@@ -1,0 +1,14 @@
+{
+  "name": "ppk-drivehub",
+  "private": true,
+  "version": "1.0.0",
+  "description": "PPK DriveHub — ระบบจัดการยานพาหนะโรงเรียนพะเยาพิทยาคม",
+  "scripts": {
+    "dev": "npx wrangler pages dev ./frontend --d1 DB=REPLACE_WITH_YOUR_D1_ID",
+    "deploy": "npx wrangler pages deploy ./frontend",
+    "migrate": "npx wrangler d1 execute ppk-drivehub-db --remote --file=migrations/schema.sql",
+    "seed": "npx wrangler d1 execute ppk-drivehub-db --remote --file=migrations/seed.sql",
+    "migrate:local": "npx wrangler d1 execute ppk-drivehub-db --local --file=migrations/schema.sql",
+    "seed:local": "npx wrangler d1 execute ppk-drivehub-db --local --file=migrations/seed.sql"
+  }
+}

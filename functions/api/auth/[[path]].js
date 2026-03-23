@@ -1,0 +1,223 @@
+// PPK DriveHub — Auth API
+// POST /api/auth/login
+// POST /api/auth/register
+// POST /api/auth/logout
+// GET  /api/auth/me
+// POST /api/auth/change-password
+// POST /api/auth/forgot-password
+// POST /api/auth/reset-password
+
+import {
+  dbFirst, dbRun, dbAll, generateUUID, now, success, error,
+  parseBody, hashPassword, verifyPassword, generateSalt, generateToken,
+  writeAuditLog
+} from '../../_helpers.js';
+
+export async function onRequest(context) {
+  const { request, env } = context;
+  const url = new URL(request.url);
+  const path = url.pathname;
+  const method = request.method;
+
+  // POST /api/auth/login
+  if (path === '/api/auth/login' && method === 'POST') {
+    const body = await parseBody(request);
+    if (!body?.username || !body?.password) return error('กรุณากรอก username และ password');
+
+    const user = await dbFirst(env.DB,
+      'SELECT * FROM users WHERE (username = ? OR email = ?) AND active = 1',
+      [body.username, body.username]
+    );
+    if (!user) return error('username/email หรือ password ไม่ถูกต้อง', 401);
+
+    const valid = await verifyPassword(body.password, user.salt, user.password_hash);
+    if (!valid) return error('username/email หรือ password ไม่ถูกต้อง', 401);
+
+    // Create session (8 hours)
+    const token = generateToken();
+    const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
+    await dbRun(env.DB,
+      'INSERT INTO sessions (id, user_id, token, expires_at, created_at) VALUES (?, ?, ?, ?, ?)',
+      [generateUUID(), user.id, token, expiresAt, now()]
+    );
+
+    // Update last login
+    await dbRun(env.DB, 'UPDATE users SET last_login = ?, updated_at = ? WHERE id = ?',
+      [now(), now(), user.id]);
+
+    await writeAuditLog(env.DB, user.id, user.username, 'login', 'auth', user.id, null);
+
+    return success({
+      token,
+      user_id: user.id,
+      username: user.username,
+      display_name: user.display_name,
+      role: user.role,
+      permissions: JSON.parse(user.permissions || '{}'),
+      must_change_password: user.must_change_password === 1,
+      pdpa_accepted: user.pdpa_accepted === 1
+    });
+  }
+
+  // POST /api/auth/register
+  if (path === '/api/auth/register' && method === 'POST') {
+    const body = await parseBody(request);
+    if (!body?.email || !body?.first_name || !body?.last_name) {
+      return error('กรุณากรอกชื่อ นามสกุล และ email');
+    }
+
+    const existing = await dbFirst(env.DB, 'SELECT id FROM user_requests WHERE email = ?', [body.email]);
+    if (existing) return error('email นี้มีคำขอสมัครรอการอนุมัติแล้ว', 409);
+
+    const existingUser = await dbFirst(env.DB, 'SELECT id FROM users WHERE email = ?', [body.email]);
+    if (existingUser) return error('email นี้มีบัญชีอยู่แล้ว', 409);
+
+    await dbRun(env.DB,
+      `INSERT INTO user_requests (id, name, email, requested_role, initial_permissions, status, created_at)
+       VALUES (?, ?, ?, ?, ?, 'pending', ?)`,
+      [generateUUID(), `${body.first_name} ${body.last_name}`, body.email,
+       body.role || 'viewer', body.permissions ? JSON.stringify(body.permissions) : '{}', now()]
+    );
+
+    return success({ message: 'ส่งคำขอสมัครสมาชิกเรียบร้อย รอการอนุมัติจากผู้ดูแลระบบ' });
+  }
+
+  // POST /api/auth/logout
+  if (path === '/api/auth/logout' && method === 'POST') {
+    const authHeader = request.headers.get('Authorization') || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    if (token) {
+      await dbRun(env.DB, 'DELETE FROM sessions WHERE token = ?', [token]);
+    }
+    return success({ message: 'ออกจากระบบเรียบร้อย' });
+  }
+
+  // GET /api/auth/me
+  if (path === '/api/auth/me' && method === 'GET') {
+    if (!env.user) return error('กรุณาเข้าสู่ระบบ', 401);
+    const user = await dbFirst(env.DB,
+      'SELECT id, username, email, role, permissions, title, first_name, last_name, display_name, phone, profile_image, driver_id, pdpa_accepted, must_change_password, last_login FROM users WHERE id = ?',
+      [env.user.id]
+    );
+    if (!user) return error('ไม่พบข้อมูลผู้ใช้', 404);
+    return success({ ...user, permissions: JSON.parse(user.permissions || '{}') });
+  }
+
+  // POST /api/auth/change-password
+  if (path === '/api/auth/change-password' && method === 'POST') {
+    if (!env.user) return error('กรุณาเข้าสู่ระบบ', 401);
+    const body = await parseBody(request);
+    if (!body?.new_password) return error('กรุณาระบุรหัสผ่านใหม่');
+    if (body.new_password.length < 8) return error('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');
+
+    const user = await dbFirst(env.DB, 'SELECT * FROM users WHERE id = ?', [env.user.id]);
+
+    // Verify old password (skip if admin forcing reset)
+    if (body.old_password) {
+      const valid = await verifyPassword(body.old_password, user.salt, user.password_hash);
+      if (!valid) return error('รหัสผ่านเดิมไม่ถูกต้อง');
+    }
+
+    const salt = generateSalt();
+    const hash = await hashPassword(body.new_password, salt);
+
+    // Save old password to history
+    await dbRun(env.DB,
+      'INSERT INTO password_history (id, user_id, password_hash, salt, changed_at) VALUES (?, ?, ?, ?, ?)',
+      [generateUUID(), user.id, user.password_hash, user.salt, now()]
+    );
+
+    await dbRun(env.DB,
+      'UPDATE users SET password_hash = ?, salt = ?, must_change_password = 0, updated_at = ? WHERE id = ?',
+      [hash, salt, now(), user.id]
+    );
+
+    await writeAuditLog(env.DB, user.id, user.username, 'change_password', 'auth', user.id, null);
+    return success({ message: 'เปลี่ยนรหัสผ่านเรียบร้อย' });
+  }
+
+  // POST /api/auth/forgot-password
+  if (path === '/api/auth/forgot-password' && method === 'POST') {
+    const body = await parseBody(request);
+    if (!body?.email) return error('กรุณาระบุ email');
+    const user = await dbFirst(env.DB, 'SELECT id, email, first_name FROM users WHERE email = ?', [body.email]);
+    // Don't reveal if email exists
+    if (!user) return success({ message: 'ถ้า email นี้มีในระบบ จะได้รับลิงก์รีเซ็ตรหัสผ่านทางอีเมล' });
+
+    const token = generateToken();
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
+    await dbRun(env.DB,
+      `INSERT INTO reset_password_requests (id, user_id, email, token, expires_at, used, created_at)
+       VALUES (?, ?, ?, ?, ?, 0, ?)`,
+      [generateUUID(), user.id, user.email, token, expiresAt, now()]
+    );
+
+    return success({ message: 'ถ้า email นี้มีในระบบ จะได้รับลิงก์รีเซ็ตรหัสผ่านทางอีเมล', token });
+  }
+
+  // POST /api/auth/reset-password
+  if (path === '/api/auth/reset-password' && method === 'POST') {
+    const body = await parseBody(request);
+    if (!body?.token || !body?.new_password) return error('กรุณาระบุ token และรหัสผ่านใหม่');
+
+    const req = await dbFirst(env.DB,
+      'SELECT * FROM reset_password_requests WHERE token = ? AND used = 0 AND expires_at > ?',
+      [body.token, new Date().toISOString()]
+    );
+    if (!req) return error('Token ไม่ถูกต้องหรือหมดอายุแล้ว', 400);
+
+    const salt = generateSalt();
+    const hash = await hashPassword(body.new_password, salt);
+
+    await dbRun(env.DB,
+      'UPDATE users SET password_hash = ?, salt = ?, must_change_password = 0, updated_at = ? WHERE id = ?',
+      [hash, salt, now(), req.user_id]
+    );
+    await dbRun(env.DB,
+      'UPDATE reset_password_requests SET used = 1 WHERE id = ?', [req.id]
+    );
+
+    return success({ message: 'รีเซ็ตรหัสผ่านเรียบร้อย กรุณาเข้าสู่ระบบด้วยรหัสใหม่' });
+  }
+
+  // POST /api/auth/accept-pdpa
+  if (path === '/api/auth/accept-pdpa' && method === 'POST') {
+    if (!env.user) return error('กรุณาเข้าสู่ระบบ', 401);
+    await dbRun(env.DB,
+      'UPDATE users SET pdpa_accepted = 1, pdpa_accepted_at = ?, updated_at = ? WHERE id = ?',
+      [now(), now(), env.user.id]
+    );
+    return success({ message: 'ยอมรับนโยบาย PDPA เรียบร้อย' });
+  }
+
+  // PUT /api/auth/profile — update own profile
+  if (path === '/api/auth/profile' && method === 'PUT') {
+    if (!env.user) return error('กรุณาเข้าสู่ระบบ', 401);
+    const body = await parseBody(request);
+    const allowed = ['title', 'first_name', 'last_name', 'phone'];
+    const updates = [];
+    const params = [];
+    for (const field of allowed) {
+      if (body[field] !== undefined) {
+        updates.push(`${field} = ?`);
+        params.push(body[field]);
+      }
+    }
+    if (!updates.length) return error('ไม่มีข้อมูลที่จะอัปเดต');
+
+    if (body.first_name || body.last_name) {
+      const user = await dbFirst(env.DB, 'SELECT first_name, last_name FROM users WHERE id = ?', [env.user.id]);
+      const fn = body.first_name || user.first_name;
+      const ln = body.last_name || user.last_name;
+      updates.push('display_name = ?');
+      params.push(`${fn} ${ln}`);
+    }
+
+    updates.push('updated_at = ?');
+    params.push(now(), env.user.id);
+    await dbRun(env.DB, `UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params);
+    return success({ message: 'อัปเดตโปรไฟล์เรียบร้อย' });
+  }
+
+  return error('Not Found', 404);
+}

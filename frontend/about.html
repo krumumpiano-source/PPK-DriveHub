@@ -1,0 +1,408 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เกี่ยวกับโปรแกรม - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'about';</script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <link rel="stylesheet" href="common.css">
+  <script src="js/api.js"></script><script src="common.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Sarabun', 'Kanit', sans-serif;
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      min-height: 100vh;
+      padding: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="navigation"></div>
+  <div style="padding: 20px;">
+
+    .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    }
+
+    .header {
+    background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+    color: white;
+    padding: 30px;
+    text-align: center;
+    }
+
+    .header h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    }
+
+    .nav {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 20px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    border-bottom: 3px solid #4285f4;
+    }
+
+    .nav-btn {
+    padding: 12px 20px;
+    background: white;
+    border: 2px solid #4285f4;
+    color: #4285f4;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 0.95em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    }
+
+    .nav-btn:hover {
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(66, 133, 244, 0.4);
+    background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+    }
+
+    .nav-btn.active {
+    background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+    color: white;
+    }
+
+    .content {
+    padding: 40px;
+    }
+
+    .section {
+    margin-bottom: 40px;
+    }
+
+    .section h2 {
+    color: #4285f4;
+    font-size: 1.8em;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 3px solid #34a853;
+    }
+
+    .section h3 {
+    color: #34a853;
+    font-size: 1.4em;
+    margin-top: 25px;
+    margin-bottom: 15px;
+    }
+
+    .section p {
+    line-height: 1.8;
+    color: #333;
+    margin-bottom: 15px;
+    text-align: justify;
+    }
+
+    .section ul {
+    margin-left: 30px;
+    margin-bottom: 20px;
+    line-height: 2;
+    }
+
+    .section li {
+    margin-bottom: 10px;
+    color: #555;
+    }
+
+    .highlight-box {
+    background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%);
+    border-left: 4px solid #4285f4;
+    padding: 25px;
+    margin: 25px 0;
+    border-radius: 10px;
+    }
+
+    .highlight-box h3 {
+    color: #4285f4;
+    margin-bottom: 15px;
+    }
+
+    .principle-box {
+    background: #f8f9fa;
+    border-left: 4px solid #34a853;
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 8px;
+    }
+
+    .principle-box h4 {
+    color: #34a853;
+    margin-bottom: 10px;
+    font-size: 1.2em;
+    }
+
+    .academic-box {
+    background: #fff3e0;
+    border-left: 4px solid #ff9800;
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 8px;
+    }
+
+    .academic-box h4 {
+    color: #ff9800;
+    margin-bottom: 10px;
+    font-size: 1.2em;
+    }
+
+    .footer {
+    background: #f8f9fa;
+    padding: 20px;
+    text-align: center;
+    color: #666;
+    border-top: 2px solid #e9ecef;
+    font-size: 0.9em;
+    }
+
+    @media (max-width: 768px) {
+    .content {
+    padding: 20px;
+    }
+
+    .header h1 {
+    font-size: 1.8em;
+    }
+
+    .section h2 {
+    font-size: 1.5em;
+    }
+    }
+    </style>
+    </head>
+
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>ℹ️ เกี่ยวกับโปรแกรม</h1>
+          <p>PPK DriveHub - ระบบจัดการยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+        </div>
+
+        <div id="navigation"></div>
+
+        <div class="content">
+          <div class="section">
+            <h2>ชื่อโปรแกรม: PPK DriveHub</h2>
+
+            <div class="highlight-box">
+              <h3>ความหมายของชื่อ</h3>
+              <p><strong>PPK</strong> ย่อมาจาก <strong>Phayao Pittayakom</strong> (โรงเรียนพะเยาพิทยาคม)</p>
+              <p><strong>DriveHub</strong> หมายถึง <strong>ศูนย์กลางการจัดการยานพาหนะ</strong> (Vehicle Management Hub)
+              </p>
+              <p>ชื่อนี้สะท้อนถึงการเป็นระบบกลางที่รวบรวมและจัดการข้อมูลยานพาหนะทั้งหมดของโรงเรียนไว้ในที่เดียว</p>
+            </div>
+          </div>
+
+          <div class="section">
+            <h2>หลักการและเหตุผลเชิงวิชาการ</h2>
+
+            <div class="principle-box">
+              <h4>1. หลักการความยุติธรรมและความเสมอภาค (Justice and Equity)</h4>
+              <p>ระบบออกแบบมาเพื่อให้การจัดการคนขับรถเป็นไปด้วยความยุติธรรม โดยใช้หลักการ:</p>
+              <ul>
+                <li><strong>การกระจายงานอย่างเท่าเทียม:</strong> ระบบ Smart Queue
+                  จะแนะนำการจัดคิวที่กระจายงานให้คนขับอย่างเท่าเทียม</li>
+                <li><strong>การพิจารณาความล้า:</strong> ระบบติดตามและเตือนเมื่อคนขับทำงานหนักเกินไป
+                  เพื่อป้องกันความเสี่ยงและส่งเสริมความเป็นธรรม</li>
+                <li><strong>การให้โอกาสทุกคน:</strong> ระบบหมุนเวียนคิวให้ทุกคนมีโอกาสทำงานเท่าเทียมกัน</li>
+              </ul>
+            </div>
+
+            <div class="principle-box">
+              <h4>2. หลักการมนุษยธรรม (Humanity)</h4>
+              <p>ระบบให้ความสำคัญกับความเป็นมนุษย์และความเป็นอยู่ที่ดีของพนักงานขับรถ:</p>
+              <ul>
+                <li><strong>Psychological Safety:</strong> ระบบรองรับการรายงานความล้าด้วยตนเอง โดยไม่มีการลงโทษ</li>
+                <li><strong>การพักผ่อนที่เพียงพอ:</strong> ระบบกำหนดระยะพักและ Recovery Day เพื่อให้คนขับมีเวลาพักผ่อน
+                </li>
+                <li><strong>การพัฒนาไม่ใช่การลงโทษ:</strong> คะแนนและสถิติใช้เพื่อการพัฒนา ไม่ใช่เพื่อลงโทษ</li>
+                <li><strong>ความยืดหยุ่น:</strong> ระบบยืดหยุ่นได้ในกรณีพิเศษ โดยต้องมีเหตุผลประกอบ</li>
+              </ul>
+            </div>
+
+            <div class="principle-box">
+              <h4>3. หลักการความคุ้มค่าและประสิทธิภาพ (Efficiency and Cost-Effectiveness)</h4>
+              <p>ระบบช่วยให้การจัดการทรัพยากรเป็นไปอย่างคุ้มค่า:</p>
+              <ul>
+                <li><strong>การวิเคราะห์ต้นทุน:</strong> ระบบคำนวณค่าใช้จ่ายต่อกิโลเมตรของแต่ละรถ
+                  เพื่อประเมินความคุ้มค่า
+                </li>
+                <li><strong>การติดตามการสิ้นเปลือง:</strong> ระบบตรวจจับการใช้น้ำมันผิดปกติ เพื่อลดค่าใช้จ่าย</li>
+                <li><strong>การวางแผนซ่อมบำรุง:</strong> ระบบเตือนล่วงหน้าเพื่อป้องกันการซ่อมฉุกเฉินที่ค่าใช้จ่ายสูง
+                </li>
+                <li><strong>การประเมินความพร้อมใช้งาน:</strong> ระบบประเมินว่ารถคันไหนควรปลดระวางหรือซ่อมต่อ</li>
+              </ul>
+            </div>
+
+            <div class="principle-box">
+              <h4>4. หลักการความโปร่งใสและตรวจสอบได้ (Transparency and Accountability)</h4>
+              <p>ระบบสร้างความโปร่งใสและตรวจสอบได้:</p>
+              <ul>
+                <li><strong>Audit Trail:</strong> บันทึกทุกการเปลี่ยนแปลงข้อมูลสำคัญ เพื่อตรวจสอบย้อนหลังได้</li>
+                <li><strong>ข้อมูลที่ครบถ้วน:</strong> ทุกการกระทำมีหลักฐานและบันทึกไว้</li>
+                <li><strong>การรายงานที่เชื่อถือได้:</strong> รายงานแสดงตัวเลขดิบ เปอร์เซ็นต์ และแนวโน้มที่ตรวจสอบได้
+                </li>
+                <li><strong>PDPA Compliance:</strong> ป้องกันข้อมูลส่วนบุคคลและบันทึกการเข้าถึง</li>
+              </ul>
+            </div>
+
+            <div class="principle-box">
+              <h4>5. หลักการรักษาคุณภาพและผลประโยชน์ (Quality and Benefit Preservation)</h4>
+              <p>ระบบช่วยรักษาคุณภาพของยานพาหนะและผลประโยชน์ขององค์กร:</p>
+              <ul>
+                <li><strong>การบำรุงรักษาตามแผน:</strong> ระบบเตือนการซ่อมบำรุงตามระยะทางและเวลา เพื่อยืดอายุการใช้งาน
+                </li>
+                <li><strong>การตรวจสภาพประจำวัน:</strong> ระบบส่งเสริมการตรวจสภาพรถก่อนใช้งาน เพื่อความปลอดภัย</li>
+                <li><strong>การติดตามภาษีและประกัน:</strong> ระบบเตือนก่อนหมดอายุ เพื่อป้องกันความเสี่ยง</li>
+                <li><strong>การวิเคราะห์ความเสี่ยง:</strong> ระบบระบุรถหรือคนขับที่มีความเสี่ยง เพื่อป้องกันปัญหา</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="section">
+            <h2>เหตุผลเชิงวิชาการ</h2>
+
+            <div class="academic-box">
+              <h4>การจัดการทรัพยากรองค์กร (Resource Management)</h4>
+              <p>ระบบนี้ใช้หลักการ <strong>Resource-Based View (RBV)</strong> และ <strong>Asset Management</strong>
+                ในการจัดการยานพาหนะ ซึ่งเป็นทรัพยากรสำคัญขององค์กร โดย:</p>
+              <ul>
+                <li>ติดตามและวิเคราะห์การใช้งานทรัพยากรอย่างเป็นระบบ</li>
+                <li>ประเมินความคุ้มค่าและประสิทธิภาพของทรัพยากร</li>
+                <li>วางแผนการบำรุงรักษาเพื่อยืดอายุการใช้งาน</li>
+                <li>ตัดสินใจเชิงกลยุทธ์เกี่ยวกับการลงทุนหรือปลดระวาง</li>
+              </ul>
+            </div>
+
+            <div class="academic-box">
+              <h4>การจัดการบุคลากรอย่างเป็นธรรม (Fair Human Resource Management)</h4>
+              <p>ระบบใช้หลักการ <strong>Distributive Justice</strong> และ <strong>Procedural Justice</strong>
+                ในการจัดการบุคลากร:</p>
+              <ul>
+                <li><strong>Distributive Justice:</strong> การกระจายงานอย่างเท่าเทียม โดยพิจารณาจากภาระงานและความสามารถ
+                </li>
+                <li><strong>Procedural Justice:</strong> กระบวนการที่โปร่งใส ตรวจสอบได้ และมีเหตุผล</li>
+                <li><strong>Interactional Justice:</strong> การปฏิบัติต่อบุคลากรด้วยความเคารพและความเป็นธรรม</li>
+                <li>ส่งเสริมความพึงพอใจในการทำงานและลดความขัดแย้ง</li>
+              </ul>
+            </div>
+
+            <div class="academic-box">
+              <h4>การวิเคราะห์ข้อมูลและการตัดสินใจ (Data-Driven Decision Making)</h4>
+              <p>ระบบใช้หลักการ <strong>Business Intelligence</strong> และ <strong>Analytics</strong>:</p>
+              <ul>
+                <li>รวบรวมข้อมูลจากหลายแหล่ง (คิว, การใช้งาน, น้ำมัน, ซ่อม)</li>
+                <li>วิเคราะห์และสรุปข้อมูลเป็นรายงานที่ใช้ตัดสินใจได้</li>
+                <li>ใช้ KPI และ Metrics เพื่อประเมินประสิทธิภาพ</li>
+                <li>ระบุปัญหาและโอกาสในการปรับปรุง</li>
+              </ul>
+            </div>
+
+            <div class="academic-box">
+              <h4>การจัดการความเสี่ยง (Risk Management)</h4>
+              <p>ระบบใช้หลักการ <strong>Risk Assessment</strong> และ <strong>Preventive Management</strong>:</p>
+              <ul>
+                <li>ระบุความเสี่ยง (รถซ่อมบ่อย, คนขับล้า, น้ำมันผิดปกติ)</li>
+                <li>ประเมินระดับความเสี่ยง</li>
+                <li>เตือนล่วงหน้าเพื่อป้องกันปัญหา</li>
+                <li>ติดตามและรายงานความเสี่ยงอย่างต่อเนื่อง</li>
+              </ul>
+            </div>
+
+            <div class="academic-box">
+              <h4>การปฏิบัติตามกฎหมายและมาตรฐาน (Legal Compliance)</h4>
+              <p>ระบบออกแบบให้สอดคล้องกับ:</p>
+              <ul>
+                <li><strong>PDPA (Personal Data Protection Act):</strong> คุ้มครองข้อมูลส่วนบุคคล</li>
+                <li><strong>Audit Requirements:</strong> บันทึกที่ตรวจสอบได้สำหรับการตรวจสอบภายใน</li>
+                <li><strong>Transparency Standards:</strong> ความโปร่งใสในการจัดการทรัพยากรสาธารณะ</li>
+                <li><strong>Best Practices:</strong> มาตรฐานการจัดการยานพาหนะที่ดี</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="section">
+            <h2>คุณค่าของระบบ</h2>
+
+            <div class="highlight-box">
+              <h3>สำหรับองค์กร</h3>
+              <ul>
+                <li>ลดค่าใช้จ่ายในการจัดการยานพาหนะ</li>
+                <li>เพิ่มประสิทธิภาพการใช้งานทรัพยากร</li>
+                <li>ป้องกันความเสี่ยงและปัญหาที่ไม่คาดคิด</li>
+                <li>มีข้อมูลสำหรับการตัดสินใจเชิงกลยุทธ์</li>
+                <li>ปฏิบัติตามกฎหมายและมาตรฐาน</li>
+              </ul>
+            </div>
+
+            <div class="highlight-box">
+              <h3>สำหรับพนักงานขับรถ</h3>
+              <ul>
+                <li>ได้รับงานอย่างเท่าเทียมและเป็นธรรม</li>
+                <li>ได้รับการดูแลและป้องกันความเสี่ยง</li>
+                <li>มีโอกาสพัฒนาตนเองผ่านข้อมูลและคะแนน</li>
+                <li>ทำงานในสภาพแวดล้อมที่ปลอดภัยและเป็นมิตร</li>
+              </ul>
+            </div>
+
+            <div class="highlight-box">
+              <h3>สำหรับผู้บริหาร</h3>
+              <ul>
+                <li>มีข้อมูลที่เชื่อถือได้สำหรับการตัดสินใจ</li>
+                <li>สามารถตรวจสอบและประเมินผลได้</li>
+                <li>มีรายงานสำหรับการเสนอของบประมาณ</li>
+                <li>ปฏิบัติตามหลักธรรมาภิบาล</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="section">
+            <h2>วิสัยทัศน์</h2>
+            <p style="font-size: 1.1em; text-align: center; color: #4285f4; font-weight: 600;">
+              "เป็นระบบจัดการยานพาหนะที่ยึดหลักความยุติธรรม มนุษยธรรม ความคุ้มค่า และความโปร่งใส<br>
+              เพื่อส่งเสริมการพัฒนาองค์กรและบุคลากรอย่างยั่งยืน"
+            </p>
+          </div>
+        </div>
+
+        <div class="footer">
+          <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+          <p style="margin-top: 10px;">
+            <a href="user-guide.html" style="color: #4285f4; text-decoration: none; margin: 0 10px;">📖
+              วิธีการใช้งาน</a>
+            <a href="glossary.html" style="color: #4285f4; text-decoration: none; margin: 0 10px;">📚
+              คำศัพท์และความหมาย</a>
+          </p>
+        </div>
+      </div>
+
+      <script src="common.html"></script>
+    </body>
+
+</html>
