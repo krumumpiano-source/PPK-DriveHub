@@ -265,42 +265,29 @@
           <!-- Manual Backup -->
           <div class="section">
             <h2>1. สำรองข้อมูลด้วยตนเอง</h2>
-            <p style="margin-bottom: 20px;">กดปุ่มด้านล่างเพื่อสำรองข้อมูลทันที (นอกเหนือจากการสำรองอัตโนมัติ)</p>
+            <p style="margin-bottom: 20px;">กดปุ่มด้านล่างเพื่อสำรองข้อมูลทันที ระบบจะดาวน์โหลดไฟล์ JSON สำหรับเก็บไว้</p>
             <button class="btn" onclick="createManualBackup()" id="backupBtn">
               💾 สร้าง Backup ตอนนี้
             </button>
           </div>
 
-          <!-- Recovery -->
+          <!-- Recovery from file -->
           <div class="section">
-            <h2>2. กู้คืนข้อมูล</h2>
+            <h2>2. กู้คืนข้อมูลจากไฟล์</h2>
             <div class="alert alert-warning">
               <strong>⚠️ คำเตือน:</strong> การกู้คืนข้อมูลจะเขียนทับข้อมูลปัจจุบัน
-              กรุณาตรวจสอบวันที่และโมดูลที่ต้องการกู้คืนให้แน่ใจ
+              กรุณาตรวจสอบไฟล์ backup ให้แน่ใจก่อนดำเนินการ
             </div>
 
-            <form id="recoveryForm" onsubmit="handleRecovery(event); return false;">
+            <form id="recoveryForm" onsubmit="handleFileRestore(event); return false;">
               <div class="form-group">
-                <label for="backupDate">วันที่ที่ต้องการกู้คืน <span style="color: #f44336;">*</span></label>
-                <input type="date" id="backupDate" name="backupDate" required>
-                <div style="font-size: 0.85em; color: #666; margin-top: 5px;">เลือกวันที่ที่มี backup (ย้อนหลังไม่เกิน
-                  30
-                  วัน)</div>
-              </div>
-
-              <div class="form-group">
-                <label for="recoveryModule">โมดูลที่ต้องการกู้คืน</label>
-                <select id="recoveryModule" name="recoveryModule">
-                  <option value="all">ทั้งหมด (ทั้งระบบ)</option>
-                  <option value="spreadsheet">Google Sheets เท่านั้น</option>
-                  <option value="fuel">ไฟล์น้ำมัน</option>
-                  <option value="repair">ไฟล์ซ่อม</option>
-                  <option value="check">ไฟล์ตรวจสภาพ</option>
-                </select>
+                <label for="backupFile">เลือกไฟล์ Backup (JSON) <span style="color: #f44336;">*</span></label>
+                <input type="file" id="backupFile" name="backupFile" accept=".json" required
+                  style="width:100%; padding:12px; border:2px solid #e0e0e0; border-radius:8px;">
               </div>
 
               <button type="submit" class="btn btn-danger" id="recoveryBtn">
-                🔄 กู้คืนข้อมูล
+                🔄 กู้คืนข้อมูลจากไฟล์
               </button>
             </form>
           </div>
@@ -324,78 +311,113 @@
       <script src="common.html"></script>
       <script>
         window.addEventListener('DOMContentLoaded', function () {
-          if (!requireAdmin()) {
-            return;
-          }
-
-          // Note: There's no API to list backups yet, so we'll show a message
-          document.getElementById('backupList').innerHTML =
-            '<div style="text-align: center; padding: 40px; color: #666;">' +
-            'Backup ถูกเก็บไว้ใน Google Drive ที่ /backup/YYYY/MM/DD<br>' +
-            'กรุณาตรวจสอบใน Google Drive โดยตรง</div>';
-
-          // Initialize Flatpickr for Thai date pickers
-          setTimeout(function () {
-            if (typeof initAllThaiDateTimePickers === 'function') {
-              initAllThaiDateTimePickers();
-            }
-          }, 200);
+          if (!requireAdmin()) return;
+          loadBackupList();
         });
 
-        async function createManualBackup() {
-          if (!confirm('ต้องการสร้าง Backup ตอนนี้หรือไม่?')) {
-            return;
+        async function loadBackupList() {
+          try {
+            var result = await apiCall('listBackups', {});
+            if (result.success && result.data && result.data.length > 0) {
+              var html = '';
+              result.data.forEach(function(b) {
+                html += '<div class="backup-item">' +
+                  '<div class="backup-item-info">' +
+                  '<div class="backup-item-date">' + (b.name || b.filename || 'Backup') + '</div>' +
+                  '<div class="backup-item-details">' + (b.row_count || b.record_count || 0) + ' records | ' + (b.created_at || '') + '</div>' +
+                  '</div></div>';
+              });
+              document.getElementById('backupList').innerHTML = html;
+            } else {
+              document.getElementById('backupList').innerHTML =
+                '<div style="text-align: center; padding: 40px; color: #666;">ยังไม่มี Backup</div>';
+            }
+          } catch(e) {
+            document.getElementById('backupList').innerHTML =
+              '<div style="text-align: center; padding: 40px; color: #666;">ไม่สามารถโหลดรายการ Backup ได้</div>';
           }
+        }
+
+        async function createManualBackup() {
+          if (!confirm('ต้องการสร้าง Backup ตอนนี้หรือไม่?')) return;
 
           var backupBtn = document.getElementById('backupBtn');
           backupBtn.disabled = true;
           backupBtn.textContent = 'กำลังสำรองข้อมูล...';
 
           try {
-            // Note: There's no manual backup API yet, so we'll call the scheduled job
-            var result = await apiCall('dailyBackup', {});
+            var token = API.getToken();
+            var resp = await fetch('/api/backup', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+              },
+              body: JSON.stringify({})
+            });
 
-            if (result.success) {
+            var contentDisp = resp.headers.get('Content-Disposition');
+            if (contentDisp && contentDisp.includes('attachment')) {
+              // Direct download — R2 not available
+              var blob = await resp.blob();
+              var filenameMatch = contentDisp.match(/filename="?([^"]+)"?/);
+              var filename = filenameMatch ? filenameMatch[1] : 'backup.json';
+              var a = document.createElement('a');
+              a.href = URL.createObjectURL(blob);
+              a.download = filename;
+              a.click();
+              URL.revokeObjectURL(a.href);
               document.getElementById('alert-container').innerHTML =
-                '<div class="alert alert-success">สำรองข้อมูลสำเร็จ</div>';
+                '<div class="alert alert-success">สำรองข้อมูลสำเร็จ — ไฟล์ถูกดาวน์โหลดแล้ว</div>';
             } else {
-              document.getElementById('alert-container').innerHTML =
-                '<div class="alert alert-error">' + (typeof getUserMessage !== 'undefined' ? getUserMessage(result.message) : (result.message || 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')) + '</div>';
+              var result = await resp.json();
+              if (result.success) {
+                document.getElementById('alert-container').innerHTML =
+                  '<div class="alert alert-success">สำรองข้อมูลสำเร็จ (เก็บใน Cloud Storage)</div>';
+              } else {
+                document.getElementById('alert-container').innerHTML =
+                  '<div class="alert alert-error">' + (result.error || result.message || 'เกิดข้อผิดพลาด') + '</div>';
+              }
             }
+            loadBackupList();
           } catch (error) {
             document.getElementById('alert-container').innerHTML =
-              '<div class="alert alert-error">' + handleError(error) + '</div>';
+              '<div class="alert alert-error">' + (error.message || 'เกิดข้อผิดพลาด') + '</div>';
           } finally {
             backupBtn.disabled = false;
             backupBtn.textContent = '💾 สร้าง Backup ตอนนี้';
           }
         }
 
-        async function handleRecovery(event) {
+        async function handleFileRestore(event) {
           event.preventDefault();
-
-          var backupDate = document.getElementById('backupDate').value;
-          var module = document.getElementById('recoveryModule').value;
-
-          if (!backupDate) {
+          var fileInput = document.getElementById('backupFile');
+          if (!fileInput.files.length) {
             document.getElementById('alert-container').innerHTML =
-              '<div class="alert alert-error">กรุณาเลือกวันที่</div>';
+              '<div class="alert alert-error">กรุณาเลือกไฟล์</div>';
             return;
           }
 
-          if (!confirm('⚠️ การกู้คืนจะเขียนทับข้อมูลปัจจุบัน\n\nวันที่: ' + backupDate + '\nโมดูล: ' + module + '\n\nต้องการดำเนินการต่อหรือไม่?')) {
-            return;
-          }
+          if (!confirm('⚠️ การกู้คืนจะเขียนทับข้อมูลปัจจุบัน\n\nต้องการดำเนินการต่อหรือไม่?')) return;
 
           var recoveryBtn = document.getElementById('recoveryBtn');
           recoveryBtn.disabled = true;
           recoveryBtn.textContent = 'กำลังกู้คืน...';
 
           try {
-            var result = await apiCall('restoreBackup', {
-              backupDate: backupDate,
-              module: module
+            var fileText = await fileInput.files[0].text();
+            var snapshot = JSON.parse(fileText);
+
+            var token = API.getToken();
+            var resp = await fetch('/api/backup/restore-upload', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+              },
+              body: JSON.stringify(snapshot)
             });
+            var result = await resp.json();
 
             if (result.success) {
               document.getElementById('alert-container').innerHTML =
@@ -403,14 +425,14 @@
               document.getElementById('recoveryForm').reset();
             } else {
               document.getElementById('alert-container').innerHTML =
-                '<div class="alert alert-error">' + (typeof getUserMessage !== 'undefined' ? getUserMessage(result.message) : (result.message || 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')) + '</div>';
+                '<div class="alert alert-error">' + (result.error || result.message || 'เกิดข้อผิดพลาด') + '</div>';
             }
           } catch (error) {
             document.getElementById('alert-container').innerHTML =
-              '<div class="alert alert-error">' + handleError(error) + '</div>';
+              '<div class="alert alert-error">ไฟล์ไม่ถูกต้อง หรือเกิดข้อผิดพลาด: ' + (error.message || '') + '</div>';
           } finally {
             recoveryBtn.disabled = false;
-            recoveryBtn.textContent = '🔄 กู้คืนข้อมูล';
+            recoveryBtn.textContent = '🔄 กู้คืนข้อมูลจากไฟล์';
           }
         }
       </script>

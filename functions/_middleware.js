@@ -9,7 +9,6 @@ const PUBLIC_PATHS = [
   '/api/auth/register',
   '/api/auth/forgot-password',
   '/api/auth/reset-password',
-  '/api/auth/verify-email',
   '/api/setup',
   '/api/check/daily',           // QR ตรวจสภาพ+แจ้งซ่อม
   '/api/usage/qr',              // QR บันทึกใช้รถ
@@ -19,8 +18,13 @@ const PUBLIC_PATHS = [
 ];
 
 // CORS headers
+const ALLOWED_ORIGINS = [
+  'https://ppk-drivehub.pages.dev',
+  'http://localhost:8788',         // wrangler dev
+];
+
 const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': '*',  // replaced at runtime by addCors()
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   'Access-Control-Max-Age': '86400'
@@ -45,7 +49,7 @@ export async function onRequest(context) {
 
   // Handle CORS preflight
   if (request.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
+    return new Response(null, { status: 204, headers: corsHeaders(request) });
   }
 
   // Static files — pass through with CSP
@@ -64,7 +68,7 @@ export async function onRequest(context) {
   if (!isPublic) {
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return addCors(error('กรุณาเข้าสู่ระบบ', 401));
+      return addCors(error('กรุณาเข้าสู่ระบบ', 401), request);
     }
 
     const token = authHeader.slice(7);
@@ -79,11 +83,11 @@ export async function onRequest(context) {
       );
 
       if (!session) {
-        return addCors(error('Session หมดอายุ กรุณาเข้าสู่ระบบใหม่', 401));
+        return addCors(error('Session หมดอายุ กรุณาเข้าสู่ระบบใหม่', 401), request);
       }
 
       if (!session.active) {
-        return addCors(error('บัญชีถูกระงับการใช้งาน', 403));
+        return addCors(error('บัญชีถูกระงับการใช้งาน', 403), request);
       }
 
       // Attach user info for downstream handlers
@@ -96,22 +100,34 @@ export async function onRequest(context) {
         mustChangePassword: session.must_change_password === 1
       };
     } catch (e) {
-      return addCors(error('เกิดข้อผิดพลาดในการตรวจสอบ session', 500));
+      return addCors(error('เกิดข้อผิดพลาดในการตรวจสอบ session', 500), request);
     }
   }
 
   // Continue to route handler
   try {
     const response = await next();
-    return addCors(response);
+    return addCors(response, request);
   } catch (e) {
-    return addCors(error('Internal Server Error', 500));
+    return addCors(error('Internal Server Error', 500), request);
   }
 }
 
-function addCors(response) {
+function corsHeaders(request) {
+  const origin = request?.headers?.get('Origin') || '';
+  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Methods': CORS_HEADERS['Access-Control-Allow-Methods'],
+    'Access-Control-Allow-Headers': CORS_HEADERS['Access-Control-Allow-Headers'],
+    'Access-Control-Max-Age': CORS_HEADERS['Access-Control-Max-Age']
+  };
+}
+
+function addCors(response, request) {
   const headers = new Headers(response.headers);
-  for (const [key, value] of Object.entries(CORS_HEADERS)) {
+  const cors = corsHeaders(request);
+  for (const [key, value] of Object.entries(cors)) {
     headers.set(key, value);
   }
   return new Response(response.body, { status: response.status, headers });

@@ -187,6 +187,7 @@ const ACTION_MAP = {
 
   // Backup
   'getBackups':          ()  => API.get('/api/backup'),
+  'listBackups':         ()  => API.get('/api/backup'),
   'createBackup':        (d) => API.post('/api/backup', d),
   'restoreBackup':       (d) => API.post(`/api/backup/${d.id}/restore`, d),
 

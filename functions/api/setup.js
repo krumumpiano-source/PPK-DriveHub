@@ -4,6 +4,12 @@
 import { dbFirst, dbRun, generateUUID, now, success, error, parseBody, hashPassword, generateSalt } from '../_helpers.js';
 
 export async function onRequest({ request, env }) {
+  // GET /api/setup — check if first-time setup is needed
+  if (request.method === 'GET') {
+    const existing = await dbFirst(env.DB, 'SELECT id FROM users LIMIT 1');
+    return success({ needs_setup: !existing });
+  }
+
   if (request.method !== 'POST') return error('Method not allowed', 405);
 
   // Only allow setup if no users exist

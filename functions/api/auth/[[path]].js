@@ -171,7 +171,7 @@ export async function onRequest(context) {
       [generateUUID(), user.id, user.email, token, expiresAt, now()]
     );
 
-    return success({ message: 'ถ้า email นี้มีในระบบ จะได้รับลิงก์รีเซ็ตรหัสผ่านทางอีเมล', token });
+    return success({ message: 'ถ้า email นี้มีในระบบ จะได้รับลิงก์รีเซ็ตรหัสผ่านทางอีเมล' });
   }
 
   // POST /api/auth/reset-password
