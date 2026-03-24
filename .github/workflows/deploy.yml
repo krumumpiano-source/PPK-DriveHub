@@ -1,0 +1,26 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get fresh Cloudflare token
+        id: cf_token
+        run: |
+          RESP=$(curl -s -X POST https://dash.cloudflare.com/oauth2/token \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "grant_type=refresh_token&refresh_token=${{ secrets.CLOUDFLARE_REFRESH_TOKEN }}&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7")
+          TOKEN=$(echo "$RESP" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log(JSON.parse(d).access_token))")
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+
+      - name: Deploy to Cloudflare Pages
+        run: npx wrangler@latest pages deploy ./frontend --project-name ppk-drivehub
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ steps.cf_token.outputs.token }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
