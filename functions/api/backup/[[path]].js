@@ -32,18 +32,22 @@ async function createSnapshot(db) {
 }
 
 async function restoreSnapshot(db, snapshot) {
+  const SAFE_COL = /^[a-z_][a-z0-9_]*$/;
   for (const table of RESTORABLE_TABLES) {
     if (!snapshot[table] || !snapshot[table].length) continue;
     await dbRun(db, `DELETE FROM ${table}`);
     for (const row of snapshot[table]) {
-      const cols = Object.keys(row).join(', ');
-      const placeholders = Object.keys(row).map(() => '?').join(', ');
+      const keys = Object.keys(row);
+      if (keys.some(k => !SAFE_COL.test(k))) throw new Error(`Invalid column name in table ${table}`);
+      const cols = keys.join(', ');
+      const placeholders = keys.map(() => '?').join(', ');
       await dbRun(db, `INSERT OR IGNORE INTO ${table} (${cols}) VALUES (${placeholders})`, Object.values(row));
     }
   }
 }
 
 export async function onRequest(context) {
+  try {
   const { request, env } = context;
   const url = new URL(request.url);
   const path = url.pathname;
@@ -152,4 +156,8 @@ export async function onRequest(context) {
   }
 
   return error('Not Found', 404);
+  } catch (e) {
+    console.error('API Error:', e);
+    return error(e.message || 'Internal Server Error', 500);
+  }
 }

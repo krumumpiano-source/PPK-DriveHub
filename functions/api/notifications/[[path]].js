@@ -4,10 +4,11 @@
 // PUT /api/notifications/read-all  — mark all read
 
 import {
-  dbAll, dbFirst, dbRun, success, error, requireAdmin
+  dbAll, dbFirst, dbRun, success, error
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
+  try {
   const { request, env } = context;
   const url = new URL(request.url);
   const path = url.pathname;
@@ -55,4 +56,8 @@ export async function onRequest(context) {
   }
 
   return error('Not Found', 404);
+  } catch (e) {
+    console.error('API Error:', e);
+    return error(e.message || 'Internal Server Error', 500);
+  }
 }

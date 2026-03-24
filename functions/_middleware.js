@@ -1,7 +1,7 @@
 // PPK DriveHub — Middleware: Auth + CORS + CSP
 // Cloudflare Pages Functions global middleware
 
-import { json, error, dbFirst } from './_helpers.js';
+import { error, dbFirst } from './_helpers.js';
 
 // Public API paths — no authentication required
 const PUBLIC_PATHS = [

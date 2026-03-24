@@ -4,6 +4,7 @@
 import { dbFirst, dbRun, generateUUID, now, success, error, parseBody, hashPassword, generateSalt } from '../_helpers.js';
 
 export async function onRequest({ request, env }) {
+  try {
   // GET /api/setup — check if first-time setup is needed
   if (request.method === 'GET') {
     const existing = await dbFirst(env.DB, 'SELECT id FROM users LIMIT 1');
@@ -34,4 +35,8 @@ export async function onRequest({ request, env }) {
   );
 
   return success({ message: 'สร้างบัญชีผู้ดูแลระบบสำเร็จ', user_id: id });
+  } catch (e) {
+    console.error('API Error:', e);
+    return error(e.message || 'Internal Server Error', 500);
+  }
 }
