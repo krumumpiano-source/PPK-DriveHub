@@ -1,13 +1,4 @@
-// PPK DriveHub — Vehicles API
-// GET    /api/vehicles
-// POST   /api/vehicles
-// GET    /api/vehicles/:id
-// PUT    /api/vehicles/:id
-// PUT    /api/vehicles/:id/deactivate
-// GET    /api/vehicles/qr-info?car_id=xxx  (public)
-// GET    /api/vehicles/:id/maintenance
-// POST   /api/vehicles/:id/maintenance
-
+// Vehicle CRUD, health scores, images
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, extractParam, writeAuditLog, uploadToR2
@@ -33,7 +24,6 @@ export async function onRequest(context) {
 
   if (!user) return error('Unauthorized', 401);
 
-  // GET /api/vehicles
   if (path === '/api/vehicles' && method === 'GET') {
     const status = url.searchParams.get('status');
     const type = url.searchParams.get('car_type');
@@ -47,7 +37,6 @@ export async function onRequest(context) {
     return success(vehicles);
   }
 
-  // POST /api/vehicles
   if (path === '/api/vehicles' && method === 'POST') {
     try { requirePermission(user, 'vehicles', 'create'); } catch { return error('ไม่มีสิทธิ์เพิ่มยานพาหนะ', 403); }
     const body = await parseBody(request);
@@ -72,14 +61,12 @@ export async function onRequest(context) {
     return success({ id, message: 'เพิ่มยานพาหนะเรียบร้อย' }, 201);
   }
 
-  // GET /api/vehicles/:id
   if (path.match(/^\/api\/vehicles\/[^/]+$/) && method === 'GET') {
     const id = extractParam(path, '/api/vehicles/');
     const car = await dbFirst(env.DB, 'SELECT * FROM cars WHERE id = ? AND active = 1', [id]);
     return car ? success(car) : error('ไม่พบยานพาหนะ', 404);
   }
 
-  // PUT /api/vehicles/:id
   if (path.match(/^\/api\/vehicles\/[^/]+$/) && method === 'PUT') {
     try { requirePermission(user, 'vehicles', 'edit'); } catch { return error('ไม่มีสิทธิ์แก้ไขยานพาหนะ', 403); }
     const id = extractParam(path, '/api/vehicles/');
@@ -102,7 +89,6 @@ export async function onRequest(context) {
     return success({ message: 'อัปเดตยานพาหนะเรียบร้อย' });
   }
 
-  // PUT /api/vehicles/:id/deactivate
   if (path.match(/\/api\/vehicles\/[^/]+\/deactivate/) && method === 'PUT') {
     try { requirePermission(user, 'vehicles', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[3];
@@ -111,7 +97,6 @@ export async function onRequest(context) {
     return success({ message: 'ปิดการใช้งานยานพาหนะเรียบร้อย' });
   }
 
-  // GET /api/vehicles/:id/maintenance
   if (path.match(/\/api\/vehicles\/[^/]+\/maintenance/) && method === 'GET') {
     const id = path.split('/')[3];
     const logs = await dbAll(env.DB,
@@ -120,7 +105,6 @@ export async function onRequest(context) {
     return success(logs);
   }
 
-  // POST /api/vehicles/:id/maintenance
   if (path.match(/\/api\/vehicles\/[^/]+\/maintenance/) && method === 'POST') {
     try { requirePermission(user, 'maintenance', 'create'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[3];

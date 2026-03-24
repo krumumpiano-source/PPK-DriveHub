@@ -1,7 +1,4 @@
-// PPK DriveHub — Files API
-// POST /api/files/upload    — base64 → R2, returns R2 key + URL
-// GET  /api/files/:key*     — proxy stream from R2 (authenticated)
-
+// File storage proxy (R2)
 import {
   success, error, parseBody, requirePermission, uploadToR2
 } from '../../_helpers.js';
@@ -16,7 +13,6 @@ export async function onRequest(context) {
 
   if (!user) return error('Unauthorized', 401);
 
-  // POST /api/files/upload
   if (path === '/api/files/upload' && method === 'POST') {
     const body = await parseBody(request);
     if (!body?.base64 || !body?.mime) return error('กรุณาส่ง base64 และ mime type');
@@ -28,7 +24,6 @@ export async function onRequest(context) {
     return success({ url: r2Url, filename });
   }
 
-  // GET /api/files/* — proxy from R2 (key = everything after /api/files/)
   if (method === 'GET' && path.startsWith('/api/files/')) {
     const key = decodeURIComponent(path.replace('/api/files/', ''));
     if (!key) return error('กรุณาระบุ key');

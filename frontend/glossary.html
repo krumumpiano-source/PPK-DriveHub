@@ -19,8 +19,8 @@
     }
 
     body {
-      font-family: 'Sarabun', 'Kanit', sans-serif;
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      font-family: var(--font-family);
+      background: var(--gradient-primary);
       min-height: 100vh;
       padding: 20px;
     }
@@ -29,13 +29,13 @@
       max-width: 1200px;
       margin: 0 auto;
       background: white;
-      border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      border-radius: var(--radius-2xl);
+      box-shadow: var(--shadow-container);
       overflow: hidden;
     }
 
     .header {
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
       padding: 30px;
       text-align: center;
@@ -47,21 +47,21 @@
     }
 
     .nav {
-      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      background: var(--gradient-nav);
       padding: 20px;
       display: flex;
       gap: 12px;
       flex-wrap: wrap;
       justify-content: center;
-      border-bottom: 3px solid #4285f4;
+      border-bottom: 3px solid var(--color-primary);
     }
 
     .nav-btn {
       padding: 12px 20px;
       background: white;
-      border: 2px solid #4285f4;
-      color: #4285f4;
-      border-radius: 10px;
+      border: 2px solid var(--color-primary);
+      color: var(--color-primary);
+      border-radius: var(--radius-lg);
       cursor: pointer;
       font-size: 0.95em;
       font-weight: 600;
@@ -75,12 +75,12 @@
     .nav-btn:hover {
       color: white;
       transform: translateY(-3px);
-      box-shadow: 0 6px 20px rgba(66, 133, 244, 0.4);
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      box-shadow: var(--shadow-nav-hover);
+      background: var(--gradient-primary);
     }
 
     .nav-btn.active {
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
     }
 
@@ -93,7 +93,7 @@
     }
 
     .glossary-section h2 {
-      color: #4285f4;
+      color: var(--color-primary);
       font-size: 1.8em;
       margin-bottom: 20px;
       padding-bottom: 10px;
@@ -101,11 +101,11 @@
     }
 
     .term-item {
-      background: #f8f9fa;
-      border-left: 4px solid #4285f4;
+      background: var(--color-bg-light);
+      border-left: 4px solid var(--color-primary);
       padding: 20px;
       margin: 15px 0;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       transition: all 0.3s ease;
     }
 
@@ -115,7 +115,7 @@
     }
 
     .term-item h3 {
-      color: #4285f4;
+      color: var(--color-primary);
       font-size: 1.3em;
       margin-bottom: 10px;
     }
@@ -128,9 +128,9 @@
     }
 
     .term-item .simple-explanation {
-      background: #e3f2fd;
+      background: var(--color-bg-info);
       padding: 15px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       margin-top: 12px;
       border-left: 4px solid #2196f3;
       font-size: 1em;
@@ -139,9 +139,9 @@
     }
 
     .term-item .example {
-      background: #fff3e0;
+      background: var(--color-bg-warning);
       padding: 12px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       margin-top: 10px;
       border-left: 4px solid #ff9800;
       color: #e65100;
@@ -149,19 +149,19 @@
     }
 
     .term-item .tip {
-      background: #e8f5e9;
+      background: var(--color-bg-success);
       padding: 12px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       margin-top: 10px;
       border-left: 4px solid #4caf50;
-      color: #2e7d32;
+      color: var(--color-secondary-dark);
       font-size: 0.95em;
     }
 
     .term-item .warning {
-      background: #fff3e0;
+      background: var(--color-bg-warning);
       padding: 12px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       margin-top: 10px;
       border-left: 4px solid #ff9800;
       color: #e65100;
@@ -180,10 +180,10 @@
     }
 
     .footer {
-      background: #f8f9fa;
+      background: var(--color-bg-light);
       padding: 20px;
       text-align: center;
-      color: #666;
+      color: var(--color-text-muted);
       border-top: 2px solid #e9ecef;
       font-size: 0.9em;
     }
@@ -751,8 +751,8 @@
     <div class="footer">
       <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
       <p style="margin-top: 10px;">
-        <a href="user-guide.html" style="color: #4285f4; text-decoration: none; margin: 0 10px;">📖 วิธีการใช้งาน</a>
-        <a href="about.html" style="color: #4285f4; text-decoration: none; margin: 0 10px;">ℹ️ เกี่ยวกับโปรแกรม</a>
+        <a href="user-guide.html" style="color: var(--color-primary); text-decoration: none; margin: 0 10px;">📖 วิธีการใช้งาน</a>
+        <a href="about.html" style="color: var(--color-primary); text-decoration: none; margin: 0 10px;">ℹ️ เกี่ยวกับโปรแกรม</a>
       </p>
     </div>
   </div>

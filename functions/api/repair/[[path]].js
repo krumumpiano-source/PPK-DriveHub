@@ -1,14 +1,4 @@
-// PPK DriveHub — Repair API
-// GET    /api/repair
-// POST   /api/repair
-// GET    /api/repair/:id
-// PUT    /api/repair/:id
-// PUT    /api/repair/:id/complete
-// DELETE /api/repair/:id  (admin)
-// GET    /api/repair/scheduled
-// POST   /api/repair/scheduled
-// PUT    /api/repair/scheduled/:id
-
+// Repair logs (ad-hoc + scheduled)
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, requireAdmin, extractParam, writeAuditLog, uploadToR2
@@ -24,7 +14,6 @@ export async function onRequest(context) {
 
   if (!user) return error('Unauthorized', 401);
 
-  // GET /api/repair/scheduled
   if (path === '/api/repair/scheduled' && method === 'GET') {
     const status = url.searchParams.get('status');
     const where = status ? 'WHERE status = ?' : '';
@@ -37,7 +26,6 @@ export async function onRequest(context) {
     return success(rows);
   }
 
-  // POST /api/repair/scheduled
   if (path === '/api/repair/scheduled' && method === 'POST') {
     try { requirePermission(user, 'maintenance', 'create'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const body = await parseBody(request);
@@ -53,7 +41,6 @@ export async function onRequest(context) {
     return success({ id, message: 'บันทึกตารางซ่อมเรียบร้อย' }, 201);
   }
 
-  // PUT /api/repair/scheduled/:id
   if (path.match(/\/api\/repair\/scheduled\/[^/]+/) && method === 'PUT') {
     try { requirePermission(user, 'maintenance', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[4];
@@ -71,7 +58,6 @@ export async function onRequest(context) {
     return success({ message: 'อัปเดตตารางซ่อมเรียบร้อย' });
   }
 
-  // GET /api/repair
   if (path === '/api/repair' && method === 'GET') {
     const status = url.searchParams.get('status');
     const carId = url.searchParams.get('car_id');
@@ -89,7 +75,6 @@ export async function onRequest(context) {
     return success(rows);
   }
 
-  // POST /api/repair
   if (path === '/api/repair' && method === 'POST') {
     try { requirePermission(user, 'repair', 'create'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const body = await parseBody(request);
@@ -114,7 +99,6 @@ export async function onRequest(context) {
     return success({ id, message: 'บันทึกการซ่อมเรียบร้อย' }, 201);
   }
 
-  // GET /api/repair/:id
   if (path.match(/^\/api\/repair\/[^/]+$/) && method === 'GET') {
     const id = extractParam(path, '/api/repair/');
     const row = await dbFirst(env.DB,
@@ -124,7 +108,6 @@ export async function onRequest(context) {
     return row ? success(row) : error('ไม่พบข้อมูลการซ่อม', 404);
   }
 
-  // PUT /api/repair/:id (general update)
   if (path.match(/^\/api\/repair\/[^/]+$/) && method === 'PUT') {
     try { requirePermission(user, 'repair', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = extractParam(path, '/api/repair/');
@@ -146,7 +129,6 @@ export async function onRequest(context) {
     return success({ message: 'อัปเดตข้อมูลการซ่อมเรียบร้อย' });
   }
 
-  // PUT /api/repair/:id/complete
   if (path.match(/\/api\/repair\/[^/]+\/complete/) && method === 'PUT') {
     try { requirePermission(user, 'repair', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[3];

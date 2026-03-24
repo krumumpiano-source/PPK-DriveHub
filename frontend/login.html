@@ -17,8 +17,8 @@
     }
 
     body {
-      font-family: 'Sarabun', 'Kanit', sans-serif;
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      font-family: var(--font-family);
+      background: var(--gradient-primary);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -29,15 +29,15 @@
 
     .login-container {
       background: white;
-      border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      border-radius: var(--radius-2xl);
+      box-shadow: var(--shadow-container);
       max-width: 450px;
       width: 100%;
       overflow: hidden;
     }
 
     .login-header {
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
       padding: 40px 30px;
       text-align: center;
@@ -64,7 +64,7 @@
     .form-group label {
       display: block;
       margin-bottom: 8px;
-      color: #333;
+      color: var(--color-text);
       font-weight: 600;
       font-size: 0.95em;
     }
@@ -73,7 +73,7 @@
       width: 100%;
       padding: 12px 15px;
       border: 2px solid #e0e0e0;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       font-size: 1em;
       transition: all 0.3s;
       font-family: inherit;
@@ -81,17 +81,17 @@
 
     .form-group input:focus {
       outline: none;
-      border-color: #4285f4;
-      box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+      border-color: var(--color-primary);
+      box-shadow: var(--shadow-focus);
     }
 
     .btn {
       width: 100%;
       padding: 14px;
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
       border: none;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       font-size: 1.1em;
       font-weight: 600;
       cursor: pointer;
@@ -101,7 +101,7 @@
 
     .btn:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(66, 133, 244, 0.3);
+      box-shadow: var(--shadow-hover);
     }
 
     .btn:active {
@@ -110,38 +110,38 @@
 
     .btn-secondary {
       background: white;
-      color: #4285f4;
-      border: 2px solid #4285f4;
+      color: var(--color-primary);
+      border: 2px solid var(--color-primary);
       margin-top: 15px;
     }
 
     .btn-secondary:hover {
-      background: #f5f5f5;
+      background: var(--color-bg-lighter);
     }
 
     .alert {
       padding: 12px 15px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       margin-bottom: 20px;
       font-size: 0.9em;
     }
 
     .alert-error {
-      background: #ffebee;
-      color: #c62828;
+      background: var(--color-bg-danger);
+      color: var(--color-danger-dark);
       border-left: 4px solid #c62828;
     }
 
     .alert-success {
-      background: #e8f5e9;
-      color: #2e7d32;
+      background: var(--color-bg-success);
+      color: var(--color-secondary-dark);
       border-left: 4px solid #2e7d32;
     }
 
     .loading {
       text-align: center;
       padding: 20px;
-      color: #666;
+      color: var(--color-text-muted);
     }
 
     .school-logo {
@@ -193,7 +193,7 @@
         </div>
 
         <div style="text-align: right; margin-bottom: 20px;">
-          <a href="forgot-password.html" style="color: #4285f4; text-decoration: none; font-size: 0.9em;">
+          <a href="forgot-password.html" style="color: var(--color-primary); text-decoration: none; font-size: 0.9em;">
             ลืมรหัสผ่าน?
           </a>
         </div>
@@ -251,7 +251,6 @@
           };
           API.setUser(userData);
 
-          // Check if must change password
           if (result.data.must_change_password) {
             alert('กรุณาเปลี่ยนรหัสผ่านก่อนใช้งาน');
             window.location.href = 'change-password.html';

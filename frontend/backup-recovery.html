@@ -19,8 +19,8 @@
     }
 
     body {
-      font-family: 'Sarabun', 'Kanit', sans-serif;
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      font-family: var(--font-family);
+      background: var(--gradient-primary);
       min-height: 100vh;
       padding: 0;
     }
@@ -29,13 +29,13 @@
     max-width: 1000px;
     margin: 0 auto;
     background: white;
-    border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-container);
     overflow: hidden;
     }
 
     .header {
-    background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+    background: var(--gradient-primary);
     color: white;
     padding: 30px;
     text-align: center;
@@ -47,21 +47,21 @@
     }
 
     .nav {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    background: var(--gradient-nav);
     padding: 20px;
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
     justify-content: center;
-    border-bottom: 3px solid #4285f4;
+    border-bottom: 3px solid var(--color-primary);
     }
 
     .nav-btn {
     padding: 12px 20px;
     background: white;
-    border: 2px solid #4285f4;
-    color: #4285f4;
-    border-radius: 10px;
+    border: 2px solid var(--color-primary);
+    color: var(--color-primary);
+    border-radius: var(--radius-lg);
     cursor: pointer;
     font-size: 0.95em;
     font-weight: 600;
@@ -75,12 +75,12 @@
     .nav-btn:hover {
     color: white;
     transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(66, 133, 244, 0.4);
-    background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+    box-shadow: var(--shadow-nav-hover);
+    background: var(--gradient-primary);
     }
 
     .nav-btn.active {
-    background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+    background: var(--gradient-primary);
     color: white;
     }
 
@@ -93,7 +93,7 @@
     }
 
     .section h2 {
-    color: #4285f4;
+    color: var(--color-primary);
     font-size: 1.5em;
     margin-bottom: 20px;
     padding-bottom: 10px;
@@ -101,15 +101,15 @@
     }
 
     .info-box {
-    background: #e3f2fd;
-    border-left: 4px solid #4285f4;
+    background: var(--color-bg-info);
+    border-left: 4px solid var(--color-primary);
     padding: 20px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     margin-bottom: 20px;
     }
 
     .info-box h3 {
-    color: #4285f4;
+    color: var(--color-primary);
     margin-bottom: 10px;
     }
 
@@ -120,7 +120,7 @@
     .form-group label {
     display: block;
     margin-bottom: 8px;
-    color: #333;
+    color: var(--color-text);
     font-weight: 600;
     font-size: 0.95em;
     }
@@ -130,7 +130,7 @@
     width: 100%;
     padding: 12px 15px;
     border: 2px solid #e0e0e0;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     font-size: 1em;
     transition: all 0.3s;
     font-family: inherit;
@@ -139,16 +139,16 @@
     .form-group input:focus,
     .form-group select:focus {
     outline: none;
-    border-color: #4285f4;
-    box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-focus);
     }
 
     .btn {
     padding: 12px 24px;
-    background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+    background: var(--gradient-primary);
     color: white;
     border: none;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     font-size: 1em;
     font-weight: 600;
     cursor: pointer;
@@ -158,7 +158,7 @@
 
     .btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(66, 133, 244, 0.3);
+    box-shadow: var(--shadow-hover);
     }
 
     .btn:disabled {
@@ -168,30 +168,30 @@
     }
 
     .btn-danger {
-    background: linear-gradient(135deg, #ea4335 0%, #c62828 100%);
+    background: var(--gradient-danger);
     }
 
     .alert {
     padding: 12px 15px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     margin-bottom: 20px;
     font-size: 0.9em;
     }
 
     .alert-success {
-    background: #e8f5e9;
-    color: #2e7d32;
+    background: var(--color-bg-success);
+    color: var(--color-secondary-dark);
     border-left: 4px solid #2e7d32;
     }
 
     .alert-error {
-    background: #ffebee;
-    color: #c62828;
+    background: var(--color-bg-danger);
+    color: var(--color-danger-dark);
     border-left: 4px solid #c62828;
     }
 
     .alert-warning {
-    background: #fff3e0;
+    background: var(--color-bg-warning);
     color: #f57c00;
     border-left: 4px solid #f57c00;
     }
@@ -201,14 +201,14 @@
     }
 
     .backup-item {
-    background: #f8f9fa;
+    background: var(--color-bg-light);
     padding: 15px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     margin-bottom: 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-left: 4px solid #4285f4;
+    border-left: 4px solid var(--color-primary);
     }
 
     .backup-item-info {
@@ -217,20 +217,20 @@
 
     .backup-item-date {
     font-weight: 600;
-    color: #333;
+    color: var(--color-text);
     margin-bottom: 5px;
     }
 
     .backup-item-details {
     font-size: 0.9em;
-    color: #666;
+    color: var(--color-text-muted);
     }
 
     .footer {
-    background: #f8f9fa;
+    background: var(--color-bg-light);
     padding: 20px;
     text-align: center;
-    color: #666;
+    color: var(--color-text-muted);
     border-top: 2px solid #e9ecef;
     font-size: 0.9em;
     }
@@ -275,7 +275,7 @@
 
             <form id="recoveryForm" onsubmit="handleFileRestore(event); return false;">
               <div class="form-group">
-                <label for="backupFile">เลือกไฟล์ Backup (JSON) <span style="color: #f44336;">*</span></label>
+                <label for="backupFile">เลือกไฟล์ Backup (JSON) <span style="color: var(--color-danger);">*</span></label>
                 <input type="file" id="backupFile" name="backupFile" accept=".json" required
                   style="width:100%; padding:12px; border:2px solid #e0e0e0; border-radius:8px;">
               </div>
@@ -290,7 +290,7 @@
           <div class="section">
             <h2>3. รายการ Backup ที่มี</h2>
             <div class="backup-list" id="backupList">
-              <div style="text-align: center; padding: 40px; color: #666;">
+              <div style="text-align: center; padding: 40px; color: var(--color-text-muted);">
                 กำลังโหลดข้อมูล...
               </div>
             </div>
@@ -322,11 +322,11 @@
               document.getElementById('backupList').innerHTML = html;
             } else {
               document.getElementById('backupList').innerHTML =
-                '<div style="text-align: center; padding: 40px; color: #666;">ยังไม่มี Backup</div>';
+                '<div style="text-align: center; padding: 40px; color: var(--color-text-muted);">ยังไม่มี Backup</div>';
             }
           } catch(e) {
             document.getElementById('backupList').innerHTML =
-              '<div style="text-align: center; padding: 40px; color: #666;">ไม่สามารถโหลดรายการ Backup ได้</div>';
+              '<div style="text-align: center; padding: 40px; color: var(--color-text-muted);">ไม่สามารถโหลดรายการ Backup ได้</div>';
           }
         }
 

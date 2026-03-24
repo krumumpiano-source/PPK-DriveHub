@@ -1,16 +1,4 @@
-// PPK DriveHub — Queue API
-// GET    /api/queue
-// POST   /api/queue
-// GET    /api/queue/timeline
-// GET    /api/queue/rules
-// PUT    /api/queue/rules
-// GET    /api/queue/:id
-// PUT    /api/queue/:id
-// PUT    /api/queue/:id/cancel
-// PUT    /api/queue/:id/freeze
-// PUT    /api/queue/:id/unfreeze
-// PUT    /api/queue/:id/complete
-
+// Vehicle dispatch queue + scheduling rules
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, requireAdmin, extractParam, writeAuditLog
@@ -26,7 +14,6 @@ export async function onRequest(context) {
 
   if (!user) return error('Unauthorized', 401);
 
-  // GET /api/queue/timeline
   if (path === '/api/queue/timeline' && method === 'GET') {
     const startDate = url.searchParams.get('start') || now().split('T')[0];
     const endDate = url.searchParams.get('end') || new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
@@ -43,13 +30,11 @@ export async function onRequest(context) {
     return success(rows);
   }
 
-  // GET /api/queue/rules
   if (path === '/api/queue/rules' && method === 'GET') {
     const rules = await dbAll(env.DB, 'SELECT * FROM queue_rules ORDER BY priority DESC');
     return success(rules);
   }
 
-  // PUT /api/queue/rules
   if (path === '/api/queue/rules' && method === 'PUT') {
     try { requireAdmin(user); } catch { return error('ไม่มีสิทธิ์', 403); }
     const body = await parseBody(request);
@@ -64,7 +49,6 @@ export async function onRequest(context) {
     return success({ message: 'อัปเดต Queue Rules เรียบร้อย' });
   }
 
-  // GET /api/queue
   if (path === '/api/queue' && method === 'GET') {
     const status = url.searchParams.get('status');
     const dateFrom = url.searchParams.get('date_from');
@@ -84,7 +68,6 @@ export async function onRequest(context) {
     return success(rows);
   }
 
-  // POST /api/queue
   if (path === '/api/queue' && method === 'POST') {
     try { requirePermission(user, 'queue', 'create'); } catch { return error('ไม่มีสิทธิ์สร้างคิว', 403); }
     const body = await parseBody(request);
@@ -119,7 +102,6 @@ export async function onRequest(context) {
     return success({ id, queue_number: qnum, message: 'สร้างคิวเรียบร้อย' }, 201);
   }
 
-  // GET /api/queue/:id
   if (path.match(/^\/api\/queue\/[^/]+$/) && method === 'GET') {
     const id = extractParam(path, '/api/queue/');
     const row = await dbFirst(env.DB,
@@ -132,7 +114,6 @@ export async function onRequest(context) {
     return row ? success(row) : error('ไม่พบคิว', 404);
   }
 
-  // PUT /api/queue/:id
   if (path.match(/^\/api\/queue\/[^/]+$/) && method === 'PUT') {
     try { requirePermission(user, 'queue', 'edit'); } catch { return error('ไม่มีสิทธิ์แก้ไขคิว', 403); }
     const id = extractParam(path, '/api/queue/');
@@ -151,7 +132,6 @@ export async function onRequest(context) {
     return success({ message: 'อัปเดตคิวเรียบร้อย' });
   }
 
-  // PUT /api/queue/:id/cancel
   if (path.match(/\/api\/queue\/[^/]+\/cancel/) && method === 'PUT') {
     const id = path.split('/')[3];
     const body = await parseBody(request);
@@ -163,7 +143,6 @@ export async function onRequest(context) {
     return success({ message: 'ยกเลิกคิวเรียบร้อย' });
   }
 
-  // PUT /api/queue/:id/freeze
   if (path.match(/\/api\/queue\/[^/]+\/freeze/) && method === 'PUT') {
     try { requireAdmin(user); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[3];
@@ -175,7 +154,6 @@ export async function onRequest(context) {
     return success({ message: 'ระงับคิวเรียบร้อย' });
   }
 
-  // PUT /api/queue/:id/unfreeze
   if (path.match(/\/api\/queue\/[^/]+\/unfreeze/) && method === 'PUT') {
     try { requireAdmin(user); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[3];
@@ -186,7 +164,6 @@ export async function onRequest(context) {
     return success({ message: 'คืนสถานะคิวเรียบร้อย' });
   }
 
-  // PUT /api/queue/:id/complete
   if (path.match(/\/api\/queue\/[^/]+\/complete/) && method === 'PUT') {
     try { requirePermission(user, 'queue', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[3];

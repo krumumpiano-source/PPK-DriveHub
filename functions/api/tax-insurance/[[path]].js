@@ -1,12 +1,5 @@
-// PPK DriveHub — Tax & Insurance API
-// GET  /api/tax-insurance/tax
-// POST /api/tax-insurance/tax
-// PUT  /api/tax-insurance/tax/:id
-// GET  /api/tax-insurance/insurance
-// POST /api/tax-insurance/insurance
-// PUT  /api/tax-insurance/insurance/:id
-// GET  /api/tax-insurance/expiring   (vehicles with near-expiry tax/insurance)
-
+// Tax + insurance tracking
+// Tax & insurance record tracking
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, extractParam, writeAuditLog, uploadToR2
@@ -22,7 +15,6 @@ export async function onRequest(context) {
 
   if (!user) return error('Unauthorized', 401);
 
-  // GET /api/tax-insurance/expiring
   if (path === '/api/tax-insurance/expiring' && method === 'GET') {
     const days = parseInt(url.searchParams.get('days') || '30');
     const cutoff = new Date(Date.now() + days * 86400000).toISOString().split('T')[0];
@@ -39,7 +31,6 @@ export async function onRequest(context) {
     return success(rows);
   }
 
-  // ── TAX RECORDS ──
 
   if (path === '/api/tax-insurance/tax' && method === 'GET') {
     const carId = url.searchParams.get('car_id');
@@ -99,7 +90,6 @@ export async function onRequest(context) {
     return success({ message: 'อัปเดตข้อมูลภาษีรถเรียบร้อย' });
   }
 
-  // ── INSURANCE RECORDS ──
 
   if (path === '/api/tax-insurance/insurance' && method === 'GET') {
     const carId = url.searchParams.get('car_id');

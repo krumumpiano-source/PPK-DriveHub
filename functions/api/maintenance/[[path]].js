@@ -1,11 +1,4 @@
-// PPK DriveHub — Maintenance API
-// GET  /api/maintenance/settings
-// PUT  /api/maintenance/settings
-// GET  /api/maintenance/schedule   — vehicles needing service (upcoming + overdue)
-// GET  /api/maintenance/alerts
-// POST /api/maintenance/alerts
-// PUT  /api/maintenance/alerts/:id/resolve
-
+// Maintenance schedules + alerts
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, requireAdmin
@@ -21,13 +14,11 @@ export async function onRequest(context) {
 
   if (!user) return error('Unauthorized', 401);
 
-  // GET /api/maintenance/settings
   if (path === '/api/maintenance/settings' && method === 'GET') {
     const rows = await dbAll(env.DB, 'SELECT * FROM maintenance_settings ORDER BY maintenance_type');
     return success(rows);
   }
 
-  // PUT /api/maintenance/settings
   if (path === '/api/maintenance/settings' && method === 'PUT') {
     try { requireAdmin(user); } catch { return error('ต้องเป็น Admin', 403); }
     const body = await parseBody(request);
@@ -42,7 +33,6 @@ export async function onRequest(context) {
     return success({ message: 'อัปเดตการตั้งค่าบำรุงรักษาเรียบร้อย' });
   }
 
-  // GET /api/maintenance/schedule
   if (path === '/api/maintenance/schedule' && method === 'GET') {
     const settings = await dbAll(env.DB, 'SELECT * FROM maintenance_settings WHERE enabled = 1');
     const vehicles = await dbAll(env.DB, 'SELECT id, car_id, brand, license_plate, mileage, last_check_date FROM cars WHERE active = 1');
@@ -88,7 +78,6 @@ export async function onRequest(context) {
     return success(schedule);
   }
 
-  // GET /api/maintenance/alerts
   if (path === '/api/maintenance/alerts' && method === 'GET') {
     const status = url.searchParams.get('status') || 'open';
     const rows = await dbAll(env.DB,
@@ -100,7 +89,6 @@ export async function onRequest(context) {
     return success(rows);
   }
 
-  // POST /api/maintenance/alerts
   if (path === '/api/maintenance/alerts' && method === 'POST') {
     try { requirePermission(user, 'maintenance', 'create'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const body = await parseBody(request);
@@ -115,7 +103,6 @@ export async function onRequest(context) {
     return success({ id, message: 'สร้างการแจ้งเตือนเรียบร้อย' }, 201);
   }
 
-  // PUT /api/maintenance/alerts/:id/resolve
   if (path.match(/\/api\/maintenance\/alerts\/[^/]+\/resolve/) && method === 'PUT') {
     try { requirePermission(user, 'maintenance', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[4];

@@ -1,10 +1,4 @@
-// PPK DriveHub — Backup API
-// GET  /api/backup         — list backups
-// POST /api/backup         — create backup (snapshot all tables → R2 or direct download)
-// GET  /api/backup/:id     — get backup detail
-// POST /api/backup/:id/restore — restore from R2 backup (admin only)
-// POST /api/backup/restore-upload — restore from uploaded JSON (admin only, no R2 needed)
-
+// Backup: snapshot, restore, download
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requireAdmin, writeAuditLog
@@ -57,13 +51,11 @@ export async function onRequest(context) {
   if (!user) return error('Unauthorized', 401);
   try { requireAdmin(user); } catch { return error('ต้องเป็น Admin', 403); }
 
-  // GET /api/backup — list backups
   if (path === '/api/backup' && method === 'GET') {
     const backups = await dbAll(env.DB, 'SELECT * FROM backups ORDER BY created_at DESC LIMIT 50');
     return success(backups);
   }
 
-  // POST /api/backup — create backup
   if (path === '/api/backup' && method === 'POST') {
     const body = await parseBody(request);
     const snapshot = await createSnapshot(env.DB);
@@ -110,7 +102,6 @@ export async function onRequest(context) {
     return success({ id, filename, record_count: recordCount, message: 'สร้าง Backup เรียบร้อย' }, 201);
   }
 
-  // POST /api/backup/restore-upload — restore from uploaded JSON (no R2 needed)
   if (path === '/api/backup/restore-upload' && method === 'POST') {
     const body = await parseBody(request);
     if (!body || typeof body !== 'object') return error('กรุณาอัปโหลดไฟล์ backup JSON');
@@ -125,14 +116,12 @@ export async function onRequest(context) {
     return success({ message: 'กู้คืนข้อมูลจากไฟล์เรียบร้อย' });
   }
 
-  // GET /api/backup/:id — get backup detail
   if (path.match(/^\/api\/backup\/[^/]+$/) && method === 'GET') {
     const id = path.split('/')[3];
     const backup = await dbFirst(env.DB, 'SELECT * FROM backups WHERE id = ?', [id]);
     return backup ? success(backup) : error('ไม่พบ Backup', 404);
   }
 
-  // POST /api/backup/:id/restore — restores data from R2 backup (destructive!)
   if (path.match(/\/api\/backup\/[^/]+\/restore/) && method === 'POST') {
     if (!env.STORAGE) return error('R2 Storage ไม่พร้อมใช้งาน กรุณาใช้ "กู้คืนจากไฟล์" แทน');
 

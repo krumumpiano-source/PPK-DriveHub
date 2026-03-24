@@ -1,14 +1,4 @@
-// PPK DriveHub — Drivers API
-// GET    /api/drivers
-// POST   /api/drivers
-// GET    /api/drivers/:id
-// PUT    /api/drivers/:id
-// PUT    /api/drivers/:id/deactivate
-// GET    /api/drivers/:id/fatigue
-// POST   /api/drivers/fatigue  (for logged-in user self-report)
-// GET    /api/drivers/:id/leaves
-// POST   /api/drivers/:id/leaves
-
+// Driver management + fatigue tracking
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, extractParam, writeAuditLog, uploadToR2
@@ -24,7 +14,6 @@ export async function onRequest(context) {
 
   if (!user) return error('Unauthorized', 401);
 
-  // GET /api/drivers
   if (path === '/api/drivers' && method === 'GET') {
     const status = url.searchParams.get('status');
     const where = ['active = 1'];
@@ -36,7 +25,6 @@ export async function onRequest(context) {
     return success(drivers);
   }
 
-  // POST /api/drivers
   if (path === '/api/drivers' && method === 'POST') {
     try { requirePermission(user, 'drivers', 'create'); } catch { return error('ไม่มีสิทธิ์เพิ่มคนขับ', 403); }
     const body = await parseBody(request);
@@ -61,7 +49,6 @@ export async function onRequest(context) {
     return success({ id, message: 'เพิ่มคนขับเรียบร้อย' }, 201);
   }
 
-  // POST /api/drivers/fatigue — self-report for logged-in user
   if (path === '/api/drivers/fatigue' && method === 'POST') {
     const body = await parseBody(request);
     // find driver linked to current user
@@ -78,14 +65,12 @@ export async function onRequest(context) {
     return success({ id, message: 'บันทึกรายงานความเหนื่อยล้าเรียบร้อย' }, 201);
   }
 
-  // GET /api/drivers/:id
   if (path.match(/^\/api\/drivers\/[^/]+$/) && method === 'GET') {
     const id = extractParam(path, '/api/drivers/');
     const driver = await dbFirst(env.DB, 'SELECT * FROM drivers WHERE id = ? AND active = 1', [id]);
     return driver ? success(driver) : error('ไม่พบคนขับ', 404);
   }
 
-  // PUT /api/drivers/:id
   if (path.match(/^\/api\/drivers\/[^/]+$/) && method === 'PUT') {
     try { requirePermission(user, 'drivers', 'edit'); } catch { return error('ไม่มีสิทธิ์แก้ไข', 403); }
     const id = extractParam(path, '/api/drivers/');
@@ -108,7 +93,6 @@ export async function onRequest(context) {
     return success({ message: 'อัปเดตข้อมูลคนขับเรียบร้อย' });
   }
 
-  // PUT /api/drivers/:id/deactivate
   if (path.match(/\/api\/drivers\/[^/]+\/deactivate/) && method === 'PUT') {
     try { requirePermission(user, 'drivers', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[3];
@@ -117,7 +101,6 @@ export async function onRequest(context) {
     return success({ message: 'ปิดการใช้งานคนขับเรียบร้อย' });
   }
 
-  // GET /api/drivers/:id/fatigue
   if (path.match(/\/api\/drivers\/[^/]+\/fatigue/) && method === 'GET') {
     const id = path.split('/')[3];
     const logs = await dbAll(env.DB,
@@ -126,7 +109,6 @@ export async function onRequest(context) {
     return success(logs);
   }
 
-  // GET /api/drivers/:id/leaves
   if (path.match(/\/api\/drivers\/[^/]+\/leaves/) && method === 'GET') {
     const id = path.split('/')[3];
     const leaves = await dbAll(env.DB,
@@ -135,7 +117,6 @@ export async function onRequest(context) {
     return success(leaves);
   }
 
-  // POST /api/drivers/:id/leaves
   if (path.match(/\/api\/drivers\/[^/]+\/leaves/) && method === 'POST') {
     const id = path.split('/')[3];
     const body = await parseBody(request);

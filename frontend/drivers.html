@@ -20,8 +20,8 @@
     }
 
     body {
-      font-family: 'Sarabun', 'Kanit', sans-serif;
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      font-family: var(--font-family);
+      background: var(--gradient-primary);
       min-height: 100vh;
       padding: 20px;
     }
@@ -30,13 +30,13 @@
       max-width: 1400px;
       margin: 0 auto;
       background: white;
-      border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      border-radius: var(--radius-2xl);
+      box-shadow: var(--shadow-container);
       overflow: hidden;
     }
 
     .header {
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
       padding: 25px;
       text-align: center;
@@ -65,19 +65,19 @@
       border-bottom: 3px solid transparent;
       font-size: 1em;
       font-weight: 600;
-      color: #666;
+      color: var(--color-text-muted);
       cursor: pointer;
       transition: all 0.3s;
       font-family: inherit;
     }
 
     .tab.active {
-      color: #4285f4;
-      border-bottom-color: #4285f4;
+      color: var(--color-primary);
+      border-bottom-color: var(--color-primary);
     }
 
     .tab:hover {
-      color: #4285f4;
+      color: var(--color-primary);
     }
 
     .actions-bar {
@@ -90,7 +90,7 @@
     .btn {
       padding: 10px 20px;
       border: none;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       font-size: 1em;
       font-weight: 600;
       cursor: pointer;
@@ -99,7 +99,7 @@
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
       cursor: pointer;
       pointer-events: auto;
@@ -116,7 +116,7 @@
     }
 
     .btn-danger {
-      background: #dc3545;
+      background: var(--color-danger);
       color: white;
     }
 
@@ -141,15 +141,15 @@
     }
 
     .driver-card {
-      background: #f8f9fa;
-      border-radius: 12px;
+      background: var(--color-bg-light);
+      border-radius: var(--radius-xl);
       padding: 20px;
       border: 2px solid #e9ecef;
       transition: all 0.3s;
     }
 
     .driver-card:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      box-shadow: var(--shadow-card);
       transform: translateY(-2px);
     }
 
@@ -163,12 +163,12 @@
     .driver-name {
       font-size: 1.2em;
       font-weight: 700;
-      color: #4285f4;
+      color: var(--color-primary);
     }
 
     .driver-status {
       padding: 4px 12px;
-      border-radius: 20px;
+      border-radius: var(--radius-2xl);
       font-size: 0.85em;
       font-weight: 600;
     }
@@ -195,12 +195,12 @@
 
     .driver-info-label {
       font-weight: 600;
-      color: #666;
+      color: var(--color-text-muted);
       min-width: 100px;
     }
 
     .driver-info-value {
-      color: #333;
+      color: var(--color-text);
     }
 
     .driver-actions {
@@ -238,19 +238,19 @@
 
     .modal {
       background: white;
-      border-radius: 20px;
+      border-radius: var(--radius-2xl);
       max-width: 900px;
       width: 100%;
       max-height: 90vh;
       overflow-y: auto;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      box-shadow: var(--shadow-container);
     }
 
     .modal-header {
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
       padding: 20px;
-      border-radius: 20px 20px 0 0;
+      border-radius: var(--radius-2xl) 20px 0 0;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -279,8 +279,8 @@
     }
 
     .form-section {
-      background: #f8f9fa;
-      border-radius: 12px;
+      background: var(--color-bg-light);
+      border-radius: var(--radius-xl);
       padding: 20px;
       margin-bottom: 20px;
     }
@@ -288,7 +288,7 @@
     .form-section-title {
       font-size: 1.2em;
       font-weight: 700;
-      color: #4285f4;
+      color: var(--color-primary);
       margin-bottom: 18px;
     }
 
@@ -306,12 +306,12 @@
       display: block;
       margin-bottom: 8px;
       font-weight: 600;
-      color: #333;
+      color: var(--color-text);
       font-size: 1em;
     }
 
     .form-group label .required {
-      color: #dc3545;
+      color: var(--color-danger);
     }
 
     .title-options {
@@ -326,9 +326,9 @@
       min-width: 80px;
       padding: 10px 16px;
       border: 2px solid #ddd;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       background: white;
-      color: #333;
+      color: var(--color-text);
       font-size: 1em;
       font-weight: 600;
       cursor: pointer;
@@ -337,14 +337,14 @@
     }
 
     .title-option-btn:hover {
-      border-color: #4285f4;
+      border-color: var(--color-primary);
       background: #f0f7ff;
     }
 
     .title-option-btn.active {
-      background: #4285f4;
+      background: var(--color-primary);
       color: white;
-      border-color: #4285f4;
+      border-color: var(--color-primary);
     }
 
     .form-group input,
@@ -353,7 +353,7 @@
       width: 100%;
       padding: 12px;
       border: 2px solid #ddd;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       font-size: 1em;
       font-family: inherit;
     }
@@ -362,8 +362,8 @@
     .form-group select:focus,
     .form-group textarea:focus {
       outline: none;
-      border-color: #4285f4;
-      box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+      border-color: var(--color-primary);
+      box-shadow: var(--shadow-focus);
     }
 
     .form-group textarea {
@@ -373,7 +373,7 @@
 
     .file-upload {
       border: 2px dashed #ddd;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       padding: 20px;
       text-align: center;
       cursor: pointer;
@@ -381,7 +381,7 @@
     }
 
     .file-upload:hover {
-      border-color: #4285f4;
+      border-color: var(--color-primary);
       background: #f0f7ff;
     }
 
@@ -397,7 +397,7 @@
     .file-preview img {
       max-width: 200px;
       max-height: 200px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       border: 2px solid #ddd;
     }
 
@@ -412,9 +412,9 @@
     .leave-item {
       background: white;
       padding: 15px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       margin-bottom: 10px;
-      border-left: 4px solid #4285f4;
+      border-left: 4px solid var(--color-primary);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -426,12 +426,12 @@
 
     .leave-dates {
       font-weight: 600;
-      color: #4285f4;
+      color: var(--color-primary);
       margin-bottom: 5px;
     }
 
     .leave-type {
-      color: #666;
+      color: var(--color-text-muted);
       font-size: 0.9em;
     }
 
@@ -442,7 +442,7 @@
 
     .alert {
       padding: 15px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       margin-bottom: 20px;
     }
 
@@ -453,15 +453,15 @@
     }
 
     .alert-error {
-      background: #ffebee;
-      color: #c62828;
+      background: var(--color-bg-danger);
+      color: var(--color-danger-dark);
       border-left: 4px solid #c62828;
     }
 
     .loading {
       text-align: center;
       padding: 60px 20px;
-      color: #666;
+      color: var(--color-text-muted);
       position: relative;
       z-index: 1;
       pointer-events: none;
@@ -484,7 +484,7 @@
     .empty-state {
       text-align: center;
       padding: 60px 20px;
-      color: #999;
+      color: var(--color-text-light);
     }
 
     .empty-state-icon {
@@ -572,7 +572,7 @@
                 </div>
                 <input type="hidden" id="title" value="">
                 <input type="text" id="title_custom" placeholder="พิมพ์คำนำหน้าของคุณ"
-                  style="display: none; margin-top: 8px; width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; font-family: inherit;">
+                  style="display: none; margin-top: 8px; width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: var(--radius-md); font-size: 1em; font-family: inherit;">
               </div>
 
               <div class="form-group">
@@ -780,7 +780,6 @@
           console.warn('No current user, but showing page anyway');
         }
 
-        // Check permission (more lenient - allow if admin or has view permission)
         var hasViewPermission = false;
         if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'super_admin')) {
           hasViewPermission = true;
@@ -798,7 +797,6 @@
           return;
         }
 
-        // Initialize date pickers - wait a bit for DOM to be ready
         setTimeout(function () {
           try {
             var datePickerElements = document.querySelectorAll('.date-picker');
@@ -821,7 +819,6 @@
 
         loadDrivers();
 
-        // Setup button event listeners
         setupButtonListeners();
       } catch (error) {
         console.error('Error initializing page:', error);
@@ -833,7 +830,6 @@
     });
 
     function setupButtonListeners() {
-      // Add Driver Button
       var addBtn = document.getElementById('addDriverBtn');
       if (addBtn) {
         addBtn.addEventListener('click', function (e) {
@@ -873,7 +869,6 @@
 
     async function loadDrivers() {
       try {
-        // Show loading but don't block buttons
         var loadingEl = document.getElementById('loading');
         if (loadingEl) {
           loadingEl.style.display = 'block';
@@ -894,7 +889,6 @@
         if (result.success && result.data && result.data.drivers) {
           drivers = result.data.drivers || [];
 
-          // Load queue rules to determine driver assignment types (optional - don't fail if this fails)
           var rules = [];
           try {
             var rulesResult = await apiCall('getQueueRules', {});
@@ -906,7 +900,6 @@
             // Continue without rules - drivers will default to 'reserve'
           }
 
-          // Add assignment_type to each driver based on rules
           drivers.forEach(function (driver) {
             driver.assignment_type = getDriverAssignmentType(driver.driver_id, rules);
           });
@@ -922,7 +915,7 @@
         console.error('Error loading drivers:', error);
         showAlert(handleError(error), 'error');
         // Still show empty state so user can try to add driver
-        document.getElementById('driversGrid').innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>เกิดข้อผิดพลาดในการโหลดข้อมูล</p><p style="font-size: 0.9em; color: #999;">คุณยังสามารถเพิ่มพนักงานขับรถใหม่ได้</p></div>';
+        document.getElementById('driversGrid').innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>เกิดข้อผิดพลาดในการโหลดข้อมูล</p><p style="font-size: 0.9em; color: var(--color-text-light);">คุณยังสามารถเพิ่มพนักงานขับรถใหม่ได้</p></div>';
         document.getElementById('driversContainer').style.display = 'block';
       } finally {
         var loadingEl = document.getElementById('loading');
@@ -980,7 +973,6 @@
           if (driver.line_id) html += '<div class="driver-info-item"><span class="driver-info-label">LINE:</span><span class="driver-info-value">' + driver.line_id + '</span></div>';
           if (driver.position) html += '<div class="driver-info-item"><span class="driver-info-label">ตำแหน่ง:</span><span class="driver-info-value">' + driver.position + '</span></div>';
           if (driver.license_number) html += '<div class="driver-info-item"><span class="driver-info-label">ใบขับขี่:</span><span class="driver-info-value">' + driver.license_number + '</span></div>';
-          // Show assignment type badge
           var assignmentType = driver.assignment_type || 'reserve';
           var assignmentText = {
             'out_of_school': 'งานนอกสถานที่',
@@ -989,7 +981,7 @@
             'standby_school': 'สแตนด์บาย',
             'reserve': 'สำรอง'
           };
-          html += '<div class="driver-info-item"><span class="driver-info-label">บทบาท:</span><span class="driver-info-value" style="color: #4285f4; font-weight: 600;">' + (assignmentText[assignmentType] || assignmentType) + '</span></div>';
+          html += '<div class="driver-info-item"><span class="driver-info-label">บทบาท:</span><span class="driver-info-value" style="color: var(--color-primary); font-weight: 600;">' + (assignmentText[assignmentType] || assignmentType) + '</span></div>';
           html += '</div>';
 
           html += '<div class="driver-actions">';
@@ -1024,12 +1016,10 @@
       var titleCustom = document.getElementById('title_custom');
       var buttons = document.querySelectorAll('.title-option-btn');
 
-      // Remove active class from all buttons
       buttons.forEach(function (btn) {
         btn.classList.remove('active');
       });
 
-      // Add active class to selected button
       var selectedBtn = document.querySelector('.title-option-btn[data-title="' + value + '"]');
       if (selectedBtn) {
         selectedBtn.classList.add('active');
@@ -1070,7 +1060,6 @@
 
     function openAddModal() {
 
-      // Get modal first - don't depend on auth
       var modal = document.getElementById('driverModal');
       if (!modal) {
         alert('เปิดฟอร์มเพิ่มคนขับไม่ได้ กรุณารีเฟรชหน้าแล้วลองอีกครั้ง');
@@ -1079,7 +1068,6 @@
       }
 
       try {
-        // Check if common.js is loaded (optional check)
         var currentUser = null;
         var hasPermission = true; // Default to true, check later
 
@@ -1091,7 +1079,6 @@
             console.warn('No current user found');
             // Don't block - allow modal to open
           } else {
-            // Check permission - more lenient check
             try {
               if (currentUser.role === 'admin' || currentUser.role === 'super_admin') {
                 hasPermission = true;
@@ -1118,7 +1105,6 @@
           // If common.js not loaded, still allow modal to open
         }
 
-        // Reset form
         editingDriverId = null;
         var modalTitle = document.getElementById('modalTitle');
         if (modalTitle) {
@@ -1130,7 +1116,6 @@
           driverForm.reset();
         }
 
-        // Reset title field
         resetTitleField();
 
         profileImageFile = null;
@@ -1139,7 +1124,6 @@
           profilePreview.innerHTML = '';
         }
 
-        // Initialize date pickers if not already initialized
         try {
           var datePickers = document.querySelectorAll('.date-picker');
           datePickers.forEach(function (picker) {
@@ -1159,7 +1143,6 @@
           console.warn('Date picker initialization/reset error:', fpError);
         }
 
-        // Show modal
         modal.classList.add('show');
         modal.style.display = 'flex';
         modal.style.opacity = '1';
@@ -1210,7 +1193,6 @@
         var titleHidden = document.getElementById('title');
         var titleCustom = document.getElementById('title_custom');
 
-        // Check if title is one of the standard options
         if (titleValue === 'นาย' || titleValue === 'นาง' || titleValue === 'นางสาว' || !titleValue) {
           if (titleHidden) titleHidden.value = titleValue || '';
           selectTitle(titleValue || '');
@@ -1232,14 +1214,12 @@
         document.getElementById('phone').value = driver.phone || '';
         document.getElementById('line_id').value = driver.line_id || '';
         document.getElementById('position').value = driver.position || '';
-        // Set date values - need to set both flatpickr and input
         function setDateValue(inputId, dateValue) {
           var input = document.getElementById(inputId);
           if (!input) return;
 
           if (dateValue) {
             input.value = dateValue;
-            // Update flatpickr if initialized
             if (input._flatpickr) {
               input._flatpickr.setDate(dateValue, false);
             }
@@ -1291,7 +1271,6 @@
     // Make function globally available
     window.closeModal = closeModal;
 
-    // Close modal when clicking outside
     document.addEventListener('DOMContentLoaded', function () {
       var modal = document.getElementById('driverModal');
       if (modal) {
@@ -1341,11 +1320,9 @@
           return;
         }
 
-        // Get date values from flatpickr altInput or direct input
         function getDateValue(inputId) {
           var input = document.getElementById(inputId);
           if (!input) return '';
-          // Check if flatpickr is initialized
           if (input._flatpickr) {
             var selectedDates = input._flatpickr.selectedDates;
             if (selectedDates && selectedDates.length > 0) {
@@ -1361,7 +1338,6 @@
           return input.value || '';
         }
 
-        // Get title value (from hidden input or custom input)
         var titleHidden = document.getElementById('title');
         var titleCustom = document.getElementById('title_custom');
         var titleValue = '';
@@ -1391,7 +1367,6 @@
           notes: document.getElementById('notes').value.trim() || ''
         };
 
-        // Add additional notes if provided
         var additionalNotes = document.getElementById('additional_notes');
         if (additionalNotes && additionalNotes.value.trim()) {
           driverData.notes = (driverData.notes ? driverData.notes + '\n' : '') + additionalNotes.value.trim();
@@ -1490,13 +1465,11 @@
           nameEl.textContent = driverName;
         }
 
-        // Reset leave form
         var leaveForm = document.getElementById('leaveForm');
         if (leaveForm) {
           leaveForm.reset();
         }
 
-        // Initialize date pickers for leave form
         setTimeout(function () {
           try {
             var startDateInput = document.getElementById('leave_start_date');
@@ -1565,7 +1538,7 @@
             html += '<div class="leave-info">';
             html += '<div class="leave-dates">' + formatDateThai(leave.start_date) + ' - ' + formatDateThai(leave.end_date) + '</div>';
             html += '<div class="leave-type">' + getLeaveTypeText(leave.leave_type) + '</div>';
-            if (leave.reason) html += '<div style="color: #666; font-size: 0.85em; margin-top: 5px;">' + leave.reason + '</div>';
+            if (leave.reason) html += '<div style="color: var(--color-text-muted); font-size: 0.85em; margin-top: 5px;">' + leave.reason + '</div>';
             html += '</div>';
             html += '<div class="leave-actions">';
             html += '<button class="btn btn-danger" onclick="deleteLeave(\'' + leave.leave_id + '\')">🗑️</button>';
@@ -1586,7 +1559,6 @@
       event.preventDefault();
 
       try {
-        // Get date values from flatpickr or direct input
         function getLeaveDateValue(inputId) {
           var input = document.getElementById(inputId);
           if (!input) return '';
@@ -1627,7 +1599,6 @@
         if (result.success) {
           showAlert('เพิ่มการลาสำเร็จ', 'success');
           document.getElementById('leaveForm').reset();
-          // Clear date pickers
           var startInput = document.getElementById('leave_start_date');
           var endInput = document.getElementById('leave_end_date');
           if (startInput && startInput._flatpickr) startInput._flatpickr.clear();
@@ -1705,7 +1676,7 @@
     }
   </script>
 
-  <div style="background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 0.9em; margin-top: 20px;">
+  <div style="background: var(--color-bg-light); padding: 20px; text-align: center; color: var(--color-text-muted); font-size: 0.9em; margin-top: 20px;">
     <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
   </div>
 </body>

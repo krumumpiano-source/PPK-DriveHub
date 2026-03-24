@@ -21,8 +21,8 @@
     }
 
     body {
-      font-family: 'Sarabun', 'Kanit', sans-serif;
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      font-family: var(--font-family);
+      background: var(--gradient-primary);
       min-height: 100vh;
       padding: 20px;
     }
@@ -31,13 +31,13 @@
       max-width: 1400px;
       margin: 0 auto;
       background: white;
-      border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      border-radius: var(--radius-2xl);
+      box-shadow: var(--shadow-container);
       overflow: hidden;
     }
 
     .header {
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
       padding: 25px;
       text-align: center;
@@ -53,9 +53,9 @@
     }
 
     .filters {
-      background: #f8f9fa;
+      background: var(--color-bg-light);
       padding: 20px;
-      border-radius: 12px;
+      border-radius: var(--radius-xl);
       margin-bottom: 25px;
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -70,7 +70,7 @@
 
     .filter-group label {
       font-weight: 600;
-      color: #333;
+      color: var(--color-text);
       font-size: 0.9em;
     }
 
@@ -78,7 +78,7 @@
     .filter-group select {
       padding: 10px;
       border: 2px solid #ddd;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       font-size: 1em;
       font-family: inherit;
     }
@@ -86,7 +86,7 @@
     .filter-group input:focus,
     .filter-group select:focus {
       outline: none;
-      border-color: #4285f4;
+      border-color: var(--color-primary);
     }
 
     .actions-bar {
@@ -99,7 +99,7 @@
     .btn {
       padding: 10px 20px;
       border: none;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       font-size: 1em;
       font-weight: 600;
       cursor: pointer;
@@ -108,7 +108,7 @@
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
     }
 
@@ -133,10 +133,10 @@
     }
 
     .stat-card {
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
       padding: 20px;
-      border-radius: 12px;
+      border-radius: var(--radius-xl);
       text-align: center;
     }
 
@@ -158,7 +158,7 @@
 
     .table-container {
       overflow-x: auto;
-      border-radius: 12px;
+      border-radius: var(--radius-xl);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
@@ -169,7 +169,7 @@
     }
 
     .usage-table thead {
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
     }
 
@@ -186,46 +186,46 @@
     }
 
     .usage-table tbody tr:hover {
-      background: #f8f9fa;
+      background: var(--color-bg-light);
     }
 
     .badge {
       padding: 4px 10px;
-      border-radius: 12px;
+      border-radius: var(--radius-xl);
       font-size: 0.85em;
       font-weight: 600;
     }
 
     .badge-auto {
-      background: #e3f2fd;
+      background: var(--color-bg-info);
       color: #1976d2;
     }
 
     .badge-normal {
-      background: #e8f5e9;
-      color: #2e7d32;
+      background: var(--color-bg-success);
+      color: var(--color-secondary-dark);
     }
 
     .badge-warning {
-      background: #fff3e0;
+      background: var(--color-bg-warning);
       color: #f57c00;
     }
 
     .badge-error {
-      background: #ffebee;
-      color: #c62828;
+      background: var(--color-bg-danger);
+      color: var(--color-danger-dark);
     }
 
     .loading {
       text-align: center;
       padding: 60px 20px;
-      color: #666;
+      color: var(--color-text-muted);
     }
 
     .empty-state {
       text-align: center;
       padding: 60px 20px;
-      color: #999;
+      color: var(--color-text-light);
     }
 
     .empty-state-icon {
@@ -235,7 +235,7 @@
 
     .alert {
       padding: 15px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       margin-bottom: 20px;
     }
 
@@ -246,8 +246,8 @@
     }
 
     .alert-error {
-      background: #ffebee;
-      color: #c62828;
+      background: var(--color-bg-danger);
+      color: var(--color-danger-dark);
       border-left: 4px solid #c62828;
     }
 
@@ -352,7 +352,7 @@
     </div>
 
     <div
-      style="background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 0.9em; margin-top: 20px;">
+      style="background: var(--color-bg-light); padding: 20px; text-align: center; color: var(--color-text-muted); font-size: 0.9em; margin-top: 20px;">
       <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
     </div>
   </div>
@@ -376,7 +376,6 @@
         // ไม่ redirect — ให้แสดงหน้าได้
       }
 
-      // Set default date range (last 30 days)
       var today = new Date();
       var lastMonth = new Date();
       lastMonth.setDate(lastMonth.getDate() - 30);
@@ -589,7 +588,6 @@
           var driver = driversMap[record.driver_id];
           var driverName = driver ? (driver.full_name || driver.first_name + ' ' + driver.last_name) : record.driver_id;
 
-          // Get date - support both datetime and date fields
           var recordDate = record.date;
           if (!recordDate && record.datetime) {
             recordDate = record.datetime.split(' ')[0];

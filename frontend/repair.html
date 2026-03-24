@@ -24,8 +24,8 @@
     }
 
     body {
-      font-family: 'Sarabun', 'Kanit', sans-serif;
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      font-family: var(--font-family);
+      background: var(--gradient-primary);
       min-height: 100vh;
       padding: 20px;
     }
@@ -34,13 +34,13 @@
       max-width: 1400px;
       margin: 0 auto;
       background: white;
-      border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      border-radius: var(--radius-2xl);
+      box-shadow: var(--shadow-container);
       overflow: hidden;
     }
 
     .header {
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
       padding: 25px;
       text-align: center;
@@ -56,9 +56,9 @@
     }
 
     .filters {
-      background: #f8f9fa;
+      background: var(--color-bg-light);
       padding: 20px;
-      border-radius: 12px;
+      border-radius: var(--radius-xl);
       margin-bottom: 25px;
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -73,7 +73,7 @@
 
     .filter-group label {
       font-weight: 600;
-      color: #333;
+      color: var(--color-text);
       font-size: 0.9em;
     }
 
@@ -81,7 +81,7 @@
     .filter-group select {
       padding: 10px;
       border: 2px solid #ddd;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       font-size: 1em;
       font-family: inherit;
     }
@@ -96,7 +96,7 @@
     .btn {
       padding: 10px 20px;
       border: none;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       font-size: 1em;
       font-weight: 600;
       cursor: pointer;
@@ -105,7 +105,7 @@
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
     }
 
@@ -114,7 +114,7 @@
     }
 
     .btn-danger {
-      background: #dc3545;
+      background: var(--color-danger);
       color: white;
     }
 
@@ -135,13 +135,13 @@
       width: 100%;
       border-collapse: collapse;
       background: white;
-      border-radius: 12px;
+      border-radius: var(--radius-xl);
       overflow: hidden;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     .repairs-table thead {
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
     }
 
@@ -157,12 +157,12 @@
     }
 
     .repairs-table tbody tr:hover {
-      background: #f8f9fa;
+      background: var(--color-bg-light);
     }
 
     .status-badge {
       padding: 6px 12px;
-      border-radius: 20px;
+      border-radius: var(--radius-2xl);
       font-size: 0.85em;
       font-weight: 600;
       white-space: nowrap;
@@ -213,7 +213,7 @@
     }
 
     .btn-danger {
-      background: #dc3545;
+      background: var(--color-danger);
       color: white;
     }
 
@@ -241,19 +241,19 @@
 
     .modal {
       background: white;
-      border-radius: 20px;
+      border-radius: var(--radius-2xl);
       max-width: 900px;
       width: 100%;
       max-height: 90vh;
       overflow-y: auto;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      box-shadow: var(--shadow-container);
     }
 
     .modal-header {
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
       padding: 20px;
-      border-radius: 20px 20px 0 0;
+      border-radius: var(--radius-2xl) 20px 0 0;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -282,8 +282,8 @@
     }
 
     .form-section {
-      background: #f8f9fa;
-      border-radius: 12px;
+      background: var(--color-bg-light);
+      border-radius: var(--radius-xl);
       padding: 20px;
       margin-bottom: 20px;
     }
@@ -291,7 +291,7 @@
     .form-section-title {
       font-size: 1.2em;
       font-weight: 700;
-      color: #4285f4;
+      color: var(--color-primary);
       margin-bottom: 18px;
     }
 
@@ -309,12 +309,12 @@
       display: block;
       margin-bottom: 8px;
       font-weight: 600;
-      color: #333;
+      color: var(--color-text);
       font-size: 1em;
     }
 
     .form-group label .required {
-      color: #dc3545;
+      color: var(--color-danger);
     }
 
     .form-group input,
@@ -323,7 +323,7 @@
       width: 100%;
       padding: 12px;
       border: 2px solid #ddd;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       font-size: 1em;
       font-family: inherit;
     }
@@ -332,8 +332,8 @@
     .form-group select:focus,
     .form-group textarea:focus {
       outline: none;
-      border-color: #4285f4;
-      box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+      border-color: var(--color-primary);
+      box-shadow: var(--shadow-focus);
     }
 
     .form-group textarea {
@@ -354,16 +354,16 @@
 
     .help-text {
       font-size: 0.85em;
-      color: #666;
+      color: var(--color-text-muted);
       margin-top: 4px;
     }
 
     .btn-use-current-time {
       padding: 12px 16px;
-      background: #4caf50;
+      background: var(--color-success);
       color: white;
       border: none;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       font-size: 0.9em;
       font-weight: 600;
       cursor: pointer;
@@ -385,7 +385,7 @@
 
     .file-upload {
       border: 2px dashed #ddd;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       padding: 20px;
       text-align: center;
       cursor: pointer;
@@ -393,7 +393,7 @@
     }
 
     .file-upload:hover {
-      border-color: #4285f4;
+      border-color: var(--color-primary);
       background: #f0f7ff;
     }
 
@@ -410,7 +410,7 @@
 
     .file-preview-item {
       position: relative;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       overflow: hidden;
     }
 
@@ -424,7 +424,7 @@
       position: absolute;
       top: 5px;
       right: 5px;
-      background: #dc3545;
+      background: var(--color-danger);
       color: white;
       border: none;
       border-radius: 50%;
@@ -436,7 +436,7 @@
 
     .alert {
       padding: 15px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       margin-bottom: 20px;
     }
 
@@ -447,21 +447,21 @@
     }
 
     .alert-error {
-      background: #ffebee;
-      color: #c62828;
+      background: var(--color-bg-danger);
+      color: var(--color-danger-dark);
       border-left: 4px solid #c62828;
     }
 
     .loading {
       text-align: center;
       padding: 60px 20px;
-      color: #666;
+      color: var(--color-text-muted);
     }
 
     .empty-state {
       text-align: center;
       padding: 60px 20px;
-      color: #999;
+      color: var(--color-text-light);
     }
 
     .empty-state-icon {
@@ -531,7 +531,7 @@
           ➕ บันทึกการซ่อมบำรุง (ซ่อมเสร็จแล้ว)
         </button>
         <button class="btn btn-warning" id="scheduleRepairBtn" onclick="openScheduleRepairModal()"
-          style="background: #ff9800; color: white; border: none;">
+          style="background: var(--color-warning); color: white; border: none;">
           📅 ลงคิวซ่อม
         </button>
         <button class="btn btn-secondary" onclick="loadRepairs()">
@@ -606,12 +606,12 @@
                 <div style="display: flex; gap: 10px; align-items: flex-start;">
                   <div style="flex: 1;">
                     <input type="time" id="time_completed" required>
-                    <div class="help-text time-ampm-help" style="font-size: 0.85em; color: #666; margin-top: 4px;">
+                    <div class="help-text time-ampm-help" style="font-size: 0.85em; color: var(--color-text-muted); margin-top: 4px;">
                       <strong>AM เช้า</strong> · <strong>PM บ่าย</strong>
                     </div>
                   </div>
                   <button type="button" onclick="useCurrentTime('time_completed')" class="btn-use-current-time"
-                    style="padding: 12px 16px; background: #4caf50; color: white; border: none; border-radius: 8px; font-size: 0.9em; font-weight: 600; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; touch-action: manipulation; align-self: flex-end;">
+                    style="padding: 12px 16px; background: var(--color-success); color: white; border: none; border-radius: var(--radius-md); font-size: 0.9em; font-weight: 600; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; touch-action: manipulation; align-self: flex-end;">
                     ⏰ ใช้เวลาปัจจุบัน
                   </button>
                 </div>
@@ -635,7 +635,7 @@
               </div>
               <textarea id="repair_items" required
                 placeholder="เช่น เปลี่ยนน้ำมันเครื่อง, เปลี่ยนไส้กรองอากาศ"></textarea>
-              <small style="color: #666; font-size: 0.85em;">คั่นด้วยจุลภาค (,) หรือขึ้นบรรทัดใหม่</small>
+              <small style="color: var(--color-text-muted); font-size: 0.85em;">คั่นด้วยจุลภาค (,) หรือขึ้นบรรทัดใหม่</small>
               <div class="help-box"
                 style="margin-top:10px; padding:12px; background:#e8f4fd; border-radius:8px; font-size:0.9em; color:#1565c0;">
                 <strong>คำที่ระบบรู้จัก (พิมพ์ให้ตรงหรือมีคำเหล่านี้ในรายการ):</strong><br>
@@ -651,7 +651,7 @@
             <div class="form-group">
               <label>เลขไมล์ตอนเข้าซ่อม <span class="required">*</span></label>
               <input type="number" id="mileage_at_repair" min="0" required placeholder="0">
-              <small style="color: #666; font-size: 0.85em;">ใช้สำหรับนับครั้งถัดไปที่ต้องแจ้งเตือน
+              <small style="color: var(--color-text-muted); font-size: 0.85em;">ใช้สำหรับนับครั้งถัดไปที่ต้องแจ้งเตือน
                 (ร่วมกับรายการซ่อมด้านบน)</small>
             </div>
 
@@ -765,7 +765,7 @@
               ยกเลิก
             </button>
             <button type="submit" class="btn btn-warning" id="scheduleSubmitBtn"
-              style="flex: 1; background: #ff9800; color: white; border: none;">
+              style="flex: 1; background: var(--color-warning); color: white; border: none;">
               📅 ลงคิวซ่อม
             </button>
           </div>
@@ -806,7 +806,6 @@
     document.addEventListener('DOMContentLoaded', async function () {
       await waitForCommon();
 
-      // Check if opened via file:// protocol
       var isFileProtocol = window.location.protocol === 'file:';
 
       // Check authentication (ไม่ redirect — ให้แสดงหน้าได้)
@@ -845,14 +844,12 @@
       loadDrivers();
       loadRepairs();
 
-      // Initialize datetime pickers after modal opens
       setTimeout(function () {
         if (typeof initAllThaiDateTimePickers === 'function') {
           initAllThaiDateTimePickers();
         }
       }, 500);
 
-      // Add event listener as backup in case onclick doesn't work
       var addBtn = document.getElementById('addRepairBtn');
       if (addBtn) {
         addBtn.addEventListener('click', function (e) {
@@ -930,7 +927,6 @@
       var timeInput = document.getElementById(inputId);
       if (timeInput) {
         timeInput.value = timeStr;
-        // Update flatpickr if initialized
         if (timeInput._flatpickr) {
           timeInput._flatpickr.setDate(timeStr, false);
         }
@@ -1041,7 +1037,6 @@
           documentsPreview.innerHTML = '';
         }
 
-        // Set default date/time to now (for completed date)
         var now = new Date();
         var dateStr = formatDate(now);
         var hours = String(now.getHours()).padStart(2, '0');
@@ -1053,10 +1048,8 @@
         if (dateCompleted) dateCompleted.value = dateStr;
         if (timeCompleted) timeCompleted.value = timeStr;
 
-        // Open modal immediately (like queue-manage.html)
         modal.classList.add('show');
 
-        // Initialize datetime pickers after modal is shown
         setTimeout(function () {
           if (typeof initAllThaiDateTimePickers === 'function') {
             initAllThaiDateTimePickers();
@@ -1100,7 +1093,6 @@
       document.getElementById('cost').value = repair.cost || '';
       document.getElementById('garage_name').value = repair.garage_name || '';
 
-      // Set taken_by (could be driver_id or name)
       var takenBySelect = document.getElementById('taken_by');
       if (takenBySelect) {
         // Try to find driver by ID first, then by name
@@ -1131,7 +1123,6 @@
         }
       }
 
-      // Load existing documents
       documentFiles = [];
       if (repair.documents && Array.isArray(repair.documents) && repair.documents.length > 0) {
         // Documents are stored as URLs, we'll display them but can't edit them
@@ -1149,7 +1140,6 @@
 
       document.getElementById('repairModal').classList.add('show');
 
-      // Initialize datetime pickers after modal is shown
       setTimeout(function () {
         if (typeof initAllThaiDateTimePickers === 'function') {
           initAllThaiDateTimePickers();
@@ -1160,7 +1150,6 @@
     function closeModal() {
       document.getElementById('repairModal').classList.remove('show');
 
-      // Reset form
       var repairForm = document.getElementById('repairForm');
       if (repairForm) {
         repairForm.reset();
@@ -1202,7 +1191,7 @@
             html += '<div style="width:100%;height:150px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;border-radius:8px;flex-direction:column;gap:8px;">';
             html += '<span style="font-size:2em;">📄</span>';
             html += '<span style="font-size:0.85em;word-break:break-word;text-align:center;padding:0 8px;">' + file.name + '</span>';
-            html += '<a href="' + file.url + '" target="_blank" style="font-size:0.8em;color:#4285f4;text-decoration:none;">เปิดดู</a>';
+            html += '<a href="' + file.url + '" target="_blank" style="font-size:0.8em;color:var(--color-primary);text-decoration:none;">เปิดดู</a>';
             html += '</div>';
           } else {
             html += '<img src="' + file.url + '" alt="Preview" style="width:100%;height:150px;object-fit:cover;">';
@@ -1228,7 +1217,6 @@
     async function handleSubmit(event) {
       event.preventDefault();
 
-      // Check permission when submitting (not when opening modal)
       var isFileProtocol = window.location.protocol === 'file:';
 
       if (typeof getCurrentUser === 'undefined' || typeof hasModulePermission === 'undefined') {
@@ -1247,7 +1235,6 @@
         return;
       }
 
-      // Check permission based on whether editing or creating
       if (editingRepairId) {
         // Editing
         if (!hasModulePermission('repair', 'edit') && user.role !== 'admin') {
@@ -1272,7 +1259,6 @@
         var timeCompleted = document.getElementById('time_completed').value;
         var dateCompletedFull = dateCompleted + (timeCompleted ? ' ' + timeCompleted + ':00' : '');
 
-        // Get taken_by value (could be driver_id or name)
         var takenByValue = document.getElementById('taken_by').value;
         // If it's a driver_id, get the driver name; otherwise use the value as-is
         var driver = drivers.find(function (d) { return d.driver_id === takenByValue; });
@@ -1292,7 +1278,6 @@
           status: 'completed' // Always completed when creating new record
         };
 
-        // Check if there's a scheduled repair for this car and link it
         // This will unlock the vehicle after repair is completed
         try {
           var scheduledRepairsResult = await apiCall('getScheduledRepairs', {
@@ -1397,13 +1382,11 @@
           return;
         }
 
-        // Reset form
         var form = document.getElementById('scheduleRepairForm');
         if (form) {
           form.reset();
         }
 
-        // Set default date to today
         var today = formatDate(new Date());
         var startDate = document.getElementById('schedule_start_date');
         if (startDate) {
@@ -1424,7 +1407,6 @@
 
         modal.classList.add('show');
 
-        // Initialize datetime pickers after modal is shown
         setTimeout(function () {
           if (typeof initAllThaiDateTimePickers === 'function') {
             initAllThaiDateTimePickers();
@@ -1442,7 +1424,6 @@
         modal.classList.remove('show');
       }
 
-      // Reset form
       var form = document.getElementById('scheduleRepairForm');
       if (form) {
         form.reset();
@@ -1452,7 +1433,6 @@
     async function handleScheduleRepair(event) {
       event.preventDefault();
 
-      // Check permission
       var isFileProtocol = window.location.protocol === 'file:';
 
       if (!isFileProtocol) {
@@ -1468,7 +1448,6 @@
           return;
         }
 
-        // Check permission for repair module
         if (!hasModulePermission('repair', 'create') && user.role !== 'admin') {
           alert('คุณไม่มีสิทธิ์ลงคิวซ่อม กรุณาติดต่อผู้ดูแลระบบ');
           return;
@@ -1513,7 +1492,7 @@
     }
   </script>
 
-  <div style="background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 0.9em; margin-top: 20px;">
+  <div style="background: var(--color-bg-light); padding: 20px; text-align: center; color: var(--color-text-muted); font-size: 0.9em; margin-top: 20px;">
     <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
   </div>
 </body>

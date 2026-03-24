@@ -20,8 +20,8 @@
     }
 
     body {
-      font-family: 'Sarabun', 'Kanit', sans-serif;
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      font-family: var(--font-family);
+      background: var(--gradient-primary);
       min-height: 100vh;
       padding: 10px;
       -webkit-font-smoothing: antialiased;
@@ -43,12 +43,12 @@
       }
 
       .container {
-        border-radius: 12px;
+        border-radius: var(--radius-xl);
       }
     }
 
     .header {
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
       padding: 20px 15px;
       text-align: center;
@@ -84,16 +84,16 @@
     }
 
     .car-info {
-      background: #f8f9fa;
+      background: var(--color-bg-light);
       padding: 15px;
-      border-radius: 10px;
+      border-radius: var(--radius-lg);
       margin-bottom: 20px;
       text-align: center;
-      border-left: 4px solid #4285f4;
+      border-left: 4px solid var(--color-primary);
     }
 
     .car-info h2 {
-      color: #4285f4;
+      color: var(--color-primary);
       font-size: 1.3em;
       margin-bottom: 8px;
       font-weight: 700;
@@ -117,13 +117,13 @@
     .form-group label {
       display: block;
       margin-bottom: 10px;
-      color: #333;
+      color: var(--color-text);
       font-weight: 600;
       font-size: 1em;
     }
 
     .form-group label .required {
-      color: #f44336;
+      color: var(--color-danger);
     }
 
     .form-group input,
@@ -131,7 +131,7 @@
       width: 100%;
       padding: 14px;
       border: 2px solid #e0e0e0;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       font-size: 16px;
       /* ป้องกัน zoom บน iOS */
       transition: all 0.3s;
@@ -144,8 +144,8 @@
     .form-group input:focus,
     .form-group select:focus {
       outline: none;
-      border-color: #4285f4;
-      box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+      border-color: var(--color-primary);
+      box-shadow: var(--shadow-focus);
     }
 
     .form-group input[type="number"] {
@@ -153,7 +153,7 @@
     }
 
     .form-group input[type="number"]:invalid {
-      border-color: #f44336;
+      border-color: var(--color-danger);
     }
 
     .form-group.datetime-group {
@@ -188,7 +188,7 @@
 
     .form-group .help-text {
       font-size: 0.85em;
-      color: #666;
+      color: var(--color-text-muted);
       margin-top: 5px;
     }
 
@@ -215,19 +215,19 @@
     }
 
     .price-display {
-      background: #e8f5e9;
+      background: var(--color-bg-success);
       padding: 15px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       margin-top: 10px;
       text-align: center;
       font-size: 1.2em;
       font-weight: 600;
-      color: #2e7d32;
+      color: var(--color-secondary-dark);
     }
 
     .file-upload {
       border: 2px dashed #e0e0e0;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       padding: 20px;
       text-align: center;
       cursor: pointer;
@@ -238,8 +238,8 @@
     }
 
     .file-upload:active {
-      border-color: #4285f4;
-      background: #f5f5f5;
+      border-color: var(--color-primary);
+      background: var(--color-bg-lighter);
       transform: scale(0.98);
     }
 
@@ -255,7 +255,7 @@
 
     .file-upload-label {
       display: block;
-      color: #4285f4;
+      color: var(--color-primary);
       font-weight: 600;
       cursor: pointer;
     }
@@ -268,17 +268,17 @@
     .file-preview img {
       max-width: 100%;
       max-height: 300px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       border: 2px solid #e0e0e0;
     }
 
     .btn {
       width: 100%;
       padding: 18px;
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
       border: none;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       font-size: 1.1em;
       font-weight: 600;
       cursor: pointer;
@@ -310,27 +310,27 @@
     }
 
     .btn-success {
-      background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+      background: var(--gradient-success);
       font-size: 1.3em;
       padding: 20px;
     }
 
     .alert {
       padding: 12px 15px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       margin-bottom: 20px;
       font-size: 0.9em;
     }
 
     .alert-error {
-      background: #ffebee;
-      color: #c62828;
+      background: var(--color-bg-danger);
+      color: var(--color-danger-dark);
       border-left: 4px solid #c62828;
     }
 
     .alert-success {
-      background: #e8f5e9;
-      color: #2e7d32;
+      background: var(--color-bg-success);
+      color: var(--color-secondary-dark);
       border-left: 4px solid #2e7d32;
     }
 
@@ -345,21 +345,21 @@
     }
 
     .info-footer {
-      background: #f8f9fa;
+      background: var(--color-bg-light);
       padding: 15px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       margin-top: 20px;
       font-size: 0.85em;
-      color: #666;
+      color: var(--color-text-muted);
       text-align: center;
-      border-left: 4px solid #4285f4;
+      border-left: 4px solid var(--color-primary);
     }
 
     .footer {
-      background: #f8f9fa;
+      background: var(--color-bg-light);
       padding: 15px;
       text-align: center;
-      color: #666;
+      color: var(--color-text-muted);
       border-top: 2px solid #e9ecef;
       font-size: 0.85em;
       line-height: 1.5;
@@ -413,14 +413,14 @@
       <!-- Car Info (Read-only) -->
       <div id="carInfo" class="car-info" style="display: none;">
         <h2 id="carLicensePlate">-</h2>
-        <div style="color: #666; font-size: 0.95em;" id="carBrandModel">-</div>
+        <div style="color: var(--color-text-muted); font-size: 0.95em;" id="carBrandModel">-</div>
       </div>
 
       <!-- Success Message -->
       <div id="successMessage">
         <div style="font-size: 3em; margin-bottom: 15px;">✅</div>
-        <h2 style="color: #2e7d32; margin-bottom: 10px;">บันทึกสำเร็จ!</h2>
-        <p style="color: #666; margin-bottom: 20px;">ข้อมูลถูกบันทึกเรียบร้อยแล้ว</p>
+        <h2 style="color: var(--color-secondary-dark); margin-bottom: 10px;">บันทึกสำเร็จ!</h2>
+        <p style="color: var(--color-text-muted); margin-bottom: 20px;">ข้อมูลถูกบันทึกเรียบร้อยแล้ว</p>
         <button class="btn btn-success" onclick="resetForm()">
           บันทึกอีกครั้ง
         </button>
@@ -445,12 +445,12 @@
             <div style="display: flex; gap: 10px; align-items: flex-start;">
               <div style="flex: 1;">
                 <input type="time" id="fuelTime" name="fuelTime" required>
-                <div class="help-text time-ampm-help" style="font-size: 0.85em; color: #666;">
+                <div class="help-text time-ampm-help" style="font-size: 0.85em; color: var(--color-text-muted);">
                   <strong>AM เช้า</strong> · <strong>PM บ่าย</strong>
                 </div>
               </div>
               <button type="button" onclick="useCurrentTime('fuelTime')" class="btn-use-current-time"
-                style="padding: 12px 16px; background: #4caf50; color: white; border: none; border-radius: 8px; font-size: 0.9em; font-weight: 600; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; touch-action: manipulation; align-self: flex-end;">
+                style="padding: 12px 16px; background: var(--color-success); color: white; border: none; border-radius: var(--radius-md); font-size: 0.9em; font-weight: 600; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; touch-action: manipulation; align-self: flex-end;">
                 ⏰ ใช้เวลาปัจจุบัน
               </button>
             </div>
@@ -477,7 +477,7 @@
             oninput="validateAmountCalculation()">
           <div class="help-text">กรุณากรอกจำนวนเงินรวมที่จ่ายจริง (ระบบจะตรวจสอบความถูกต้องอัตโนมัติ)</div>
           <div id="amountError"
-            style="display: none; color: #c62828; font-size: 0.9em; margin-top: 5px; font-weight: 600;"></div>
+            style="display: none; color: var(--color-danger-dark); font-size: 0.9em; margin-top: 5px; font-weight: 600;"></div>
         </div>
 
         <div class="form-group">
@@ -511,7 +511,7 @@
         </div>
       </form>
 
-      <div id="loading" style="text-align: center; padding: 40px; color: #666;">
+      <div id="loading" style="text-align: center; padding: 40px; color: var(--color-text-muted);">
         กำลังโหลดข้อมูล...
       </div>
     </div>
@@ -527,7 +527,6 @@
     var carInfo = null;
     var receiptFile = null;
 
-    // Get car ID from URL parameter — form always shown; car info & save only when QR scanned
     window.addEventListener('DOMContentLoaded', function () {
       var urlParams = new URLSearchParams(window.location.search);
       carId = urlParams.get('car');
@@ -674,7 +673,6 @@
       var timeStr = String(now.getHours()).padStart(2, '0') + ':' +
         String(now.getMinutes()).padStart(2, '0');
 
-      // Set default date/time in form fields
       var dateInput = document.getElementById('fuelDate');
       var timeInput = document.getElementById('fuelTime');
       if (dateInput) dateInput.value = dateStr;
@@ -739,7 +737,7 @@
         };
         reader.readAsDataURL(file);
       } else {
-        preview.innerHTML = '<div style="color: #666;">ไฟล์: ' + file.name + '</div>';
+        preview.innerHTML = '<div style="color: var(--color-text-muted);">ไฟล์: ' + file.name + '</div>';
       }
     }
 
@@ -781,7 +779,6 @@
       submitBtn.textContent = 'กำลังบันทึก...';
 
       try {
-        // Get last mileage from previous fuel log
         var lastMileage = 0;
         try {
           var fuelLogsResult = await apiCall('getFuelLogs', {
@@ -806,7 +803,6 @@
           receiptImageMime = receiptFile.type;
         }
 
-        // Get date/time from form fields
         var dateInput = document.getElementById('fuelDate');
         var timeInput = document.getElementById('fuelTime');
         var dateStr = dateInput ? dateInput.value : (function () {

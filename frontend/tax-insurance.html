@@ -24,8 +24,8 @@
     }
 
     body {
-      font-family: 'Sarabun', 'Kanit', sans-serif;
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      font-family: var(--font-family);
+      background: var(--gradient-primary);
       min-height: 100vh;
       padding: 20px;
     }
@@ -34,13 +34,13 @@
       max-width: 1400px;
       margin: 0 auto;
       background: white;
-      border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      border-radius: var(--radius-2xl);
+      box-shadow: var(--shadow-container);
       overflow: hidden;
     }
 
     .header {
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
       padding: 25px;
       text-align: center;
@@ -69,25 +69,25 @@
       border-bottom: 3px solid transparent;
       font-size: 1em;
       font-weight: 600;
-      color: #666;
+      color: var(--color-text-muted);
       cursor: pointer;
       transition: all 0.3s;
       font-family: inherit;
     }
 
     .tab.active {
-      color: #4285f4;
-      border-bottom-color: #4285f4;
+      color: var(--color-primary);
+      border-bottom-color: var(--color-primary);
     }
 
     .tab:hover {
-      color: #4285f4;
+      color: var(--color-primary);
     }
 
     .filters {
-      background: #f8f9fa;
+      background: var(--color-bg-light);
       padding: 20px;
-      border-radius: 12px;
+      border-radius: var(--radius-xl);
       margin-bottom: 25px;
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -102,7 +102,7 @@
 
     .filter-group label {
       font-weight: 600;
-      color: #333;
+      color: var(--color-text);
       font-size: 0.9em;
     }
 
@@ -110,7 +110,7 @@
     .filter-group select {
       padding: 10px;
       border: 2px solid #ddd;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       font-size: 1em;
       font-family: inherit;
     }
@@ -125,7 +125,7 @@
     .btn {
       padding: 10px 20px;
       border: none;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       font-size: 1em;
       font-weight: 600;
       cursor: pointer;
@@ -134,7 +134,7 @@
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
     }
 
@@ -143,7 +143,7 @@
     }
 
     .btn-danger {
-      background: #dc3545;
+      background: var(--color-danger);
       color: white;
     }
 
@@ -168,15 +168,15 @@
     }
 
     .record-card {
-      background: #f8f9fa;
-      border-radius: 12px;
+      background: var(--color-bg-light);
+      border-radius: var(--radius-xl);
       padding: 20px;
       border: 2px solid #e9ecef;
       transition: all 0.3s;
     }
 
     .record-card:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      box-shadow: var(--shadow-card);
       transform: translateY(-2px);
     }
 
@@ -198,12 +198,12 @@
     .record-vehicle {
       font-size: 1.2em;
       font-weight: 700;
-      color: #4285f4;
+      color: var(--color-primary);
     }
 
     .record-expiry {
       padding: 4px 12px;
-      border-radius: 20px;
+      border-radius: var(--radius-2xl);
       font-size: 0.85em;
       font-weight: 600;
     }
@@ -235,12 +235,12 @@
 
     .record-info-label {
       font-weight: 600;
-      color: #666;
+      color: var(--color-text-muted);
       min-width: 120px;
     }
 
     .record-info-value {
-      color: #333;
+      color: var(--color-text);
     }
 
     .record-actions {
@@ -275,19 +275,19 @@
 
     .modal {
       background: white;
-      border-radius: 20px;
+      border-radius: var(--radius-2xl);
       max-width: 900px;
       width: 100%;
       max-height: 90vh;
       overflow-y: auto;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      box-shadow: var(--shadow-container);
     }
 
     .modal-header {
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
       padding: 20px;
-      border-radius: 20px 20px 0 0;
+      border-radius: var(--radius-2xl) 20px 0 0;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -316,8 +316,8 @@
     }
 
     .form-section {
-      background: #f8f9fa;
-      border-radius: 12px;
+      background: var(--color-bg-light);
+      border-radius: var(--radius-xl);
       padding: 20px;
       margin-bottom: 20px;
     }
@@ -325,7 +325,7 @@
     .form-section-title {
       font-size: 1.2em;
       font-weight: 700;
-      color: #4285f4;
+      color: var(--color-primary);
       margin-bottom: 18px;
     }
 
@@ -343,12 +343,12 @@
       display: block;
       margin-bottom: 8px;
       font-weight: 600;
-      color: #333;
+      color: var(--color-text);
       font-size: 1em;
     }
 
     .form-group label .required {
-      color: #dc3545;
+      color: var(--color-danger);
     }
 
     .form-group input,
@@ -357,7 +357,7 @@
       width: 100%;
       padding: 12px;
       border: 2px solid #ddd;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       font-size: 1em;
       font-family: inherit;
     }
@@ -366,8 +366,8 @@
     .form-group select:focus,
     .form-group textarea:focus {
       outline: none;
-      border-color: #4285f4;
-      box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+      border-color: var(--color-primary);
+      box-shadow: var(--shadow-focus);
     }
 
     .form-group textarea {
@@ -377,7 +377,7 @@
 
     .file-upload {
       border: 2px dashed #ddd;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       padding: 20px;
       text-align: center;
       cursor: pointer;
@@ -385,7 +385,7 @@
     }
 
     .file-upload:hover {
-      border-color: #4285f4;
+      border-color: var(--color-primary);
       background: #f0f7ff;
     }
 
@@ -401,13 +401,13 @@
     .file-preview img {
       max-width: 300px;
       max-height: 300px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       border: 2px solid #ddd;
     }
 
     .alert {
       padding: 15px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       margin-bottom: 20px;
     }
 
@@ -418,21 +418,21 @@
     }
 
     .alert-error {
-      background: #ffebee;
-      color: #c62828;
+      background: var(--color-bg-danger);
+      color: var(--color-danger-dark);
       border-left: 4px solid #c62828;
     }
 
     .loading {
       text-align: center;
       padding: 60px 20px;
-      color: #666;
+      color: var(--color-text-muted);
     }
 
     .empty-state {
       text-align: center;
       padding: 60px 20px;
-      color: #999;
+      color: var(--color-text-light);
     }
 
     .empty-state-icon {
@@ -680,7 +680,6 @@
       // Wait for common.js to load
       await waitForCommon();
 
-      // Check if common.js is loaded
       if (typeof apiCall === 'undefined' || typeof requireAuth === 'undefined') {
         console.error('common.js not loaded! Make sure to open via web server, not file://');
         // Still show UI even without API
@@ -707,12 +706,10 @@
         return;
       }
 
-      // Initialize date pickers will be done after modal opens
 
       loadVehicles();
       loadRecords();
 
-      // Add backup event listener for add button
       var addBtn = document.getElementById('addRecordBtn') || document.querySelector('.btn-primary[onclick*="openAddModal"]');
       if (addBtn) {
         addBtn.addEventListener('click', function (e) {
@@ -896,7 +893,6 @@
       });
       datePickers = {};
 
-      // Initialize all date pickers
       var dateInputs = document.querySelectorAll('.date-picker');
       dateInputs.forEach(function (input) {
         datePickers[input.id] = flatpickr(input, {
@@ -914,7 +910,6 @@
       try {
         var isFileProtocol = window.location.protocol === 'file:';
 
-        // Check permission when opening modal (but allow file:// to open UI)
         if (!isFileProtocol) {
           if (typeof getCurrentUser === 'undefined' || typeof hasModulePermission === 'undefined') {
             alert('ระบบกำลังโหลด กรุณารอสักครู่แล้วกดอีกครั้ง');
@@ -955,7 +950,6 @@
         document.getElementById('receiptPreview').innerHTML = '';
         modal.classList.add('show');
 
-        // Initialize date pickers after modal is shown
         setTimeout(function () {
           initializeDatePickers();
         }, 100);
@@ -1008,7 +1002,6 @@
       document.getElementById('insuranceFields').style.display = currentTab === 'insurance' ? 'block' : 'none';
       document.getElementById('recordModal').classList.add('show');
 
-      // Initialize date pickers and set values after modal is shown
       setTimeout(function () {
         initializeDatePickers();
 
@@ -1088,7 +1081,6 @@
           recordData.tax_type = document.getElementById('tax_type').value;
           recordData.amount = parseFloat(document.getElementById('tax_amount').value) || 0;
 
-          // Get date values from flatpickr instances
           var paidDatePicker = datePickers['paid_date'];
           var expiryDatePicker = datePickers['expiry_date'];
           recordData.paid_date = paidDatePicker ? paidDatePicker.input.value : document.getElementById('paid_date').value;
@@ -1128,7 +1120,6 @@
           recordData.coverage_amount = parseFloat(document.getElementById('coverage_amount').value) || 0;
           recordData.coverage_details = document.getElementById('coverage_details').value.trim();
 
-          // Get date values from flatpickr instances
           var startDatePicker = datePickers['insurance_start_date'];
           var expiryDatePicker = datePickers['insurance_expiry_date'];
           recordData.paid_date = startDatePicker ? startDatePicker.input.value : document.getElementById('insurance_start_date').value;
@@ -1199,7 +1190,7 @@
     }
   </script>
 
-  <div style="background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 0.9em; margin-top: 20px;">
+  <div style="background: var(--color-bg-light); padding: 20px; text-align: center; color: var(--color-text-muted); font-size: 0.9em; margin-top: 20px;">
     <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
   </div>
 </body>

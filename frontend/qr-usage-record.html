@@ -25,8 +25,8 @@
     }
 
     body {
-      font-family: 'Sarabun', 'Kanit', sans-serif;
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      font-family: var(--font-family);
+      background: var(--gradient-primary);
       min-height: 100vh;
       padding: 10px;
       -webkit-font-smoothing: antialiased;
@@ -48,12 +48,12 @@
       }
 
       .container {
-        border-radius: 12px;
+        border-radius: var(--radius-xl);
       }
     }
 
     .header {
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
       padding: 20px 15px;
       text-align: center;
@@ -89,23 +89,23 @@
     }
 
     .car-info {
-      background: #f8f9fa;
+      background: var(--color-bg-light);
       padding: 15px;
-      border-radius: 10px;
+      border-radius: var(--radius-lg);
       margin-bottom: 20px;
       text-align: center;
-      border-left: 4px solid #4285f4;
+      border-left: 4px solid var(--color-primary);
     }
 
     .car-info h2 {
-      color: #4285f4;
+      color: var(--color-primary);
       font-size: 1.3em;
       margin-bottom: 8px;
       font-weight: 700;
     }
 
     .car-info .car-details {
-      color: #666;
+      color: var(--color-text-muted);
       font-size: 0.9em;
       margin-bottom: 6px;
     }
@@ -128,24 +128,24 @@
     .car-info .car-status {
       display: inline-block;
       padding: 6px 12px;
-      border-radius: 20px;
+      border-radius: var(--radius-2xl);
       font-size: 0.85em;
       font-weight: 600;
       margin-top: 8px;
     }
 
     .car-info .car-status.available {
-      background: #e8f5e9;
-      color: #2e7d32;
+      background: var(--color-bg-success);
+      color: var(--color-secondary-dark);
     }
 
     .car-info .car-status.unavailable {
-      background: #ffebee;
-      color: #c62828;
+      background: var(--color-bg-danger);
+      color: var(--color-danger-dark);
     }
 
     .car-info .car-status.repair {
-      background: #fff3e0;
+      background: var(--color-bg-warning);
       color: #f57c00;
     }
 
@@ -156,13 +156,13 @@
     .form-group label {
       display: block;
       margin-bottom: 10px;
-      color: #333;
+      color: var(--color-text);
       font-weight: 600;
       font-size: 1em;
     }
 
     .form-group label .required {
-      color: #f44336;
+      color: var(--color-danger);
     }
 
     .form-group input,
@@ -170,7 +170,7 @@
       width: 100%;
       padding: 14px;
       border: 2px solid #e0e0e0;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       font-size: 16px;
       /* ป้องกัน zoom บน iOS */
       transition: all 0.3s;
@@ -183,8 +183,8 @@
     .form-group input:focus,
     .form-group select:focus {
       outline: none;
-      border-color: #4285f4;
-      box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+      border-color: var(--color-primary);
+      box-shadow: var(--shadow-focus);
     }
 
     .form-group input[type="number"] {
@@ -212,7 +212,7 @@
 
     .form-group .help-text {
       font-size: 0.85em;
-      color: #666;
+      color: var(--color-text-muted);
       margin-top: 5px;
     }
 
@@ -240,14 +240,14 @@
 
     .form-group .error-text {
       font-size: 0.85em;
-      color: #f44336;
+      color: var(--color-danger);
       margin-top: 5px;
       display: none;
     }
 
     .form-group.error input,
     .form-group.error select {
-      border-color: #f44336;
+      border-color: var(--color-danger);
     }
 
     .form-group.error .error-text {
@@ -269,9 +269,9 @@
     }
 
     .status-btn.selected {
-      background: #4285f4 !important;
+      background: var(--color-primary) !important;
       color: white !important;
-      border-color: #4285f4 !important;
+      border-color: var(--color-primary) !important;
     }
 
     @media (max-width: 480px) {
@@ -288,10 +288,10 @@
     .btn {
       width: 100%;
       padding: 18px;
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
       border: none;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       font-size: 1.1em;
       font-weight: 600;
       cursor: pointer;
@@ -323,38 +323,38 @@
     }
 
     .btn-success {
-      background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+      background: var(--gradient-success);
       font-size: 1.3em;
       padding: 20px;
     }
 
     .alert {
       padding: 12px 15px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       margin-bottom: 20px;
       font-size: 0.9em;
     }
 
     .alert-error {
-      background: #ffebee;
-      color: #c62828;
+      background: var(--color-bg-danger);
+      color: var(--color-danger-dark);
       border-left: 4px solid #c62828;
     }
 
     .alert-success {
-      background: #e8f5e9;
-      color: #2e7d32;
+      background: var(--color-bg-success);
+      color: var(--color-secondary-dark);
       border-left: 4px solid #2e7d32;
     }
 
     .alert-warning {
-      background: #fff3e0;
+      background: var(--color-bg-warning);
       color: #f57c00;
       border-left: 4px solid #f57c00;
     }
 
     .alert-info {
-      background: #e3f2fd;
+      background: var(--color-bg-info);
       color: #1976d2;
       border-left: 4px solid #1976d2;
     }
@@ -377,14 +377,14 @@
     }
 
     .info-footer {
-      background: #f8f9fa;
+      background: var(--color-bg-light);
       padding: 15px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       margin-top: 20px;
       font-size: 0.85em;
-      color: #666;
+      color: var(--color-text-muted);
       text-align: center;
-      border-left: 4px solid #4285f4;
+      border-left: 4px solid var(--color-primary);
     }
 
     #successMessage {
@@ -449,8 +449,8 @@
       <!-- Success Message -->
       <div id="successMessage">
         <div style="font-size: 3em; margin-bottom: 15px;">✅</div>
-        <h2 style="color: #2e7d32; margin-bottom: 10px;">บันทึกสำเร็จ!</h2>
-        <p style="color: #666; margin-bottom: 20px;">ข้อมูลถูกบันทึกเรียบร้อยแล้ว</p>
+        <h2 style="color: var(--color-secondary-dark); margin-bottom: 10px;">บันทึกสำเร็จ!</h2>
+        <p style="color: var(--color-text-muted); margin-bottom: 20px;">ข้อมูลถูกบันทึกเรียบร้อยแล้ว</p>
         <button class="btn btn-success" onclick="resetForm()">
           บันทึกอีกครั้ง
         </button>
@@ -469,11 +469,11 @@
           <label>สถานะ <span class="required">*</span></label>
           <div class="status-buttons" style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button type="button" id="statusBeforeTrip" class="status-btn" onclick="selectStatus('before_trip')"
-              style="flex: 1; min-width: 150px; padding: 14px; border: 2px solid #4285f4; border-radius: 8px; background: white; color: #4285f4; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+              style="flex: 1; min-width: 150px; padding: 14px; border: 2px solid var(--color-primary); border-radius: var(--radius-md); background: white; color: var(--color-primary); font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">
               🚗 ก่อนออกเดินทาง
             </button>
             <button type="button" id="statusAfterTrip" class="status-btn" onclick="selectStatus('after_trip')"
-              style="flex: 1; min-width: 150px; padding: 14px; border: 2px solid #4285f4; border-radius: 8px; background: white; color: #4285f4; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+              style="flex: 1; min-width: 150px; padding: 14px; border: 2px solid var(--color-primary); border-radius: var(--radius-md); background: white; color: var(--color-primary); font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">
               🏠 กลับมาจากเดินทาง
             </button>
           </div>
@@ -491,12 +491,12 @@
             <div style="display: flex; gap: 10px; align-items: flex-start;">
               <div style="flex: 1;">
                 <input type="time" id="time" name="time" required>
-                <div class="help-text time-ampm-help" style="font-size: 0.85em; color: #666;">
+                <div class="help-text time-ampm-help" style="font-size: 0.85em; color: var(--color-text-muted);">
                   <strong>AM เช้า</strong> · <strong>PM บ่าย</strong>
                 </div>
               </div>
               <button type="button" onclick="useCurrentTime('time')" class="btn-use-current-time"
-                style="padding: 12px 16px; background: #4caf50; color: white; border: none; border-radius: 8px; font-size: 0.9em; font-weight: 600; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; touch-action: manipulation; align-self: flex-end;">
+                style="padding: 12px 16px; background: var(--color-success); color: white; border: none; border-radius: var(--radius-md); font-size: 0.9em; font-weight: 600; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; touch-action: manipulation; align-self: flex-end;">
                 ⏰ ใช้เวลาปัจจุบัน
               </button>
             </div>
@@ -532,7 +532,7 @@
         </div>
       </form>
 
-      <div id="loading" style="text-align: center; padding: 40px; color: #666;">
+      <div id="loading" style="text-align: center; padding: 40px; color: var(--color-text-muted);">
         กำลังโหลดข้อมูล...
       </div>
     </div>
@@ -547,14 +547,12 @@
     // QR Usage Record page does NOT require authentication
     // Anyone can scan QR and record usage
 
-    // Get QR data from URL
     function getQRDataFromURL() {
       var urlParams = new URLSearchParams(window.location.search);
       var qrData = urlParams.get('car') || urlParams.get('qr');
       return qrData ? { car_id: qrData } : null;
     }
 
-    // Load initial data — form always shown; car info & save only when QR scanned
     async function loadData() {
       try {
         var qrData = getQRDataFromURL();
@@ -597,7 +595,6 @@
         document.getElementById('carLicensePlate').textContent = carInfo.license_plate || carId;
         document.getElementById('carBrandModel').textContent = (carInfo.brand || '') + ' ' + (carInfo.model || '');
 
-        // Display status
         var statusEl = document.getElementById('carStatus');
         var status = carInfo.status || 'available';
         var statusText = '';
@@ -617,7 +614,6 @@
         statusEl.textContent = statusText;
         statusEl.className = 'car-status ' + statusClass;
 
-        // Show warning if unavailable
         if (status === 'unavailable' || status === 'repair') {
           var alertContainer = document.getElementById('alert-container');
           alertContainer.innerHTML = '<div class="alert alert-warning"><strong>⚠️ คำเตือน:</strong> รถคันนี้อยู่ในสถานะงดใช้ กรุณาตรวจสอบก่อนใช้งาน</div>';
@@ -641,7 +637,6 @@
 
     async function loadLastMileage() {
       try {
-        // Get latest usage record for this car
         var result = await apiCall('getUsageRecords', {
           car_id: carId,
           limit: 1,
@@ -653,7 +648,6 @@
           lastMileage = latestRecord.mileage || 0;
           document.getElementById('lastMileage').textContent = lastMileage.toLocaleString();
 
-          // Check if there's a before_trip record for today
           var today = formatDate(new Date());
           var todayRecords = result.data.records.filter(function (r) {
             return r.date === today && r.record_type === 'before_trip';
@@ -672,13 +666,11 @@
       document.getElementById('loading').style.display = 'none';
       document.getElementById('usageForm').style.display = 'block';
 
-      // Set default date/time to now
       var now = new Date();
       document.getElementById('date').value = formatDate(now);
       var timeInput = document.getElementById('time');
       timeInput.value = formatTime(now);
 
-      // Initialize Flatpickr for Thai date/time pickers (24-hour format)
       setTimeout(function () {
         if (typeof initAllThaiDateTimePickers === 'function') {
           initAllThaiDateTimePickers();
@@ -706,11 +698,9 @@
       var beforeBtn = document.getElementById('statusBeforeTrip');
       var afterBtn = document.getElementById('statusAfterTrip');
 
-      // Remove selected class from all buttons
       beforeBtn.classList.remove('selected');
       afterBtn.classList.remove('selected');
 
-      // Set value and add selected class
       recordTypeInput.value = status;
 
       if (status === 'before_trip') {
@@ -720,7 +710,6 @@
       } else if (status === 'after_trip') {
         afterBtn.classList.add('selected');
 
-        // Check if there's a before_trip record
         if (!hasBeforeTrip) {
           helpText.textContent = '⚠️ ยังไม่มีบันทึก "ก่อนออกเดินทาง" สำหรับวันนี้';
           helpText.style.color = '#f57c00';
@@ -828,11 +817,9 @@
         var result = await apiCall('createUsageRecord', { data: recordData });
 
         if (result.success) {
-          // Show success message
           document.getElementById('usageForm').style.display = 'none';
           document.getElementById('successMessage').classList.add('show');
 
-          // Update hasBeforeTrip if needed
           if (recordType === 'before_trip') {
             hasBeforeTrip = true;
           }
@@ -856,13 +843,11 @@
       document.getElementById('usageForm').style.display = 'block';
       document.getElementById('usageForm').reset();
 
-      // Reset status buttons
       document.getElementById('statusBeforeTrip').classList.remove('selected');
       document.getElementById('statusAfterTrip').classList.remove('selected');
       document.getElementById('record_type').value = '';
       document.getElementById('recordTypeHelp').textContent = '';
 
-      // Reset date/time
       var now = new Date();
       document.getElementById('date').value = formatDate(now);
       document.getElementById('time').value = formatTime(now);
@@ -870,11 +855,9 @@
       // Reload last mileage
       loadLastMileage();
 
-      // Clear alerts
       document.getElementById('alert-container').innerHTML = '';
     }
 
-    // Load on page load (no authentication required)
     // This page is public - anyone can scan QR and record usage
     // No navigation - QR page only
     if (document.readyState === 'loading') {
@@ -886,7 +869,7 @@
 
   <div id="navigation"></div>
   <div
-    style="background: #f8f9fa; padding: 15px; text-align: center; color: #666; font-size: 0.85em; margin-top: 15px; border-radius: 0 0 16px 16px; line-height: 1.5;">
+    style="background: var(--color-bg-light); padding: 15px; text-align: center; color: var(--color-text-muted); font-size: 0.85em; margin-top: 15px; border-radius: 0 0 16px 16px; line-height: 1.5;">
     <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
   </div>
 </body>

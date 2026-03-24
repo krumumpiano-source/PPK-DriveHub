@@ -1,14 +1,4 @@
-// PPK DriveHub — Admin API
-// GET    /api/admin/users
-// PUT    /api/admin/users/:id
-// PUT    /api/admin/users/:id/deactivate
-// PUT    /api/admin/users/:id/reset-password
-// GET    /api/admin/requests
-// PUT    /api/admin/requests/:id/approve
-// PUT    /api/admin/requests/:id/reject
-// GET    /api/admin/settings
-// PUT    /api/admin/settings
-
+// Admin: users, settings, requests
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, hashPassword, generateSalt, requireAdmin,
@@ -25,7 +15,6 @@ export async function onRequest(context) {
 
   try { requireAdmin(user); } catch { return error('ต้องเป็น Admin เท่านั้น', 403); }
 
-  // ── USERS ──
 
   if (path === '/api/admin/users' && method === 'GET') {
     const includeInactive = url.searchParams.get('include_inactive') === 'true';
@@ -36,7 +25,6 @@ export async function onRequest(context) {
     return success(users.map(u => ({ ...u, permissions: JSON.parse(u.permissions || '{}') })));
   }
 
-  // PUT /api/admin/users/:id
   if (path.startsWith('/api/admin/users/') && method === 'PUT' && !path.includes('/deactivate') && !path.includes('/reset-password')) {
     const id = extractParam(path, '/api/admin/users/');
     const body = await parseBody(request);
@@ -57,7 +45,6 @@ export async function onRequest(context) {
     return success({ message: 'อัปเดตข้อมูลผู้ใช้เรียบร้อย' });
   }
 
-  // PUT /api/admin/users/:id/deactivate
   if (path.match(/\/api\/admin\/users\/[^/]+\/deactivate/) && method === 'PUT') {
     const id = path.split('/')[4];
     const body = await parseBody(request);
@@ -70,7 +57,6 @@ export async function onRequest(context) {
     return success({ message: 'ระงับการใช้งานบัญชีเรียบร้อย' });
   }
 
-  // PUT /api/admin/users/:id/reset-password
   if (path.match(/\/api\/admin\/users\/[^/]+\/reset-password/) && method === 'PUT') {
     const id = path.split('/')[4];
     const body = await parseBody(request);
@@ -86,7 +72,6 @@ export async function onRequest(context) {
     return success({ message: 'รีเซ็ตรหัสผ่านเรียบร้อย' });
   }
 
-  // ── USER REQUESTS ──
 
   if (path === '/api/admin/requests' && method === 'GET') {
     const status = url.searchParams.get('status') || 'pending';
@@ -96,7 +81,6 @@ export async function onRequest(context) {
     return success(reqs);
   }
 
-  // PUT /api/admin/requests/:id/approve
   if (path.match(/\/api\/admin\/requests\/[^/]+\/approve/) && method === 'PUT') {
     const id = path.split('/')[4];
     const body = await parseBody(request);
@@ -132,7 +116,6 @@ export async function onRequest(context) {
     return success({ message: 'อนุมัติคำขอสมัครสมาชิกเรียบร้อย', user_id: userId, initial_password: initialPwd });
   }
 
-  // PUT /api/admin/requests/:id/reject
   if (path.match(/\/api\/admin\/requests\/[^/]+\/reject/) && method === 'PUT') {
     const id = path.split('/')[4];
     const body = await parseBody(request);
@@ -143,7 +126,6 @@ export async function onRequest(context) {
     return success({ message: 'ปฏิเสธคำขอสมัครสมาชิกเรียบร้อย' });
   }
 
-  // ── SYSTEM SETTINGS ──
 
   if (path === '/api/admin/settings' && method === 'GET') {
     const settings = await dbAll(env.DB, 'SELECT key, value FROM system_settings ORDER BY key');
@@ -168,7 +150,6 @@ export async function onRequest(context) {
     return success({ message: 'บันทึกการตั้งค่าเรียบร้อย' });
   }
 
-  // GET /api/admin/audit-log
   if (path === '/api/admin/audit-log' && method === 'GET') {
     const limit = Math.min(500, parseInt(url.searchParams.get('limit') || '100'));
     const offset = parseInt(url.searchParams.get('offset') || '0');

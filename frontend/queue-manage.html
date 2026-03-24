@@ -21,7 +21,7 @@
     }
 
     body {
-      font-family: 'Sarabun', 'Kanit', sans-serif;
+      font-family: var(--font-family);
       background: linear-gradient(135deg, #81d4fa 0%, #b2dfdb 100%);
       min-height: 100vh;
       padding: 20px;
@@ -31,13 +31,13 @@
       max-width: 1400px;
       margin: 0 auto;
       background: white;
-      border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      border-radius: var(--radius-2xl);
+      box-shadow: var(--shadow-container);
       overflow: hidden;
     }
 
     .header {
-      background: linear-gradient(135deg, #4fc3f7 0%, #80deea 100%);
+      background: var(--gradient-info);
       color: white;
       padding: 30px;
       text-align: center;
@@ -69,7 +69,7 @@
     .btn {
       padding: 12px 24px;
       border: none;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       font-size: 1em;
       font-weight: 600;
       cursor: pointer;
@@ -79,7 +79,7 @@
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, #4fc3f7 0%, #80deea 100%);
+      background: var(--gradient-info);
       color: white;
     }
 
@@ -89,7 +89,7 @@
     }
 
     .btn-success {
-      background: #4caf50;
+      background: var(--color-success);
       color: white;
     }
 
@@ -98,7 +98,7 @@
     }
 
     .btn-danger {
-      background: #f44336;
+      background: var(--color-danger);
       color: white;
     }
 
@@ -139,7 +139,7 @@
       background: #4fc3f7;
       color: white;
       border: none;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       cursor: pointer;
       font-size: 1em;
       font-weight: 600;
@@ -153,21 +153,21 @@
     .calendar-month-year {
       font-size: 1.5em;
       font-weight: 700;
-      color: #333;
+      color: var(--color-text);
     }
 
     .calendar-grid {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
       gap: 1px;
-      background: #e9ecef;
+      background: var(--color-bg-gray);
       border: 1px solid #e9ecef;
-      border-radius: 12px;
+      border-radius: var(--radius-xl);
       overflow: hidden;
     }
 
     .calendar-day-header {
-      background: linear-gradient(135deg, #4fc3f7 0%, #80deea 100%);
+      background: var(--gradient-info);
       color: white;
       padding: 15px;
       text-align: center;
@@ -205,20 +205,20 @@
     }
 
     .calendar-day:hover {
-      background: #f8f9fa;
+      background: var(--color-bg-light);
       transform: scale(1.02);
     }
 
     .calendar-day.other-month {
-      background: #f8f9fa;
-      color: #999;
+      background: var(--color-bg-light);
+      color: var(--color-text-light);
     }
 
     .calendar-day-number {
       font-weight: 700;
       font-size: 1.1em;
       margin-bottom: 5px;
-      color: #333;
+      color: var(--color-text);
     }
 
     .calendar-day.other-month .calendar-day-number {
@@ -237,25 +237,25 @@
 
     /* Queue status colors - different from dashboard */
     .calendar-day.queue-past {
-      background: #e9ecef !important;
+      background: var(--color-bg-gray) !important;
     }
 
     .calendar-day.queue-past .calendar-day-number {
-      color: #666;
+      color: var(--color-text-muted);
     }
 
     .calendar-day.queue-current {
-      background: #ffebee !important;
+      background: var(--color-bg-danger) !important;
       border: 2px solid #f44336 !important;
     }
 
     .calendar-day.queue-current .calendar-day-number {
-      color: #c62828;
+      color: var(--color-danger-dark);
       font-weight: 700;
     }
 
     .calendar-day.queue-upcoming {
-      background: #fff3e0 !important;
+      background: var(--color-bg-warning) !important;
     }
 
     .calendar-day.queue-upcoming .calendar-day-number {
@@ -298,7 +298,7 @@
 
     .queue-more {
       font-size: 0.7em;
-      color: #666;
+      color: var(--color-text-muted);
       text-align: center;
       margin-top: 4px;
       font-style: italic;
@@ -310,8 +310,8 @@
       flex-wrap: wrap;
       margin-bottom: 20px;
       padding: 15px;
-      background: #f8f9fa;
-      border-radius: 8px;
+      background: var(--color-bg-light);
+      border-radius: var(--radius-md);
     }
 
     .legend-item {
@@ -329,26 +329,26 @@
     }
 
     .legend-color.past {
-      background: #e9ecef;
+      background: var(--color-bg-gray);
     }
 
     .legend-color.upcoming {
-      background: #fff3e0;
+      background: var(--color-bg-warning);
     }
 
     .legend-color.current {
-      background: #ffebee;
-      border-color: #f44336;
+      background: var(--color-bg-danger);
+      border-color: var(--color-danger);
     }
 
     .legend-color.future {
-      background: #e8f5e9;
+      background: var(--color-bg-success);
     }
 
     .loading {
       text-align: center;
       padding: 60px 20px;
-      color: #666;
+      color: var(--color-text-muted);
     }
 
     /* Modal Styles */
@@ -373,7 +373,7 @@
 
     .modal {
       background: white;
-      border-radius: 12px;
+      border-radius: var(--radius-xl);
       padding: 30px;
       max-width: 900px;
       width: 100%;
@@ -398,7 +398,7 @@
       border: none;
       font-size: 1.5em;
       cursor: pointer;
-      color: #666;
+      color: var(--color-text-muted);
       padding: 0;
       width: 32px;
       height: 32px;
@@ -410,13 +410,13 @@
     }
 
     .modal-close:hover {
-      background: #f5f5f5;
-      color: #333;
+      background: var(--color-bg-lighter);
+      color: var(--color-text);
     }
 
     .form-section {
-      background: #f8f9fa;
-      border-radius: 12px;
+      background: var(--color-bg-light);
+      border-radius: var(--radius-xl);
       padding: 20px;
       margin-bottom: 20px;
     }
@@ -439,12 +439,12 @@
       display: block;
       margin-bottom: 8px;
       font-weight: 600;
-      color: #333;
+      color: var(--color-text);
       font-size: 1em;
     }
 
     .form-group label .required {
-      color: #f44336;
+      color: var(--color-danger);
     }
 
     .form-group input,
@@ -453,7 +453,7 @@
       width: 100%;
       padding: 12px;
       border: 2px solid #ddd;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       font-size: 1em;
       font-family: inherit;
       -webkit-appearance: none;
@@ -476,7 +476,7 @@
 
     .form-group .help-text {
       font-size: 0.8em;
-      color: #666;
+      color: var(--color-text-muted);
       margin-top: 4px;
     }
 
@@ -496,7 +496,7 @@
     .date-type-btn {
       padding: 10px 18px;
       border: 2px solid #ddd;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       background: white;
       cursor: pointer;
       font-weight: 600;
@@ -531,7 +531,7 @@
     .weekday-btn {
       padding: 12px 8px;
       border: 2px solid #ddd;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       background: white;
       cursor: pointer;
       text-align: center;
@@ -554,7 +554,7 @@
     .selected-dates-preview {
       background: white;
       padding: 12px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       margin-top: 10px;
       border: 2px solid #e9ecef;
       max-height: 150px;
@@ -575,7 +575,7 @@
       background: #fff3cd;
       border-left: 4px solid #ffc107;
       padding: 15px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       margin-bottom: 20px;
       color: #856404;
     }
@@ -586,9 +586,9 @@
     }
 
     .modal-options {
-      background: #f8f9fa;
+      background: var(--color-bg-light);
       padding: 15px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       margin-bottom: 20px;
     }
 
@@ -619,7 +619,7 @@
 
     .alert {
       padding: 15px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       margin-bottom: 20px;
     }
 
@@ -636,8 +636,8 @@
     }
 
     .alert-error {
-      background: #ffebee;
-      color: #c62828;
+      background: var(--color-bg-danger);
+      color: var(--color-danger-dark);
       border-left: 4px solid #c62828;
     }
 
@@ -650,7 +650,7 @@
     .progress-bar {
       width: 100%;
       height: 8px;
-      background: #e9ecef;
+      background: var(--color-bg-gray);
       border-radius: 4px;
       overflow: hidden;
       margin-top: 10px;
@@ -658,14 +658,14 @@
 
     .progress-fill {
       height: 100%;
-      background: linear-gradient(135deg, #4fc3f7 0%, #80deea 100%);
+      background: var(--gradient-info);
       transition: width 0.3s;
     }
 
     .queue-info {
       background: #e1f5fe;
       padding: 15px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       margin-bottom: 20px;
       border-left: 4px solid #4fc3f7;
     }
@@ -886,7 +886,7 @@
             <input type="number" id="create_passenger_count" min="0" required placeholder="จำนวนผู้โดยสาร"
               oninput="checkCreatePassengerCount()">
             <div id="createPassengerWarning"
-              style="display: none; color: #ff9800; font-size: 0.9em; margin-top: 5px; font-weight: 600;"></div>
+              style="display: none; color: var(--color-warning); font-size: 0.9em; margin-top: 5px; font-weight: 600;"></div>
           </div>
           <div class="form-group">
             <label>จุดหมายปลายทาง <span class="required">*</span></label>
@@ -903,7 +903,7 @@
         </div>
 
         <div id="createProgressContainer" style="display: none;">
-          <div style="margin-bottom: 10px; font-weight: 600; color: #333;">
+          <div style="margin-bottom: 10px; font-weight: 600; color: var(--color-text);">
             <span id="createProgressText">กำลังสร้างคิว...</span>
           </div>
           <div class="progress-bar">
@@ -985,7 +985,7 @@
             <input type="number" id="edit_passenger_count" min="0" required placeholder="จำนวนผู้โดยสาร"
               oninput="checkEditPassengerCount()">
             <div id="editPassengerWarning"
-              style="display: none; color: #ff9800; font-size: 0.9em; margin-top: 5px; font-weight: 600;"></div>
+              style="display: none; color: var(--color-warning); font-size: 0.9em; margin-top: 5px; font-weight: 600;"></div>
           </div>
           <div class="form-group">
             <label>จุดหมายปลายทาง <span class="required">*</span></label>
@@ -1057,7 +1057,6 @@
     var currentYear = currentDate.getFullYear();
     var currentMonth = currentDate.getMonth();
 
-    // Create queue variables
     var createDateType = 'single';
     var selectedWeekdays = [];
     var pendingCreateData = null;
@@ -1098,7 +1097,6 @@
       // Wait for common.js to load
       await waitForCommon();
 
-      // Check if common.js is loaded
       if (typeof apiCall === 'undefined') {
         console.warn('common.js not loaded! Opening via file:// - showing calendar without data');
         // Still show calendar even without API
@@ -1115,7 +1113,6 @@
         return;
       }
 
-      // Check authentication but don't block if not logged in (for testing)
       try {
         if (typeof requireAuth === 'function') {
           var authResult = requireAuth();
@@ -1129,14 +1126,12 @@
 
       currentUser = getCurrentUser();
 
-      // Check permission but don't block
       if (currentUser && typeof hasModulePermission === 'function') {
         if (!hasModulePermission('queue', 'edit')) {
           console.warn('No permission, but showing calendar anyway');
         }
       }
 
-      // Initialize form defaults (don't block on errors)
       try {
         var today = new Date();
         var dateStr = formatDate(today);
@@ -1167,7 +1162,6 @@
         console.warn('Error setting form defaults:', e);
       }
 
-      // Load data and show calendar
       loadQueueManagement();
     });
 
@@ -1190,12 +1184,10 @@
         if (loadingEl) loadingEl.style.display = 'block';
         if (containerEl) containerEl.style.display = 'none';
 
-        // Show calendar immediately first (like dashboard)
         renderCalendar();
         if (loadingEl) loadingEl.style.display = 'none';
         if (containerEl) containerEl.style.display = 'block';
 
-        // Load vehicles and drivers (non-blocking)
         try {
           await loadVehicles();
         } catch (e) {
@@ -1208,7 +1200,6 @@
           console.warn('Error loading drivers:', e);
         }
 
-        // Load queues and re-render
         await loadQueues();
 
       } catch (error) {
@@ -1381,7 +1372,6 @@
 
     async function loadQueues() {
       try {
-        // Check if apiCall is available
         if (typeof apiCall === 'undefined') {
           queues = [];
           vehicles = [];
@@ -1442,7 +1432,6 @@
       var firstDayOfWeek = firstDay.getDay();
       var daysInMonth = lastDay.getDate();
 
-      // Update month/year header
       var monthYearEl = document.getElementById('monthYear');
       if (monthYearEl) {
         monthYearEl.textContent = thaiMonths[currentMonth] + ' ' + (currentYear + 543);
@@ -1539,7 +1528,6 @@
         html += '<div class="calendar-day ' + statusClass + '">';
         html += '<div class="calendar-day-number">' + day + '</div>';
 
-        // Display all queues for this day
         dayQueues.forEach(function (queue) {
           var vehicle = vehiclesMap[queue.car_id];
           var driver = driversMap[queue.driver_id];
@@ -1594,7 +1582,6 @@
       loadQueues();
     }
 
-    // Create Queue Functions
     function openCreateModal() {
       document.getElementById('createModal').classList.add('show');
       resetCreateForm();
@@ -1811,7 +1798,6 @@
         emergency_override: false
       };
 
-      // Check conflicts
       var allConflicts = [];
       var allPassengerWarnings = [];
 
@@ -1847,7 +1833,7 @@
         }
 
         if (allPassengerWarnings.length > 0) {
-          conflictDetails.innerHTML += '<strong style="color: #ff9800;">⚠️ คำเตือน:</strong><ul style="margin: 10px 0; padding-left: 20px; color: #ff9800;">';
+          conflictDetails.innerHTML += '<strong style="color: var(--color-warning);">⚠️ คำเตือน:</strong><ul style="margin: 10px 0; padding-left: 20px; color: var(--color-warning);">';
           allPassengerWarnings.forEach(function (warning) {
             conflictDetails.innerHTML += '<li>' + warning + '</li>';
           });
@@ -2201,7 +2187,7 @@
         }
 
         if (conflictCheck.passengerWarnings.length > 0) {
-          conflictDetails.innerHTML += '<strong style="color: #ff9800;">⚠️ คำเตือน:</strong><ul style="margin: 10px 0; padding-left: 20px; color: #ff9800;">';
+          conflictDetails.innerHTML += '<strong style="color: var(--color-warning);">⚠️ คำเตือน:</strong><ul style="margin: 10px 0; padding-left: 20px; color: var(--color-warning);">';
           conflictCheck.passengerWarnings.forEach(function (warning) {
             conflictDetails.innerHTML += '<li>' + warning + '</li>';
           });
@@ -2286,7 +2272,7 @@
     }
   </script>
 
-  <div style="background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 0.9em; margin-top: 20px;">
+  <div style="background: var(--color-bg-light); padding: 20px; text-align: center; color: var(--color-text-muted); font-size: 0.9em; margin-top: 20px;">
     <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
   </div>
 </body>

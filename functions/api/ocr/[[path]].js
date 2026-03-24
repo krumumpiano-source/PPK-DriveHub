@@ -1,6 +1,4 @@
-// PPK DriveHub — OCR API (Gemini Vision)
-// POST /api/ocr/extract   — base64 image → Gemini Vision → extracted fields JSON
-
+// OCR via Gemini Vision API
 import { success, error, parseBody } from '../../_helpers.js';
 
 // Document type → Gemini prompt

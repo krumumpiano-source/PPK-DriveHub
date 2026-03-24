@@ -1,8 +1,4 @@
-// PPK DriveHub — Notifications API
-// GET /api/notifications           — list for current user
-// PUT /api/notifications/:id/read  — mark read
-// PUT /api/notifications/read-all  — mark all read
-
+// User notifications
 import {
   dbAll, dbFirst, dbRun, success, error
 } from '../../_helpers.js';
@@ -17,7 +13,6 @@ export async function onRequest(context) {
 
   if (!user) return error('Unauthorized', 401);
 
-  // PUT /api/notifications/read-all
   if (path === '/api/notifications/read-all' && method === 'PUT') {
     await dbRun(env.DB,
       `UPDATE notifications SET is_read = 1, read_at = ? WHERE (user_id = ? OR user_id IS NULL) AND is_read = 0`,
@@ -26,7 +21,6 @@ export async function onRequest(context) {
     return success({ message: 'อ่านการแจ้งเตือนทั้งหมดแล้ว' });
   }
 
-  // GET /api/notifications
   if (path === '/api/notifications' && method === 'GET') {
     const unreadOnly = url.searchParams.get('unread') === 'true';
     const limit = Math.min(100, parseInt(url.searchParams.get('limit') || '50'));
@@ -45,7 +39,6 @@ export async function onRequest(context) {
     return success({ notifications: rows, unread_count: unreadCount?.cnt || 0 });
   }
 
-  // PUT /api/notifications/:id/read
   if (path.match(/\/api\/notifications\/[^/]+\/read/) && method === 'PUT') {
     const id = path.split('/')[3];
     await dbRun(env.DB,

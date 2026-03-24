@@ -1,11 +1,4 @@
-// PPK DriveHub — Reports API
-// GET /api/reports/dashboard      — summary stats
-// GET /api/reports/fuel           — fuel analysis
-// GET /api/reports/usage          — vehicle usage report
-// GET /api/reports/repair         — repair cost report
-// GET /api/reports/drivers        — driver activity report
-// GET /api/reports/health         — vehicle health scores
-
+// Dashboard stats + analytics
 import {
   dbAll, dbFirst, dbRun, success, error, requirePermission
 } from '../../_helpers.js';
@@ -21,7 +14,6 @@ export async function onRequest(context) {
   if (!user) return error('Unauthorized', 401);
   if (method !== 'GET') return error('Method Not Allowed', 405);
 
-  // GET /api/reports/dashboard
   if (path === '/api/reports/dashboard') {
     const [
       totalVehicles, activeVehicles,
@@ -49,7 +41,6 @@ export async function onRequest(context) {
     });
   }
 
-  // GET /api/reports/fuel
   if (path === '/api/reports/fuel') {
     const year = url.searchParams.get('year') || new Date().getFullYear().toString();
     const [monthly, byVehicle, byType] = await Promise.all([
@@ -77,7 +68,6 @@ export async function onRequest(context) {
     return success({ year, monthly, by_vehicle: byVehicle, by_type: byType });
   }
 
-  // GET /api/reports/usage
   if (path === '/api/reports/usage') {
     const year = url.searchParams.get('year') || new Date().getFullYear().toString();
     const [monthly, byVehicle] = await Promise.all([
@@ -100,7 +90,6 @@ export async function onRequest(context) {
     return success({ year, monthly, by_vehicle: byVehicle });
   }
 
-  // GET /api/reports/repair
   if (path === '/api/reports/repair') {
     const year = url.searchParams.get('year') || new Date().getFullYear().toString();
     const [monthly, byVehicle, byType] = await Promise.all([
@@ -128,7 +117,6 @@ export async function onRequest(context) {
     return success({ year, monthly, by_vehicle: byVehicle, by_type: byType });
   }
 
-  // GET /api/reports/health
   if (path === '/api/reports/health') {
     // Simple health score: based on last check_log, pending repairs, expiry dates
     const vehicles = await dbAll(env.DB,
@@ -158,7 +146,6 @@ export async function onRequest(context) {
     return success(scored);
   }
 
-  // GET /api/reports/drivers
   if (path === '/api/reports/drivers') {
     const year = url.searchParams.get('year') || new Date().getFullYear().toString();
     const drivers = await dbAll(env.DB,

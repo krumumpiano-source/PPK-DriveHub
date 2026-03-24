@@ -1,12 +1,4 @@
-// PPK DriveHub — Auth API
-// POST /api/auth/login
-// POST /api/auth/register
-// POST /api/auth/logout
-// GET  /api/auth/me
-// POST /api/auth/change-password
-// POST /api/auth/forgot-password
-// POST /api/auth/reset-password
-
+// Auth: login, register, password management
 import {
   dbFirst, dbRun, dbAll, generateUUID, now, success, error,
   parseBody, hashPassword, verifyPassword, generateSalt, generateToken,
@@ -20,7 +12,6 @@ export async function onRequest(context) {
   const path = url.pathname;
   const method = request.method;
 
-  // POST /api/auth/login
   if (path === '/api/auth/login' && method === 'POST') {
     const body = await parseBody(request);
     if (!body?.username || !body?.password) return error('กรุณากรอก username และ password');
@@ -60,7 +51,6 @@ export async function onRequest(context) {
     });
   }
 
-  // POST /api/auth/register
   if (path === '/api/auth/register' && method === 'POST') {
     const raw = await parseBody(request);
     const body = (raw && typeof raw === 'object' && raw.data && typeof raw.data === 'object') ? raw.data : raw;
@@ -102,7 +92,6 @@ export async function onRequest(context) {
     return success({ message: 'ส่งคำขอสมัครสมาชิกเรียบร้อย รอการอนุมัติจากผู้ดูแลระบบ' });
   }
 
-  // POST /api/auth/logout
   if (path === '/api/auth/logout' && method === 'POST') {
     const authHeader = request.headers.get('Authorization') || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
@@ -112,7 +101,6 @@ export async function onRequest(context) {
     return success({ message: 'ออกจากระบบเรียบร้อย' });
   }
 
-  // GET /api/auth/me
   if (path === '/api/auth/me' && method === 'GET') {
     if (!env.user) return error('กรุณาเข้าสู่ระบบ', 401);
     const user = await dbFirst(env.DB,
@@ -123,7 +111,6 @@ export async function onRequest(context) {
     return success({ ...user, permissions: JSON.parse(user.permissions || '{}') });
   }
 
-  // POST /api/auth/change-password
   if (path === '/api/auth/change-password' && method === 'POST') {
     if (!env.user) return error('กรุณาเข้าสู่ระบบ', 401);
     const body = await parseBody(request);
@@ -156,7 +143,6 @@ export async function onRequest(context) {
     return success({ message: 'เปลี่ยนรหัสผ่านเรียบร้อย' });
   }
 
-  // POST /api/auth/forgot-password
   if (path === '/api/auth/forgot-password' && method === 'POST') {
     const body = await parseBody(request);
     if (!body?.email) return error('กรุณาระบุ email');
@@ -175,7 +161,6 @@ export async function onRequest(context) {
     return success({ message: 'ถ้า email นี้มีในระบบ จะได้รับลิงก์รีเซ็ตรหัสผ่านทางอีเมล' });
   }
 
-  // POST /api/auth/reset-password
   if (path === '/api/auth/reset-password' && method === 'POST') {
     const body = await parseBody(request);
     if (!body?.token || !body?.new_password) return error('กรุณาระบุ token และรหัสผ่านใหม่');
@@ -200,7 +185,6 @@ export async function onRequest(context) {
     return success({ message: 'รีเซ็ตรหัสผ่านเรียบร้อย กรุณาเข้าสู่ระบบด้วยรหัสใหม่' });
   }
 
-  // POST /api/auth/accept-pdpa
   if (path === '/api/auth/accept-pdpa' && method === 'POST') {
     if (!env.user) return error('กรุณาเข้าสู่ระบบ', 401);
     await dbRun(env.DB,
@@ -210,7 +194,6 @@ export async function onRequest(context) {
     return success({ message: 'ยอมรับนโยบาย PDPA เรียบร้อย' });
   }
 
-  // PUT /api/auth/profile — update own profile
   if (path === '/api/auth/profile' && method === 'PUT') {
     if (!env.user) return error('กรุณาเข้าสู่ระบบ', 401);
     const body = await parseBody(request);

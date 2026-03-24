@@ -1,10 +1,4 @@
-// PPK DriveHub — Usage Records API
-// GET  /api/usage                (auth)
-// POST /api/usage                (auth)
-// POST /api/usage/qr             (public — QR submit)
-// GET  /api/usage/:id            (auth)
-// PUT  /api/usage/:id            (auth)
-
+// Vehicle usage records (incl. public QR)
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, extractParam, writeAuditLog
@@ -41,7 +35,6 @@ export async function onRequest(context) {
 
   if (!user) return error('Unauthorized', 401);
 
-  // GET /api/usage
   if (path === '/api/usage' && method === 'GET') {
     const dateFrom = url.searchParams.get('date_from');
     const dateTo = url.searchParams.get('date_to');
@@ -63,7 +56,6 @@ export async function onRequest(context) {
     return success(rows);
   }
 
-  // POST /api/usage
   if (path === '/api/usage' && method === 'POST') {
     try { requirePermission(user, 'usage', 'create'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const body = await parseBody(request);
@@ -86,7 +78,6 @@ export async function onRequest(context) {
     return success({ id, message: 'บันทึกการใช้รถเรียบร้อย' }, 201);
   }
 
-  // GET /api/usage/:id
   if (path.match(/^\/api\/usage\/[^/]+$/) && method === 'GET') {
     const id = extractParam(path, '/api/usage/');
     const row = await dbFirst(env.DB,
@@ -96,7 +87,6 @@ export async function onRequest(context) {
     return row ? success(row) : error('ไม่พบข้อมูลการใช้รถ', 404);
   }
 
-  // PUT /api/usage/:id
   if (path.match(/^\/api\/usage\/[^/]+$/) && method === 'PUT') {
     try { requirePermission(user, 'usage', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = extractParam(path, '/api/usage/');

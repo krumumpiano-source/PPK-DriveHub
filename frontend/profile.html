@@ -17,8 +17,8 @@
     }
 
     body {
-      font-family: 'Sarabun', 'Kanit', sans-serif;
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      font-family: var(--font-family);
+      background: var(--gradient-primary);
       min-height: 100vh;
       padding: 20px;
     }
@@ -27,13 +27,13 @@
       max-width: 800px;
       margin: 0 auto;
       background: white;
-      border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      border-radius: var(--radius-2xl);
+      box-shadow: var(--shadow-container);
       overflow: hidden;
     }
 
     .header {
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
       padding: 30px;
       text-align: center;
@@ -45,21 +45,21 @@
     }
 
     .nav {
-      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      background: var(--gradient-nav);
       padding: 20px;
       display: flex;
       gap: 12px;
       flex-wrap: wrap;
       justify-content: center;
-      border-bottom: 3px solid #4285f4;
+      border-bottom: 3px solid var(--color-primary);
     }
 
     .nav-btn {
       padding: 12px 20px;
       background: white;
-      border: 2px solid #4285f4;
-      color: #4285f4;
-      border-radius: 10px;
+      border: 2px solid var(--color-primary);
+      color: var(--color-primary);
+      border-radius: var(--radius-lg);
       cursor: pointer;
       font-size: 0.95em;
       font-weight: 600;
@@ -73,12 +73,12 @@
     .nav-btn:hover {
       color: white;
       transform: translateY(-3px);
-      box-shadow: 0 6px 20px rgba(66, 133, 244, 0.4);
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      box-shadow: var(--shadow-nav-hover);
+      background: var(--gradient-primary);
     }
 
     .nav-btn.active {
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
     }
 
@@ -91,7 +91,7 @@
     }
 
     .section h2 {
-      color: #4285f4;
+      color: var(--color-primary);
       font-size: 1.5em;
       margin-bottom: 20px;
       padding-bottom: 10px;
@@ -105,7 +105,7 @@
     .form-group label {
       display: block;
       margin-bottom: 8px;
-      color: #333;
+      color: var(--color-text);
       font-weight: 600;
       font-size: 0.95em;
     }
@@ -115,7 +115,7 @@
       width: 100%;
       padding: 12px 15px;
       border: 2px solid #e0e0e0;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       font-size: 1em;
       transition: all 0.3s;
       font-family: inherit;
@@ -124,23 +124,23 @@
     .form-group input:focus,
     .form-group select:focus {
       outline: none;
-      border-color: #4285f4;
-      box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+      border-color: var(--color-primary);
+      box-shadow: var(--shadow-focus);
     }
 
     .form-group input:disabled {
-      background: #f5f5f5;
+      background: var(--color-bg-lighter);
       cursor: not-allowed;
     }
 
     .form-group .help-text {
       font-size: 0.85em;
-      color: #666;
+      color: var(--color-text-muted);
       margin-top: 5px;
     }
 
     .form-group .required {
-      color: #f44336;
+      color: var(--color-danger);
     }
 
     .title-options {
@@ -155,9 +155,9 @@
       min-width: 80px;
       padding: 10px 16px;
       border: 2px solid #ddd;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       background: white;
-      color: #333;
+      color: var(--color-text);
       font-size: 1em;
       font-weight: 600;
       cursor: pointer;
@@ -166,14 +166,14 @@
     }
 
     .title-option-btn:hover {
-      border-color: #4285f4;
+      border-color: var(--color-primary);
       background: #f0f7ff;
     }
 
     .title-option-btn.active {
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
-      border-color: #4285f4;
+      border-color: var(--color-primary);
     }
 
     .form-row {
@@ -189,10 +189,10 @@
     }
 
     .info-display {
-      background: #f8f9fa;
+      background: var(--color-bg-light);
       padding: 15px;
-      border-radius: 8px;
-      border-left: 4px solid #4285f4;
+      border-radius: var(--radius-md);
+      border-left: 4px solid var(--color-primary);
       margin-bottom: 20px;
       transition: all 0.3s;
     }
@@ -202,19 +202,19 @@
     }
 
     .info-display.editable:hover {
-      background: #e3f2fd;
+      background: var(--color-bg-info);
       border-left-color: #34a853;
     }
 
     .info-display.editing {
       background: #fff;
-      border: 2px solid #4285f4;
-      box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+      border: 2px solid var(--color-primary);
+      box-shadow: var(--shadow-focus);
     }
 
     .info-display .label {
       font-weight: 600;
-      color: #666;
+      color: var(--color-text-muted);
       font-size: 0.9em;
       display: flex;
       align-items: center;
@@ -233,7 +233,7 @@
 
     .info-display .value {
       font-size: 1.1em;
-      color: #333;
+      color: var(--color-text);
       margin-top: 5px;
       min-height: 24px;
     }
@@ -242,8 +242,8 @@
     .info-display .value select {
       width: 100%;
       padding: 8px 12px;
-      border: 2px solid #4285f4;
-      border-radius: 6px;
+      border: 2px solid var(--color-primary);
+      border-radius: var(--radius-sm);
       font-size: 1em;
       font-family: inherit;
       background: white;
@@ -269,7 +269,7 @@
     .edit-actions button {
       padding: 8px 16px;
       border: none;
-      border-radius: 6px;
+      border-radius: var(--radius-sm);
       font-size: 0.9em;
       font-weight: 600;
       cursor: pointer;
@@ -288,9 +288,9 @@
     }
 
     .edit-actions .btn-cancel {
-      background: #f5f5f5;
-      color: #666;
-      border: 1px solid #ddd;
+      background: var(--color-bg-lighter);
+      color: var(--color-text-muted);
+      border: 1px solid var(--color-border);
     }
 
     .edit-actions .btn-cancel:hover {
@@ -305,20 +305,20 @@
     }
 
     .permission-badge {
-      background: #e3f2fd;
+      background: var(--color-bg-info);
       color: #1565c0;
       padding: 6px 12px;
-      border-radius: 20px;
+      border-radius: var(--radius-2xl);
       font-size: 0.85em;
       font-weight: 600;
     }
 
     .btn {
       padding: 12px 24px;
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       color: white;
       border: none;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       font-size: 1em;
       font-weight: 600;
       cursor: pointer;
@@ -328,7 +328,7 @@
 
     .btn:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(66, 133, 244, 0.3);
+      box-shadow: var(--shadow-hover);
     }
 
     .btn:disabled {
@@ -339,34 +339,34 @@
 
     .btn-secondary {
       background: white;
-      color: #4285f4;
-      border: 2px solid #4285f4;
+      color: var(--color-primary);
+      border: 2px solid var(--color-primary);
     }
 
     .alert {
       padding: 12px 15px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       margin-bottom: 20px;
       font-size: 0.9em;
     }
 
     .alert-success {
-      background: #e8f5e9;
-      color: #2e7d32;
+      background: var(--color-bg-success);
+      color: var(--color-secondary-dark);
       border-left: 4px solid #2e7d32;
     }
 
     .alert-error {
-      background: #ffebee;
-      color: #c62828;
+      background: var(--color-bg-danger);
+      color: var(--color-danger-dark);
       border-left: 4px solid #c62828;
     }
 
     .footer {
-      background: #f8f9fa;
+      background: var(--color-bg-light);
       padding: 20px;
       text-align: center;
-      color: #666;
+      color: var(--color-text-muted);
       border-top: 2px solid #e9ecef;
       font-size: 0.9em;
     }
@@ -375,8 +375,8 @@
       text-align: center;
       margin-bottom: 30px;
       padding: 20px;
-      background: #f8f9fa;
-      border-radius: 12px;
+      background: var(--color-bg-light);
+      border-radius: var(--radius-xl);
     }
 
     .profile-image-container {
@@ -390,7 +390,7 @@
       height: 150px;
       border-radius: 50%;
       object-fit: cover;
-      border: 4px solid #4285f4;
+      border: 4px solid var(--color-primary);
       background: #e0e0e0;
       display: block;
     }
@@ -399,13 +399,13 @@
       width: 150px;
       height: 150px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      background: var(--gradient-primary);
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 3em;
       color: white;
-      border: 4px solid #4285f4;
+      border: 4px solid var(--color-primary);
       margin: 0 auto;
     }
 
@@ -421,9 +421,9 @@
       display: inline-block;
       padding: 10px 20px;
       background: white;
-      color: #4285f4;
-      border: 2px solid #4285f4;
-      border-radius: 8px;
+      color: var(--color-primary);
+      border: 2px solid var(--color-primary);
+      border-radius: var(--radius-md);
       cursor: pointer;
       font-size: 0.9em;
       font-weight: 600;
@@ -431,7 +431,7 @@
     }
 
     .profile-image-upload-btn:hover {
-      background: #4285f4;
+      background: var(--color-primary);
       color: white;
     }
 
@@ -442,7 +442,7 @@
     .profile-image-preview img {
       max-width: 200px;
       max-height: 200px;
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       border: 2px solid #e0e0e0;
     }
   </style>
@@ -520,7 +520,7 @@
           <div class="info-display">
             <div class="label">อีเมล</div>
             <div class="value" id="displayEmail">-</div>
-            <div class="help-text" style="font-size: 0.85em; color: #666; margin-top: 5px;">ไม่สามารถแก้ไขได้ (ติดต่อ
+            <div class="help-text" style="font-size: 0.85em; color: var(--color-text-muted); margin-top: 5px;">ไม่สามารถแก้ไขได้ (ติดต่อ
               Admin)</div>
           </div>
 
@@ -635,12 +635,10 @@
       var customInputEl = displayEl.querySelector('input[type="text"]');
       var buttons = displayEl.querySelectorAll('.title-option-btn');
 
-      // Remove active class from all buttons
       buttons.forEach(function (btn) {
         btn.classList.remove('active');
       });
 
-      // Add active class to selected button
       var selectedBtn = displayEl.querySelector('.title-option-btn[data-title="' + value + '"]');
       if (selectedBtn) {
         selectedBtn.classList.add('active');
@@ -687,7 +685,6 @@
         if (result.success && result.data) {
           var user = result.data;
 
-          // Display profile image
           if (user.profile_image) {
             document.getElementById('profileImage').src = user.profile_image;
             document.getElementById('profileImage').style.display = 'block';
@@ -705,24 +702,20 @@
             phone: user.phone || ''
           };
 
-          // Display info
           document.getElementById('displayTitle').textContent = user.title || '-';
           document.getElementById('displayFullName').textContent = user.full_name || '-';
           document.getElementById('displayEmail').textContent = user.email || '-';
           document.getElementById('displayDepartment').textContent = user.department || '-';
           document.getElementById('displayPhone').textContent = user.phone || '-';
 
-          // Check if user can edit (own profile or admin)
           var canEdit = checkCanEditProfile();
           if (!canEdit) {
-            // Remove editable class from all fields
             document.querySelectorAll('.info-display.editable').forEach(function (el) {
               el.classList.remove('editable');
               el.onclick = null;
             });
           }
 
-          // Display role
           var roleText = '';
           if (user.role === 'admin' || user.role === 'super_admin') {
             roleText = user.role === 'super_admin' ? 'ผู้ดูแลระบบสูงสุด (Super Admin)' : 'ผู้ดูแลระบบ (Admin)';
@@ -731,7 +724,6 @@
           }
           document.getElementById('displayRole').textContent = roleText;
 
-          // Display account info
           if (user.created_at) {
             var createdAt = user.created_at;
             if (typeof formatDateThai === 'function') {
@@ -755,7 +747,6 @@
 
           document.getElementById('accountInfoSection').style.display = 'block';
 
-          // Display permissions
           var permissionsList = document.getElementById('permissionsList');
           permissionsList.innerHTML = '';
 
@@ -785,7 +776,7 @@
               permissionsList.appendChild(badge);
             }
           } else {
-            permissionsList.innerHTML = '<span style="color: #666;">ไม่มีสิทธิ์พิเศษ</span>';
+            permissionsList.innerHTML = '<span style="color: var(--color-text-muted);">ไม่มีสิทธิ์พิเศษ</span>';
           }
 
         }
@@ -795,7 +786,6 @@
     }
 
     function checkCanEditProfile() {
-      // Check if current user can edit profile
       // Can edit if: own profile OR admin
       if (!currentUser || !currentUser.id) {
         return false;
@@ -812,7 +802,6 @@
     }
 
     function startEdit(fieldName) {
-      // Check if can edit
       if (!checkCanEditProfile()) {
         alert('คุณไม่มีสิทธิ์แก้ไขข้อมูลนี้');
         return;
@@ -831,13 +820,10 @@
       // Store original value
       containerEl.dataset.originalValue = currentValue;
 
-      // Add editing class
       containerEl.classList.add('editing');
 
-      // Create input based on field type
       var input;
       if (fieldName === 'title') {
-        // Create container for title options and custom input
         var container = document.createElement('div');
         container.style.position = 'relative';
 
@@ -868,9 +854,8 @@
         customInput.type = 'text';
         customInput.id = 'edit_title_custom';
         customInput.placeholder = 'พิมพ์คำนำหน้าของคุณ';
-        customInput.style.cssText = 'display: none; margin-top: 8px; width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; font-family: inherit;';
+        customInput.style.cssText = 'display: none; margin-top: 8px; width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: var(--radius-md); font-size: 1em; font-family: inherit;';
 
-        // Set initial value
         if (currentValue === 'นาย' || currentValue === 'นาง' || currentValue === 'นางสาว' || !currentValue) {
           hiddenInput.value = currentValue || '';
           var initialBtn = optionsDiv.querySelector('[data-title="' + (currentValue || '') + '"]');
@@ -929,7 +914,6 @@
       // Restore original value
       displayEl.textContent = originalValue || '-';
 
-      // Remove editing class
       containerEl.classList.remove('editing');
 
       editingField = null;
@@ -998,7 +982,6 @@
         return;
       }
 
-      // Check if value changed
       var originalValue = containerEl.dataset.originalValue || '';
       if (newValue === originalValue) {
         cancelEdit(fieldName);
@@ -1020,20 +1003,15 @@
         });
 
         if (result.success) {
-          // Update display
           displayEl.textContent = newValue || '-';
 
-          // Update original data
           originalProfileData[fieldName] = newValue;
 
-          // Remove editing class
           containerEl.classList.remove('editing');
           editingField = null;
 
-          // Show success message
           showTemporaryAlert('✅ บันทึกข้อมูลสำเร็จ', 'success');
 
-          // Update full name display if title or full_name changed
           if (fieldName === 'title' || fieldName === 'full_name') {
             var title = fieldName === 'title' ? newValue : originalProfileData.title;
             var fullName = fieldName === 'full_name' ? newValue : originalProfileData.full_name;
@@ -1117,7 +1095,6 @@
         if (result.success) {
           document.getElementById('alert-container').innerHTML = '<div class="alert alert-success">✅ เปลี่ยนรหัสผ่านสำเร็จ กรุณาใช้รหัสผ่านใหม่ในการเข้าสู่ระบบครั้งต่อไป</div>';
           window.scrollTo({ top: 0, behavior: 'smooth' });
-          // Reset form after a delay
           setTimeout(function () {
             resetPasswordForm();
           }, 2000);
@@ -1247,7 +1224,6 @@
 
       selectedProfileImageFile = file;
 
-      // Show preview
       var reader = new FileReader();
       reader.onload = function (e) {
         document.getElementById('previewImage').src = e.target.result;
@@ -1293,14 +1269,12 @@
               document.getElementById('alert-container').innerHTML = '<div class="alert alert-success">✅ อัปโหลดรูปโปรไฟล์สำเร็จ</div>';
               window.scrollTo({ top: 0, behavior: 'smooth' });
 
-              // Update displayed image
               if (result.data && result.data.file_url) {
                 document.getElementById('profileImage').src = result.data.file_url;
                 document.getElementById('profileImage').style.display = 'block';
                 document.getElementById('profileImagePlaceholder').style.display = 'none';
               }
 
-              // Hide preview
               cancelProfileImageUpload();
 
               // Reload profile to get updated data after a delay

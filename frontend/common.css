@@ -1,5 +1,54 @@
-/* PPK DriveHub - Shared layout styles (สำหรับหน้าที่อ้างอิง common.css) */
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --color-primary: #4285f4;
+  --color-primary-dark: #1976d2;
+  --color-secondary: #34a853;
+  --color-secondary-dark: #2e7d32;
+
+  --color-danger: #f44336;
+  --color-danger-dark: #c62828;
+  --color-warning: #ff9800;
+  --color-warning-dark: #f57c00;
+  --color-success: #4caf50;
+  --color-info: #4fc3f7;
+
+  --color-text: #333;
+  --color-text-muted: #666;
+  --color-text-light: #999;
+
+  --color-bg-light: #f8f9fa;
+  --color-bg-lighter: #f5f5f5;
+  --color-bg-gray: #e9ecef;
+  --color-bg-danger: #ffebee;
+  --color-bg-success: #e8f5e9;
+  --color-bg-info: #e3f2fd;
+  --color-bg-warning: #fff3e0;
+
+  --color-border: #ddd;
+  --color-border-light: #e0e0e0;
+
+  --gradient-primary: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+  --gradient-nav: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  --gradient-warning: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  --gradient-info: linear-gradient(135deg, #4fc3f7 0%, #80deea 100%);
+  --gradient-success: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+  --gradient-danger: linear-gradient(135deg, #ea4335 0%, #c62828 100%);
+
+  --shadow-container: 0 20px 60px rgba(0, 0, 0, 0.3);
+  --shadow-focus: 0 0 0 3px rgba(66, 133, 244, 0.1);
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-hover: 0 8px 20px rgba(66, 133, 244, 0.3);
+  --shadow-nav-hover: 0 6px 20px rgba(66, 133, 244, 0.4);
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 20px;
+
+  --font-family: 'Sarabun', 'Kanit', sans-serif;
+}
 
 * {
   margin: 0;
@@ -8,8 +57,8 @@
 }
 
 body {
-  font-family: 'Sarabun', 'Kanit', sans-serif;
-  background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+  font-family: var(--font-family);
+  background: var(--gradient-primary);
   min-height: 100vh;
   padding: 20px;
 }
@@ -18,13 +67,13 @@ body {
   max-width: 1200px;
   margin: 0 auto;
   background: white;
-  border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-container);
   overflow: hidden;
 }
 
 .header {
-  background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+  background: var(--gradient-primary);
   color: white;
   padding: 30px;
   text-align: center;
@@ -47,13 +96,13 @@ body {
 .loading {
   text-align: center;
   padding: 40px;
-  color: #666;
+  color: var(--color-text-muted);
 }
 
 .btn {
   padding: 10px 20px;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: 1em;
   font-weight: 600;
   cursor: pointer;
@@ -61,13 +110,13 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+  background: var(--gradient-primary);
   color: white;
 }
 
 .btn-secondary {
-  background: #e9ecef;
-  color: #333;
+  background: var(--color-bg-gray);
+  color: var(--color-text);
 }
 
 .form-group {
@@ -77,7 +126,7 @@ body {
 .form-group label {
   display: block;
   margin-bottom: 5px;
-  color: #333;
+  color: var(--color-text);
   font-weight: 500;
 }
 
@@ -85,29 +134,28 @@ body {
 .form-group select {
   width: 100%;
   padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
   font-size: 1em;
   font-family: inherit;
 }
 
-/* Navigation */
 .nav {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  background: var(--gradient-nav);
   padding: 20px;
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
   justify-content: center;
-  border-bottom: 3px solid #4285f4;
+  border-bottom: 3px solid var(--color-primary);
 }
 
 .nav-btn {
   padding: 12px 20px;
   background: white;
-  border: 2px solid #4285f4;
-  color: #4285f4;
-  border-radius: 10px;
+  border: 2px solid var(--color-primary);
+  color: var(--color-primary);
+  border-radius: var(--radius-lg);
   cursor: pointer;
   font-size: 0.95em;
   font-weight: 600;
@@ -121,12 +169,12 @@ body {
 .nav-btn:hover {
   color: white;
   transform: translateY(-3px);
-  box-shadow: 0 6px 20px rgba(66, 133, 244, 0.4);
-  background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+  box-shadow: var(--shadow-nav-hover);
+  background: var(--gradient-primary);
 }
 
 .nav-btn.active {
-  background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+  background: var(--gradient-primary);
   color: white;
 }
 

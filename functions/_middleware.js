@@ -1,9 +1,5 @@
-// PPK DriveHub — Middleware: Auth + CORS + CSP
-// Cloudflare Pages Functions global middleware
-
 import { error, dbFirst } from './_helpers.js';
 
-// Public API paths — no authentication required
 const PUBLIC_PATHS = [
   '/api/auth/login',
   '/api/auth/register',
@@ -17,7 +13,6 @@ const PUBLIC_PATHS = [
   '/api/fuel/types',            // โหลด fuel types สำหรับ QR
 ];
 
-// CORS headers
 const ALLOWED_ORIGINS = [
   'https://ppk-drivehub.pages.dev',
   'http://localhost:8788',         // wrangler dev
@@ -30,7 +25,6 @@ const CORS_HEADERS = {
   'Access-Control-Max-Age': '86400'
 };
 
-// CSP header
 const CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com",
@@ -90,7 +84,6 @@ export async function onRequest(context) {
         return addCors(error('บัญชีถูกระงับการใช้งาน', 403), request);
       }
 
-      // Attach user info for downstream handlers
       env.user = {
         id: session.user_id,
         role: session.role,
@@ -104,7 +97,6 @@ export async function onRequest(context) {
     }
   }
 
-  // Continue to route handler
   try {
     const response = await next();
     return addCors(response, request);

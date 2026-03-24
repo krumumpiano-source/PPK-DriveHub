@@ -1,17 +1,4 @@
-// PPK DriveHub — Fuel API
-// GET    /api/fuel             (auth)
-// POST   /api/fuel             (auth)
-// GET    /api/fuel/types       (public)
-// POST   /api/fuel/qr          (public — QR page submit)
-// GET    /api/fuel/reports      (auth)
-// GET    /api/fuel/requests     (auth)
-// POST   /api/fuel/requests     (auth)
-// PUT    /api/fuel/requests/:id/approve  (admin)
-// PUT    /api/fuel/requests/:id/reject   (admin)
-// GET    /api/fuel/:id          (auth)
-// PUT    /api/fuel/:id          (auth)
-// DELETE /api/fuel/:id          (admin)
-
+// Fuel logs, requests, reports
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, requireAdmin, extractParam, writeAuditLog, uploadToR2
@@ -37,9 +24,7 @@ export async function onRequest(context) {
   const method = request.method;
   const user = env.user;
 
-  // ── PUBLIC ──
 
-  // GET /api/fuel/types
   if (path === '/api/fuel/types' && method === 'GET') {
     // Also return price per litre from system_settings
     const prices = {};
@@ -53,7 +38,6 @@ export async function onRequest(context) {
     return success(FUEL_TYPES.map(f => ({ ...f, price_per_litre: prices[f.id] || 0 })));
   }
 
-  // POST /api/fuel/qr — public QR-page fuel record
   if (path === '/api/fuel/qr' && method === 'POST') {
     const body = await parseBody(request);
     if (!body?.car_id || !body?.fuel_type || !body?.liters) return error('กรุณากรอกข้อมูลให้ครบ');
@@ -89,10 +73,8 @@ export async function onRequest(context) {
     return success({ id, message: 'บันทึกการเติมน้ำมันเรียบร้อย' }, 201);
   }
 
-  // ── AUTH REQUIRED ──
   if (!user) return error('Unauthorized', 401);
 
-  // GET /api/fuel
   if (path === '/api/fuel' && method === 'GET') {
     const dateFrom = url.searchParams.get('date_from');
     const dateTo = url.searchParams.get('date_to');
@@ -112,7 +94,6 @@ export async function onRequest(context) {
     return success(rows);
   }
 
-  // POST /api/fuel
   if (path === '/api/fuel' && method === 'POST') {
     try { requirePermission(user, 'fuel', 'create'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const body = await parseBody(request);
@@ -145,7 +126,6 @@ export async function onRequest(context) {
     return success({ id, message: 'บันทึกการเติมน้ำมันเรียบร้อย' }, 201);
   }
 
-  // GET /api/fuel/reports
   if (path === '/api/fuel/reports' && method === 'GET') {
     const year = url.searchParams.get('year') || new Date().getFullYear().toString();
     const month = url.searchParams.get('month');
@@ -170,7 +150,6 @@ export async function onRequest(context) {
     return success(rows);
   }
 
-  // GET /api/fuel/requests
   if (path === '/api/fuel/requests' && method === 'GET') {
     const status = url.searchParams.get('status') || 'pending';
     const rows = await dbAll(env.DB,
@@ -179,7 +158,6 @@ export async function onRequest(context) {
     return success(rows);
   }
 
-  // POST /api/fuel/requests
   if (path === '/api/fuel/requests' && method === 'POST') {
     const body = await parseBody(request);
     if (!body?.car_id || !body?.liters) return error('กรุณากรอกข้อมูลให้ครบ');
@@ -194,7 +172,6 @@ export async function onRequest(context) {
     return success({ id, message: 'ส่งคำขอเติมน้ำมันเรียบร้อย' }, 201);
   }
 
-  // PUT /api/fuel/requests/:id/approve
   if (path.match(/\/api\/fuel\/requests\/[^/]+\/approve/) && method === 'PUT') {
     try { requireAdmin(user); } catch { return error('ต้องเป็น Admin', 403); }
     const id = path.split('/')[4];
@@ -206,7 +183,6 @@ export async function onRequest(context) {
     return success({ message: 'อนุมัติคำขอเติมน้ำมันเรียบร้อย' });
   }
 
-  // PUT /api/fuel/requests/:id/reject
   if (path.match(/\/api\/fuel\/requests\/[^/]+\/reject/) && method === 'PUT') {
     try { requireAdmin(user); } catch { return error('ต้องเป็น Admin', 403); }
     const id = path.split('/')[4];
@@ -218,7 +194,6 @@ export async function onRequest(context) {
     return success({ message: 'ปฏิเสธคำขอเติมน้ำมัน' });
   }
 
-  // GET /api/fuel/:id
   if (path.match(/^\/api\/fuel\/[^/]+$/) && method === 'GET') {
     const id = extractParam(path, '/api/fuel/');
     const row = await dbFirst(env.DB,
@@ -228,7 +203,6 @@ export async function onRequest(context) {
     return row ? success(row) : error('ไม่พบข้อมูล', 404);
   }
 
-  // PUT /api/fuel/:id
   if (path.match(/^\/api\/fuel\/[^/]+$/) && method === 'PUT') {
     try { requirePermission(user, 'fuel', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = extractParam(path, '/api/fuel/');

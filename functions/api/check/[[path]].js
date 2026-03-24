@@ -1,9 +1,4 @@
-// PPK DriveHub — Daily Check API
-// POST /api/check/daily   (public — QR daily check-in)
-// GET  /api/check/log     (auth)
-// GET  /api/check/alerts  (auth)
-// PUT  /api/check/alerts/:id/resolve
-
+// Daily vehicle inspections (incl. public QR)
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, extractParam, uploadToR2
@@ -71,7 +66,6 @@ export async function onRequest(context) {
 
   if (!user) return error('Unauthorized', 401);
 
-  // GET /api/check/log
   if (path === '/api/check/log' && method === 'GET') {
     const carId = url.searchParams.get('car_id');
     const dateFrom = url.searchParams.get('date_from');
@@ -91,7 +85,6 @@ export async function onRequest(context) {
     return success(rows);
   }
 
-  // GET /api/check/alerts
   if (path === '/api/check/alerts' && method === 'GET') {
     const status = url.searchParams.get('status') || 'open';
     const rows = await dbAll(env.DB,
@@ -103,7 +96,6 @@ export async function onRequest(context) {
     return success(rows);
   }
 
-  // PUT /api/check/alerts/:id/resolve
   if (path.match(/\/api\/check\/alerts\/[^/]+\/resolve/) && method === 'PUT') {
     try { requirePermission(user, 'maintenance', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[4];

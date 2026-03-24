@@ -1,11 +1,4 @@
-/**
- * PPK DriveHub — common.js (Cloudflare Edition)
- * Auth ใช้ Bearer token ผ่าน api.js (API.getToken / API.getUser)
- * apiCall(action, data) มาจาก js/api.js — ไม่ต้องนิยามซ้ำที่นี่
- */
-
-// ── Flatpickr Thai Locale ──────────────────────────────────────────────────
-if (typeof flatpickr !== 'undefined') {
+﻿if (typeof flatpickr !== 'undefined') {
     flatpickr.localize({
         weekdays: {
             shorthand: ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'],
@@ -29,7 +22,6 @@ if (typeof flatpickr !== 'undefined') {
     });
 }
 
-// ── Auth ───────────────────────────────────────────────────────────────────
 
 var currentUser = null;
 
@@ -92,7 +84,6 @@ function requireAdmin() {
     return true;
 }
 
-// ── Navigation ──────────────────────────────────────────────────────────────
 
 function setActiveMenu() {
     try {
@@ -171,7 +162,6 @@ function renderNav() {
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderNav);
 else renderNav();
 
-// ── Error / Message Helpers ────────────────────────────────────────────────
 
 function handleError(error, context) {
     try {
@@ -231,7 +221,6 @@ function showConfirm(message, onConfirm, onCancel) {
     return c;
 }
 
-// ── Date / Number Helpers ──────────────────────────────────────────────────
 
 function formatDateThai(dateString) {
     if (!dateString) return '';
@@ -266,7 +255,6 @@ function validateFileUpload(file, maxSizeMB, allowedTypes) {
     return { valid: true };
 }
 
-// ── File → Base64 ──────────────────────────────────────────────────────────
 
 function fileToBase64(file) {
     return new Promise(function (resolve, reject) {
@@ -280,7 +268,6 @@ function fileToBase64(file) {
     });
 }
 
-// ── Flatpickr Helpers ──────────────────────────────────────────────────────
 
 function initLoadingSpinnerStyle() {
     if (!document.getElementById('loading-spinner-style')) {

@@ -1,11 +1,8 @@
-// PPK DriveHub — First-time setup endpoint
-// POST /api/setup → creates first admin user
-
+// First-time admin setup
 import { dbFirst, dbRun, generateUUID, now, success, error, parseBody, hashPassword, generateSalt } from '../_helpers.js';
 
 export async function onRequest({ request, env }) {
   try {
-  // GET /api/setup — check if first-time setup is needed
   if (request.method === 'GET') {
     const existing = await dbFirst(env.DB, 'SELECT id FROM users LIMIT 1');
     return success({ needs_setup: !existing });

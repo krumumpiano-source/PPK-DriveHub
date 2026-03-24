@@ -1,10 +1,3 @@
-// PPK DriveHub — Shared Helpers
-// D1 queries, PBKDF2 auth, R2 file storage, permission checks
-
-// ============================================================
-// UUID & Time
-// ============================================================
-
 export function generateUUID() {
   return crypto.randomUUID();
 }
@@ -13,10 +6,7 @@ export function now() {
   return new Date().toISOString();
 }
 
-// ============================================================
-// Password (PBKDF2-SHA256, 100k iterations)
-// ============================================================
-
+// PBKDF2-SHA256, 100k iterations — OWASP recommended minimum for password storage
 export async function hashPassword(password, salt) {
   const enc = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
@@ -29,6 +19,7 @@ export async function hashPassword(password, salt) {
   return btoa(String.fromCharCode(...new Uint8Array(bits)));
 }
 
+// Timing-safe comparison to prevent side-channel attacks
 export async function verifyPassword(password, salt, hash) {
   const computed = await hashPassword(password, salt);
   if (computed.length !== hash.length) return false;
@@ -48,10 +39,6 @@ export function generateSalt() {
 export function generateToken() {
   return generateUUID() + '-' + generateUUID();
 }
-
-// ============================================================
-// HTTP Response helpers
-// ============================================================
 
 export function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -76,10 +63,6 @@ export async function parseBody(request) {
   }
 }
 
-// ============================================================
-// D1 Query helpers — always parameterized
-// ============================================================
-
 export async function dbAll(db, sql, params = []) {
   const stmt = db.prepare(sql).bind(...params);
   const result = await stmt.all();
@@ -96,10 +79,6 @@ export async function dbRun(db, sql, params = []) {
   return await stmt.run();
 }
 
-// ============================================================
-// Pagination
-// ============================================================
-
 export function paginate(url) {
   const u = typeof url === 'string' ? new URL(url) : url;
   const page = Math.max(1, parseInt(u.searchParams.get('page') || '1'));
@@ -114,19 +93,9 @@ export function extractParam(pathname, prefix) {
   return slash === -1 ? rest : rest.slice(0, slash);
 }
 
-// ============================================================
-// Permission checks
-// ============================================================
-
 const PERMISSION_LEVELS = { view: 1, create: 2, edit: 3, delete: 4 };
 
-/**
- * Check if user has required permission level for a module.
- * Admins bypass all checks.
- * @param {object} user - env.user from middleware
- * @param {string} module - 'queue'|'fuel'|'repair'|'vehicles'|'drivers'|'reports'|'usage_log'
- * @param {string} level  - 'view'|'create'|'edit'|'delete'
- */
+// Hierarchical: view < create < edit < delete — having 'edit' implies 'create' and 'view'
 export function checkPermission(user, module, level) {
   if (!user) return false;
   if (user.role === 'admin' || user.role === 'super_admin') return true;
@@ -159,35 +128,17 @@ class PermissionError extends Error {
   constructor(msg) { super(msg); this.status = 403; }
 }
 
-// ============================================================
-// Cloudflare R2 File Storage
-// ============================================================
-
-/**
- * Upload a base64-encoded file to R2.
- * @param {object} env         - Cloudflare env with STORAGE binding
- * @param {string} base64Data  - base64 string (without data: prefix)
- * @param {string} fileName    - original file name
- * @param {string} folder      - prefix: 'FUEL'|'REPAIR'|'CHECK'|'TAX'|'INSURANCE'|'VEHICLES'|'DRIVERS'
- * @param {string} mimeType    - e.g. 'image/jpeg'
- * @returns {{ key: string, url: string }}
- */
+// R2 is optional — returns empty string if bucket not bound (local dev / free tier)
 export async function uploadToR2(env, base64Data, fileName, folder, mimeType = 'image/jpeg') {
-  // R2 is optional — if bucket not configured, skip silently
-  if (!env.STORAGE) return '';
-  if (!base64Data) return '';
+  if (!env.STORAGE || !base64Data) return '';
 
-  // Strip data URL prefix if present
   const clean = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
-
-  // Decode base64 → binary
   const binary = atob(clean);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i);
   }
 
-  // Build R2 key: FOLDER/YYYYMMDD_uuid.ext
   const ext = fileName.split('.').pop()?.toLowerCase() || 'bin';
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   const key = `${folder}/${dateStr}_${generateUUID()}.${ext}`;
@@ -198,10 +149,6 @@ export async function uploadToR2(env, base64Data, fileName, folder, mimeType = '
 
   return `/api/files/${key}`;
 }
-
-// ============================================================
-// Audit Log
-// ============================================================
 
 export async function writeAuditLog(db, userId, username, action, module, entityId, details) {
   try {
@@ -215,10 +162,6 @@ export async function writeAuditLog(db, userId, username, action, module, entity
     // Audit log failures should not crash the main request
   }
 }
-
-// ============================================================
-// Telegram notifications
-// ============================================================
 
 export async function sendTelegramMessage(env, message) {
   const token = env.TELEGRAM_BOT_TOKEN;

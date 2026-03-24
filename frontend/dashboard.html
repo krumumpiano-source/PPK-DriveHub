@@ -19,8 +19,8 @@
     }
 
     body {
-      font-family: 'Sarabun', 'Kanit', sans-serif;
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      font-family: var(--font-family);
+      background: var(--gradient-primary);
       min-height: 100vh;
       padding: 0;
     }
@@ -29,13 +29,13 @@
     max-width: 1400px;
     margin: 0 auto;
     background: white;
-    border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-container);
     overflow: hidden;
     }
 
     .header {
-    background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+    background: var(--gradient-primary);
     color: white;
     padding: 30px;
     text-align: center;
@@ -74,10 +74,10 @@
 
     .calendar-nav-btn {
     padding: 8px 16px;
-    background: #4285f4;
+    background: var(--color-primary);
     color: white;
     border: none;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     cursor: pointer;
     font-size: 1em;
     font-weight: 600;
@@ -91,21 +91,21 @@
     .calendar-month-year {
     font-size: 1.5em;
     font-weight: 700;
-    color: #333;
+    color: var(--color-text);
     }
 
     .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 1px;
-    background: #e9ecef;
+    background: var(--color-bg-gray);
     border: 1px solid #e9ecef;
-    border-radius: 12px;
+    border-radius: var(--radius-xl);
     overflow: hidden;
     }
 
     .calendar-day-header {
-    background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+    background: var(--gradient-primary);
     color: white;
     padding: 15px;
     text-align: center;
@@ -123,19 +123,19 @@
     }
 
     .calendar-day:hover {
-    background: #f8f9fa;
+    background: var(--color-bg-light);
     }
 
     .calendar-day.other-month {
-    background: #f8f9fa;
-    color: #999;
+    background: var(--color-bg-light);
+    color: var(--color-text-light);
     }
 
     .calendar-day-number {
     font-weight: 700;
     font-size: 1.1em;
     margin-bottom: 5px;
-    color: #333;
+    color: var(--color-text);
     }
 
     .calendar-day.other-month .calendar-day-number {
@@ -143,22 +143,22 @@
     }
 
     .calendar-day.today {
-    background: #e3f2fd;
-    border: 2px solid #4285f4;
+    background: var(--color-bg-info);
+    border: 2px solid var(--color-primary);
     }
 
     .calendar-day.today .calendar-day-number {
-    color: #4285f4;
+    color: var(--color-primary);
     font-size: 1.3em;
     }
 
     /* Queue status colors */
     .calendar-day.past {
-    background: #e9ecef !important;
+    background: var(--color-bg-gray) !important;
     }
 
     .calendar-day.past .calendar-day-number {
-    color: #666;
+    color: var(--color-text-muted);
     }
 
     .calendar-day.current {
@@ -166,7 +166,7 @@
     }
 
     .calendar-day.current .calendar-day-number {
-    color: #2e7d32;
+    color: var(--color-secondary-dark);
     font-weight: 700;
     }
 
@@ -192,7 +192,7 @@
     margin-bottom: 3px;
     border-radius: 4px;
     background: rgba(255, 255, 255, 0.7);
-    border-left: 3px solid #4285f4;
+    border-left: 3px solid var(--color-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -204,12 +204,12 @@
     }
 
     .queue-item .queue-driver {
-    color: #666;
+    color: var(--color-text-muted);
     font-size: 0.9em;
     }
 
     .queue-item .queue-destination {
-    color: #333;
+    color: var(--color-text);
     font-size: 0.85em;
     }
 
@@ -221,18 +221,18 @@
     }
 
     .availability-card {
-    background: #f8f9fa;
-    border-radius: 12px;
+    background: var(--color-bg-light);
+    border-radius: var(--radius-xl);
     padding: 25px;
-    border-left: 4px solid #4285f4;
+    border-left: 4px solid var(--color-primary);
     }
 
     .availability-card h3 {
     font-size: 1.5em;
-    color: #4285f4;
+    color: var(--color-primary);
     margin-bottom: 20px;
     padding-bottom: 10px;
-    border-bottom: 2px solid #4285f4;
+    border-bottom: 2px solid var(--color-primary);
     }
 
     .availability-list {
@@ -244,7 +244,7 @@
     .availability-item {
     background: white;
     padding: 12px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     border-left: 3px solid #34a853;
     display: flex;
     justify-content: space-between;
@@ -252,25 +252,25 @@
     }
 
     .availability-item strong {
-    color: #333;
+    color: var(--color-text);
     }
 
     .availability-item span {
-    color: #666;
+    color: var(--color-text-muted);
     font-size: 0.9em;
     }
 
     .empty-availability {
     text-align: center;
     padding: 20px;
-    color: #999;
+    color: var(--color-text-light);
     font-style: italic;
     }
 
     .loading {
     text-align: center;
     padding: 60px 20px;
-    color: #666;
+    color: var(--color-text-muted);
     }
 
     @media (max-width: 768px) {
@@ -381,12 +381,10 @@
           });
         }
 
-        // Initialize
         document.addEventListener('DOMContentLoaded', async function () {
           // Wait for common.js to load
           await waitForCommon();
 
-          // Check if common.js is loaded
           if (typeof apiCall === 'undefined') {
             console.error('common.js not loaded! Make sure to open via web server, not file://');
             // Still show calendar even without API
@@ -398,7 +396,6 @@
             return;
           }
 
-          // Check authentication but don't block if not logged in (for testing)
           try {
             if (typeof requireAuth === 'function') {
               var authResult = requireAuth();
@@ -418,7 +415,6 @@
             document.getElementById('loading').style.display = 'block';
             document.getElementById('dashboardContent').style.display = 'none';
 
-            // Load queues for current month
             var firstDay = new Date(currentYear, currentMonth, 1);
             var lastDay = new Date(currentYear, currentMonth + 1, 0);
             var dateFrom = formatDate(firstDay);
@@ -426,7 +422,6 @@
 
             queues = [];
 
-            // Load queues
             try {
               var queuesResult = await apiCall('getQueues', {
                 filters: {
@@ -468,7 +463,6 @@
               queues = [];
             }
 
-            // Load vehicles
             try {
               var vehiclesResult = await apiCall('getVehicles', {});
               if (vehiclesResult && vehiclesResult.success && vehiclesResult.data && vehiclesResult.data.vehicles) {
@@ -482,7 +476,6 @@
               vehicles = [];
             }
 
-            // Load drivers
             try {
               var driversResult = await apiCall('getDrivers', { status: 'active' });
               if (driversResult && driversResult.success && driversResult.data && driversResult.data.drivers) {
@@ -496,7 +489,6 @@
               drivers = [];
             }
 
-            // Load available vehicles and drivers for today
             var today = formatDate(new Date());
             var availableVehicles = [];
             var availableDrivers = [];
@@ -522,7 +514,6 @@
             // Always display calendar, even if no data
             renderCalendar();
 
-            // Display availability
             displayAvailability(availableVehicles, availableDrivers);
 
           } catch (error) {
@@ -550,7 +541,6 @@
           var firstDayOfWeek = firstDay.getDay();
           var daysInMonth = lastDay.getDate();
 
-          // Update month/year header
           document.getElementById('monthYear').textContent = thaiMonths[currentMonth] + ' ' + (currentYear + 543);
 
           var html = '';
@@ -639,7 +629,6 @@
             html += '<div class="calendar-day ' + statusClass + '">';
             html += '<div class="calendar-day-number">' + day + '</div>';
 
-            // Display queues for this day (limit to 3 for better display)
             var displayQueues = dayQueues.slice(0, 3);
             displayQueues.forEach(function (queue) {
               var vehicle = vehiclesMap[queue.car_id];
@@ -656,7 +645,7 @@
             });
 
             if (dayQueues.length > 3) {
-              html += '<div class="queue-item" style="font-size: 0.7em; color: #999;">+ ' + (dayQueues.length - 3) + ' คิวเพิ่มเติม</div>';
+              html += '<div class="queue-item" style="font-size: 0.7em; color: var(--color-text-light);">+ ' + (dayQueues.length - 3) + ' คิวเพิ่มเติม</div>';
             }
 
             html += '</div>';
@@ -691,7 +680,6 @@
         }
 
         async function displayAvailability(availableVehicles, availableDrivers) {
-          // Display available drivers
           var driversHtml = '';
           if (availableDrivers && availableDrivers.length > 0) {
             availableDrivers.forEach(function (driver) {
@@ -707,7 +695,6 @@
           }
           document.getElementById('driversAvailableList').innerHTML = driversHtml;
 
-          // Load scheduled repairs to show vehicles under repair
           var scheduledRepairs = [];
           try {
             var scheduledRepairsResult = await apiCall('getScheduledRepairs', {
@@ -722,7 +709,6 @@
             console.error('Error loading scheduled repairs:', schedError);
           }
 
-          // Display available vehicles
           var vehiclesHtml = '';
           if (availableVehicles && availableVehicles.length > 0) {
             availableVehicles.forEach(function (vehicle) {
@@ -735,14 +721,13 @@
             vehiclesHtml = '<div class="empty-availability">ไม่มีรถว่าง</div>';
           }
 
-          // Display vehicles under repair
           if (scheduledRepairs.length > 0) {
             vehiclesHtml += '<div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #ff9800;">';
-            vehiclesHtml += '<h4 style="color: #ff9800; margin-bottom: 10px; font-size: 1em;">🔧 รถที่กำลังซ่อม</h4>';
+            vehiclesHtml += '<h4 style="color: var(--color-warning); margin-bottom: 10px; font-size: 1em;">🔧 รถที่กำลังซ่อม</h4>';
             scheduledRepairs.forEach(function (sr) {
               var vehicle = vehicles.find(function (v) { return v.car_id === sr.car_id; });
               if (vehicle) {
-                vehiclesHtml += '<div class="availability-item" style="border-left-color: #ff9800; background: #fff3e0;">';
+                vehiclesHtml += '<div class="availability-item" style="border-left-color: var(--color-warning); background: var(--color-bg-warning);">';
                 vehiclesHtml += '<strong>' + vehicle.license_plate + '</strong>';
                 vehiclesHtml += '<span style="color: #e65100; font-size: 0.85em;">🔧 ' + (sr.issue_description || 'กำลังซ่อม') + '</span>';
                 vehiclesHtml += '</div>';
@@ -761,7 +746,7 @@
       </script>
 
       <div class="footer"
-        style="background: #f8f9fa; padding: 20px; text-align: center; color: #666; border-top: 2px solid #e9ecef; font-size: 0.9em; margin-top: 40px;">
+        style="background: var(--color-bg-light); padding: 20px; text-align: center; color: var(--color-text-muted); border-top: 2px solid #e9ecef; font-size: 0.9em; margin-top: 40px;">
         <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
       </div>
     </body>

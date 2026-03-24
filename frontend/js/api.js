@@ -1,9 +1,4 @@
-/**
- * PPK DriveHub — Frontend API Client
- * Bearer token REST wrapper + backward-compat apiCall() bridge
- */
-
-const API = (() => {
+﻿const API = (() => {
   const BASE = '';  // relative paths — works on any domain
 
   function getToken() {
@@ -67,10 +62,8 @@ const API = (() => {
   };
 })();
 
-// ────────────────────────────────────────────────────────────────────────────
 // Backward-Compat Bridge: apiCall(action, data)
 // Maps old GAS action names → new REST endpoints
-// ────────────────────────────────────────────────────────────────────────────
 const ACTION_MAP = {
   // Auth
   'login':               (d) => API.post('/api/auth/login', d),
