@@ -396,15 +396,12 @@
             return;
           }
 
-          try {
-            if (typeof requireAuth === 'function') {
-              var authResult = requireAuth();
-              if (!authResult) {
-                console.warn('Not authenticated, but continuing to show calendar');
-              }
+          if (typeof requireAuth === 'function') {
+            var authResult = requireAuth();
+            if (!authResult) {
+              window.location.href = 'login.html';
+              return;
             }
-          } catch (e) {
-            console.warn('Auth check failed:', e);
           }
 
           loadDashboard();
@@ -423,15 +420,13 @@
             queues = [];
 
             try {
-              var queuesResult = await apiCall('getQueues', {
-                filters: {
-                  date_from: dateFrom,
-                  date_to: dateTo
-                }
+              var queuesResult = await apiCall('getQueue', {
+                date_from: dateFrom,
+                date_to: dateTo
               });
 
-              if (queuesResult && queuesResult.success && queuesResult.data && queuesResult.data.queues) {
-                queues = queuesResult.data.queues;
+              if (queuesResult && queuesResult.success && Array.isArray(queuesResult.data)) {
+                queues = queuesResult.data;
               }
 
               // Also load queues for a few days before and after for better calendar display
@@ -440,21 +435,19 @@
               var extendedTo = new Date(lastDay);
               extendedTo.setDate(extendedTo.getDate() + 7);
 
-              var extendedQueuesResult = await apiCall('getQueues', {
-                filters: {
-                  date_from: formatDate(extendedFrom),
-                  date_to: formatDate(extendedTo)
-                }
+              var extendedQueuesResult = await apiCall('getQueue', {
+                date_from: formatDate(extendedFrom),
+                date_to: formatDate(extendedTo)
               });
 
-              if (extendedQueuesResult && extendedQueuesResult.success && extendedQueuesResult.data && extendedQueuesResult.data.queues) {
+              if (extendedQueuesResult && extendedQueuesResult.success && Array.isArray(extendedQueuesResult.data)) {
                 // Merge queues, avoiding duplicates
                 var queueIds = {};
-                queues.forEach(function (q) { queueIds[q.queue_id] = true; });
-                extendedQueuesResult.data.queues.forEach(function (q) {
-                  if (!queueIds[q.queue_id]) {
+                queues.forEach(function (q) { queueIds[q.id] = true; });
+                extendedQueuesResult.data.forEach(function (q) {
+                  if (!queueIds[q.id]) {
                     queues.push(q);
-                    queueIds[q.queue_id] = true;
+                    queueIds[q.id] = true;
                   }
                 });
               }
@@ -465,10 +458,10 @@
 
             try {
               var vehiclesResult = await apiCall('getVehicles', {});
-              if (vehiclesResult && vehiclesResult.success && vehiclesResult.data && vehiclesResult.data.vehicles) {
-                vehicles = vehiclesResult.data.vehicles;
+              if (vehiclesResult && vehiclesResult.success && Array.isArray(vehiclesResult.data)) {
+                vehicles = vehiclesResult.data;
                 vehicles.forEach(function (v) {
-                  vehiclesMap[v.car_id] = v;
+                  vehiclesMap[v.id] = v;
                 });
               }
             } catch (vehicleError) {
@@ -478,10 +471,10 @@
 
             try {
               var driversResult = await apiCall('getDrivers', { status: 'active' });
-              if (driversResult && driversResult.success && driversResult.data && driversResult.data.drivers) {
-                drivers = driversResult.data.drivers;
+              if (driversResult && driversResult.success && Array.isArray(driversResult.data)) {
+                drivers = driversResult.data;
                 drivers.forEach(function (d) {
-                  driversMap[d.driver_id] = d;
+                  driversMap[d.id] = d;
                 });
               }
             } catch (driverError) {
@@ -493,23 +486,22 @@
             var availableVehicles = [];
             var availableDrivers = [];
 
-            try {
-              var availableVehiclesResult = await apiCall('getAvailableVehiclesForQueue', { date: today });
-              if (availableVehiclesResult && availableVehiclesResult.success && availableVehiclesResult.data && availableVehiclesResult.data.vehicles) {
-                availableVehicles = availableVehiclesResult.data.vehicles;
-              }
-            } catch (avError) {
-              console.error('Error loading available vehicles:', avError);
-            }
-
-            try {
-              var availableDriversResult = await apiCall('getAvailableDriversForQueue', { date: today });
-              if (availableDriversResult && availableDriversResult.success && availableDriversResult.data && availableDriversResult.data.drivers) {
-                availableDrivers = availableDriversResult.data.drivers;
-              }
-            } catch (adError) {
-              console.error('Error loading available drivers:', adError);
-            }
+            // Compute availability from loaded data
+            var todayQueues = queues.filter(function (q) {
+              return q.departure_date === today && q.status !== 'cancelled';
+            });
+            var busyCarIds = {};
+            var busyDriverIds = {};
+            todayQueues.forEach(function (q) {
+              if (q.car_id) busyCarIds[q.car_id] = true;
+              if (q.driver_id) busyDriverIds[q.driver_id] = true;
+            });
+            availableVehicles = vehicles.filter(function (v) {
+              return v.status === 'active' && !busyCarIds[v.id];
+            });
+            availableDrivers = drivers.filter(function (d) {
+              return d.status === 'active' && !busyDriverIds[d.id];
+            });
 
             // Always display calendar, even if no data
             renderCalendar();
@@ -572,10 +564,10 @@
           function isQueueCurrent(queue, dateStr) {
             if (dateStr !== todayStr) return false;
             if (queue.status !== 'active' && queue.status !== 'running') return false;
-            if (!queue.time_start) return false;
+            if (!queue.departure_time) return false;
 
-            var queueStart = parseTimeToMinutes(queue.time_start);
-            var queueEnd = queue.time_end ? parseTimeToMinutes(queue.time_end) : (queueStart + 8 * 60);
+            var queueStart = parseTimeToMinutes(queue.departure_time);
+            var queueEnd = queue.return_time ? parseTimeToMinutes(queue.return_time) : (queueStart + 8 * 60);
 
             return currentTimeMinutes >= queueStart && currentTimeMinutes <= queueEnd;
           }
@@ -583,9 +575,9 @@
           function isQueueUpcoming(queue, dateStr) {
             if (dateStr !== todayStr) return false;
             if (queue.status !== 'pending') return false;
-            if (!queue.time_start) return false;
+            if (!queue.departure_time) return false;
 
-            var queueStart = parseTimeToMinutes(queue.time_start);
+            var queueStart = parseTimeToMinutes(queue.departure_time);
             // Upcoming: starts within next 2 hours
             return queueStart > currentTimeMinutes && queueStart <= currentTimeMinutes + 120;
           }
@@ -595,7 +587,7 @@
             var dateObj = new Date(currentYear, currentMonth, day);
             dateObj.setHours(0, 0, 0, 0);
             var isToday = dateStr === todayStr;
-            var dayQueues = queues.filter(function (q) { return q.date === dateStr; });
+            var dayQueues = queues.filter(function (q) { return q.departure_date === dateStr; });
 
             // Determine status
             var statusClass = '';
@@ -697,13 +689,9 @@
 
           var scheduledRepairs = [];
           try {
-            var scheduledRepairsResult = await apiCall('getScheduledRepairs', {
-              filters: {
-                status: 'pending'
-              }
-            });
-            if (scheduledRepairsResult && scheduledRepairsResult.success && scheduledRepairsResult.data && scheduledRepairsResult.data.scheduled_repairs) {
-              scheduledRepairs = scheduledRepairsResult.data.scheduled_repairs;
+            var scheduledRepairsResult = await apiCall('getScheduledRepairs', { status: 'pending' });
+            if (scheduledRepairsResult && scheduledRepairsResult.success && Array.isArray(scheduledRepairsResult.data)) {
+              scheduledRepairs = scheduledRepairsResult.data;
             }
           } catch (schedError) {
             console.error('Error loading scheduled repairs:', schedError);
@@ -725,13 +713,11 @@
             vehiclesHtml += '<div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #ff9800;">';
             vehiclesHtml += '<h4 style="color: var(--color-warning); margin-bottom: 10px; font-size: 1em;">🔧 รถที่กำลังซ่อม</h4>';
             scheduledRepairs.forEach(function (sr) {
-              var vehicle = vehicles.find(function (v) { return v.car_id === sr.car_id; });
-              if (vehicle) {
-                vehiclesHtml += '<div class="availability-item" style="border-left-color: var(--color-warning); background: var(--color-bg-warning);">';
-                vehiclesHtml += '<strong>' + vehicle.license_plate + '</strong>';
-                vehiclesHtml += '<span style="color: #e65100; font-size: 0.85em;">🔧 ' + (sr.issue_description || 'กำลังซ่อม') + '</span>';
-                vehiclesHtml += '</div>';
-              }
+              var plate = sr.license_plate || (vehiclesMap[sr.car_id] && vehiclesMap[sr.car_id].license_plate) || sr.car_id;
+              vehiclesHtml += '<div class="availability-item" style="border-left-color: var(--color-warning); background: var(--color-bg-warning);">';
+              vehiclesHtml += '<strong>' + plate + '</strong>';
+              vehiclesHtml += '<span style="color: #e65100; font-size: 0.85em;">🔧 ' + (sr.description || sr.issue_description || 'กำลังซ่อม') + '</span>';
+              vehiclesHtml += '</div>';
             });
             vehiclesHtml += '</div>';
           }
