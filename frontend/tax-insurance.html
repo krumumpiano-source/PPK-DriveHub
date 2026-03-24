@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 
 <head>
@@ -14,6 +14,9 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
+  <link rel="stylesheet" href="common.css">
+  <script src="offline-mock.js"></script>
+  <script src="common.js"></script>
   <style>
     * {
       margin: 0;
@@ -922,7 +925,7 @@
           var user = getCurrentUser();
           if (!user) {
             alert('กรุณาล็อกอินก่อนจึงจะเพิ่มหรือแก้ไขบันทึกได้');
-            window.location.href = 'login.html';
+            window.location.href = '/login';
             return;
           }
 

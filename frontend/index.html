@@ -11,13 +11,13 @@
         if (userStr) {
             try {
                 var user = JSON.parse(userStr);
-                window.location.href = 'dashboard.html';
+                window.location.href = '/dashboard';
             } catch (e) {
                 sessionStorage.removeItem('ppk_drivehub_user');
-                window.location.href = 'login.html';
+                window.location.href = '/login';
             }
         } else {
-            window.location.href = 'login.html';
+            window.location.href = '/login';
         }
     </script>
 </head>

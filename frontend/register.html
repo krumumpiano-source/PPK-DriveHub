@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 
 <head>
@@ -294,7 +294,7 @@
         </button>
       </form>
 
-      <button type="button" class="btn btn-secondary" onclick="window.location.href='login.html'">
+      <button type="button" class="btn btn-secondary" onclick="window.location.href='/login'">
         ← กลับไปหน้าเข้าสู่ระบบ
       </button>
     </div>
@@ -417,7 +417,7 @@
           // Show success message and redirect after 3 seconds
           setTimeout(function () {
             alert('ส่งคำขอสมัครเรียบร้อยแล้ว รอการอนุมัติจากผู้ดูแลระบบ แล้วตรวจสอบอีเมลเมื่อได้รับการอนุมัติ');
-            window.location.href = 'login.html';
+            window.location.href = '/login';
           }, 2000);
         } else {
           alertContainer.innerHTML = '<div class="alert alert-error">' + result.message + '</div>';

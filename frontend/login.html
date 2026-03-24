@@ -194,7 +194,7 @@
         </div>
 
         <div style="text-align: right; margin-bottom: 20px;">
-          <a href="forgot-password.html" style="color: #4285f4; text-decoration: none; font-size: 0.9em;">
+          <a href="/forgot-password" style="color: #4285f4; text-decoration: none; font-size: 0.9em;">
             ลืมรหัสผ่าน?
           </a>
         </div>
@@ -204,7 +204,7 @@
         </button>
       </form>
 
-      <button type="button" class="btn btn-secondary" onclick="window.location.href='register.html'">
+      <button type="button" class="btn btn-secondary" onclick="window.location.href='/register'">
         📝 สมัครเข้าใช้งานครั้งแรก
       </button>
     </div>
@@ -253,9 +253,9 @@
           // Check if first login - require password change
           if (result.data.first_login) {
             alert('กรุณาเปลี่ยนรหัสผ่านก่อนใช้งาน');
-            window.location.href = 'change-password.html';
+            window.location.href = '/change-password';
           } else {
-            window.location.href = 'dashboard.html';
+            window.location.href = '/dashboard';
           }
         } else {
           var msg = (result.message && /[\u0E00-\u0E7F]/.test(result.message)) ? result.message : 'เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจสอบชื่อผู้ใช้และรหัสผ่าน';

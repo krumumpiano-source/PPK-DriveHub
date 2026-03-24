@@ -538,7 +538,7 @@
     async function acceptPolicy() {
       if (!currentUser || !currentUser.user_id) {
         alert('กรุณาล็อกอินก่อนจึงจะบันทึกการยอมรับได้');
-        window.location.href = 'login.html';
+        window.location.href = '/login';
         return;
       }
 
@@ -558,7 +558,7 @@
 
           // Redirect to dashboard after 2 seconds
           setTimeout(function () {
-            window.location.href = 'dashboard.html';
+            window.location.href = '/dashboard';
           }, 2000);
         } else {
           document.getElementById('alert-container').innerHTML =

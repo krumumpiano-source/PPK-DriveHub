@@ -550,7 +550,7 @@
           if (response.success) {
             showAlert('บันทึกการเติมน้ำมันสำเร็จ', 'success');
             setTimeout(function () {
-              window.location.href = 'dashboard.html';
+              window.location.href = '/dashboard';
             }, 2000);
           } else {
             showAlert(typeof getUserMessage !== 'undefined' ? getUserMessage(response.message) : (response.message || 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'), 'error');

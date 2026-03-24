@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 
 <head>
@@ -11,6 +11,9 @@
     window.currentPage = 'user-guide';
     window.REQUIRE_AUTH = false;
   </script>
+  <link rel="stylesheet" href="common.css">
+  <script src="offline-mock.js"></script>
+  <script src="common.js"></script>
   <style>
     * {
       margin: 0;
@@ -245,7 +248,7 @@
             <li>กรอกผู้ขอใช้รถ ปลายทาง เลขไมล์ (กลับจากเดินทางกรอกเลขไมล์เท่านั้น)</li>
             <li>กดปุ่ม "บันทึก"</li>
           </ol>
-          <a href="qr-usage-record.html" class="link-page">📷 ไปหน้า QR บันทึกใช้รถ</a>
+          <a href="/qr-usage-record" class="link-page">📷 ไปหน้า QR บันทึกใช้รถ</a>
         </div>
 
         <div class="step-box">
@@ -257,7 +260,7 @@
             <li>แนบรูปสลิป (ถ่ายหรืออัปโหลด)</li>
             <li>กดปุ่ม "บันทึก"</li>
           </ol>
-          <a href="qr-fuel-record.html" class="link-page">⛽ ไปหน้า QR เติมน้ำมัน</a>
+          <a href="/qr-fuel-record" class="link-page">⛽ ไปหน้า QR เติมน้ำมัน</a>
         </div>
 
         <div class="step-box">
@@ -269,7 +272,7 @@
             <li>แนบรูป (ถ้ามีความผิดปกติ)</li>
             <li>กดปุ่ม "บันทึก"</li>
           </ol>
-          <a href="qr-daily-check.html" class="link-page">🔧 ไปหน้า QR ตรวจสภาพ+แจ้งซ่อม</a>
+          <a href="/qr-daily-check" class="link-page">🔧 ไปหน้า QR ตรวจสภาพ+แจ้งซ่อม</a>
         </div>
 
         <h3>🚗 การดูคิวของตัวเองในโปรแกรม</h3>
@@ -281,7 +284,7 @@
             <li>จะเห็นปฏิทินและรายการคิวของตัวเอง (ตามวันที่)</li>
             <li>สามารถเลือกวันที่เพื่อดูรายละเอียดคิวในวันนั้น</li>
           </ol>
-          <a href="driver-history.html" class="link-page">🚗 ไปหน้าคิวและประวัติ</a>
+          <a href="/driver-history" class="link-page">🚗 ไปหน้าคิวและประวัติ</a>
         </div>
       </div>
 
@@ -301,7 +304,7 @@
             <li>กรอก: วันที่, เวลาไป-กลับ, รถ, คนขับ, ผู้ขอใช้รถ, ปลายทาง, จำนวนผู้โดยสาร, หมายเหตุ</li>
             <li>กดปุ่ม "บันทึก" หรือ "สร้างคิว"</li>
           </ol>
-          <a href="queue-manage.html" class="link-page">✏️ ไปหน้าจัดคิว</a>
+          <a href="/queue-manage" class="link-page">✏️ ไปหน้าจัดคิว</a>
         </div>
 
         <h3>การแก้ไขคิว</h3>
@@ -340,12 +343,12 @@
         <h3>ผ่าน QR (ที่รถ)</h3>
         <p>สแกน QR ที่รถ → เปิดหน้า <strong>QR เติมน้ำมัน</strong> → กรอกประเภทน้ำมัน จำนวนลิตร ราคา เลขไมล์ แนบสลิป →
           บันทึก</p>
-        <a href="qr-fuel-record.html" class="link-page">⛽ QR เติมน้ำมัน</a>
+        <a href="/qr-fuel-record" class="link-page">⛽ QR เติมน้ำมัน</a>
 
         <h3>ผ่านเมนูในโปรแกรม (หลังล็อกอิน)</h3>
         <p>เข้าเมนู <strong>น้ำมัน</strong> เพื่อดูประวัติการเติมน้ำมันและบันทึกการเติมใหม่ (เลือกรถ
           จากนั้นกรอกข้อมูลเหมือน QR)</p>
-        <a href="fuel-record.html" class="link-page">⛽ ไปหน้าน้ำมัน</a>
+        <a href="/fuel-record" class="link-page">⛽ ไปหน้าน้ำมัน</a>
       </div>
 
       <!-- 4. บันทึกรอซ่อม / บันทึกซ่อมเสร็จ -->
@@ -363,7 +366,7 @@
             <li>เลือกรถ อาการเสีย วันที่เริ่มงดใช้ (และวันที่คาดกลับ ถ้าทราบ)</li>
             <li>กดปุ่ม "ลงคิวซ่อม" → รถจะถูกงดใช้ในจัดคิวและแสดงในหน้าแรกว่ากำลังซ่อม</li>
           </ol>
-          <a href="repair.html" class="link-page">🔧 ไปหน้าซ่อมบำรุง</a>
+          <a href="/repair" class="link-page">🔧 ไปหน้าซ่อมบำรุง</a>
         </div>
 
         <h3>✅ บันทึกซ่อมเสร็จแล้ว</h3>
@@ -392,12 +395,12 @@
           <li><strong>รายงาน:</strong> เข้าเมนู <strong>รายงาน</strong> เลือกช่วงเวลา แล้วดูภาพรวม การทำงานคนขับ รถ
             สถิติ ความเสี่ยง อัตราสิ้นเปลือง และส่งออกรายงานได้</li>
         </ul>
-        <a href="dashboard.html" class="link-page">🏠 หน้าแรก</a>
-        <a href="reports.html" class="link-page">📊 รายงาน</a>
+        <a href="/dashboard" class="link-page">🏠 หน้าแรก</a>
+        <a href="/reports" class="link-page">📊 รายงาน</a>
 
         <h3>ตั้งค่าระบบ (Admin)</h3>
         <p>เข้าเมนู <strong>ตั้งค่าระบบ</strong> เพื่อจัดการผู้ใช้ สิทธิ์ โมดูล ฯลฯ (เฉพาะผู้ดูแลระบบ)</p>
-        <a href="admin-settings.html" class="link-page">⚙️ ตั้งค่าระบบ</a>
+        <a href="/admin-settings" class="link-page">⚙️ ตั้งค่าระบบ</a>
       </div>
 
       <!-- 6. คนทั่วไป (ดูคิว) -->
@@ -412,8 +415,8 @@
         </ul>
         <p>คนทั่วไปที่ได้รับสิทธิ์เฉพาะดู จะเห็นเมนู <strong>หน้าแรก</strong> และ <strong>คิวและประวัติ</strong>
           เพื่อดูคิวเท่านั้น ไม่มีปุ่มจัดคิว/แก้ไข/ลบ</p>
-        <a href="dashboard.html" class="link-page">🏠 ไปหน้าแรก</a>
-        <a href="driver-history.html" class="link-page">🚗 คิวและประวัติ</a>
+        <a href="/dashboard" class="link-page">🏠 ไปหน้าแรก</a>
+        <a href="/driver-history" class="link-page">🚗 คิวและประวัติ</a>
       </div>
 
       <!-- เข้าสู่ระบบ / สมัคร -->
@@ -426,7 +429,7 @@
             <li>กรอกอีเมลและรหัสผ่าน แล้วกด "เข้าสู่ระบบ"</li>
             <li>ลืมรหัสผ่าน: กด "ลืมรหัสผ่าน" แล้วกรอกอีเมลเพื่อรับลิงก์รีเซ็ตรหัส</li>
           </ol>
-          <a href="login.html" class="link-page">🔐 เข้าสู่ระบบ</a>
+          <a href="/login" class="link-page">🔐 เข้าสู่ระบบ</a>
         </div>
         <div class="step-box">
           <h4>สมัครครั้งแรก</h4>
@@ -436,7 +439,7 @@
             <li>ยืนยันอีเมล แล้วรอการอนุมัติจากผู้ดูแลระบบ</li>
             <li>เมื่ออนุมัติ จะได้รับอีเมลแจ้ง → เข้าสู่ระบบด้วยรหัสที่ให้มา แล้วเปลี่ยนรหัสผ่านทันที</li>
           </ol>
-          <a href="register.html" class="link-page">สมัครใช้งาน</a>
+          <a href="/register" class="link-page">สมัครใช้งาน</a>
         </div>
       </div>
     </div>
@@ -444,10 +447,10 @@
     <div class="footer">
       <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
       <p style="margin-top: 10px;">
-        <a href="glossary.html">📚 คำศัพท์และความหมาย</a>
-        <a href="about.html">ℹ️ เกี่ยวกับโปรแกรม</a>
-        <a href="dashboard.html">🏠 หน้าแรก</a>
-        <a href="login.html">🔐 เข้าสู่ระบบ</a>
+        <a href="/glossary">📚 คำศัพท์และความหมาย</a>
+        <a href="/about">ℹ️ เกี่ยวกับโปรแกรม</a>
+        <a href="/dashboard">🏠 หน้าแรก</a>
+        <a href="/login">🔐 เข้าสู่ระบบ</a>
       </p>
     </div>
   </div>
