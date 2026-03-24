@@ -61,21 +61,40 @@ export async function onRequest(context) {
 
   // POST /api/auth/register
   if (path === '/api/auth/register' && method === 'POST') {
-    const body = await parseBody(request);
-    if (!body?.email || !body?.first_name || !body?.last_name) {
-      return error('กรุณากรอกชื่อ นามสกุล และ email');
+    const raw = await parseBody(request);
+    const body = (raw && typeof raw === 'object' && raw.data && typeof raw.data === 'object') ? raw.data : raw;
+
+    if (!body?.email) return error('กรุณากรอก email');
+
+    const hasFirstLast = !!(body.first_name && body.last_name);
+    const hasFullName = !!(body.full_name || body.fullName || body.name);
+    if (!hasFirstLast && !hasFullName) return error('กรุณากรอกชื่อ-นามสกุล');
+
+    const email = String(body.email).trim();
+    const fullName = String(body.full_name || body.fullName || body.name || '').trim();
+    const firstName = String(body.first_name || '').trim();
+    const lastName = String(body.last_name || '').trim();
+
+    let displayName = hasFirstLast ? `${firstName} ${lastName}`.trim() : fullName;
+    const legacyBits = [];
+    if (body.title) legacyBits.push(String(body.title).trim());
+    if (body.department) legacyBits.push(`แผนก:${String(body.department).trim()}`);
+    if (body.phone) legacyBits.push(`โทร:${String(body.phone).trim()}`);
+    if (body.reason) legacyBits.push(`เหตุผล:${String(body.reason).trim()}`);
+    if (legacyBits.length) {
+      displayName = `${displayName} (${legacyBits.join(' | ')})`;
     }
 
-    const existing = await dbFirst(env.DB, 'SELECT id FROM user_requests WHERE email = ?', [body.email]);
+    const existing = await dbFirst(env.DB, 'SELECT id FROM user_requests WHERE email = ?', [email]);
     if (existing) return error('email นี้มีคำขอสมัครรอการอนุมัติแล้ว', 409);
 
-    const existingUser = await dbFirst(env.DB, 'SELECT id FROM users WHERE email = ?', [body.email]);
+    const existingUser = await dbFirst(env.DB, 'SELECT id FROM users WHERE email = ?', [email]);
     if (existingUser) return error('email นี้มีบัญชีอยู่แล้ว', 409);
 
     await dbRun(env.DB,
       `INSERT INTO user_requests (id, name, email, requested_role, initial_permissions, status, created_at)
        VALUES (?, ?, ?, ?, ?, 'pending', ?)`,
-      [generateUUID(), `${body.first_name} ${body.last_name}`, body.email,
+      [generateUUID(), displayName, email,
        body.role || 'viewer', body.permissions ? JSON.stringify(body.permissions) : '{}', now()]
     );
 

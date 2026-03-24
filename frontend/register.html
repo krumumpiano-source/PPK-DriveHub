@@ -10,6 +10,8 @@
     window.API_BASE_URL = CONFIG.API_BASE_URL; // ใช้ค่าจาก config.js
     window.currentPage = 'register';
   </script>
+  <link rel="stylesheet" href="common.css">
+  <script src="js/api.js"></script><script src="common.js"></script>
   <style>
     * {
       margin: 0;
@@ -305,7 +307,6 @@
     </div>
   </div>
 
-  <script src="common.html"></script>
   <script>
     function selectTitle(value) {
       var titleHidden = document.getElementById('title');
@@ -408,12 +409,11 @@
       alertContainer.innerHTML = '';
 
       try {
-        var result = await apiCall('register', {
-          data: formData
-        });
+        var result = await apiCall('register', formData);
 
         if (result.success) {
-          alertContainer.innerHTML = '<div class="alert alert-success">' + result.message + '</div>';
+          var msg = (result.data && result.data.message) ? result.data.message : 'ส่งคำขอสมัครสมาชิกเรียบร้อย รอการอนุมัติจากผู้ดูแลระบบ';
+          alertContainer.innerHTML = '<div class="alert alert-success">' + msg + '</div>';
           document.getElementById('registerForm').reset();
 
           // Show success message and redirect after 3 seconds
@@ -422,7 +422,7 @@
             window.location.href = 'login.html';
           }, 2000);
         } else {
-          alertContainer.innerHTML = '<div class="alert alert-error">' + result.message + '</div>';
+          alertContainer.innerHTML = '<div class="alert alert-error">' + (result.error || result.message || 'ส่งคำขอไม่สำเร็จ') + '</div>';
           registerBtn.disabled = false;
           registerBtn.textContent = '📤 ส่งคำขอสมัคร';
         }
