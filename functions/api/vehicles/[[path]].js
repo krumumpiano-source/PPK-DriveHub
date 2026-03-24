@@ -25,6 +25,7 @@ export async function onRequest(context) {
   if (!user) return error('Unauthorized', 401);
 
   if (path === '/api/vehicles' && method === 'GET') {
+    try { requirePermission(user, 'vehicles', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const status = url.searchParams.get('status');
     const type = url.searchParams.get('car_type');
     const params = [];
@@ -62,6 +63,7 @@ export async function onRequest(context) {
   }
 
   if (path.match(/^\/api\/vehicles\/[^/]+$/) && method === 'GET') {
+    try { requirePermission(user, 'vehicles', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = extractParam(path, '/api/vehicles/');
     const car = await dbFirst(env.DB, 'SELECT * FROM cars WHERE id = ? AND active = 1', [id]);
     return car ? success(car) : error('ไม่พบยานพาหนะ', 404);
@@ -98,6 +100,7 @@ export async function onRequest(context) {
   }
 
   if (path.match(/\/api\/vehicles\/[^/]+\/maintenance/) && method === 'GET') {
+    try { requirePermission(user, 'vehicles', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[3];
     const logs = await dbAll(env.DB,
       'SELECT * FROM vehicle_maintenance WHERE car_id = ? ORDER BY service_date DESC', [id]

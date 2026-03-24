@@ -15,6 +15,7 @@ export async function onRequest(context) {
   if (!user) return error('Unauthorized', 401);
 
   if (path === '/api/drivers' && method === 'GET') {
+    try { requirePermission(user, 'drivers', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const status = url.searchParams.get('status');
     const where = ['active = 1'];
     const params = [];
@@ -51,8 +52,8 @@ export async function onRequest(context) {
 
   if (path === '/api/drivers/fatigue' && method === 'POST') {
     const body = await parseBody(request);
-    // find driver linked to current user
     const driver = await dbFirst(env.DB, 'SELECT id FROM drivers WHERE user_id = ? AND active = 1', [user.id]);
+    if (!driver && body?.driver_id) { try { requirePermission(user, 'drivers', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); } }
     const driverId = driver?.id || body?.driver_id;
     if (!driverId) return error('ไม่พบข้อมูลคนขับ');
     const id = generateUUID();
@@ -66,6 +67,7 @@ export async function onRequest(context) {
   }
 
   if (path.match(/^\/api\/drivers\/[^/]+$/) && method === 'GET') {
+    try { requirePermission(user, 'drivers', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = extractParam(path, '/api/drivers/');
     const driver = await dbFirst(env.DB, 'SELECT * FROM drivers WHERE id = ? AND active = 1', [id]);
     return driver ? success(driver) : error('ไม่พบคนขับ', 404);
@@ -102,6 +104,7 @@ export async function onRequest(context) {
   }
 
   if (path.match(/\/api\/drivers\/[^/]+\/fatigue/) && method === 'GET') {
+    try { requirePermission(user, 'drivers', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[3];
     const logs = await dbAll(env.DB,
       'SELECT * FROM self_reported_fatigue WHERE driver_id = ? ORDER BY created_at DESC LIMIT 30', [id]
@@ -110,6 +113,7 @@ export async function onRequest(context) {
   }
 
   if (path.match(/\/api\/drivers\/[^/]+\/leaves/) && method === 'GET') {
+    try { requirePermission(user, 'drivers', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[3];
     const leaves = await dbAll(env.DB,
       'SELECT * FROM leaves WHERE driver_id = ? ORDER BY start_date DESC', [id]
@@ -118,6 +122,7 @@ export async function onRequest(context) {
   }
 
   if (path.match(/\/api\/drivers\/[^/]+\/leaves/) && method === 'POST') {
+    try { requirePermission(user, 'drivers', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[3];
     const body = await parseBody(request);
     if (!body?.start_date || !body?.end_date) return error('กรุณาระบุวันที่');

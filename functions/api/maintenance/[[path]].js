@@ -15,6 +15,7 @@ export async function onRequest(context) {
   if (!user) return error('Unauthorized', 401);
 
   if (path === '/api/maintenance/settings' && method === 'GET') {
+    try { requirePermission(user, 'maintenance', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const rows = await dbAll(env.DB, 'SELECT * FROM maintenance_settings ORDER BY maintenance_type');
     return success(rows);
   }
@@ -34,6 +35,7 @@ export async function onRequest(context) {
   }
 
   if (path === '/api/maintenance/schedule' && method === 'GET') {
+    try { requirePermission(user, 'maintenance', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const settings = await dbAll(env.DB, 'SELECT * FROM maintenance_settings WHERE enabled = 1');
     const vehicles = await dbAll(env.DB, 'SELECT id, car_id, brand, license_plate, mileage, last_check_date FROM cars WHERE active = 1');
 
@@ -79,6 +81,7 @@ export async function onRequest(context) {
   }
 
   if (path === '/api/maintenance/alerts' && method === 'GET') {
+    try { requirePermission(user, 'maintenance', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const status = url.searchParams.get('status') || 'open';
     const rows = await dbAll(env.DB,
       `SELECT ia.*, c.car_id as car_code, c.brand, c.license_plate FROM inspection_alerts ia

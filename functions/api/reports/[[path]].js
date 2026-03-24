@@ -14,6 +14,8 @@ export async function onRequest(context) {
   if (!user) return error('Unauthorized', 401);
   if (method !== 'GET') return error('Method Not Allowed', 405);
 
+  try { requirePermission(user, 'reports', 'view'); } catch { return error('ไม่มีสิทธิ์ดูรายงาน', 403); }
+
   if (path === '/api/reports/dashboard') {
     const [
       totalVehicles, activeVehicles,

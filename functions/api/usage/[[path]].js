@@ -36,6 +36,7 @@ export async function onRequest(context) {
   if (!user) return error('Unauthorized', 401);
 
   if (path === '/api/usage' && method === 'GET') {
+    try { requirePermission(user, 'usage', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const dateFrom = url.searchParams.get('date_from');
     const dateTo = url.searchParams.get('date_to');
     const carId = url.searchParams.get('car_id');
@@ -79,6 +80,7 @@ export async function onRequest(context) {
   }
 
   if (path.match(/^\/api\/usage\/[^/]+$/) && method === 'GET') {
+    try { requirePermission(user, 'usage', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = extractParam(path, '/api/usage/');
     const row = await dbFirst(env.DB,
       'SELECT ur.*, c.car_id as car_code, c.brand, c.license_plate FROM usage_records ur LEFT JOIN cars c ON ur.car_id = c.id WHERE ur.id = ?',

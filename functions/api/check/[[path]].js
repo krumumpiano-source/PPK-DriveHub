@@ -67,6 +67,7 @@ export async function onRequest(context) {
   if (!user) return error('Unauthorized', 401);
 
   if (path === '/api/check/log' && method === 'GET') {
+    try { requirePermission(user, 'check', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const carId = url.searchParams.get('car_id');
     const dateFrom = url.searchParams.get('date_from');
     const dateTo = url.searchParams.get('date_to');
@@ -86,6 +87,7 @@ export async function onRequest(context) {
   }
 
   if (path === '/api/check/alerts' && method === 'GET') {
+    try { requirePermission(user, 'check', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const status = url.searchParams.get('status') || 'open';
     const rows = await dbAll(env.DB,
       `SELECT ia.*, c.car_id as car_code, c.brand, c.license_plate FROM inspection_alerts ia

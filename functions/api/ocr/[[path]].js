@@ -1,5 +1,7 @@
 // OCR via Gemini Vision API
-import { success, error, parseBody } from '../../_helpers.js';
+import { success, error, parseBody, requirePermission } from '../../_helpers.js';
+
+const DOC_MODULE = { fuel_receipt: 'fuel', pump_meter: 'fuel', vehicle_registration: 'vehicles', insurance_doc: 'insurance', tax_doc: 'tax', repair_doc: 'repair' };
 
 // Document type → Gemini prompt
 const PROMPTS = {
@@ -81,6 +83,8 @@ export async function onRequest(context) {
   const prompt = PROMPTS[body.doc_type];
   if (!prompt) return error(`ไม่รองรับ doc_type: ${body.doc_type}. ใช้: ${Object.keys(PROMPTS).join(', ')}`);
 
+  const docMod = DOC_MODULE[body.doc_type];
+  if (docMod) { try { requirePermission(user, docMod, 'view'); } catch { return error('ไม่มีสิทธิ์', 403); } }
   const geminiKey = env.GEMINI_API_KEY;
   if (!geminiKey) return error('ยังไม่ได้ตั้งค่า GEMINI_API_KEY', 500);
 

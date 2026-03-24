@@ -76,6 +76,7 @@ export async function onRequest(context) {
   if (!user) return error('Unauthorized', 401);
 
   if (path === '/api/fuel' && method === 'GET') {
+    try { requirePermission(user, 'fuel', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const dateFrom = url.searchParams.get('date_from');
     const dateTo = url.searchParams.get('date_to');
     const carId = url.searchParams.get('car_id');
@@ -127,6 +128,7 @@ export async function onRequest(context) {
   }
 
   if (path === '/api/fuel/reports' && method === 'GET') {
+    try { requirePermission(user, 'fuel', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const year = url.searchParams.get('year') || new Date().getFullYear().toString();
     const month = url.searchParams.get('month');
     let sql, params;
@@ -151,6 +153,7 @@ export async function onRequest(context) {
   }
 
   if (path === '/api/fuel/requests' && method === 'GET') {
+    try { requirePermission(user, 'fuel', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const status = url.searchParams.get('status') || 'pending';
     const rows = await dbAll(env.DB,
       'SELECT * FROM fuel_requests WHERE status = ? ORDER BY created_at DESC', [status]
@@ -159,6 +162,7 @@ export async function onRequest(context) {
   }
 
   if (path === '/api/fuel/requests' && method === 'POST') {
+    try { requirePermission(user, 'fuel', 'create'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const body = await parseBody(request);
     if (!body?.car_id || !body?.liters) return error('กรุณากรอกข้อมูลให้ครบ');
     const id = generateUUID();
@@ -195,6 +199,7 @@ export async function onRequest(context) {
   }
 
   if (path.match(/^\/api\/fuel\/[^/]+$/) && method === 'GET') {
+    try { requirePermission(user, 'fuel', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = extractParam(path, '/api/fuel/');
     const row = await dbFirst(env.DB,
       'SELECT fl.*, c.car_id as car_code, c.brand, c.license_plate FROM fuel_log fl LEFT JOIN cars c ON fl.car_id = c.id WHERE fl.id = ?',

@@ -15,6 +15,7 @@ export async function onRequest(context) {
   if (!user) return error('Unauthorized', 401);
 
   if (path === '/api/repair/scheduled' && method === 'GET') {
+    try { requirePermission(user, 'repair', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const status = url.searchParams.get('status');
     const where = status ? 'WHERE status = ?' : '';
     const rows = await dbAll(env.DB,
@@ -59,6 +60,7 @@ export async function onRequest(context) {
   }
 
   if (path === '/api/repair' && method === 'GET') {
+    try { requirePermission(user, 'repair', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const status = url.searchParams.get('status');
     const carId = url.searchParams.get('car_id');
     const where = [];
@@ -100,6 +102,7 @@ export async function onRequest(context) {
   }
 
   if (path.match(/^\/api\/repair\/[^/]+$/) && method === 'GET') {
+    try { requirePermission(user, 'repair', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = extractParam(path, '/api/repair/');
     const row = await dbFirst(env.DB,
       'SELECT rl.*, c.car_id as car_code, c.brand, c.license_plate FROM repair_log rl LEFT JOIN cars c ON rl.car_id = c.id WHERE rl.id = ?',

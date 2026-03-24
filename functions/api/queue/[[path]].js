@@ -15,6 +15,7 @@ export async function onRequest(context) {
   if (!user) return error('Unauthorized', 401);
 
   if (path === '/api/queue/timeline' && method === 'GET') {
+    try { requirePermission(user, 'queue', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const startDate = url.searchParams.get('start') || now().split('T')[0];
     const endDate = url.searchParams.get('end') || new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
     const rows = await dbAll(env.DB,
@@ -31,6 +32,7 @@ export async function onRequest(context) {
   }
 
   if (path === '/api/queue/rules' && method === 'GET') {
+    try { requirePermission(user, 'queue', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const rules = await dbAll(env.DB, 'SELECT * FROM queue_rules ORDER BY priority DESC');
     return success(rules);
   }
@@ -50,6 +52,7 @@ export async function onRequest(context) {
   }
 
   if (path === '/api/queue' && method === 'GET') {
+    try { requirePermission(user, 'queue', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const status = url.searchParams.get('status');
     const dateFrom = url.searchParams.get('date_from');
     const dateTo = url.searchParams.get('date_to');
@@ -103,6 +106,7 @@ export async function onRequest(context) {
   }
 
   if (path.match(/^\/api\/queue\/[^/]+$/) && method === 'GET') {
+    try { requirePermission(user, 'queue', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = extractParam(path, '/api/queue/');
     const row = await dbFirst(env.DB,
       `SELECT q.*, c.brand, c.model, c.license_plate, d.display_name as driver_name
@@ -133,6 +137,7 @@ export async function onRequest(context) {
   }
 
   if (path.match(/\/api\/queue\/[^/]+\/cancel/) && method === 'PUT') {
+    try { requirePermission(user, 'queue', 'edit'); } catch { return error('ไม่มีสิทธิ์ยกเลิกคิว', 403); }
     const id = path.split('/')[3];
     const body = await parseBody(request);
     await dbRun(env.DB,

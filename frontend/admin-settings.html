@@ -414,18 +414,15 @@
           if (typeof requireAuth === 'function') {
             isAuthenticated = requireAuth();
             if (!isAuthenticated) {
-              console.warn('Not authenticated, but showing page anyway');
+              window.location.href = 'login.html';
+              return;
             }
           }
 
           var currentUser = getCurrentUser();
-          if (currentUser && typeof hasPermission === 'function' && !hasPermission(['admin'])) {
-            console.warn('No admin permission, but showing page anyway');
-            // ไม่ redirect — ให้แสดงหน้าได้
-          }
-
-          // ถ้ายังไม่ล็อกอิน ให้แสดงหน้าได้แต่ไม่โหลดข้อมูล
-          if (!isAuthenticated) {
+          if (!currentUser || (typeof hasPermission === 'function' && !hasPermission(['admin']))) {
+            showAlert('ต้องเป็น Admin เท่านั้น', 'error');
+            window.location.href = 'dashboard.html';
             return;
           }
 

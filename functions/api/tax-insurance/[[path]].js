@@ -16,6 +16,7 @@ export async function onRequest(context) {
   if (!user) return error('Unauthorized', 401);
 
   if (path === '/api/tax-insurance/expiring' && method === 'GET') {
+    try { requirePermission(user, 'tax', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const days = parseInt(url.searchParams.get('days') || '30');
     const cutoff = new Date(Date.now() + days * 86400000).toISOString().split('T')[0];
     const rows = await dbAll(env.DB,
@@ -33,6 +34,7 @@ export async function onRequest(context) {
 
 
   if (path === '/api/tax-insurance/tax' && method === 'GET') {
+    try { requirePermission(user, 'tax', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const carId = url.searchParams.get('car_id');
     const where = carId ? 'WHERE car_id = ?' : '';
     const rows = await dbAll(env.DB,
@@ -92,6 +94,7 @@ export async function onRequest(context) {
 
 
   if (path === '/api/tax-insurance/insurance' && method === 'GET') {
+    try { requirePermission(user, 'insurance', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const carId = url.searchParams.get('car_id');
     const where = carId ? 'WHERE car_id = ?' : '';
     const rows = await dbAll(env.DB,
