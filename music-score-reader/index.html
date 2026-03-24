@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>โปรแกรมอ่านโน้ตเพลงเพื่อการศึกษา</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>โปรแกรมอ่านโน้ตเพลงเพื่อการศึกษา</h1>
+            <nav>
+                <a href="index.html" class="active">หน้าแรก</a>
+                <a href="library.html">คลังโน้ต</a>
+                <a href="terms.html">เงื่อนไขการใช้งาน</a>
+                <span id="user-menu">
+                    <a href="login.html" id="login-link">เข้าสู่ระบบ</a>
+                    <span id="user-info" style="display: none;">
+                        <span id="user-name"></span>
+                        <button id="logout-btn">ออกจากระบบ</button>
+                    </span>
+                </span>
+            </nav>
+        </header>
+
+        <main>
+            <section class="hero">
+                <h2>ยินดีต้อนรับสู่โปรแกรมอ่านโน้ตเพลงเพื่อการศึกษา</h2>
+                <p>แพลตฟอร์มสำหรับการเรียนรู้ การฝึกซ้อม และการวิเคราะห์ทางดนตรี</p>
+            </section>
+
+            <section class="disclaimer-box">
+                <h3>คำชี้แจงการใช้งาน (Disclaimer)</h3>
+                <div class="disclaimer-content">
+                    <p>แพลตฟอร์มนี้เป็น <strong>โปรแกรมอ่านโน้ตเพลงเพื่อการศึกษา</strong> จัดทำขึ้นเพื่อการเรียนรู้ การฝึกซ้อม และการวิเคราะห์ทางดนตรีเท่านั้น โน้ตเพลงทั้งหมดเป็นการเรียบเรียงหรือจัดทำขึ้นเพื่อวัตถุประสงค์ทางการศึกษา มิได้อ้างว่าเป็นโน้ตต้นฉบับหรือโน้ตอย่างเป็นทางการ</p>
+                    
+                    <p>ลิขสิทธิ์ในบทเพลงต้นฉบับเป็นของเจ้าของลิขสิทธิ์เดิมทุกประการ แพลตฟอร์มทำหน้าที่เป็นเพียงตัวกลางในการจัดเก็บและให้สิทธิ์เข้าถึงเนื้อหาตามขอบเขตที่กำหนด หากมีเนื้อหาใดอาจเข้าข่ายละเมิดลิขสิทธิ์ โปรดแจ้งให้ผู้ดูแลระบบทราบเพื่อดำเนินการแก้ไขหรือลบออกโดยเร็ว</p>
+                    
+                    <p><a href="terms.html">อ่านเงื่อนไขการใช้งานฉบับเต็ม</a></p>
+                </div>
+            </section>
+
+            <section class="features">
+                <h3>คุณสมบัติ</h3>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h4>โน้ตเพลงสาธารณะ</h4>
+                        <p>เข้าถึงโน้ตเพลงสาธารณะที่เปิดให้ทุกคนใช้เพื่อการศึกษา</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>โน้ตเพลงส่วนบุคคล</h4>
+                        <p>โน้ตเพลงที่จัดทำตามคำสั่งเฉพาะสำหรับผู้ที่ได้รับสิทธิ์</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>เพื่อการศึกษาเท่านั้น</h4>
+                        <p>ทุกเนื้อหาจัดทำเพื่อวัตถุประสงค์ทางการศึกษาและการเรียนรู้</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="cta">
+                <h3>เริ่มต้นใช้งาน</h3>
+                <p>เข้าสู่ระบบเพื่อเข้าถึงคลังโน้ตเพลง</p>
+                <a href="login.html" class="btn btn-primary">เข้าสู่ระบบ</a>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2025 โปรแกรมอ่านโน้ตเพลงเพื่อการศึกษา | <a href="terms.html">เงื่อนไขการใช้งาน</a></p>
+            <p>หากพบเนื้อหาที่ละเมิดลิขสิทธิ์ โปรดติดต่อ: <a href="mailto:admin@yourdomain.com">admin@yourdomain.com</a></p>
+        </footer>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script>
+        // ตรวจสอบสถานะการล็อกอิน
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthStatus();
+        });
+    </script>
+</body>
+</html>

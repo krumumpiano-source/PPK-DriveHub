@@ -1,0 +1,92 @@
+---
+description: เมื่อปรับแก้ frontend HTML ให้ตรวจสอบและแก้ไข backend .gs ให้ทำงานตามได้อย่างสมบูรณ์เสมอ
+alwaysApply: true
+---
+
+# Frontend-Backend Synchronization Rule
+
+## หลักการสำคัญ
+
+**ทุกครั้งที่ปรับแก้ frontend HTML (.html) ให้ตรวจสอบและแก้ไข backend Google Apps Script (.gs) ให้ทำงานตามได้อย่างสมบูรณ์เสมอ**
+
+## ขั้นตอนการตรวจสอบ
+
+### 1. ตรวจสอบ API Endpoints
+- ตรวจสอบว่า frontend เรียกใช้ API ใดบ้าง (`apiCall()`)
+- ตรวจสอบว่า backend มี function นั้นหรือไม่ (`Code.gs`)
+- ตรวจสอบว่า function นั้นทำงานถูกต้องหรือไม่
+
+### 2. ตรวจสอบ Field Names
+- ตรวจสอบว่า field names ที่ frontend ใช้ตรงกับ backend หรือไม่
+- ตัวอย่าง: `queue.requester` vs `queue.requested_by`
+- แก้ไขให้ตรงกันเสมอ
+
+### 3. ตรวจสอบ Data Structure
+- ตรวจสอบว่า backend return data structure ที่ frontend ต้องการหรือไม่
+- ตรวจสอบว่า fields ที่ frontend ต้องการมีใน backend response หรือไม่
+- ตรวจสอบว่า filtering logic ทำงานถูกต้องหรือไม่ (เช่น driver-specific filtering)
+
+### 4. ตรวจสอบ Permission & Authorization
+- ตรวจสอบว่า backend มีการ filter ตาม role/permission หรือไม่
+- ตรวจสอบว่า non-admin users เห็นเฉพาะข้อมูลของตัวเองหรือไม่
+- ตรวจสอบว่า admin users เห็นข้อมูลทั้งหมดหรือไม่
+
+### 5. ตรวจสอบ Business Logic
+- ตรวจสอบว่า business logic ใน backend สอดคล้องกับ frontend หรือไม่
+- ตรวจสอบว่า validation rules ตรงกันหรือไม่
+- ตรวจสอบว่า error handling ทำงานถูกต้องหรือไม่
+
+## ตัวอย่างการตรวจสอบ
+
+### ตัวอย่างที่ 1: Field Name Mismatch
+```javascript
+// ❌ BAD - Frontend ใช้ field name ที่ไม่ตรงกับ backend
+var requester = queue.requester || '-';
+
+// ✅ GOOD - แก้ไขให้ตรงกับ backend
+var requester = queue.requested_by || queue.requester || '-';
+```
+
+### ตัวอย่างที่ 2: API Function Missing
+```javascript
+// Frontend เรียกใช้
+var result = await apiCall('getAvailableVehiclesForQueue', { date: today });
+
+// ต้องตรวจสอบว่า backend มี function นี้หรือไม่
+// Code.gs ต้องมี case 'getAvailableVehiclesForQueue'
+// QueueHelperService.gs ต้องมี function getAvailableVehiclesForQueue()
+```
+
+### ตัวอย่างที่ 3: Driver Filtering
+```javascript
+// Frontend: driver-history.html ต้องการเห็นเฉพาะคิวของตัวเอง
+// Backend: getQueues() ต้อง filter โดย driver_id สำหรับ non-admin users
+// ตรวจสอบว่า:
+// 1. getQueues() มีการตรวจสอบ role หรือไม่
+// 2. getQueues() มีการ match driver_id โดย full_name หรือไม่
+// 3. getQueues() filter queues ตาม driver_id หรือไม่
+```
+
+## Checklist ก่อนเสร็จสิ้นการแก้ไข
+
+- [ ] ตรวจสอบ API endpoints ที่ frontend เรียกใช้
+- [ ] ตรวจสอบ field names ให้ตรงกัน
+- [ ] ตรวจสอบ data structure ให้ตรงกัน
+- [ ] ตรวจสอบ permission & authorization
+- [ ] ตรวจสอบ business logic
+- [ ] ทดสอบว่า frontend และ backend ทำงานร่วมกันได้
+
+## ไฟล์ที่ต้องตรวจสอบ
+
+### Frontend Files
+- `frontend/*.html` - ทุกไฟล์ HTML ที่มีการเรียกใช้ API
+
+### Backend Files
+- `backend/Code.gs` - API router
+- `backend/*Service.gs` - Service files ที่เกี่ยวข้อง
+- `backend/Utils.gs` - Utility functions
+- `backend/Config.gs` - Configuration
+
+## สรุป
+
+**จำไว้เสมอ: การปรับแก้ frontend HTML ต้องควบคู่กับการตรวจสอบและแก้ไข backend .gs เสมอ เพื่อให้ระบบทำงานได้อย่างสมบูรณ์**

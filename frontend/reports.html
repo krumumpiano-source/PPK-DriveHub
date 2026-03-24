@@ -1,0 +1,853 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>รายงานประเมินผล - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>
+    window.API_BASE_URL = CONFIG.API_BASE_URL;
+    window.currentPage = 'reports';
+    window.REQUIRE_AUTH = true;
+  </script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Sarabun', 'Kanit', sans-serif;
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      color: white;
+      padding: 25px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 1.8em;
+      margin-bottom: 8px;
+    }
+
+    .content {
+      padding: 25px;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 25px;
+      border-bottom: 2px solid #e9ecef;
+      padding-bottom: 10px;
+    }
+
+    .tab {
+      padding: 12px 20px;
+      background: #f8f9fa;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      font-size: 0.95em;
+      font-weight: 600;
+      color: #666;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-family: inherit;
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+
+    .tab:hover {
+      background: #e9ecef;
+      border-color: #4285f4;
+      color: #4285f4;
+    }
+
+    .tab.active {
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      color: white;
+      border-color: transparent;
+    }
+
+    .tab.active:hover {
+      background: linear-gradient(135deg, #357abd 0%, #2d8f47 100%);
+      color: white;
+    }
+
+    .filters {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 25px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .filter-group label {
+      font-weight: 600;
+      color: #333;
+      font-size: 0.9em;
+    }
+
+    .filter-group input,
+    .filter-group select {
+      padding: 10px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 1em;
+      font-family: inherit;
+    }
+
+    .actions-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.9;
+    }
+
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #5a6268;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      color: white;
+      padding: 25px;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .stat-card h3 {
+      font-size: 1.1em;
+      margin-bottom: 10px;
+      opacity: 0.9;
+    }
+
+    .stat-card .value {
+      font-size: 2.5em;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    .stat-card .unit {
+      font-size: 0.9em;
+      opacity: 0.8;
+    }
+
+    .report-section {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 25px;
+      margin-bottom: 25px;
+    }
+
+    .report-section-title {
+      font-size: 1.5em;
+      font-weight: 700;
+      color: #4285f4;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid #4285f4;
+    }
+
+    .report-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .report-table thead {
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      color: white;
+    }
+
+    .report-table th {
+      padding: 15px;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    .report-table td {
+      padding: 15px;
+      border-bottom: 1px solid #e9ecef;
+    }
+
+    .report-table tbody tr:hover {
+      background: #f8f9fa;
+    }
+
+    .score-badge {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.9em;
+      font-weight: 600;
+    }
+
+    .score-excellent {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .score-good {
+      background: #cfe2ff;
+      color: #084298;
+    }
+
+    .score-normal {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .score-poor {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: #666;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+    }
+
+    .empty-state-icon {
+      font-size: 4em;
+      margin-bottom: 20px;
+    }
+
+    .kpi-note {
+      background: #e7f3ff;
+      border-left: 4px solid #4285f4;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      font-size: 0.95em;
+      color: #333;
+    }
+
+    @media (max-width: 768px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .filters {
+        grid-template-columns: 1fr;
+      }
+
+      .report-table {
+        font-size: 0.9em;
+      }
+
+      .report-table th,
+      .report-table td {
+        padding: 10px;
+      }
+
+      .tabs {
+        gap: 6px;
+      }
+
+      .tab {
+        padding: 10px 16px;
+        font-size: 0.9em;
+        flex: 1 1 calc(50% - 3px);
+        min-width: calc(50% - 3px);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .tab {
+        flex: 1 1 100%;
+        min-width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📊 รายงานประเมินผล</h1>
+      <p>ระบบจัดการยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+    </div>
+
+    <div id="navigation"></div>
+
+    <div class="content">
+      <div id="alertContainer"></div>
+
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('overview')">📈 ภาพรวม</button>
+        <button class="tab" onclick="switchTab('drivers')">👤 การทำงานพนักงานขับรถ</button>
+        <button class="tab" onclick="switchTab('vehicles')">🚗 การใช้งานรถ</button>
+        <button class="tab" onclick="switchTab('statistics')">📊 สถิติ</button>
+        <button class="tab" onclick="switchTab('risk')">⚠️ ประเมินความเสี่ยง</button>
+        <button class="tab" onclick="switchTab('fuel')">⛽ อัตราสิ้นเปลืองพลังงาน</button>
+      </div>
+
+      <div class="filters">
+        <div class="filter-group">
+          <label>วันที่เริ่มต้น</label>
+          <input type="date" id="dateFrom" onchange="loadReport()">
+        </div>
+        <div class="filter-group">
+          <label>วันที่สิ้นสุด</label>
+          <input type="date" id="dateTo" onchange="loadReport()">
+        </div>
+        <div class="filter-group">
+          <label>รถ</label>
+          <select id="filterCar" onchange="loadReport()">
+            <option value="">ทั้งหมด</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>คนขับ</label>
+          <select id="filterDriver" onchange="loadReport()">
+            <option value="">ทั้งหมด</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="actions-bar">
+        <button class="btn btn-secondary" onclick="loadReport()">
+          🔃 รีเฟรช
+        </button>
+        <button class="btn btn-primary" onclick="exportReport()">
+          💾 ส่งออกรายงาน
+        </button>
+      </div>
+
+      <div id="loading" class="loading">กำลังโหลดข้อมูล...</div>
+      <div id="reportContent" style="display: none;">
+        <!-- Content will be populated dynamically -->
+      </div>
+    </div>
+  </div>
+  <script>
+    var currentTab = 'overview';
+    var vehicles = [];
+    var drivers = [];
+    var reportData = null;
+
+    document.addEventListener('DOMContentLoaded', function () {
+      var isAuthenticated = requireAuth();
+      if (!isAuthenticated) {
+        console.warn('Not authenticated, but showing page anyway');
+        return; // แสดงหน้าได้แต่ไม่โหลดข้อมูล
+      }
+
+      var currentUser = getCurrentUser();
+      if (currentUser && !hasModulePermission('reports', 'view') && currentUser.role !== 'admin') {
+        console.warn('No permission, but showing page anyway');
+        // ไม่ redirect — ให้แสดงหน้าได้
+      }
+
+      // Set default date range (last 30 days)
+      var today = new Date();
+      var lastMonth = new Date(today);
+      lastMonth.setDate(lastMonth.getDate() - 30);
+
+      document.getElementById('dateFrom').value = formatDate(lastMonth);
+      document.getElementById('dateTo').value = formatDate(today);
+
+      loadVehicles();
+      loadDrivers();
+      loadReport();
+    });
+
+    function formatDate(date) {
+      var year = date.getFullYear();
+      var month = String(date.getMonth() + 1).padStart(2, '0');
+      var day = String(date.getDate()).padStart(2, '0');
+      return year + '-' + month + '-' + day;
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab').forEach(function (t) {
+        t.classList.remove('active');
+      });
+      event.target.classList.add('active');
+      displayReport();
+    }
+
+    async function loadVehicles() {
+      try {
+        var result = await apiCall('getVehicles', {});
+        if (result.success && result.data && result.data.vehicles) {
+          vehicles = result.data.vehicles || [];
+          var select = document.getElementById('filterCar');
+          vehicles.forEach(function (vehicle) {
+            var option = document.createElement('option');
+            option.value = vehicle.car_id;
+            option.textContent = vehicle.license_plate + ' - ' + (vehicle.brand || '') + ' ' + (vehicle.model || '');
+            select.appendChild(option);
+          });
+        }
+      } catch (error) {
+        console.error('Error loading vehicles:', error);
+      }
+    }
+
+    async function loadDrivers() {
+      try {
+        var result = await apiCall('getDrivers', { status: 'active' });
+        if (result.success && result.data && result.data.drivers) {
+          drivers = result.data.drivers || [];
+          var select = document.getElementById('filterDriver');
+          drivers.forEach(function (driver) {
+            var option = document.createElement('option');
+            option.value = driver.driver_id;
+            option.textContent = driver.full_name || (driver.first_name + ' ' + driver.last_name);
+            select.appendChild(option);
+          });
+        }
+      } catch (error) {
+        console.error('Error loading drivers:', error);
+      }
+    }
+
+    async function loadReport() {
+      try {
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('reportContent').style.display = 'none';
+
+        var filters = {
+          date_from: document.getElementById('dateFrom').value,
+          date_to: document.getElementById('dateTo').value
+        };
+
+        var filterCar = document.getElementById('filterCar').value;
+        var filterDriver = document.getElementById('filterDriver').value;
+        if (filterCar) filters.car_id = filterCar;
+        if (filterDriver) filters.driver_id = filterDriver;
+
+        var result = await apiCall('getComprehensiveReport', { filters: filters });
+
+        if (result.success && result.data && result.data.report) {
+          reportData = result.data.report;
+          displayReport();
+        } else {
+          document.getElementById('reportContent').innerHTML = '<div class="empty-state"><div class="empty-state-icon">📊</div><p>ไม่พบข้อมูลรายงาน</p></div>';
+          document.getElementById('reportContent').style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Error loading report:', error);
+        showAlert('โหลดรายงานไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'error');
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+      }
+    }
+
+    function displayReport() {
+      if (!reportData) {
+        document.getElementById('reportContent').innerHTML = '<div class="empty-state"><div class="empty-state-icon">📊</div><p>ไม่พบข้อมูลรายงาน</p></div>';
+        document.getElementById('reportContent').style.display = 'block';
+        return;
+      }
+
+      var html = '';
+
+      switch (currentTab) {
+        case 'overview':
+          html = displayOverview();
+          break;
+        case 'drivers':
+          html = displayDriversReport();
+          break;
+        case 'vehicles':
+          html = displayVehiclesReport();
+          break;
+        case 'statistics':
+          html = displayStatistics();
+          break;
+        case 'risk':
+          html = displayRiskAnalysis();
+          break;
+        case 'fuel':
+          html = displayFuelConsumption();
+          break;
+        default:
+          html = displayOverview();
+      }
+
+      document.getElementById('reportContent').innerHTML = html;
+      document.getElementById('reportContent').style.display = 'block';
+    }
+
+    function displayOverview() {
+      var html = '<div class="stats-grid">';
+
+      // Overall stats
+      if (reportData.driver_performance) {
+        var dp = reportData.driver_performance;
+        html += '<div class="stat-card">';
+        html += '<h3>👤 พนักงานขับรถ</h3>';
+        html += '<div class="value">' + (dp.total_drivers || 0) + '</div>';
+        html += '<div class="unit">คน</div>';
+        html += '</div>';
+
+        html += '<div class="stat-card">';
+        html += '<h3>📊 ระยะทางรวม</h3>';
+        html += '<div class="value">' + (dp.total_distance ? dp.total_distance.toLocaleString() : 0) + '</div>';
+        html += '<div class="unit">กิโลเมตร</div>';
+        html += '</div>';
+
+        html += '<div class="stat-card">';
+        html += '<h3>⏱️ ชั่วโมงรวม</h3>';
+        html += '<div class="value">' + (dp.total_hours ? dp.total_hours.toFixed(1) : 0) + '</div>';
+        html += '<div class="unit">ชั่วโมง</div>';
+        html += '</div>';
+      }
+
+      if (reportData.fuel_stats) {
+        var fs = reportData.fuel_stats;
+        html += '<div class="stat-card">';
+        html += '<h3>⛽ น้ำมันรวม</h3>';
+        html += '<div class="value">' + (fs.total_liters ? fs.total_liters.toLocaleString() : 0) + '</div>';
+        html += '<div class="unit">ลิตร</div>';
+        html += '</div>';
+
+        html += '<div class="stat-card">';
+        html += '<h3>💰 ค่าน้ำมันรวม</h3>';
+        html += '<div class="value">' + (fs.total_cost ? fs.total_cost.toLocaleString() : 0) + '</div>';
+        html += '<div class="unit">บาท</div>';
+        html += '</div>';
+      }
+
+      html += '</div>';
+
+      html += '<div class="kpi-note">';
+      html += '<strong>หมายเหตุ:</strong> คะแนนประสิทธิภาพใช้เพื่อการพัฒนา ไม่ใช่การลงโทษ';
+      html += '</div>';
+
+      return html;
+    }
+
+    function displayDriversReport() {
+      var html = '<div class="report-section">';
+      html += '<div class="report-section-title">👤 การทำงานของพนักงานขับรถรายคน</div>';
+
+      if (reportData.driver_performance && reportData.driver_performance.by_driver) {
+        var byDriver = reportData.driver_performance.by_driver;
+        var driverIds = Object.keys(byDriver);
+
+        if (driverIds.length > 0) {
+          html += '<table class="report-table">';
+          html += '<thead><tr>';
+          html += '<th>ชื่อ</th>';
+          html += '<th>จำนวนรอบ</th>';
+          html += '<th>ระยะทาง (กม.)</th>';
+          html += '<th>ชั่วโมง</th>';
+          html += '<th>คะแนน</th>';
+          html += '</tr></thead><tbody>';
+
+          driverIds.forEach(function (driverId) {
+            var stats = byDriver[driverId];
+            var driver = drivers.find(function (d) { return d.driver_id === driverId; });
+            var driverName = driver ? (driver.full_name || driver.first_name + ' ' + driver.last_name) : driverId;
+
+            var score = stats.score || 0;
+            var scoreClass = score >= 80 ? 'score-excellent' : (score >= 60 ? 'score-good' : (score >= 40 ? 'score-normal' : 'score-poor'));
+            var scoreText = score >= 80 ? 'ดีมาก' : (score >= 60 ? 'ดี' : (score >= 40 ? 'ปกติ' : 'ควรพัฒนา'));
+
+            html += '<tr>';
+            html += '<td>' + driverName + '</td>';
+            html += '<td>' + (stats.trips || 0) + '</td>';
+            html += '<td>' + (stats.distance ? stats.distance.toLocaleString() : 0) + '</td>';
+            html += '<td>' + (stats.hours ? stats.hours.toFixed(1) : 0) + '</td>';
+            html += '<td><span class="score-badge ' + scoreClass + '">' + score + ' (' + scoreText + ')</span></td>';
+            html += '</tr>';
+          });
+
+          html += '</tbody></table>';
+        } else {
+          html += '<div class="empty-state"><div class="empty-state-icon">👤</div><p>ไม่พบข้อมูล</p></div>';
+        }
+      } else {
+        html += '<div class="empty-state"><div class="empty-state-icon">👤</div><p>ไม่พบข้อมูล</p></div>';
+      }
+
+      html += '</div>';
+      html += '<div class="kpi-note">';
+      html += '<strong>หมายเหตุ:</strong> คะแนนประสิทธิภาพใช้เพื่อการพัฒนา ไม่ใช่การลงโทษ';
+      html += '</div>';
+
+      return html;
+    }
+
+    function displayVehiclesReport() {
+      var html = '<div class="report-section">';
+      html += '<div class="report-section-title">🚗 การใช้งานรถรายคัน</div>';
+
+      if (reportData.vehicle_usage && reportData.vehicle_usage.by_vehicle) {
+        var byVehicle = reportData.vehicle_usage.by_vehicle;
+        var vehicleIds = Object.keys(byVehicle);
+
+        if (vehicleIds.length > 0) {
+          html += '<table class="report-table">';
+          html += '<thead><tr>';
+          html += '<th>รถ</th>';
+          html += '<th>จำนวนรอบ</th>';
+          html += '<th>ระยะทาง (กม.)</th>';
+          html += '<th>ชั่วโมง</th>';
+          html += '<th>คะแนน</th>';
+          html += '</tr></thead><tbody>';
+
+          vehicleIds.forEach(function (carId) {
+            var stats = byVehicle[carId];
+            var vehicle = vehicles.find(function (v) { return v.car_id === carId; });
+            var vehicleName = vehicle ? (vehicle.license_plate + ' ' + vehicle.brand + ' ' + vehicle.model) : carId;
+
+            var score = stats.score || 0;
+            var scoreClass = score >= 80 ? 'score-excellent' : (score >= 60 ? 'score-good' : (score >= 40 ? 'score-normal' : 'score-poor'));
+            var scoreText = score >= 80 ? 'ดีมาก' : (score >= 60 ? 'ดี' : (score >= 40 ? 'ปกติ' : 'ควรพัฒนา'));
+
+            html += '<tr>';
+            html += '<td>' + vehicleName + '</td>';
+            html += '<td>' + (stats.trips || 0) + '</td>';
+            html += '<td>' + (stats.distance ? stats.distance.toLocaleString() : 0) + '</td>';
+            html += '<td>' + (stats.hours ? stats.hours.toFixed(1) : 0) + '</td>';
+            html += '<td><span class="score-badge ' + scoreClass + '">' + score + ' (' + scoreText + ')</span></td>';
+            html += '</tr>';
+          });
+
+          html += '</tbody></table>';
+        } else {
+          html += '<div class="empty-state"><div class="empty-state-icon">🚗</div><p>ไม่พบข้อมูล</p></div>';
+        }
+      } else {
+        html += '<div class="empty-state"><div class="empty-state-icon">🚗</div><p>ไม่พบข้อมูล</p></div>';
+      }
+
+      html += '</div>';
+      html += '<div class="kpi-note">';
+      html += '<strong>หมายเหตุ:</strong> คะแนนประสิทธิภาพใช้เพื่อการพัฒนา ไม่ใช่การลงโทษ';
+      html += '</div>';
+
+      return html;
+    }
+
+    function displayStatistics() {
+      var html = '<div class="report-section">';
+      html += '<div class="report-section-title">📊 สถิติ</div>';
+
+      html += '<div class="stats-grid">';
+
+      if (reportData.repair_stats) {
+        var rs = reportData.repair_stats;
+        html += '<div class="stat-card">';
+        html += '<h3>🔧 จำนวนครั้งซ่อม</h3>';
+        html += '<div class="value">' + (rs.total_repairs || 0) + '</div>';
+        html += '<div class="unit">ครั้ง</div>';
+        html += '</div>';
+
+        html += '<div class="stat-card">';
+        html += '<h3>💰 ค่าซ่อมรวม</h3>';
+        html += '<div class="value">' + (rs.total_cost ? rs.total_cost.toLocaleString() : 0) + '</div>';
+        html += '<div class="unit">บาท</div>';
+        html += '</div>';
+      }
+
+      if (reportData.fuel_consumption) {
+        var fc = reportData.fuel_consumption;
+        html += '<div class="stat-card">';
+        html += '<h3>⛽ อัตราสิ้นเปลืองเฉลี่ย</h3>';
+        html += '<div class="value">' + (fc.average_consumption ? fc.average_consumption.toFixed(2) : 0) + '</div>';
+        html += '<div class="unit">กม./ลิตร</div>';
+        html += '</div>';
+      }
+
+      html += '</div>';
+      html += '</div>';
+
+      return html;
+    }
+
+    function displayRiskAnalysis() {
+      var html = '<div class="report-section">';
+      html += '<div class="report-section-title">⚠️ ประเมินความเสี่ยงความคุ้มทุน</div>';
+
+      if (reportData.risk_analysis) {
+        var ra = reportData.risk_analysis;
+        html += '<div class="stats-grid">';
+
+        html += '<div class="stat-card">';
+        html += '<h3>🚨 ความเสี่ยงสูง</h3>';
+        html += '<div class="value">' + (ra.high_risk_count || 0) + '</div>';
+        html += '<div class="unit">รายการ</div>';
+        html += '</div>';
+
+        html += '<div class="stat-card">';
+        html += '<h3>💰 ค่าใช้จ่ายรวม</h3>';
+        html += '<div class="value">' + (ra.total_cost ? ra.total_cost.toLocaleString() : 0) + '</div>';
+        html += '<div class="unit">บาท</div>';
+        html += '</div>';
+
+        html += '</div>';
+      } else {
+        html += '<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>ไม่พบข้อมูลการประเมินความเสี่ยง</p></div>';
+      }
+
+      html += '</div>';
+
+      return html;
+    }
+
+    function displayFuelConsumption() {
+      var html = '<div class="report-section">';
+      html += '<div class="report-section-title">⛽ อัตราสิ้นเปลืองพลังงาน</div>';
+
+      if (reportData.fuel_consumption) {
+        var fc = reportData.fuel_consumption;
+
+        html += '<div class="stats-grid">';
+        html += '<div class="stat-card">';
+        html += '<h3>⛽ อัตราสิ้นเปลืองเฉลี่ย</h3>';
+        html += '<div class="value">' + (fc.average_consumption ? fc.average_consumption.toFixed(2) : 0) + '</div>';
+        html += '<div class="unit">กม./ลิตร</div>';
+        html += '</div>';
+
+        html += '<div class="stat-card">';
+        html += '<h3>💰 ค่าน้ำมันเฉลี่ยต่อกม.</h3>';
+        html += '<div class="value">' + (fc.average_cost_per_km ? fc.average_cost_per_km.toFixed(2) : 0) + '</div>';
+        html += '<div class="unit">บาท/กม.</div>';
+        html += '</div>';
+        html += '</div>';
+      } else {
+        html += '<div class="empty-state"><div class="empty-state-icon">⛽</div><p>ไม่พบข้อมูลอัตราสิ้นเปลือง</p></div>';
+      }
+
+      html += '</div>';
+
+      return html;
+    }
+
+    function exportReport() {
+      // Simple export to CSV (can be enhanced to Word/PDF later)
+      if (!reportData) {
+        alert('ยังไม่มีข้อมูลในรายการนี้ จึงส่งออกรายงานไม่ได้');
+        return;
+      }
+
+      var csv = '';
+      var dateFrom = document.getElementById('dateFrom').value;
+      var dateTo = document.getElementById('dateTo').value;
+
+      csv += 'รายงาน PPK DriveHub\n';
+      csv += 'ช่วงเวลา: ' + dateFrom + ' ถึง ' + dateTo + '\n\n';
+
+      if (currentTab === 'drivers' && reportData.driver_performance && reportData.driver_performance.by_driver) {
+        csv += 'การทำงานของพนักงานขับรถรายคน\n';
+        csv += 'ชื่อ,จำนวนรอบ,ระยะทาง(กม.),ชั่วโมง,คะแนน\n';
+        Object.keys(reportData.driver_performance.by_driver).forEach(function (driverId) {
+          var stats = reportData.driver_performance.by_driver[driverId];
+          var driver = drivers.find(function (d) { return d.driver_id === driverId; });
+          var driverName = driver ? (driver.full_name || driver.first_name + ' ' + driver.last_name) : driverId;
+          csv += driverName + ',' + (stats.trips || 0) + ',' + (stats.distance || 0) + ',' + (stats.hours || 0) + ',' + (stats.score || 0) + '\n';
+        });
+      } else if (currentTab === 'vehicles' && reportData.vehicle_usage && reportData.vehicle_usage.by_vehicle) {
+        csv += 'การใช้งานรถรายคัน\n';
+        csv += 'รถ,จำนวนรอบ,ระยะทาง(กม.),ชั่วโมง,คะแนน\n';
+        Object.keys(reportData.vehicle_usage.by_vehicle).forEach(function (carId) {
+          var stats = reportData.vehicle_usage.by_vehicle[carId];
+          var vehicle = vehicles.find(function (v) { return v.car_id === carId; });
+          var vehicleName = vehicle ? (vehicle.license_plate + ' ' + vehicle.brand + ' ' + vehicle.model) : carId;
+          csv += vehicleName + ',' + (stats.trips || 0) + ',' + (stats.distance || 0) + ',' + (stats.hours || 0) + ',' + (stats.score || 0) + '\n';
+        });
+      }
+
+      var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+      var link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'report_' + currentTab + '_' + dateFrom + '_' + dateTo + '.csv';
+      link.click();
+    }
+
+    function showAlert(message, type) {
+      var container = document.getElementById('alertContainer');
+      var alert = document.createElement('div');
+      alert.className = 'alert alert-' + type;
+      alert.textContent = message;
+      container.innerHTML = '';
+      container.appendChild(alert);
+
+      setTimeout(function () {
+        alert.remove();
+      }, 5000);
+    }
+  </script>
+
+  <div style="background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 0.9em; margin-top: 20px;">
+    <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+  </div>
+</body>
+
+</html>

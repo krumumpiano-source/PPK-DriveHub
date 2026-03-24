@@ -1,0 +1,891 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>บันทึกการใช้รถ - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>
+    window.API_BASE_URL = CONFIG.API_BASE_URL;
+    window.currentPage = 'qr-usage-record';
+    // QR Usage Record page does NOT require authentication
+    window.REQUIRE_AUTH = false;
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Sarabun', 'Kanit', sans-serif;
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      min-height: 100vh;
+      padding: 10px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 5px;
+      }
+
+      .container {
+        border-radius: 12px;
+      }
+    }
+
+    .header {
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      color: white;
+      padding: 20px 15px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 1.5em;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    .header p {
+      font-size: 0.9em;
+      opacity: 0.95;
+    }
+
+    .content {
+      padding: 20px 15px;
+    }
+
+    @media (max-width: 480px) {
+      .header {
+        padding: 15px 12px;
+      }
+
+      .header h1 {
+        font-size: 1.3em;
+      }
+
+      .content {
+        padding: 15px 12px;
+      }
+    }
+
+    .car-info {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      text-align: center;
+      border-left: 4px solid #4285f4;
+    }
+
+    .car-info h2 {
+      color: #4285f4;
+      font-size: 1.3em;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    .car-info .car-details {
+      color: #666;
+      font-size: 0.9em;
+      margin-bottom: 6px;
+    }
+
+    @media (max-width: 480px) {
+      .car-info {
+        padding: 12px;
+        margin-bottom: 15px;
+      }
+
+      .car-info h2 {
+        font-size: 1.2em;
+      }
+
+      .car-info .car-details {
+        font-size: 0.85em;
+      }
+    }
+
+    .car-info .car-status {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.85em;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+
+    .car-info .car-status.available {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+
+    .car-info .car-status.unavailable {
+      background: #ffebee;
+      color: #c62828;
+    }
+
+    .car-info .car-status.repair {
+      background: #fff3e0;
+      color: #f57c00;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 10px;
+      color: #333;
+      font-weight: 600;
+      font-size: 1em;
+    }
+
+    .form-group label .required {
+      color: #f44336;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 16px;
+      /* ป้องกัน zoom บน iOS */
+      transition: all 0.3s;
+      font-family: inherit;
+      -webkit-appearance: none;
+      appearance: none;
+      background: white;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #4285f4;
+      box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+    }
+
+    .form-group input[type="number"] {
+      font-family: 'Courier New', monospace;
+    }
+
+    @media (max-width: 480px) {
+      .form-group {
+        margin-bottom: 18px;
+      }
+
+      .form-group label {
+        font-size: 0.95em;
+        margin-bottom: 8px;
+      }
+
+      .form-group input,
+      .form-group select {
+        padding: 16px 14px;
+        /* เพิ่ม padding สำหรับ touch */
+        font-size: 16px;
+        /* ป้องกัน zoom */
+      }
+    }
+
+    .form-group .help-text {
+      font-size: 0.85em;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    .btn-use-current-time {
+      transition: all 0.2s;
+    }
+
+    .btn-use-current-time:active {
+      transform: scale(0.95);
+      background: #45a049 !important;
+    }
+
+    @media (max-width: 480px) {
+      .form-group.datetime-group>div>div[style*="display: flex"] {
+        flex-direction: column !important;
+      }
+
+      .btn-use-current-time {
+        width: 100%;
+        padding: 14px !important;
+        font-size: 1em !important;
+        align-self: stretch !important;
+      }
+    }
+
+    .form-group .error-text {
+      font-size: 0.85em;
+      color: #f44336;
+      margin-top: 5px;
+      display: none;
+    }
+
+    .form-group.error input,
+    .form-group.error select {
+      border-color: #f44336;
+    }
+
+    .form-group.error .error-text {
+      display: block;
+    }
+
+    .form-group.error .error-text strong {
+      font-weight: 700;
+    }
+
+    .status-btn {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      user-select: none;
+    }
+
+    .status-btn:active {
+      transform: scale(0.98);
+    }
+
+    .status-btn.selected {
+      background: #4285f4 !important;
+      color: white !important;
+      border-color: #4285f4 !important;
+    }
+
+    @media (max-width: 480px) {
+      .status-buttons {
+        flex-direction: column;
+      }
+
+      .status-btn {
+        width: 100%;
+        min-width: 100% !important;
+      }
+    }
+
+    .btn {
+      width: 100%;
+      padding: 18px;
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-family: inherit;
+      margin-top: 15px;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      user-select: none;
+    }
+
+    .btn:active:not(:disabled) {
+      transform: scale(0.98);
+      box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    @media (max-width: 480px) {
+      .btn {
+        padding: 20px;
+        font-size: 1.05em;
+        margin-top: 12px;
+      }
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+      font-size: 1.3em;
+      padding: 20px;
+    }
+
+    .alert {
+      padding: 12px 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 0.9em;
+    }
+
+    .alert-error {
+      background: #ffebee;
+      color: #c62828;
+      border-left: 4px solid #c62828;
+    }
+
+    .alert-success {
+      background: #e8f5e9;
+      color: #2e7d32;
+      border-left: 4px solid #2e7d32;
+    }
+
+    .alert-warning {
+      background: #fff3e0;
+      color: #f57c00;
+      border-left: 4px solid #f57c00;
+    }
+
+    .alert-info {
+      background: #e3f2fd;
+      color: #1976d2;
+      border-left: 4px solid #1976d2;
+    }
+
+    .datetime-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    @media (max-width: 480px) {
+      .datetime-group {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+    }
+
+    #destinationGroup {
+      display: none;
+    }
+
+    .info-footer {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      font-size: 0.85em;
+      color: #666;
+      text-align: center;
+      border-left: 4px solid #4285f4;
+    }
+
+    #successMessage {
+      display: none;
+      text-align: center;
+      padding: 30px;
+    }
+
+    #successMessage.show {
+      display: block;
+    }
+
+    /* Smooth scrolling */
+    html {
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Prevent text selection on mobile */
+    @media (max-width: 480px) {
+      * {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      input,
+      textarea,
+      select {
+        -webkit-user-select: text;
+        user-select: text;
+      }
+
+      .info-footer {
+        padding: 12px;
+        font-size: 0.8em;
+      }
+
+      .alert {
+        padding: 12px;
+        font-size: 0.9em;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📱 บันทึกการใช้รถ</h1>
+      <p>สแกน QR Code ที่ติดรถ</p>
+    </div>
+
+    <div class="content">
+      <div id="alert-container"></div>
+
+      <!-- Car Info (Read-only) -->
+      <div id="carInfo" class="car-info" style="display: none;">
+        <h2 id="carLicensePlate">-</h2>
+        <div class="car-details" id="carBrandModel">-</div>
+        <div class="car-status" id="carStatus">-</div>
+      </div>
+
+      <!-- Success Message -->
+      <div id="successMessage">
+        <div style="font-size: 3em; margin-bottom: 15px;">✅</div>
+        <h2 style="color: #2e7d32; margin-bottom: 10px;">บันทึกสำเร็จ!</h2>
+        <p style="color: #666; margin-bottom: 20px;">ข้อมูลถูกบันทึกเรียบร้อยแล้ว</p>
+        <button class="btn btn-success" onclick="resetForm()">
+          บันทึกอีกครั้ง
+        </button>
+      </div>
+
+      <!-- Form -->
+      <form id="usageForm" onsubmit="handleSubmit(event); return false;" style="display: none;">
+        <div class="form-group">
+          <label for="driver_id">ชื่อพนักงานขับรถ <span class="required">*</span></label>
+          <select id="driver_id" name="driver_id" required>
+            <option value="">-- เลือกพนักงานขับรถ --</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>สถานะ <span class="required">*</span></label>
+          <div class="status-buttons" style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button type="button" id="statusBeforeTrip" class="status-btn" onclick="selectStatus('before_trip')"
+              style="flex: 1; min-width: 150px; padding: 14px; border: 2px solid #4285f4; border-radius: 8px; background: white; color: #4285f4; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+              🚗 ก่อนออกเดินทาง
+            </button>
+            <button type="button" id="statusAfterTrip" class="status-btn" onclick="selectStatus('after_trip')"
+              style="flex: 1; min-width: 150px; padding: 14px; border: 2px solid #4285f4; border-radius: 8px; background: white; color: #4285f4; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+              🏠 กลับมาจากเดินทาง
+            </button>
+          </div>
+          <input type="hidden" id="record_type" name="record_type" required>
+          <div class="help-text" id="recordTypeHelp" style="margin-top: 8px;"></div>
+        </div>
+
+        <div class="form-group datetime-group">
+          <div>
+            <label for="date">วันเดือนปี <span class="required">*</span></label>
+            <input type="date" id="date" name="date" required>
+          </div>
+          <div>
+            <label for="time">เวลา <span class="required">*</span></label>
+            <div style="display: flex; gap: 10px; align-items: flex-start;">
+              <div style="flex: 1;">
+                <input type="time" id="time" name="time" required>
+                <div class="help-text time-ampm-help" style="font-size: 0.85em; color: #666;">
+                  <strong>AM เช้า</strong> · <strong>PM บ่าย</strong>
+                </div>
+              </div>
+              <button type="button" onclick="useCurrentTime('time')" class="btn-use-current-time"
+                style="padding: 12px 16px; background: #4caf50; color: white; border: none; border-radius: 8px; font-size: 0.9em; font-weight: 600; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; touch-action: manipulation; align-self: flex-end;">
+                ⏰ ใช้เวลาปัจจุบัน
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="requested_by">ผู้ขอใช้รถ <span class="required">*</span></label>
+          <input type="text" id="requested_by" name="requested_by" required placeholder="ชื่อผู้ขอใช้รถ">
+        </div>
+
+        <div class="form-group">
+          <label for="destination">จุดหมายปลายทาง <span class="required">*</span></label>
+          <input type="text" id="destination" name="destination" required placeholder="ระบุจุดหมายปลายทาง">
+        </div>
+
+        <div class="form-group">
+          <label for="mileage">เลขไมล์รถ <span class="required">*</span></label>
+          <input type="number" id="mileage" name="mileage" required placeholder="ตัวเลขเท่านั้น ไม่มีเว้นวรรค" min="0"
+            step="1" oninput="this.value = this.value.replace(/[^0-9]/g, '')" onblur="validateMileage()">
+          <div class="help-text">เลขไมล์ล่าสุด: <span id="lastMileage">-</span></div>
+          <div class="error-text" id="mileageError"></div>
+        </div>
+
+        <button type="submit" class="btn" id="submitBtn">
+          💾 บันทึก
+        </button>
+
+        <div class="info-footer">
+          <strong>📋 หมายเหตุ:</strong><br>
+          ข้อมูลนี้ใช้เพื่อความปลอดภัยและการบำรุงรักษา<br>
+          กรุณากรอกข้อมูลให้ถูกต้อง
+        </div>
+      </form>
+
+      <div id="loading" style="text-align: center; padding: 40px; color: #666;">
+        กำลังโหลดข้อมูล...
+      </div>
+    </div>
+  </div>
+  <script>
+    var carId = null;
+    var carInfo = null;
+    var drivers = [];
+    var lastMileage = 0;
+    var hasBeforeTrip = false;
+
+    // QR Usage Record page does NOT require authentication
+    // Anyone can scan QR and record usage
+
+    // Get QR data from URL
+    function getQRDataFromURL() {
+      var urlParams = new URLSearchParams(window.location.search);
+      var qrData = urlParams.get('car') || urlParams.get('qr');
+      return qrData ? { car_id: qrData } : null;
+    }
+
+    // Load initial data — form always shown; car info & save only when QR scanned
+    async function loadData() {
+      try {
+        var qrData = getQRDataFromURL();
+        document.getElementById('loading').style.display = 'none';
+        showForm();
+
+        if (!qrData) {
+          document.getElementById('carInfo').style.display = 'none';
+          document.getElementById('submitBtn').disabled = true;
+          document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">กรุณาสแกน QR Code ที่รถเพื่อแสดงเลขทะเบียน รุ่นรถ และเปิดใช้ปุ่มบันทึก</div>';
+          return;
+        }
+
+        var result = await apiCall('scanQRForUsageRecord', { qrData: qrData });
+
+        if (result.success) {
+          carId = result.data.car_id;
+          carInfo = result.data.car_info;
+          drivers = result.data.drivers || [];
+
+          displayCarInfo();
+          populateDrivers();
+          loadLastMileage();
+          document.getElementById('submitBtn').disabled = false;
+          document.getElementById('alert-container').innerHTML = '';
+        } else {
+          document.getElementById('carInfo').style.display = 'none';
+          document.getElementById('submitBtn').disabled = true;
+          document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">' + result.message + '</div>';
+        }
+      } catch (error) {
+        document.getElementById('carInfo').style.display = 'none';
+        document.getElementById('submitBtn').disabled = true;
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">' + handleError(error) + '</div>';
+      }
+    }
+
+    function displayCarInfo() {
+      if (carInfo) {
+        document.getElementById('carLicensePlate').textContent = carInfo.license_plate || carId;
+        document.getElementById('carBrandModel').textContent = (carInfo.brand || '') + ' ' + (carInfo.model || '');
+
+        // Display status
+        var statusEl = document.getElementById('carStatus');
+        var status = carInfo.status || 'available';
+        var statusText = '';
+        var statusClass = 'available';
+
+        if (status === 'unavailable' || status === 'repair') {
+          statusText = '⚠️ รถงดใช้';
+          statusClass = 'unavailable';
+        } else if (status === 'in_use') {
+          statusText = '🚗 กำลังใช้งาน';
+          statusClass = 'available';
+        } else {
+          statusText = '✅ พร้อมใช้งาน';
+          statusClass = 'available';
+        }
+
+        statusEl.textContent = statusText;
+        statusEl.className = 'car-status ' + statusClass;
+
+        // Show warning if unavailable
+        if (status === 'unavailable' || status === 'repair') {
+          var alertContainer = document.getElementById('alert-container');
+          alertContainer.innerHTML = '<div class="alert alert-warning"><strong>⚠️ คำเตือน:</strong> รถคันนี้อยู่ในสถานะงดใช้ กรุณาตรวจสอบก่อนใช้งาน</div>';
+        }
+
+        document.getElementById('carInfo').style.display = 'block';
+      }
+    }
+
+    function populateDrivers() {
+      var select = document.getElementById('driver_id');
+      select.innerHTML = '<option value="">-- เลือกพนักงานขับรถ --</option>';
+
+      drivers.forEach(function (driver) {
+        var option = document.createElement('option');
+        option.value = driver.driver_id;
+        option.textContent = driver.full_name;
+        select.appendChild(option);
+      });
+    }
+
+    async function loadLastMileage() {
+      try {
+        // Get latest usage record for this car
+        var result = await apiCall('getUsageRecords', {
+          car_id: carId,
+          limit: 1,
+          sort: 'desc'
+        });
+
+        if (result.success && result.data.records && result.data.records.length > 0) {
+          var latestRecord = result.data.records[0];
+          lastMileage = latestRecord.mileage || 0;
+          document.getElementById('lastMileage').textContent = lastMileage.toLocaleString();
+
+          // Check if there's a before_trip record for today
+          var today = formatDate(new Date());
+          var todayRecords = result.data.records.filter(function (r) {
+            return r.date === today && r.record_type === 'before_trip';
+          });
+          hasBeforeTrip = todayRecords.length > 0;
+        } else {
+          document.getElementById('lastMileage').textContent = 'ไม่มีข้อมูล';
+        }
+      } catch (error) {
+        console.error('Error loading last mileage:', error);
+        document.getElementById('lastMileage').textContent = 'ไม่สามารถโหลดได้';
+      }
+    }
+
+    function showForm() {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('usageForm').style.display = 'block';
+
+      // Set default date/time to now
+      var now = new Date();
+      document.getElementById('date').value = formatDate(now);
+      var timeInput = document.getElementById('time');
+      timeInput.value = formatTime(now);
+
+      // Initialize Flatpickr for Thai date/time pickers (24-hour format)
+      setTimeout(function () {
+        if (typeof initAllThaiDateTimePickers === 'function') {
+          initAllThaiDateTimePickers();
+        }
+      }, 100);
+    }
+
+    // Use current time button handler
+    function useCurrentTime(timeInputId) {
+      var now = new Date();
+      var timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      var timeInput = document.getElementById(timeInputId);
+      if (timeInput) {
+        timeInput.value = timeStr;
+        // Trigger change event for Flatpickr if initialized
+        if (timeInput._flatpickr) {
+          timeInput._flatpickr.setDate(timeStr, false);
+        }
+      }
+    }
+
+    function selectStatus(status) {
+      var recordTypeInput = document.getElementById('record_type');
+      var helpText = document.getElementById('recordTypeHelp');
+      var beforeBtn = document.getElementById('statusBeforeTrip');
+      var afterBtn = document.getElementById('statusAfterTrip');
+
+      // Remove selected class from all buttons
+      beforeBtn.classList.remove('selected');
+      afterBtn.classList.remove('selected');
+
+      // Set value and add selected class
+      recordTypeInput.value = status;
+
+      if (status === 'before_trip') {
+        beforeBtn.classList.add('selected');
+        helpText.textContent = 'บันทึกก่อนออกเดินทาง';
+        helpText.style.color = '#666';
+      } else if (status === 'after_trip') {
+        afterBtn.classList.add('selected');
+
+        // Check if there's a before_trip record
+        if (!hasBeforeTrip) {
+          helpText.textContent = '⚠️ ยังไม่มีบันทึก "ก่อนออกเดินทาง" สำหรับวันนี้';
+          helpText.style.color = '#f57c00';
+        } else {
+          helpText.textContent = 'บันทึกการกลับมาจากเดินทาง';
+          helpText.style.color = '#666';
+        }
+      }
+    }
+
+    function validateMileage() {
+      var mileageInput = document.getElementById('mileage');
+      var mileage = parseInt(mileageInput.value) || 0;
+      var formGroup = mileageInput.closest('.form-group');
+      var errorText = document.getElementById('mileageError');
+
+      if (mileage <= 0) {
+        formGroup.classList.add('error');
+        errorText.textContent = 'เลขไมล์ต้องมากกว่า 0';
+        return false;
+      }
+
+      if (lastMileage > 0 && mileage < lastMileage) {
+        formGroup.classList.add('error');
+        var difference = lastMileage - mileage;
+        errorText.innerHTML = '⚠️ <strong>คำเตือน:</strong> เลขไมล์ที่กรอก (' + mileage.toLocaleString() + ') น้อยกว่าเลขไมล์ล่าสุดที่บันทึก (' + lastMileage.toLocaleString() + ') อยู่ ' + difference.toLocaleString() + ' ไมล์<br>กรุณาตรวจสอบเลขไมล์อีกครั้ง';
+        errorText.style.color = '#c62828';
+        errorText.style.fontWeight = '600';
+        return false;
+      }
+
+      formGroup.classList.remove('error');
+      errorText.textContent = '';
+      errorText.style.color = '';
+      errorText.style.fontWeight = '';
+      return true;
+    }
+
+    function formatDate(date) {
+      var year = date.getFullYear();
+      var month = String(date.getMonth() + 1).padStart(2, '0');
+      var day = String(date.getDate()).padStart(2, '0');
+      return year + '-' + month + '-' + day;
+    }
+
+    function formatTime(date) {
+      var hours = String(date.getHours()).padStart(2, '0');
+      var minutes = String(date.getMinutes()).padStart(2, '0');
+      return hours + ':' + minutes;
+    }
+
+    async function handleSubmit(event) {
+      event.preventDefault();
+
+      var recordType = document.getElementById('record_type').value;
+
+      // Validate status is selected
+      if (!recordType) {
+        var alertContainer = document.getElementById('alert-container');
+        alertContainer.innerHTML = '<div class="alert alert-error">กรุณาเลือกสถานะ (ก่อนออกเดินทาง หรือ กลับมาจากเดินทาง)</div>';
+        return;
+      }
+
+      var date = document.getElementById('date').value;
+      var time = document.getElementById('time').value;
+      var datetime = date + ' ' + time;
+
+      // Validate mileage
+      if (!validateMileage()) {
+        return;
+      }
+
+      // Validate: if after_trip, check if there's a before_trip
+      if (recordType === 'after_trip' && !hasBeforeTrip) {
+        var alertContainer = document.getElementById('alert-container');
+        alertContainer.innerHTML = '<div class="alert alert-warning">⚠️ ยังไม่มีบันทึก "ก่อนออกเดินทาง" สำหรับวันนี้ กรุณาบันทึกก่อนออกเดินทางก่อน</div>';
+        return;
+      }
+
+      var recordData = {
+        car_id: carId,
+        driver_id: document.getElementById('driver_id').value,
+        record_type: recordType,
+        datetime: datetime,
+        requested_by: document.getElementById('requested_by').value.trim(),
+        destination: document.getElementById('destination').value.trim(),
+        mileage: document.getElementById('mileage').value.replace(/\s/g, ''),
+        notes: ''
+      };
+
+      var submitBtn = document.getElementById('submitBtn');
+      var alertContainer = document.getElementById('alert-container');
+
+      // Validate mileage
+      if (!/^\d+$/.test(recordData.mileage)) {
+        alertContainer.innerHTML = '<div class="alert alert-error">เลขไมล์ต้องเป็นตัวเลขเท่านั้น</div>';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'กำลังบันทึก...';
+      alertContainer.innerHTML = '';
+
+      try {
+        var result = await apiCall('createUsageRecord', { data: recordData });
+
+        if (result.success) {
+          // Show success message
+          document.getElementById('usageForm').style.display = 'none';
+          document.getElementById('successMessage').classList.add('show');
+
+          // Update hasBeforeTrip if needed
+          if (recordType === 'before_trip') {
+            hasBeforeTrip = true;
+          }
+
+          // Auto clear form after 3 seconds (optional)
+          // setTimeout(resetForm, 3000);
+        } else {
+          alertContainer.innerHTML = '<div class="alert alert-error">' + result.message + '</div>';
+          submitBtn.disabled = false;
+          submitBtn.textContent = '💾 บันทึก';
+        }
+      } catch (error) {
+        alertContainer.innerHTML = '<div class="alert alert-error">' + handleError(error) + '</div>';
+        submitBtn.disabled = false;
+        submitBtn.textContent = '💾 บันทึก';
+      }
+    }
+
+    function resetForm() {
+      document.getElementById('successMessage').classList.remove('show');
+      document.getElementById('usageForm').style.display = 'block';
+      document.getElementById('usageForm').reset();
+
+      // Reset status buttons
+      document.getElementById('statusBeforeTrip').classList.remove('selected');
+      document.getElementById('statusAfterTrip').classList.remove('selected');
+      document.getElementById('record_type').value = '';
+      document.getElementById('recordTypeHelp').textContent = '';
+
+      // Reset date/time
+      var now = new Date();
+      document.getElementById('date').value = formatDate(now);
+      document.getElementById('time').value = formatTime(now);
+
+      // Reload last mileage
+      loadLastMileage();
+
+      // Clear alerts
+      document.getElementById('alert-container').innerHTML = '';
+    }
+
+    // Load on page load (no authentication required)
+    // This page is public - anyone can scan QR and record usage
+    // No navigation - QR page only
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', loadData);
+    } else {
+      loadData();
+    }
+  </script>
+
+  <div
+    style="background: #f8f9fa; padding: 15px; text-align: center; color: #666; font-size: 0.85em; margin-top: 15px; border-radius: 0 0 16px 16px; line-height: 1.5;">
+    <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+  </div>
+</body>
+
+</html>

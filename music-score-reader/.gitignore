@@ -1,0 +1,38 @@
+# Configuration files with secrets
+**/config.local.js
+**/.env
+**/secrets.json
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+tmp/
+temp/
+
+# Node modules (if using npm packages)
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Google Apps Script
+.gas/
+.clasp.json
+
+# Notes
+NOTES.md
+TODO.md

@@ -1,0 +1,18 @@
+---
+description: เมื่อผู้ใช้ขอสรุปเรื่องโฟลเดอร์ ไดร์ฟ ไฟล์ ให้อ้างอิงนโยบายการจัดเก็บและตั้งชื่อไฟล์อย่างเป็นระบบ
+globs: 
+---
+
+# Drive / โฟลเดอร์ / ไฟล์อัปโหลด
+
+## หลักการที่ผู้ใช้กำหนด
+
+- **ทุกไฟล์ที่มีการอัปโหลดเข้าโปรแกรม ต้องจัดเก็บลง Google Drive อย่างเป็นระบบ**
+- **ต้องตั้งชื่อไฟล์ใหม่ให้เป็นระบบ** (ไม่ใช้แค่ชื่อไฟล์ต้นทาง)
+- **ที่ตั้งไดร์ฟปลายทาง** — ผู้ใช้จะส่งในภายหลัง; เมื่อได้รับให้อัปเดต `backend/Config.gs` (ROOT_FOLDER_ID, FOLDERS)
+
+## เมื่อผู้ใช้ขอสรุปเรื่องโฟลเดอร์ / ไดร์ฟ / ไฟล์
+
+1. อ้างอิง **DRIVE_UPLOAD_POLICY.md** (นโยบายจัดเก็บ + ตั้งชื่อเป็นระบบ + ที่ตั้งปลายทางอัปเดตใน Config)
+2. โครงสร้างโฟลเดอร์: `backend/Config.gs` → `CONFIG.FOLDERS` (VEHICLES, DRIVERS, FUEL, REPAIR, TAX, INSURANCE, CHECK, DOCUMENTS)
+3. การตั้งชื่อไฟล์เป็นระบบ: `backend/Utils.gs` → `makeSystematicFileName(module, entityId, originalFileName, suffix)` และ `uploadBase64FileToDrive` (รองรับ options.useSystematicName)

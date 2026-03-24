@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตั้งค่าส่วนตัว - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'profile';</script>
+  <link rel="stylesheet" href="common.css">
+  <script src="offline-mock.js"></script>
+  <script src="common.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Sarabun', 'Kanit', sans-serif;
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 2em;
+      margin-bottom: 10px;
+    }
+
+    .nav {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      padding: 20px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      border-bottom: 3px solid #4285f4;
+    }
+
+    .nav-btn {
+      padding: 12px 20px;
+      background: white;
+      border: 2px solid #4285f4;
+      color: #4285f4;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 0.95em;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-btn:hover {
+      color: white;
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(66, 133, 244, 0.4);
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+    }
+
+    .nav-btn.active {
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      color: white;
+    }
+
+    .content {
+      padding: 40px;
+    }
+
+    .section {
+      margin-bottom: 40px;
+    }
+
+    .section h2 {
+      color: #4285f4;
+      font-size: 1.5em;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #34a853;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #333;
+      font-weight: 600;
+      font-size: 0.95em;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 12px 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 1em;
+      transition: all 0.3s;
+      font-family: inherit;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #4285f4;
+      box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+    }
+
+    .form-group input:disabled {
+      background: #f5f5f5;
+      cursor: not-allowed;
+    }
+
+    .form-group .help-text {
+      font-size: 0.85em;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    .form-group .required {
+      color: #f44336;
+    }
+
+    .title-options {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .title-option-btn {
+      flex: 1;
+      min-width: 80px;
+      padding: 10px 16px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      background: white;
+      color: #333;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-family: inherit;
+    }
+
+    .title-option-btn:hover {
+      border-color: #4285f4;
+      background: #f0f7ff;
+    }
+
+    .title-option-btn.active {
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      color: white;
+      border-color: #4285f4;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    @media (max-width: 768px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .info-display {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 4px solid #4285f4;
+      margin-bottom: 20px;
+      transition: all 0.3s;
+    }
+
+    .info-display.editable {
+      cursor: pointer;
+    }
+
+    .info-display.editable:hover {
+      background: #e3f2fd;
+      border-left-color: #34a853;
+    }
+
+    .info-display.editing {
+      background: #fff;
+      border: 2px solid #4285f4;
+      box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+    }
+
+    .info-display .label {
+      font-weight: 600;
+      color: #666;
+      font-size: 0.9em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .info-display .label .edit-icon {
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-size: 0.8em;
+    }
+
+    .info-display.editable:hover .label .edit-icon {
+      opacity: 1;
+    }
+
+    .info-display .value {
+      font-size: 1.1em;
+      color: #333;
+      margin-top: 5px;
+      min-height: 24px;
+    }
+
+    .info-display .value input,
+    .info-display .value select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 2px solid #4285f4;
+      border-radius: 6px;
+      font-size: 1em;
+      font-family: inherit;
+      background: white;
+    }
+
+    .info-display .value input:focus,
+    .info-display .value select:focus {
+      outline: none;
+      border-color: #34a853;
+      box-shadow: 0 0 0 2px rgba(52, 168, 83, 0.1);
+    }
+
+    .info-display .edit-actions {
+      display: none;
+      margin-top: 10px;
+      gap: 8px;
+    }
+
+    .info-display.editing .edit-actions {
+      display: flex;
+    }
+
+    .edit-actions button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.9em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-family: inherit;
+    }
+
+    .edit-actions .btn-save {
+      background: #34a853;
+      color: white;
+    }
+
+    .edit-actions .btn-save:hover {
+      background: #2e7d32;
+      transform: translateY(-1px);
+    }
+
+    .edit-actions .btn-cancel {
+      background: #f5f5f5;
+      color: #666;
+      border: 1px solid #ddd;
+    }
+
+    .edit-actions .btn-cancel:hover {
+      background: #e0e0e0;
+    }
+
+    .permissions-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .permission-badge {
+      background: #e3f2fd;
+      color: #1565c0;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.85em;
+      font-weight: 600;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-family: inherit;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(66, 133, 244, 0.3);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: white;
+      color: #4285f4;
+      border: 2px solid #4285f4;
+    }
+
+    .alert {
+      padding: 12px 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 0.9em;
+    }
+
+    .alert-success {
+      background: #e8f5e9;
+      color: #2e7d32;
+      border-left: 4px solid #2e7d32;
+    }
+
+    .alert-error {
+      background: #ffebee;
+      color: #c62828;
+      border-left: 4px solid #c62828;
+    }
+
+    .footer {
+      background: #f8f9fa;
+      padding: 20px;
+      text-align: center;
+      color: #666;
+      border-top: 2px solid #e9ecef;
+      font-size: 0.9em;
+    }
+
+    .profile-image-section {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 12px;
+    }
+
+    .profile-image-container {
+      position: relative;
+      display: inline-block;
+      margin-bottom: 15px;
+    }
+
+    .profile-image {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 4px solid #4285f4;
+      background: #e0e0e0;
+      display: block;
+    }
+
+    .profile-image-placeholder {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3em;
+      color: white;
+      border: 4px solid #4285f4;
+      margin: 0 auto;
+    }
+
+    .profile-image-upload {
+      margin-top: 15px;
+    }
+
+    .profile-image-upload input[type="file"] {
+      display: none;
+    }
+
+    .profile-image-upload-btn {
+      display: inline-block;
+      padding: 10px 20px;
+      background: white;
+      color: #4285f4;
+      border: 2px solid #4285f4;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9em;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .profile-image-upload-btn:hover {
+      background: #4285f4;
+      color: white;
+    }
+
+    .profile-image-preview {
+      margin-top: 15px;
+    }
+
+    .profile-image-preview img {
+      max-width: 200px;
+      max-height: 200px;
+      border-radius: 8px;
+      border: 2px solid #e0e0e0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>⚙️ ตั้งค่าส่วนตัว</h1>
+      <p>PPK DriveHub</p>
+    </div>
+
+    <div id="navigation"></div>
+
+    <div class="content">
+      <div id="alert-container"></div>
+
+      <!-- ข้อมูลส่วนตัว -->
+      <div class="section">
+        <h2>1. ข้อมูลส่วนตัว</h2>
+
+        <!-- รูปโปรไฟล์ -->
+        <div class="profile-image-section">
+          <div class="profile-image-container">
+            <img id="profileImage" class="profile-image" src="" alt="รูปโปรไฟล์" style="display: none;">
+            <div id="profileImagePlaceholder" class="profile-image-placeholder">👤</div>
+          </div>
+          <div class="profile-image-upload">
+            <input type="file" id="profileImageInput" accept="image/*" onchange="handleProfileImageSelect(event)">
+            <label for="profileImageInput" class="profile-image-upload-btn">
+              📷 อัปโหลดรูปโปรไฟล์
+            </label>
+          </div>
+          <div id="profileImagePreview" class="profile-image-preview" style="display: none;">
+            <img id="previewImage" src="" alt="ตัวอย่างรูป">
+            <div style="margin-top: 10px;">
+              <button type="button" class="btn" onclick="uploadProfileImage()" id="uploadImageBtn"
+                style="padding: 8px 16px; font-size: 0.9em; margin-right: 10px;">
+                💾 บันทึกรูป
+              </button>
+              <button type="button" class="btn btn-secondary" onclick="cancelProfileImageUpload()"
+                style="padding: 8px 16px; font-size: 0.9em;">
+                ยกเลิก
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div
+          style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 30px;">
+          <div class="info-display editable" id="editTitle" onclick="startEdit('title')">
+            <div class="label">
+              คำนำหน้า
+              <span class="edit-icon">✏️</span>
+            </div>
+            <div class="value" id="displayTitle">-</div>
+            <div class="edit-actions">
+              <button class="btn-save" onclick="saveField('title', event)">💾 บันทึก</button>
+              <button class="btn-cancel" onclick="cancelEdit('title', event)">ยกเลิก</button>
+            </div>
+          </div>
+
+          <div class="info-display editable" id="editFullName" onclick="startEdit('full_name')">
+            <div class="label">
+              ชื่อ-สกุล <span class="required">*</span>
+              <span class="edit-icon">✏️</span>
+            </div>
+            <div class="value" id="displayFullName">-</div>
+            <div class="edit-actions">
+              <button class="btn-save" onclick="saveField('full_name', event)">💾 บันทึก</button>
+              <button class="btn-cancel" onclick="cancelEdit('full_name', event)">ยกเลิก</button>
+            </div>
+          </div>
+
+          <div class="info-display">
+            <div class="label">อีเมล</div>
+            <div class="value" id="displayEmail">-</div>
+            <div class="help-text" style="font-size: 0.85em; color: #666; margin-top: 5px;">ไม่สามารถแก้ไขได้ (ติดต่อ
+              Admin)</div>
+          </div>
+
+          <div class="info-display editable" id="editDepartment" onclick="startEdit('department')">
+            <div class="label">
+              หน่วยงาน
+              <span class="edit-icon">✏️</span>
+            </div>
+            <div class="value" id="displayDepartment">-</div>
+            <div class="edit-actions">
+              <button class="btn-save" onclick="saveField('department', event)">💾 บันทึก</button>
+              <button class="btn-cancel" onclick="cancelEdit('department', event)">ยกเลิก</button>
+            </div>
+          </div>
+
+          <div class="info-display editable" id="editPhone" onclick="startEdit('phone')">
+            <div class="label">
+              เบอร์โทรศัพท์
+              <span class="edit-icon">✏️</span>
+            </div>
+            <div class="value" id="displayPhone">-</div>
+            <div class="edit-actions">
+              <button class="btn-save" onclick="saveField('phone', event)">💾 บันทึก</button>
+              <button class="btn-cancel" onclick="cancelEdit('phone', event)">ยกเลิก</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-display" style="margin-bottom: 30px;">
+          <div class="label">สิทธิ์ในการใช้งาน</div>
+          <div class="value" id="displayRole" style="margin-bottom: 10px;">-</div>
+          <div class="permissions-list" id="permissionsList"></div>
+        </div>
+
+        <div class="info-display" id="accountInfoSection" style="display: none;">
+          <div class="label">ข้อมูลบัญชี</div>
+          <div style="margin-top: 10px;">
+            <div style="margin-bottom: 8px;"><strong>วันที่สมัคร:</strong> <span id="displayCreatedAt">-</span></div>
+            <div style="margin-bottom: 8px;"><strong>สถานะ:</strong> <span id="displayStatus">-</span></div>
+            <div id="displayApprovedAt" style="display: none;"><strong>วันที่อนุมัติ:</strong> <span
+                id="displayApprovedAtValue">-</span></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- เปลี่ยนรหัสผ่าน -->
+      <div class="section">
+        <h2>2. เปลี่ยนรหัสผ่าน</h2>
+
+        <form id="passwordForm" onsubmit="handleChangePassword(event); return false;">
+          <div class="form-group">
+            <label for="old_password">รหัสผ่านปัจจุบัน <span class="required">*</span></label>
+            <input type="password" id="old_password" name="old_password" required
+              placeholder="กรุณากรอกรหัสผ่านปัจจุบัน">
+            <div class="help-text">กรอกรหัสผ่านที่ใช้เข้าสู่ระบบปัจจุบัน</div>
+          </div>
+
+          <div class="form-group">
+            <label for="new_password">รหัสผ่านใหม่ <span class="required">*</span></label>
+            <input type="password" id="new_password" name="new_password" required minlength="8"
+              placeholder="รหัสผ่านใหม่อย่างน้อย 8 ตัว">
+            <div class="help-text">
+              <strong>เงื่อนไขรหัสผ่าน:</strong>
+              <ul style="margin-left: 20px; margin-top: 5px; line-height: 1.6;">
+                <li>อย่างน้อย 8 ตัวอักษร</li>
+                <li>มีอักษรภาษาอังกฤษอย่างน้อย 1 ตัว</li>
+                <li>มีตัวเลขอย่างน้อย 1 ตัว</li>
+                <li>มีเครื่องหมายพิเศษอย่างน้อย 1 ตัว</li>
+              </ul>
+            </div>
+            <div id="password-strength" style="margin-top: 8px; font-size: 0.9em; font-weight: 500;"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="new_password_confirm">ยืนยันรหัสผ่านใหม่ <span class="required">*</span></label>
+            <input type="password" id="new_password_confirm" name="new_password_confirm" required minlength="8"
+              placeholder="กรอกรหัสผ่านใหม่อีกครั้ง">
+            <div class="help-text">กรอกรหัสผ่านใหม่อีกครั้งเพื่อยืนยัน</div>
+            <div id="password-match" style="margin-top: 8px; font-size: 0.9em; font-weight: 500;"></div>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 25px;">
+            <button type="submit" class="btn" id="changePasswordBtn" style="flex: 1;">
+              🔐 เปลี่ยนรหัสผ่าน
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="resetPasswordForm()" style="flex: 0 0 auto;">
+              🔄 รีเซ็ต
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+    </div>
+  </div>
+
+
+  <script>
+    var currentUser = null;
+    var selectedProfileImageFile = null;
+    var originalProfileData = {};
+    var editingField = null;
+
+    function selectTitleForEdit(value) {
+      var displayEl = document.getElementById('displayTitle');
+      if (!displayEl) return;
+
+      var hiddenInputEl = displayEl.querySelector('input[type="hidden"]');
+      var customInputEl = displayEl.querySelector('input[type="text"]');
+      var buttons = displayEl.querySelectorAll('.title-option-btn');
+
+      // Remove active class from all buttons
+      buttons.forEach(function (btn) {
+        btn.classList.remove('active');
+      });
+
+      // Add active class to selected button
+      var selectedBtn = displayEl.querySelector('.title-option-btn[data-title="' + value + '"]');
+      if (selectedBtn) {
+        selectedBtn.classList.add('active');
+      }
+
+      if (value === '__custom__') {
+        if (hiddenInputEl) hiddenInputEl.value = '';
+        if (customInputEl) {
+          customInputEl.style.display = 'block';
+          customInputEl.focus();
+        }
+      } else {
+        if (hiddenInputEl) hiddenInputEl.value = value;
+        if (customInputEl) {
+          customInputEl.style.display = 'none';
+          customInputEl.value = '';
+        }
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', function () {
+      // Check authentication (ไม่ redirect — ให้แสดงหน้าได้)
+      var isAuthenticated = requireAuth();
+      if (!isAuthenticated) {
+        console.warn('Not authenticated, but showing page anyway');
+        return; // แสดงหน้าได้แต่ไม่โหลดข้อมูล
+      }
+
+      currentUser = getCurrentUser();
+      if (!currentUser || !currentUser.user_id) {
+        console.warn('No current user, but showing page anyway');
+        return;
+      }
+
+      loadProfile();
+    });
+
+    async function loadProfile() {
+      try {
+        var result = await apiCall('getMyProfile', {
+          userId: currentUser.user_id
+        });
+
+        if (result.success && result.data) {
+          var user = result.data;
+
+          // Display profile image
+          if (user.profile_image) {
+            document.getElementById('profileImage').src = user.profile_image;
+            document.getElementById('profileImage').style.display = 'block';
+            document.getElementById('profileImagePlaceholder').style.display = 'none';
+          } else {
+            document.getElementById('profileImage').style.display = 'none';
+            document.getElementById('profileImagePlaceholder').style.display = 'flex';
+          }
+
+          // Store original data
+          originalProfileData = {
+            title: user.title || '',
+            full_name: user.full_name || '',
+            department: user.department || '',
+            phone: user.phone || ''
+          };
+
+          // Display info
+          document.getElementById('displayTitle').textContent = user.title || '-';
+          document.getElementById('displayFullName').textContent = user.full_name || '-';
+          document.getElementById('displayEmail').textContent = user.email || '-';
+          document.getElementById('displayDepartment').textContent = user.department || '-';
+          document.getElementById('displayPhone').textContent = user.phone || '-';
+
+          // Check if user can edit (own profile or admin)
+          var canEdit = checkCanEditProfile();
+          if (!canEdit) {
+            // Remove editable class from all fields
+            document.querySelectorAll('.info-display.editable').forEach(function (el) {
+              el.classList.remove('editable');
+              el.onclick = null;
+            });
+          }
+
+          // Display role
+          var roleText = '';
+          if (user.role === 'admin' || user.role === 'super_admin') {
+            roleText = user.role === 'super_admin' ? 'ผู้ดูแลระบบสูงสุด (Super Admin)' : 'ผู้ดูแลระบบ (Admin)';
+          } else {
+            roleText = 'ผู้ใช้ทั่วไป';
+          }
+          document.getElementById('displayRole').textContent = roleText;
+
+          // Display account info
+          if (user.created_at) {
+            var createdAt = user.created_at;
+            if (typeof formatDateThai === 'function') {
+              createdAt = formatDateThai(createdAt.split('T')[0]);
+            }
+            document.getElementById('displayCreatedAt').textContent = createdAt;
+          }
+
+          var statusText = user.active !== false ? 'ใช้งาน' : 'ไม่ใช้งาน';
+          var statusColor = user.active !== false ? '#2e7d32' : '#c62828';
+          document.getElementById('displayStatus').innerHTML = '<span style="color: ' + statusColor + '; font-weight: 600;">' + statusText + '</span>';
+
+          if (user.approved_at) {
+            var approvedAt = user.approved_at;
+            if (typeof formatDateThai === 'function') {
+              approvedAt = formatDateThai(approvedAt.split('T')[0]);
+            }
+            document.getElementById('displayApprovedAtValue').textContent = approvedAt;
+            document.getElementById('displayApprovedAt').style.display = 'block';
+          }
+
+          document.getElementById('accountInfoSection').style.display = 'block';
+
+          // Display permissions
+          var permissionsList = document.getElementById('permissionsList');
+          permissionsList.innerHTML = '';
+
+          if (user.role === 'admin') {
+            permissionsList.innerHTML = '<span class="permission-badge">สิทธิ์เต็มทุกโมดูล</span>';
+          } else if (user.permissions && Object.keys(user.permissions).length > 0) {
+            var permissionLabels = {
+              queue: 'จัดคิวรถ',
+              fuel: 'บันทึกน้ำมัน',
+              repair: 'บันทึกซ่อม',
+              reports: 'ดูรายงาน',
+              vehicles: 'จัดการรถ',
+              drivers: 'จัดการคนขับ',
+              usage_log: 'ดูบันทึกการใช้รถ'
+            };
+
+            var permissionLevels = {
+              view: 'ดู',
+              create: 'สร้าง',
+              edit: 'แก้ไข'
+            };
+
+            for (var module in user.permissions) {
+              var badge = document.createElement('span');
+              badge.className = 'permission-badge';
+              badge.textContent = (permissionLabels[module] || module) + ': ' + (permissionLevels[user.permissions[module]] || user.permissions[module]);
+              permissionsList.appendChild(badge);
+            }
+          } else {
+            permissionsList.innerHTML = '<span style="color: #666;">ไม่มีสิทธิ์พิเศษ</span>';
+          }
+
+        }
+      } catch (error) {
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">' + (typeof handleError !== 'undefined' ? handleError(error) : 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') + '</div>';
+      }
+    }
+
+    function checkCanEditProfile() {
+      // Check if current user can edit profile
+      // Can edit if: own profile OR admin
+      if (!currentUser || !currentUser.user_id) {
+        return false;
+      }
+
+      // Admin can edit any profile
+      if (currentUser.role === 'admin' || currentUser.role === 'super_admin') {
+        return true;
+      }
+
+      // User can only edit own profile
+      // This is handled by backend, but we check here for UI
+      return true; // User can always see edit button for own profile
+    }
+
+    function startEdit(fieldName) {
+      // Check if can edit
+      if (!checkCanEditProfile()) {
+        alert('คุณไม่มีสิทธิ์แก้ไขข้อมูลนี้');
+        return;
+      }
+
+      // Cancel any ongoing edit
+      if (editingField && editingField !== fieldName) {
+        cancelEdit(editingField);
+      }
+
+      editingField = fieldName;
+      var displayEl = document.getElementById('display' + capitalizeFirst(fieldName));
+      var containerEl = document.getElementById('edit' + capitalizeFirst(fieldName));
+      var currentValue = displayEl.textContent === '-' ? '' : displayEl.textContent;
+
+      // Store original value
+      containerEl.dataset.originalValue = currentValue;
+
+      // Add editing class
+      containerEl.classList.add('editing');
+
+      // Create input based on field type
+      var input;
+      if (fieldName === 'title') {
+        // Create container for title options and custom input
+        var container = document.createElement('div');
+        container.style.position = 'relative';
+
+        var optionsDiv = document.createElement('div');
+        optionsDiv.className = 'title-options';
+        optionsDiv.style.marginBottom = '8px';
+
+        var titles = ['นาย', 'นาง', 'นางสาว', '__custom__'];
+        var titleLabels = ['นาย', 'นาง', 'นางสาว', 'อื่นๆ'];
+
+        titles.forEach(function (title, index) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'title-option-btn';
+          btn.setAttribute('data-title', title);
+          btn.textContent = titleLabels[index];
+          btn.onclick = function () {
+            selectTitleForEdit(title);
+          };
+          optionsDiv.appendChild(btn);
+        });
+
+        var hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.id = 'edit_title_hidden';
+
+        var customInput = document.createElement('input');
+        customInput.type = 'text';
+        customInput.id = 'edit_title_custom';
+        customInput.placeholder = 'พิมพ์คำนำหน้าของคุณ';
+        customInput.style.cssText = 'display: none; margin-top: 8px; width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; font-family: inherit;';
+
+        // Set initial value
+        if (currentValue === 'นาย' || currentValue === 'นาง' || currentValue === 'นางสาว' || !currentValue) {
+          hiddenInput.value = currentValue || '';
+          var initialBtn = optionsDiv.querySelector('[data-title="' + (currentValue || '') + '"]');
+          if (initialBtn) initialBtn.classList.add('active');
+          customInput.style.display = 'none';
+        } else {
+          hiddenInput.value = '';
+          var customBtn = optionsDiv.querySelector('[data-title="__custom__"]');
+          if (customBtn) customBtn.classList.add('active');
+          customInput.value = currentValue;
+          customInput.style.display = 'block';
+        }
+
+        container.appendChild(optionsDiv);
+        container.appendChild(hiddenInput);
+        container.appendChild(customInput);
+        input = container;
+      } else if (fieldName === 'phone') {
+        input = document.createElement('input');
+        input.type = 'tel';
+        input.pattern = '[0-9]{9,10}';
+        input.maxLength = 10;
+        input.placeholder = 'เช่น 0812345678';
+        input.value = currentValue;
+      } else {
+        input = document.createElement('input');
+        input.type = 'text';
+        input.value = currentValue;
+        if (fieldName === 'full_name') {
+          input.required = true;
+          input.placeholder = 'กรุณากรอกชื่อ-สกุล';
+        } else if (fieldName === 'department') {
+          input.placeholder = 'เช่น งานยานพาหนะ, กลุ่มสาระการเรียนรู้';
+        }
+      }
+
+      // Replace display with input
+      displayEl.innerHTML = '';
+      displayEl.appendChild(input);
+      input.focus();
+
+      // Select all text for easy editing
+      if (input.type === 'text' || input.type === 'tel') {
+        input.select();
+      }
+    }
+
+    function cancelEdit(fieldName) {
+      if (!fieldName) fieldName = editingField;
+      if (!fieldName) return;
+
+      var containerEl = document.getElementById('edit' + capitalizeFirst(fieldName));
+      var displayEl = document.getElementById('display' + capitalizeFirst(fieldName));
+      var originalValue = containerEl.dataset.originalValue || '-';
+
+      // Restore original value
+      displayEl.textContent = originalValue || '-';
+
+      // Remove editing class
+      containerEl.classList.remove('editing');
+
+      editingField = null;
+    }
+
+    async function saveField(fieldName, event) {
+      if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+      }
+
+      var containerEl = document.getElementById('edit' + capitalizeFirst(fieldName));
+      var displayEl = document.getElementById('display' + capitalizeFirst(fieldName));
+
+      var newValue = '';
+      if (fieldName === 'title') {
+        var hiddenInputEl = displayEl.querySelector('input[type="hidden"]');
+        var customInputEl = displayEl.querySelector('input[type="text"]');
+        if (hiddenInputEl && customInputEl) {
+          if (hiddenInputEl.value === '') {
+            // Custom title
+            newValue = customInputEl.value.trim();
+            if (!newValue) {
+              alert('กรุณากรอกคำนำหน้า');
+              customInputEl.focus();
+              return;
+            }
+          } else {
+            newValue = hiddenInputEl.value || '';
+          }
+        } else {
+          cancelEdit(fieldName);
+          return;
+        }
+      } else {
+        var input = displayEl.querySelector('input, select');
+        if (!input) {
+          cancelEdit(fieldName);
+          return;
+        }
+        newValue = input.value.trim();
+      }
+
+      // Validation
+      if (fieldName === 'full_name' && !newValue) {
+        alert('กรุณากรอกชื่อ-สกุล');
+        var inputEl = displayEl.querySelector('input');
+        if (inputEl) inputEl.focus();
+        return;
+      }
+
+      if (fieldName === 'phone' && newValue && !/^[0-9]{9,10}$/.test(newValue)) {
+        alert('เบอร์โทรศัพท์ต้องเป็นตัวเลข 9-10 หลัก');
+        var inputEl = displayEl.querySelector('input');
+        if (inputEl) inputEl.focus();
+        return;
+      }
+
+      if (fieldName === 'title' && !newValue) {
+        alert('กรุณาเลือกหรือกรอกคำนำหน้า');
+        var hiddenInputEl = displayEl.querySelector('input[type="hidden"]');
+        var customInputEl = displayEl.querySelector('input[type="text"]');
+        if (hiddenInputEl && hiddenInputEl.value === '' && customInputEl) {
+          customInputEl.focus();
+        }
+        return;
+      }
+
+      // Check if value changed
+      var originalValue = containerEl.dataset.originalValue || '';
+      if (newValue === originalValue) {
+        cancelEdit(fieldName);
+        return;
+      }
+
+      // Disable save button
+      var saveBtn = containerEl.querySelector('.btn-save');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'กำลังบันทึก...';
+
+      try {
+        var updateData = {};
+        updateData[fieldName] = newValue;
+
+        var result = await apiCall('updateMyProfile', {
+          userId: currentUser.user_id,
+          data: updateData
+        });
+
+        if (result.success) {
+          // Update display
+          displayEl.textContent = newValue || '-';
+
+          // Update original data
+          originalProfileData[fieldName] = newValue;
+
+          // Remove editing class
+          containerEl.classList.remove('editing');
+          editingField = null;
+
+          // Show success message
+          showTemporaryAlert('✅ บันทึกข้อมูลสำเร็จ', 'success');
+
+          // Update full name display if title or full_name changed
+          if (fieldName === 'title' || fieldName === 'full_name') {
+            var title = fieldName === 'title' ? newValue : originalProfileData.title;
+            var fullName = fieldName === 'full_name' ? newValue : originalProfileData.full_name;
+            // Note: We don't update displayFullName here as it's separate field
+          }
+        } else {
+          alert(typeof getUserMessage !== 'undefined' ? getUserMessage(result.message) : (result.message || 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'));
+          saveBtn.disabled = false;
+          saveBtn.textContent = '💾 บันทึก';
+        }
+      } catch (error) {
+        alert(typeof handleError !== 'undefined' ? handleError(error) : 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+        saveBtn.disabled = false;
+        saveBtn.textContent = '💾 บันทึก';
+      }
+    }
+
+    function capitalizeFirst(str) {
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    function showTemporaryAlert(message, type) {
+      var alertContainer = document.getElementById('alert-container');
+      alertContainer.innerHTML = '<div class="alert alert-' + type + '">' + message + '</div>';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setTimeout(function () {
+        alertContainer.innerHTML = '';
+      }, 3000);
+    }
+
+    async function handleChangePassword(event) {
+      event.preventDefault();
+
+      var oldPassword = document.getElementById('old_password').value;
+      var newPassword = document.getElementById('new_password').value;
+      var newPasswordConfirm = document.getElementById('new_password_confirm').value;
+
+      // Validation
+      if (!oldPassword) {
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">กรุณากรอกรหัสผ่านปัจจุบัน</div>';
+        document.getElementById('old_password').focus();
+        return;
+      }
+
+      if (!newPassword) {
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">กรุณากรอกรหัสผ่านใหม่</div>';
+        document.getElementById('new_password').focus();
+        return;
+      }
+
+      if (newPassword !== newPasswordConfirm) {
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">รหัสผ่านใหม่ไม่ตรงกัน กรุณาตรวจสอบอีกครั้ง</div>';
+        document.getElementById('new_password_confirm').focus();
+        return;
+      }
+
+      // Validate password policy
+      var passwordError = validatePasswordPolicy(newPassword);
+      if (passwordError) {
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">' + passwordError + '</div>';
+        document.getElementById('new_password').focus();
+        return;
+      }
+
+      // Confirm before changing
+      if (!confirm('คุณต้องการเปลี่ยนรหัสผ่านหรือไม่?\n\nหลังจากเปลี่ยนรหัสผ่านแล้ว คุณจะต้องใช้รหัสผ่านใหม่ในการเข้าสู่ระบบ')) {
+        return;
+      }
+
+      var changeBtn = document.getElementById('changePasswordBtn');
+      changeBtn.disabled = true;
+      changeBtn.textContent = 'กำลังเปลี่ยนรหัสผ่าน...';
+
+      try {
+        var result = await apiCall('changePassword', {
+          userId: currentUser.user_id,
+          oldPassword: oldPassword,
+          newPassword: newPassword
+        });
+
+        if (result.success) {
+          document.getElementById('alert-container').innerHTML = '<div class="alert alert-success">✅ เปลี่ยนรหัสผ่านสำเร็จ กรุณาใช้รหัสผ่านใหม่ในการเข้าสู่ระบบครั้งต่อไป</div>';
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          // Reset form after a delay
+          setTimeout(function () {
+            resetPasswordForm();
+          }, 2000);
+        } else {
+          document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">' + (typeof getUserMessage !== 'undefined' ? getUserMessage(result.message) : (result.message || 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')) + '</div>';
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      } catch (error) {
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">' + (typeof handleError !== 'undefined' ? handleError(error) : 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') + '</div>';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } finally {
+        changeBtn.disabled = false;
+        changeBtn.textContent = '🔐 เปลี่ยนรหัสผ่าน';
+      }
+    }
+
+    function resetPasswordForm() {
+      document.getElementById('passwordForm').reset();
+      document.getElementById('password-strength').innerHTML = '';
+      document.getElementById('password-match').innerHTML = '';
+    }
+
+    function validatePasswordPolicy(password) {
+      if (password.length < 8) {
+        return 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร';
+      }
+      if (!/[a-zA-Z]/.test(password)) {
+        return 'รหัสผ่านต้องมีอักษรภาษาอังกฤษอย่างน้อย 1 ตัว';
+      }
+      if (!/[0-9]/.test(password)) {
+        return 'รหัสผ่านต้องมีตัวเลขอย่างน้อย 1 ตัว';
+      }
+      if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+        return 'รหัสผ่านต้องมีเครื่องหมายพิเศษอย่างน้อย 1 ตัว';
+      }
+      return null;
+    }
+
+    // Real-time password validation
+    var newPasswordInput = document.getElementById('new_password');
+    if (newPasswordInput) {
+      newPasswordInput.addEventListener('input', function () {
+        var password = this.value;
+        var strengthDiv = document.getElementById('password-strength');
+
+        if (password.length === 0) {
+          strengthDiv.innerHTML = '';
+          return;
+        }
+
+        var errors = [];
+        var checks = [];
+
+        if (password.length >= 8) {
+          checks.push('✓ ความยาวเพียงพอ');
+        } else {
+          errors.push('ความยาวไม่ถึง 8 ตัว');
+        }
+
+        if (/[a-zA-Z]/.test(password)) {
+          checks.push('✓ มีอักษรภาษาอังกฤษ');
+        } else {
+          errors.push('ไม่มีอักษรภาษาอังกฤษ');
+        }
+
+        if (/[0-9]/.test(password)) {
+          checks.push('✓ มีตัวเลข');
+        } else {
+          errors.push('ไม่มีตัวเลข');
+        }
+
+        if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+          checks.push('✓ มีเครื่องหมายพิเศษ');
+        } else {
+          errors.push('ไม่มีเครื่องหมายพิเศษ');
+        }
+
+        if (errors.length === 0) {
+          strengthDiv.innerHTML = '<span style="color: #34a853; font-weight: 600;">✓ รหัสผ่านถูกต้องตามเงื่อนไขทั้งหมด</span>';
+        } else {
+          strengthDiv.innerHTML = '<div style="color: #ea4335;"><strong>ยังขาด:</strong> ' + errors.join(', ') + '</div>';
+        }
+      });
+    }
+
+    // Password match validation
+    var passwordConfirmInput = document.getElementById('new_password_confirm');
+    if (passwordConfirmInput) {
+      passwordConfirmInput.addEventListener('input', function () {
+        var password = document.getElementById('new_password').value;
+        var passwordConfirm = this.value;
+        var matchDiv = document.getElementById('password-match');
+
+        if (passwordConfirm.length === 0) {
+          matchDiv.innerHTML = '';
+          return;
+        }
+
+        if (password === passwordConfirm) {
+          matchDiv.innerHTML = '<span style="color: #34a853; font-weight: 600;">✓ รหัสผ่านตรงกัน</span>';
+        } else {
+          matchDiv.innerHTML = '<span style="color: #ea4335; font-weight: 600;">⚠️ รหัสผ่านไม่ตรงกัน</span>';
+        }
+      });
+    }
+
+    // Profile Image Functions
+    function handleProfileImageSelect(event) {
+      var file = event.target.files[0];
+      if (!file) return;
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">❌ กรุณาเลือกรูปภาพเท่านั้น (JPG, PNG, GIF)</div>';
+        event.target.value = ''; // Clear input
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">❌ ขนาดไฟล์ต้องไม่เกิน 5MB (ขนาดปัจจุบัน: ' + (file.size / 1024 / 1024).toFixed(2) + ' MB)</div>';
+        event.target.value = ''; // Clear input
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      selectedProfileImageFile = file;
+
+      // Show preview
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        document.getElementById('previewImage').src = e.target.result;
+        document.getElementById('profileImagePreview').style.display = 'block';
+        // Scroll to preview
+        document.getElementById('profileImagePreview').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function cancelProfileImageUpload() {
+      selectedProfileImageFile = null;
+      document.getElementById('profileImageInput').value = '';
+      document.getElementById('profileImagePreview').style.display = 'none';
+    }
+
+    async function uploadProfileImage() {
+      if (!selectedProfileImageFile) {
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">กรุณาเลือกรูปภาพ</div>';
+        return;
+      }
+
+      var uploadBtn = document.getElementById('uploadImageBtn');
+      uploadBtn.disabled = true;
+      uploadBtn.textContent = 'กำลังอัปโหลด...';
+
+      try {
+        // Convert file to base64
+        var reader = new FileReader();
+        reader.onload = async function (e) {
+          var base64Data = e.target.result;
+
+          try {
+            var result = await apiCall('uploadUserProfileImage', {
+              userId: currentUser.user_id,
+              fileData: {
+                base64: base64Data,
+                fileName: selectedProfileImageFile.name
+              }
+            });
+
+            if (result.success) {
+              document.getElementById('alert-container').innerHTML = '<div class="alert alert-success">✅ อัปโหลดรูปโปรไฟล์สำเร็จ</div>';
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+
+              // Update displayed image
+              if (result.data && result.data.file_url) {
+                document.getElementById('profileImage').src = result.data.file_url;
+                document.getElementById('profileImage').style.display = 'block';
+                document.getElementById('profileImagePlaceholder').style.display = 'none';
+              }
+
+              // Hide preview
+              cancelProfileImageUpload();
+
+              // Reload profile to get updated data after a delay
+              setTimeout(function () {
+                loadProfile();
+              }, 500);
+            } else {
+              document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">' + (typeof getUserMessage !== 'undefined' ? getUserMessage(result.message) : (result.message || 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')) + '</div>';
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          } catch (error) {
+            document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">' + (typeof handleError !== 'undefined' ? handleError(error) : 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') + '</div>';
+          } finally {
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = '💾 บันทึกรูป';
+          }
+        };
+        reader.readAsDataURL(selectedProfileImageFile);
+      } catch (error) {
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">' + (typeof handleError !== 'undefined' ? handleError(error) : 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') + '</div>';
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = '💾 บันทึกรูป';
+      }
+    }
+  </script>
+</body>
+
+</html>

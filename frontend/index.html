@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPK DriveHub</title>
+    <script>
+        // Check authentication and redirect
+        var userStr = sessionStorage.getItem('ppk_drivehub_user');
+        if (userStr) {
+            try {
+                var user = JSON.parse(userStr);
+                window.location.href = 'dashboard.html';
+            } catch (e) {
+                sessionStorage.removeItem('ppk_drivehub_user');
+                window.location.href = 'login.html';
+            }
+        } else {
+            window.location.href = 'login.html';
+        }
+    </script>
+</head>
+
+<body>
+    <p>Redirecting...</p>
+</body>
+
+</html>

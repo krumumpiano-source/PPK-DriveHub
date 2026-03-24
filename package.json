@@ -1,0 +1,17 @@
+{
+  "name": "ppk-drivehub",
+  "version": "1.0.0",
+  "description": "PPK DriveHub - Vehicle Fleet Management",
+  "scripts": {
+    "dev": "npx wrangler pages dev ./frontend",
+    "deploy": "npx wrangler pages deploy ./frontend --project-name=ppk-drivehub",
+    "db:create": "npx wrangler d1 create ppk-drivehub-db",
+    "db:migrate": "npx wrangler d1 execute ppk-drivehub-db --remote --file=migrations/schema.sql --yes",
+    "db:seed": "npx wrangler d1 execute ppk-drivehub-db --remote --file=migrations/seed.sql --yes",
+    "db:migrate:local": "npx wrangler d1 execute ppk-drivehub-db --local --file=migrations/schema.sql --yes",
+    "db:seed:local": "npx wrangler d1 execute ppk-drivehub-db --local --file=migrations/seed.sql --yes"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

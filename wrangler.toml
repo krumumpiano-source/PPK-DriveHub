@@ -1,0 +1,15 @@
+name = "ppk-drivehub"
+compatibility_date = "2024-11-01"
+pages_build_output_dir = "./frontend"
+
+[vars]
+JWT_SECRET = "ppk-drivehub-secret-2569-change-in-production"
+SYSTEM_NAME = "PPK DriveHub"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ppk-drivehub-db"
+database_id = "REPLACE_WITH_REAL_DATABASE_ID"
+
+[triggers]
+crons = ["0 1 * * *"]

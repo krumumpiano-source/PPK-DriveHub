@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>เข้าสู่ระบบ - โปรแกรมอ่านโน้ตเพลงเพื่อการศึกษา</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>โปรแกรมอ่านโน้ตเพลงเพื่อการศึกษา</h1>
+            <nav>
+                <a href="index.html">หน้าแรก</a>
+                <a href="library.html">คลังโน้ต</a>
+                <a href="terms.html">เงื่อนไขการใช้งาน</a>
+            </nav>
+        </header>
+
+        <main>
+            <section class="login-section">
+                <div class="login-box">
+                    <h2>เข้าสู่ระบบ</h2>
+                    <form id="login-form">
+                        <div class="form-group">
+                            <label for="email">อีเมล</label>
+                            <input type="email" id="email" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="password">รหัสผ่าน</label>
+                            <input type="password" id="password" name="password" required>
+                        </div>
+                        <div id="error-message" class="error-message" style="display: none;"></div>
+                        <button type="submit" class="btn btn-primary">เข้าสู่ระบบ</button>
+                    </form>
+                    <p class="login-footer">
+                        <a href="index.html">กลับหน้าหลัก</a>
+                    </p>
+                </div>
+            </section>
+
+            <section class="disclaimer-box">
+                <h3>คำชี้แจงการใช้งาน</h3>
+                <p>แพลตฟอร์มนี้เป็น <strong>โปรแกรมอ่านโน้ตเพลงเพื่อการศึกษา</strong> จัดทำขึ้นเพื่อการเรียนรู้ การฝึกซ้อม และการวิเคราะห์ทางดนตรีเท่านั้น</p>
+                <p><a href="terms.html">อ่านเงื่อนไขการใช้งานฉบับเต็ม</a></p>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2025 โปรแกรมอ่านโน้ตเพลงเพื่อการศึกษา</p>
+        </footer>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // ตรวจสอบว่าล็อกอินอยู่แล้วหรือไม่
+            const token = localStorage.getItem('auth_token');
+            if (token) {
+                window.location.href = 'library.html';
+                return;
+            }
+
+            // จัดการฟอร์มล็อกอิน
+            document.getElementById('login-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                const errorDiv = document.getElementById('error-message');
+
+                errorDiv.style.display = 'none';
+                errorDiv.textContent = '';
+
+                try {
+                    const result = await login(email, password);
+                    if (result.success) {
+                        localStorage.setItem('auth_token', result.token);
+                        localStorage.setItem('user_id', result.user_id);
+                        localStorage.setItem('user_email', result.email);
+                        localStorage.setItem('user_role', result.role);
+                        window.location.href = 'library.html';
+                    } else {
+                        errorDiv.textContent = result.message || 'เข้าสู่ระบบไม่สำเร็จ';
+                        errorDiv.style.display = 'block';
+                    }
+                } catch (error) {
+                    errorDiv.textContent = 'เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง';
+                    errorDiv.style.display = 'block';
+                    console.error('Login error:', error);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

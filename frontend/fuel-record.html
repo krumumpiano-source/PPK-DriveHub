@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>บันทึกการเติมน้ำมัน - PPK DriveHub</title>
+  <link rel="stylesheet" href="common.css">
+  <script src="config.js"></script>
+  <script>window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'fuel-record';</script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="offline-mock.js"></script>
+  <script src="common.js"></script>
+  <style>
+    body {
+      font-family: 'Sarabun', sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      color: #1976d2;
+      margin-bottom: 10px;
+      font-size: 24px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: #333;
+      font-weight: 500;
+    }
+
+    .required {
+      color: #d32f2f;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    input[type="time"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: 'Sarabun', sans-serif;
+    }
+
+    input.readonly {
+      background: #f5f5f5;
+      color: #333;
+    }
+
+    .help-text {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    .file-upload {
+      border: 2px dashed #ddd;
+      padding: 20px;
+      text-align: center;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: border-color 0.3s;
+    }
+
+    .file-upload:hover {
+      border-color: #1976d2;
+    }
+
+    .file-upload input {
+      display: none;
+    }
+
+    .file-preview {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      font-family: 'Sarabun', sans-serif;
+    }
+
+    .btn-primary {
+      background: #1976d2;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #1565c0;
+    }
+
+    .btn-secondary {
+      background: #757575;
+      color: white;
+      margin-right: 10px;
+    }
+
+    .alert {
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+
+    .alert-info {
+      background: #e3f2fd;
+      color: #1976d2;
+      border-left: 4px solid #1976d2;
+    }
+
+    .alert-success {
+      background: #e8f5e9;
+      color: #2e7d32;
+      border-left: 4px solid #2e7d32;
+    }
+
+    .alert-error {
+      background: #ffebee;
+      color: #c62828;
+      border-left: 4px solid #c62828;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 30px;
+    }
+
+    .btn-row .btn-primary {
+      flex: 1;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="navigation"></div>
+  <div class="container">
+    <h1>⛽ บันทึกการเติมน้ำมัน</h1>
+    <p class="subtitle">บันทึกข้อมูลเพื่อคำนวณอัตราการสิ้นเปลืองและวิเคราะห์</p>
+
+    <div id="alertContainer"></div>
+
+    <form id="fuelRecordForm">
+      <!-- 1. เลขทะเบียนรถ (ออโต้ตามคิวอาร์รถแต่ละคัน) -->
+      <div class="form-group">
+        <label>เลขทะเบียนรถ <span class="required">*</span></label>
+        <select id="carId" required>
+          <option value="">-- เลือกรถ --</option>
+        </select>
+        <div class="help-text">จะออโต้ตามคิวอาร์รถแต่ละคัน (หรือเลือกจากรายการ)</div>
+      </div>
+
+      <!-- 2. วันที่เติม -->
+      <div class="form-group">
+        <label>วันที่เติม <span class="required">*</span></label>
+        <input type="date" id="date" required>
+        <div id="dateThaiDisplay" class="help-text"></div>
+      </div>
+
+      <!-- 3. เวลาที่เติม -->
+      <div class="form-group">
+        <label>เวลาที่เติม <span class="required">*</span></label>
+        <input type="time" id="time" required step="60">
+        <div class="help-text time-ampm-help" style="font-size: 0.85em; color: #666;">
+          <strong>AM เช้า</strong> · <strong>PM บ่าย</strong>
+        </div>
+      </div>
+
+      <!-- 4. แหล่งเบิกจ่าย -->
+      <div class="form-group">
+        <label>แหล่งเบิกจ่าย <span class="required">*</span></label>
+        <select id="expenseType" required>
+          <option value="">-- เลือกแหล่งเบิกจ่าย --</option>
+          <option value="procurement">เบิกจ่ายน้ำมันจากงานพัสดุ</option>
+          <option value="official_travel">เบิกจ่ายน้ำมันจากงบไปราชการ</option>
+        </select>
+      </div>
+
+      <!-- 5. ประเภทน้ำมัน -->
+      <div class="form-group">
+        <label>ประเภทน้ำมัน <span class="required">*</span></label>
+        <select id="fuelType" required>
+          <option value="">-- เลือกประเภทน้ำมัน --</option>
+          <option value="gasoline_91">เบนซิน 91</option>
+          <option value="gasoline_95">เบนซิน 95</option>
+          <option value="gasoline_e20">แก๊สโซฮอล์ E20</option>
+          <option value="gasoline_e85">แก๊สโซฮอล์ E85</option>
+          <option value="diesel">ดีเซล</option>
+          <option value="diesel_b7">ดีเซล B7</option>
+          <option value="diesel_b20">ดีเซล B20</option>
+          <option value="electric">ไฟฟ้า</option>
+        </select>
+      </div>
+
+      <!-- 6. ปริมาณที่เติม (ลิตร) -->
+      <div class="form-group">
+        <label>ปริมาณที่เติม (ลิตร) <span class="required">*</span></label>
+        <input type="number" id="liters" step="0.01" min="0" required placeholder="0.00"
+          oninput="validateAmountCalculation()">
+        <div class="help-text">กรอกจำนวนลิตรที่เติม</div>
+      </div>
+
+      <!-- 7. ราคาต่อลิตร (บาท) -->
+      <div class="form-group">
+        <label>ราคาต่อลิตร (บาท) <span class="required">*</span></label>
+        <input type="number" id="pricePerLiter" step="0.01" min="0" required placeholder="0.00"
+          oninput="validateAmountCalculation()">
+        <div class="help-text">ราคาต่อลิตรที่จ่าย</div>
+      </div>
+
+      <!-- 8. จำนวนเงินรวม (บาท) -->
+      <div class="form-group">
+        <label>จำนวนเงินรวม (บาท) <span class="required">*</span></label>
+        <input type="number" id="amount" step="0.01" min="0" required placeholder="0.00"
+          oninput="validateAmountCalculation()">
+        <div class="help-text">กรุณากรอกจำนวนเงินรวมที่จ่ายจริง (ระบบจะตรวจสอบความถูกต้องอัตโนมัติ)</div>
+        <div id="amountError"
+          style="display: none; color: #c62828; font-size: 0.9em; margin-top: 5px; font-weight: 600;"></div>
+      </div>
+
+      <!-- 9. เลขไมล์รถขณะเติมน้ำมัน -->
+      <div class="form-group">
+        <label>เลขไมล์รถขณะเติมน้ำมัน <span class="required">*</span></label>
+        <input type="number" id="mileageBefore" min="0" required placeholder="ไมล์">
+      </div>
+
+      <!-- 10. แนบใบเสร็จรับเงิน (รูปภาพ) -->
+      <div class="form-group">
+        <label>แนบใบเสร็จรับเงิน (รูปภาพ)</label>
+        <div class="file-upload" onclick="document.getElementById('receiptImage').click()">
+          <input type="file" id="receiptImage" accept="image/*">
+          <div>📷 คลิกเพื่อเลือกรูปภาพใบเสร็จ (ถ้ามี)</div>
+          <div class="file-preview" id="receiptImagePreview"></div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button type="button" class="btn btn-secondary" id="cancelBtn">ยกเลิก</button>
+        <button type="submit" class="btn btn-primary">บันทึกการเติมน้ำมัน</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="navigation"></div>
+  <script>
+    window.REQUIRE_AUTH = true;
+
+    var currentUser = null;
+    var vehicles = [];
+    var fuelTypes = [];
+    var receiptImageFile = null;
+
+    document.addEventListener('DOMContentLoaded', function () {
+      var isAuthenticated = requireAuth();
+      if (!isAuthenticated) {
+        console.warn('Not authenticated, but showing page anyway');
+        return; // แสดงหน้าได้แต่ไม่โหลดข้อมูล
+      }
+      currentUser = getCurrentUser();
+      if (!currentUser) {
+        console.warn('No current user, but showing page anyway');
+        return;
+      }
+
+      loadVehicles();
+      loadFuelTypes();
+      setDefaultDateTime();
+      setupForm();
+
+      // Initialize Flatpickr for Thai date/time pickers (24-hour format)
+      setTimeout(function () {
+        if (typeof initAllThaiDateTimePickers === 'function') {
+          initAllThaiDateTimePickers();
+        }
+      }, 200);
+    });
+
+    function setDefaultDateTime() {
+      var now = new Date();
+      var dateStr = now.toISOString().split('T')[0];
+      var timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('date').value = dateStr;
+      document.getElementById('time').value = timeStr;
+      updateDateThaiDisplay();
+    }
+
+    function updateDateThaiDisplay() {
+      var dateVal = document.getElementById('date').value;
+      var el = document.getElementById('dateThaiDisplay');
+      if (el && typeof formatDateThai === 'function') el.textContent = dateVal ? formatDateThai(dateVal) : '';
+    }
+
+    function loadVehicles() {
+      apiCall('getVehicles', {}).then(function (response) {
+        if (response.success) {
+          vehicles = response.data.vehicles || [];
+          var select = document.getElementById('carId');
+          select.innerHTML = '<option value="">-- เลือกรถ --</option>';
+          vehicles.forEach(function (vehicle) {
+            if (vehicle.active !== false) {
+              var option = document.createElement('option');
+              option.value = vehicle.car_id;
+              option.textContent = vehicle.license_plate + ' - ' + (vehicle.brand || '') + ' ' + (vehicle.model || '');
+              select.appendChild(option);
+            }
+          });
+          var urlParams = new URLSearchParams(window.location.search);
+          var plate = urlParams.get('plate');
+          if (plate) {
+            for (var i = 0; i < select.options.length; i++) {
+              if (select.options[i].textContent.indexOf(plate) === 0 || select.options[i].textContent.replace(/\s/g, '').indexOf(plate.replace(/\s/g, '')) === 0) {
+                select.selectedIndex = i;
+                break;
+              }
+            }
+          }
+        }
+      }).catch(function (err) { console.error('getVehicles error', err); });
+    }
+
+    function loadFuelTypes() {
+      var select = document.getElementById('fuelType');
+      var defaultOptions = [
+        { id: 'gasoline_91', name: 'เบนซิน 91' },
+        { id: 'gasoline_95', name: 'เบนซิน 95' },
+        { id: 'gasoline_e20', name: 'แก๊สโซฮอล์ E20' },
+        { id: 'gasoline_e85', name: 'แก๊สโซฮอล์ E85' },
+        { id: 'diesel', name: 'ดีเซล' },
+        { id: 'diesel_b7', name: 'ดีเซล B7' },
+        { id: 'diesel_b20', name: 'ดีเซล B20' },
+        { id: 'electric', name: 'ไฟฟ้า' }
+      ];
+
+      // ตั้งค่า default options ก่อน (เพื่อให้มีให้เลือกทันที)
+      var hasDefaultOptions = select.options.length > 1;
+      if (!hasDefaultOptions) {
+        defaultOptions.forEach(function (type) {
+          var opt = document.createElement('option');
+          opt.value = type.id;
+          opt.textContent = type.name;
+          select.appendChild(opt);
+        });
+      }
+
+      // พยายามโหลดจาก API เพื่ออัปเดต (ถ้ามี)
+      apiCall('getFuelTypes', {}).then(function (response) {
+        if (response.success && response.data && response.data.fuel_types && response.data.fuel_types.length > 0) {
+          fuelTypes = response.data.fuel_types || [];
+          // ล้าง options เดิม (เก็บแค่ placeholder)
+          select.innerHTML = '<option value="">-- เลือกประเภทน้ำมัน --</option>';
+
+          // กรองประเภทน้ำมันที่ไม่ต้องการ (LPG, NGV) และแสดงเฉพาะที่ขายในไทยทั่วไป
+          var excludedTypes = ['lpg', 'ngv'];
+          var hasValidTypes = false;
+          fuelTypes.forEach(function (type) {
+            var typeId = (type.id || type.key || '').toLowerCase();
+            var typeName = (type.name || '').toLowerCase();
+            // ข้ามประเภทแก๊ส (LPG/NGV) แต่เก็บแก๊สโซฮอล์ (E20, E85)
+            var isExcluded = excludedTypes.some(function (excluded) {
+              return typeId.indexOf(excluded) !== -1 || typeName.indexOf(excluded) !== -1;
+            });
+            // ถ้าเป็นแก๊สโซฮอล์ (gasohol) ให้เก็บไว้
+            if (typeName.indexOf('gasohol') !== -1 || typeName.indexOf('e20') !== -1 || typeName.indexOf('e85') !== -1) {
+              isExcluded = false;
+            }
+            if (!isExcluded) {
+              hasValidTypes = true;
+              var option = document.createElement('option');
+              option.value = type.id || type.key;
+              option.textContent = type.name + (type.price_per_liter ? ' (ประมาณ ' + type.price_per_liter + ' บาท/ลิตร)' : '');
+              select.appendChild(option);
+            }
+          });
+
+          // ถ้าไม่มีข้อมูลที่ถูกต้องจาก API ให้ใช้ default options
+          if (!hasValidTypes || select.options.length === 1) {
+            defaultOptions.forEach(function (type) {
+              var opt = document.createElement('option');
+              opt.value = type.id;
+              opt.textContent = type.name;
+              select.appendChild(opt);
+            });
+          }
+        }
+      }).catch(function (err) {
+        console.error('getFuelTypes error', err);
+        // ถ้า API error ก็ใช้ default options ที่มีอยู่แล้ว (ไม่ต้องทำอะไรเพราะมีอยู่แล้ว)
+      });
+    }
+
+    function setupForm() {
+      // เพิ่มการตรวจสอบเมื่อกรอกข้อมูล (ใช้ oninput ใน HTML แล้ว แต่ยังเก็บไว้เพื่อความปลอดภัย)
+      document.getElementById('liters').addEventListener('input', validateAmountCalculation);
+      document.getElementById('pricePerLiter').addEventListener('input', validateAmountCalculation);
+      document.getElementById('amount').addEventListener('input', validateAmountCalculation);
+      document.getElementById('date').addEventListener('change', updateDateThaiDisplay);
+      document.getElementById('date').addEventListener('input', updateDateThaiDisplay);
+
+      document.getElementById('receiptImage').addEventListener('change', function (e) {
+        var file = e.target.files[0];
+        receiptImageFile = file || null;
+        document.getElementById('receiptImagePreview').textContent = file ? '📷 ' + file.name : '';
+      });
+
+      document.getElementById('cancelBtn').addEventListener('click', function () {
+        document.getElementById('fuelRecordForm').reset();
+        document.getElementById('receiptImagePreview').textContent = '';
+        receiptImageFile = null;
+        setDefaultDateTime();
+        var urlParams = new URLSearchParams(window.location.search);
+        var plate = urlParams.get('plate');
+        if (plate && document.getElementById('carId').options.length > 1) {
+          for (var i = 0; i < document.getElementById('carId').options.length; i++) {
+            if (document.getElementById('carId').options[i].textContent.indexOf(plate) === 0) {
+              document.getElementById('carId').selectedIndex = i;
+              break;
+            }
+          }
+        }
+        showAlert('ยกเลิกแล้ว', 'success');
+      });
+
+      document.getElementById('fuelRecordForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        submitFuelRecord();
+      });
+    }
+
+    // ตรวจสอบการคำนวณจำนวนเงินรวม (แสดงเตือนแต่ไม่บล็อกการกรอก)
+    function validateAmountCalculation() {
+      var liters = parseFloat(document.getElementById('liters').value) || 0;
+      var pricePerLiter = parseFloat(document.getElementById('pricePerLiter').value) || 0;
+      var amount = parseFloat(document.getElementById('amount').value) || 0;
+      var errorDiv = document.getElementById('amountError');
+
+      // ถ้ายังกรอกไม่ครบ ไม่ต้องแสดง error
+      if (liters <= 0 || pricePerLiter <= 0 || amount <= 0) {
+        if (errorDiv) errorDiv.style.display = 'none';
+        return;
+      }
+
+      // คำนวณจำนวนเงินที่ควรจะเป็น
+      var expectedAmount = liters * pricePerLiter;
+      var difference = Math.abs(amount - expectedAmount);
+
+      // ยอมรับความคลาดเคลื่อน ±0.01 บาท (เพื่อรองรับการปัดเศษ)
+      if (difference > 0.01) {
+        if (errorDiv) {
+          errorDiv.textContent = '⚠️ การคำนวณไม่ถูกต้อง: ปริมาณ (' + liters.toFixed(2) + ') × ราคาต่อลิตร (' + pricePerLiter.toFixed(2) + ') = ' + expectedAmount.toFixed(2) + ' บาท แต่กรอก ' + amount.toFixed(2) + ' บาท กรุณาตรวจสอบอีกครั้ง';
+          errorDiv.style.display = 'block';
+        }
+      } else {
+        if (errorDiv) errorDiv.style.display = 'none';
+      }
+    }
+
+    // Make function globally available (for oninput attribute)
+    window.validateAmountCalculation = validateAmountCalculation;
+
+    function submitFuelRecord() {
+      var formData = {
+        date: document.getElementById('date').value,
+        time: document.getElementById('time').value,
+        car_id: document.getElementById('carId').value,
+        driver_id: currentUser.driver_id || currentUser.user_id,
+        expense_type: document.getElementById('expenseType').value,
+        fuel_type: document.getElementById('fuelType').value,
+        mileage_before: parseInt(document.getElementById('mileageBefore').value, 10),
+        liters: parseFloat(document.getElementById('liters').value),
+        price_per_liter: parseFloat(document.getElementById('pricePerLiter').value),
+        amount: parseFloat(document.getElementById('amount').value)
+      };
+
+      if (!formData.date || !formData.time || !formData.car_id || !formData.expense_type || !formData.fuel_type ||
+        isNaN(formData.mileage_before) || formData.mileage_before < 0 ||
+        !formData.liters || formData.liters <= 0 ||
+        !formData.price_per_liter || formData.price_per_liter <= 0 ||
+        !formData.amount || formData.amount <= 0) {
+        showAlert('กรุณากรอกข้อมูลให้ครบถ้วน (เลขทะเบียนรถ, วันที่, เวลา, แหล่งเบิกจ่าย, ประเภทน้ำมัน, ปริมาณ, ราคาต่อลิตร, จำนวนเงินรวม, เลขไมล์)', 'error');
+        return;
+      }
+
+      // ตรวจสอบการคำนวณจำนวนเงินรวม
+      var expectedAmount = formData.liters * formData.price_per_liter;
+      var difference = Math.abs(formData.amount - expectedAmount);
+
+      // ถ้าคำนวณไม่ตรง (คลาดเคลื่อนมากกว่า 0.01 บาท) ให้แสดงเตือนและหยุดการบันทึก
+      if (difference > 0.01) {
+        var errorMessage = '⚠️ การคำนวณไม่ถูกต้อง!\n\n' +
+          'ปริมาณที่เติม: ' + formData.liters.toFixed(2) + ' ลิตร\n' +
+          'ราคาต่อลิตร: ' + formData.price_per_liter.toFixed(2) + ' บาท\n' +
+          'จำนวนเงินรวมที่ควรเป็น: ' + expectedAmount.toFixed(2) + ' บาท\n' +
+          'จำนวนเงินรวมที่กรอก: ' + formData.amount.toFixed(2) + ' บาท\n\n' +
+          'กรุณาตรวจสอบ 3 รายการนี้ใหม่ให้ถูกต้อง:\n' +
+          '1. ปริมาณที่เติม (ลิตร)\n' +
+          '2. ราคาต่อลิตร (บาท)\n' +
+          '3. จำนวนเงินรวม (บาท)';
+        showAlert(errorMessage, 'error');
+        return;
+      }
+
+      if (receiptImageFile) {
+        var reader = new FileReader();
+        reader.onload = function () {
+          formData.receipt_image_base64 = reader.result.split(',')[1];
+          formData.receipt_image_name = receiptImageFile.name;
+          formData.receipt_image_mime = receiptImageFile.type;
+          submitAPI(formData);
+        };
+        reader.readAsDataURL(receiptImageFile);
+      } else {
+        submitAPI(formData);
+      }
+    }
+
+    function submitAPI(formData) {
+      apiCall('createFuelLog', { data: formData })
+        .then(function (response) {
+          if (response.success) {
+            showAlert('บันทึกการเติมน้ำมันสำเร็จ', 'success');
+            setTimeout(function () {
+              window.location.href = 'dashboard.html';
+            }, 2000);
+          } else {
+            showAlert(typeof getUserMessage !== 'undefined' ? getUserMessage(response.message) : (response.message || 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'), 'error');
+          }
+        })
+        .catch(function (error) {
+          showAlert(error && error.message ? error.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง', 'error');
+        });
+    }
+
+    function showAlert(message, type) {
+      var container = document.getElementById('alertContainer');
+      var alert = document.createElement('div');
+      alert.className = 'alert alert-' + type;
+      alert.textContent = message;
+      container.innerHTML = '';
+      container.appendChild(alert);
+    }
+  </script>
+
+  <div style="background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 0.9em; margin-top: 20px;">
+    <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+  </div>
+</body>
+
+</html>

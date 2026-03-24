@@ -1,0 +1,23 @@
+---
+description: โหมดแอปพลิเคชันสำหรับ production — ทุกฟีเจอร์ต้องทำงานจริง บังคับสิทธิ์ที่ backend มี audit ไม่มี demo/placeholder
+globs: 
+alwaysApply: true
+---
+
+# Production Application Mode
+
+อ้างอิง **PRODUCTION_APPLICATION_MODE.md** เป็น spec หลัก
+
+## กฎที่ต้องปฏิบัติ
+
+1. **ทุกหน้าจอต้องทำงานจริง** — สร้าง/อัปเดต/ตรวจสอบ/คำนวณ/สร้างผลลัพธ์ ไม่มีหน้าแสดงข้อมูลอย่างเดียวแบบ static
+2. **ไม่มี** placeholder, "coming soon", ข้อมูลปลอม, ปุ่ม demo
+3. **สิทธิ์บังคับที่ backend** — ใช้ `requireAdminFromRequest(requestData)` หรือการเช็ค permission ใน service; ไม่อาศัยแค่การซ่อน/ปิดที่ frontend
+4. **ทุก create/update/delete ต้อง log audit** — เรียก `logAudit(userId, action, entityType, entityId, details)` และบันทึก who/when/what
+5. **ก่อนเขียนฟีเจอร์ใหม่** — ต้องตอบให้ได้ว่า ใครทำได้ ข้อมูลอะไรเปลี่ยน เก็บที่ไหน validate อย่างไร error ทำอย่างไร audit อย่างไร
+
+## สถานะโปรเจกต์ปัจจุบัน
+
+- Backend: GAS + Google Sheets; ไฟล์เก็บใน Google Drive (metadata ใน Sheets)
+- เป้าหมายระยะยาว: PostgreSQL (Render) เป็น single source of truth; ไม่ lock-in vendor
+- ดูรายละเอียด role mapping, audit, และ data rules ใน PRODUCTION_APPLICATION_MODE.md

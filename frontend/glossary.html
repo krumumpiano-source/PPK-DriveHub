@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>คำศัพท์และความหมาย - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'glossary';</script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <link rel="stylesheet" href="common.css">
+  <script src="offline-mock.js"></script>
+  <script src="common.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Sarabun', 'Kanit', sans-serif;
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+    }
+
+    .nav {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      padding: 20px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      border-bottom: 3px solid #4285f4;
+    }
+
+    .nav-btn {
+      padding: 12px 20px;
+      background: white;
+      border: 2px solid #4285f4;
+      color: #4285f4;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 0.95em;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-btn:hover {
+      color: white;
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(66, 133, 244, 0.4);
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+    }
+
+    .nav-btn.active {
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      color: white;
+    }
+
+    .content {
+      padding: 40px;
+    }
+
+    .glossary-section {
+      margin-bottom: 40px;
+    }
+
+    .glossary-section h2 {
+      color: #4285f4;
+      font-size: 1.8em;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid #34a853;
+    }
+
+    .term-item {
+      background: #f8f9fa;
+      border-left: 4px solid #4285f4;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+
+    .term-item:hover {
+      box-shadow: 0 4px 12px rgba(66, 133, 244, 0.2);
+      transform: translateX(5px);
+    }
+
+    .term-item h3 {
+      color: #4285f4;
+      font-size: 1.3em;
+      margin-bottom: 10px;
+    }
+
+    .term-item p {
+      line-height: 2;
+      color: #555;
+      margin-bottom: 12px;
+      font-size: 1.05em;
+    }
+
+    .term-item .simple-explanation {
+      background: #e3f2fd;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 12px;
+      border-left: 4px solid #2196f3;
+      font-size: 1em;
+      color: #1565c0;
+      font-weight: 500;
+    }
+
+    .term-item .example {
+      background: #fff3e0;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 10px;
+      border-left: 4px solid #ff9800;
+      color: #e65100;
+      font-size: 0.95em;
+    }
+
+    .term-item .tip {
+      background: #e8f5e9;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 10px;
+      border-left: 4px solid #4caf50;
+      color: #2e7d32;
+      font-size: 0.95em;
+    }
+
+    .term-item .warning {
+      background: #fff3e0;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 10px;
+      border-left: 4px solid #ff9800;
+      color: #e65100;
+      font-size: 0.95em;
+    }
+
+    .term-item h3 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .term-item h3::before {
+      content: "💡";
+      font-size: 1.2em;
+    }
+
+    .footer {
+      background: #f8f9fa;
+      padding: 20px;
+      text-align: center;
+      color: #666;
+      border-top: 2px solid #e9ecef;
+      font-size: 0.9em;
+    }
+
+    @media (max-width: 768px) {
+      .content {
+        padding: 20px;
+      }
+
+      .header h1 {
+        font-size: 1.8em;
+      }
+
+      .glossary-section h2 {
+        font-size: 1.5em;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📚 คำศัพท์และความหมาย</h1>
+      <p>PPK DriveHub - ระบบจัดการยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+    </div>
+
+    <div id="navigation"></div>
+
+    <div class="content">
+      <div class="glossary-section">
+        <h2>🔐 ระบบความปลอดภัยและการเข้าถึง</h2>
+
+        <div class="term-item">
+          <h3>Admin (ผู้ดูแลระบบ)</h3>
+          <div class="simple-explanation">
+            <strong>อธิบายง่ายๆ:</strong> Admin คือคนที่ดูแลระบบทั้งหมด เหมือนเป็น "หัวหน้า"
+            ที่มีสิทธิ์ทำได้ทุกอย่างในระบบ
+          </div>
+          <p><strong>ความหมาย:</strong> ผู้มีอำนาจสูงสุดในระบบ สามารถทำได้ทุกอย่าง รวมถึงกำหนดสิทธิ์ผู้ใช้
+            ตั้งค่ากฎเกณฑ์ และ Override ทุกอย่าง</p>
+          <p><strong>สิทธิ์ที่ Admin มี:</strong></p>
+          <ul style="margin-left: 20px; line-height: 1.8;">
+            <li>เห็นทุกเมนูและข้อมูลในระบบ</li>
+            <li>แก้ไขข้อมูลได้ทุกอย่าง</li>
+            <li>ข้ามกฎหรือการเตือนได้ (Override)</li>
+            <li>ลบหรือแก้ไขบันทึกย้อนหลังได้</li>
+            <li>กำหนดสิทธิ์ให้ผู้ใช้อื่นได้</li>
+          </ul>
+          <div class="example">
+            <strong>ตัวอย่าง:</strong> ถ้าคิวรถซ้ำกัน Admin สามารถ Override เพื่อให้ใช้รถได้ หรือถ้ามีคนลืมบันทึก Admin
+            สามารถแก้ไขให้ได้
+          </div>
+        </div>
+
+        <div class="term-item">
+          <h3>สิทธิ์การเข้าถึง (Permission)</h3>
+          <div class="simple-explanation">
+            <strong>อธิบายง่ายๆ:</strong> สิทธิ์คือ "กุญแจ" ที่ Admin มอบให้แต่ละคน เพื่อเปิดใช้ฟีเจอร์ต่างๆ ในระบบ
+          </div>
+          <p><strong>ความหมาย:</strong> สิทธิ์ที่ Admin กำหนดให้ผู้ใช้แต่ละคนในการเข้าถึงและทำงานในแต่ละโมดูล</p>
+          <p><strong>ระดับสิทธิ์ (จากน้อยไปมาก):</strong></p>
+          <ul style="margin-left: 20px; line-height: 1.8;">
+            <li><strong>ดูอย่างเดียว:</strong> เห็นข้อมูลได้ แต่แก้ไขไม่ได้</li>
+            <li><strong>บันทึกใหม่:</strong> เพิ่มข้อมูลใหม่ได้ แต่แก้ไขข้อมูลเก่าไม่ได้</li>
+            <li><strong>แก้ไข:</strong> แก้ไขข้อมูลที่มีอยู่แล้วได้</li>
+            <li><strong>ลบ:</strong> ลบข้อมูลได้ (เฉพาะ Admin เท่านั้น)</li>
+          </ul>
+          <div class="example">
+            <strong>ตัวอย่าง:</strong>
+            <br>• ผู้ใช้ A มีสิทธิ์ "จัดคิวรถ" และ "ดูรายงาน" แต่ไม่มีสิทธิ์ "บันทึกน้ำมัน"
+            <br>• ผู้ใช้ B มีสิทธิ์ "ดูรายงาน" อย่างเดียว ไม่สามารถแก้ไขอะไรได้
+            <br>• Admin มีสิทธิ์ทุกอย่าง
+          </div>
+          <div class="tip">
+            <strong>💡 เคล็ดลับ:</strong> ถ้าคุณไม่เห็นเมนูหรือปุ่มบางอย่าง แสดงว่าคุณยังไม่มีสิทธิ์ในส่วนนั้น ต้องขอ
+            Admin ให้เพิ่มสิทธิ์ให้
+          </div>
+        </div>
+
+        <div class="term-item">
+          <h3>Audit Trail (บันทึกการเปลี่ยนแปลง)</h3>
+          <div class="simple-explanation">
+            <strong>อธิบายง่ายๆ:</strong> Audit Trail คือ "สมุดบันทึก" ที่ระบบจดบันทึกทุกครั้งที่มีคนแก้ไขข้อมูลสำคัญ
+            เหมือนกล้องวงจรปิดที่บันทึกว่าใครทำอะไร เมื่อไหร่
+          </div>
+          <p><strong>ความหมาย:</strong> บันทึกอัตโนมัติของทุกการเปลี่ยนแปลงข้อมูลสำคัญในระบบ</p>
+          <p><strong>ข้อมูลที่ระบบบันทึก:</strong></p>
+          <ul style="margin-left: 20px; line-height: 1.8;">
+            <li><strong>ใครทำ:</strong> ชื่อผู้ใช้ที่แก้ไข</li>
+            <li><strong>ทำเมื่อไหร่:</strong> วันและเวลาที่แก้ไข</li>
+            <li><strong>แก้ไขอะไร:</strong> ข้อมูลส่วนไหนที่เปลี่ยน</li>
+            <li><strong>ค่าเก่า:</strong> ข้อมูลเดิมเป็นอย่างไร</li>
+            <li><strong>ค่าใหม่:</strong> ข้อมูลใหม่เป็นอย่างไร</li>
+          </ul>
+          <div class="example">
+            <strong>ตัวอย่าง:</strong> ถ้ามีคนแก้ไขคิวรถจาก "รถ กข 1234" เป็น "รถ กข 5678" ระบบจะบันทึกว่า "คุณสมชาย
+            แก้ไขเมื่อ 15 ม.ค. 2569 เวลา 10:30 น. เปลี่ยนจาก กข 1234 เป็น กข 5678"
+          </div>
+          <div class="tip">
+            <strong>💡 ข้อสำคัญ:</strong> Audit Trail ใช้เพื่อตรวจสอบย้อนหลังและความโปร่งใสเท่านั้น
+            <strong>ไม่ใช้เพื่อลงโทษ</strong> เพราะทุกคนอาจทำผิดพลาดได้
+          </div>
+        </div>
+
+        <div class="term-item">
+          <h3>PDPA (Personal Data Protection Act)</h3>
+          <div class="simple-explanation">
+            <strong>อธิบายง่ายๆ:</strong> PDPA คือกฎหมายที่ปกป้องข้อมูลส่วนตัวของทุกคน ระบบจะเก็บข้อมูลเท่าที่จำเป็น
+            และไม่ให้คนอื่นเห็นข้อมูลส่วนตัวของคุณโดยไม่ได้รับอนุญาต
+          </div>
+          <p><strong>ความหมาย:</strong> พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (กฎหมายที่ปกป้องข้อมูลส่วนตัว)</p>
+          <p><strong>ในระบบ PPK DriveHub:</strong></p>
+          <ul style="margin-left: 20px; line-height: 1.8;">
+            <li><strong>ใช้ข้อมูลเท่าที่จำเป็น:</strong> เก็บเฉพาะข้อมูลที่ต้องใช้จริงๆ</li>
+            <li><strong>ควบคุมการเข้าถึง:</strong> มีสิทธิ์เท่านั้นถึงจะเห็นข้อมูลได้</li>
+            <li><strong>บันทึกการเข้าดู:</strong> บันทึกว่าใครดูข้อมูลส่วนตัวของคุณเมื่อไหร่</li>
+          </ul>
+          <div class="example">
+            <strong>ตัวอย่าง:</strong> ข้อมูลส่วนตัวเช่น เบอร์โทรศัพท์ ที่อยู่ จะมีแค่ Admin
+            และคนที่เกี่ยวข้องเท่านั้นที่เห็นได้ คนอื่นจะเห็นแค่ชื่อเท่านั้น
+          </div>
+        </div>
+      </div>
+
+      <div class="glossary-section">
+        <h2>🚗 การจัดการคิวรถ</h2>
+
+        <div class="term-item">
+          <h3>คิวรถ (Queue)</h3>
+          <div class="simple-explanation">
+            <strong>อธิบายง่ายๆ:</strong> คิวรถคือการ "จอง" รถและคนขับไว้ล่วงหน้า เหมือนจองโต๊ะอาหารที่ร้านอาหาร
+            แต่จองรถและคนขับแทน
+          </div>
+          <p><strong>ความหมาย:</strong> การจองรถและคนขับสำหรับงานในวันและเวลาที่กำหนด</p>
+          <p><strong>ข้อมูลที่ต้องกรอกเมื่อจองคิว:</strong></p>
+          <ul style="margin-left: 20px; line-height: 1.8;">
+            <li><strong>วันที่:</strong> วันที่จะใช้รถ</li>
+            <li><strong>เวลาไป:</strong> เวลาที่ออกจากโรงเรียน</li>
+            <li><strong>เวลากลับ:</strong> เวลาที่คาดว่าจะกลับ</li>
+            <li><strong>รถ:</strong> รถคันไหนที่ต้องการใช้</li>
+            <li><strong>คนขับ:</strong> ต้องการให้ใครขับ (หรือให้ระบบเลือกให้)</li>
+            <li><strong>ผู้ขอใช้:</strong> ใครเป็นคนขอใช้รถ</li>
+            <li><strong>สถานที่ไป:</strong> ไปที่ไหน</li>
+            <li><strong>จำนวนผู้โดยสาร:</strong> มีกี่คนนั่งไปด้วย</li>
+          </ul>
+          <div class="example">
+            <strong>ตัวอย่าง:</strong> คุณต้องการไปประชุมที่จังหวัดเชียงใหม่ในวันที่ 20 ม.ค. เวลา 8:00 น. กลับเวลา 17:00
+            น. คุณก็จองคิวรถไว้ล่วงหน้า ระบบจะจัดรถและคนขับให้
+          </div>
+        </div>
+
+        <div class="term-item">
+          <h3>Freeze คิว</h3>
+          <div class="simple-explanation">
+            <strong>อธิบายง่ายๆ:</strong> Freeze คิวคือการ "ล็อก" คิวไว้ไม่ให้แก้ไขเมื่อใกล้เวลาออกเดินทาง
+            เหมือนการปิดประตูห้องสอบก่อนเริ่มสอบ เพื่อป้องกันการแก้ไขผิดพลาดในนาทีสุดท้าย
+          </div>
+          <p><strong>ความหมาย:</strong> การล็อกคิวเมื่อใกล้เวลาออก (เช่น 30 นาทีก่อน) เพื่อป้องกันการแก้ไขผิดพลาด</p>
+          <p><strong>ผลที่เกิดขึ้น:</strong></p>
+          <ul style="margin-left: 20px; line-height: 1.8;">
+            <li>คิวที่ Freeze แล้วไม่สามารถแก้ไขได้</li>
+            <li>ไม่สามารถยกเลิกคิวได้</li>
+            <li>ยกเว้น Admin เท่านั้นที่สามารถแก้ไขได้</li>
+          </ul>
+          <div class="example">
+            <strong>ตัวอย่าง:</strong> ถ้าคุณจองคิวไว้เวลา 8:00 น. เมื่อถึงเวลา 7:30 น. (30 นาทีก่อน) ระบบจะ Freeze
+            คิวนี้ไว้ คุณจะแก้ไขหรือยกเลิกไม่ได้แล้ว แต่ถ้าจำเป็นจริงๆ Admin สามารถแก้ไขให้ได้
+          </div>
+          <div class="tip">
+            <strong>💡 เคล็ดลับ:</strong> ถ้าคุณต้องการแก้ไขคิว ควรแก้ไขก่อนเวลา 30 นาทีก่อนออกเดินทาง หรือติดต่อ Admin
+            ถ้าจำเป็นจริงๆ
+          </div>
+        </div>
+
+        <div class="term-item">
+          <h3>Override (ยกเว้นกฎ)</h3>
+          <div class="simple-explanation">
+            <strong>อธิบายง่ายๆ:</strong> Override คือการ "ข้าม" กฎหรือการเตือนของระบบเมื่อมีเหตุผลจำเป็นจริงๆ
+            เหมือนการขออนุญาตข้ามไฟแดงในกรณีฉุกเฉิน
+          </div>
+          <p><strong>ความหมาย:</strong> การข้ามกฎหรือการเตือนของระบบเมื่อมีเหตุผลจำเป็น</p>
+          <p><strong>เงื่อนไขในการ Override:</strong></p>
+          <ul style="margin-left: 20px; line-height: 1.8;">
+            <li>ต้องมีสิทธิ์ Override (Admin หรือผู้ที่ได้รับอนุญาต)</li>
+            <li>ต้องกรอกเหตุผลว่าทำไมต้อง Override</li>
+            <li>ระบบจะบันทึกว่าใคร Override อะไร เมื่อไหร่</li>
+          </ul>
+          <div class="example">
+            <strong>ตัวอย่าง:</strong>
+            <br>• รถซ้ำกับคิวอื่น แต่เป็นงานด่วนจำเป็น → Override ได้
+            <br>• คนขับล้า (Fatigue) แต่เป็นงานสำคัญมาก → Override ได้ (แต่ต้องระวังความปลอดภัย)
+            <br>• จำนวนผู้โดยสารเกินที่นั่ง แต่เป็นกรณีพิเศษ → Override ได้
+          </div>
+          <div class="warning">
+            <strong>⚠️ คำเตือน:</strong> Override ควรใช้เฉพาะเมื่อจำเป็นจริงๆ เท่านั้น
+            เพราะอาจส่งผลต่อความปลอดภัยหรือประสิทธิภาพการทำงาน
+          </div>
+        </div>
+
+        <div class="term-item">
+          <h3>Timeline View (มุมมองไทม์ไลน์)</h3>
+          <p><strong>ความหมาย:</strong> การแสดงคิวรถและคิวคนขับในรูปแบบเส้นเวลา</p>
+          <p><strong>ประโยชน์:</strong> เห็นภาพรวมการใช้งานรถและคนขับในแต่ละวัน/สัปดาห์</p>
+        </div>
+
+        <div class="term-item">
+          <h3>สถานะคิว</h3>
+          <p><strong>ความหมาย:</strong> สถานะของคิวในแต่ละช่วงเวลา</p>
+          <p><strong>สถานะ:</strong> ร่าง, ยืนยัน, freeze, ใช้งาน, เสร็จ, ยกเลิก</p>
+        </div>
+      </div>
+
+      <div class="glossary-section">
+        <h2>👨‍✈️ พนักงานขับรถ</h2>
+
+        <div class="term-item">
+          <h3>พนักงานขับรถหลัก</h3>
+          <p><strong>ความหมาย:</strong> พนักงานขับรถประจำที่มีบทบาทชัดเจน</p>
+          <p><strong>ประเภท:</strong> ภารกิจภายนอก, ภารกิจภายใน, ภารกิจผู้บริหาร</p>
+        </div>
+
+        <div class="term-item">
+          <h3>พนักงานขับรถสำรอง</h3>
+          <p><strong>ความหมาย:</strong> พนักงานขับรถที่ใช้เมื่อพนักงานขับรถหลักไม่ว่างหรือลา</p>
+        </div>
+
+        <div class="term-item">
+          <h3>ความล้า (Fatigue)</h3>
+          <div class="simple-explanation">
+            <strong>อธิบายง่ายๆ:</strong> ความล้าคือสถานะที่คนขับขับรถมากเกินไปในวันก่อน เหมือนคนที่ทำงานหนักมากเมื่อวาน
+            วันนี้ควรพักผ่อนเพื่อความปลอดภัย
+          </div>
+          <p><strong>ความหมาย:</strong> สถานะที่คนขับขับรถเกินระยะทางที่กำหนด (เช่น 400 กม.) ในวันก่อน</p>
+          <p><strong>ผลที่เกิดขึ้น:</strong></p>
+          <ul style="margin-left: 20px; line-height: 1.8;">
+            <li>ระบบจะเตือนว่าคนขับล้า</li>
+            <li>อาจบังคับให้พัก (ตามที่ Admin ตั้งค่า)</li>
+            <li>อาจไม่ให้จัดคิวใหม่จนกว่าจะพักผ่อนเพียงพอ</li>
+          </ul>
+          <div class="example">
+            <strong>ตัวอย่าง:</strong> ถ้าคนขับขับรถไป 450 กม. เมื่อวาน วันนี้ระบบจะเตือนว่า "คนขับล้า"
+            และอาจไม่ให้จัดคิวใหม่จนกว่าจะพักผ่อนเพียงพอ
+          </div>
+          <div class="tip">
+            <strong>💡 ข้อสำคัญ:</strong> ความล้าเป็นเรื่องสำคัญมาก เพราะอาจทำให้เกิดอุบัติเหตุได้
+            ควรให้คนขับพักผ่อนให้เพียงพอก่อนขับรถอีกครั้ง
+          </div>
+        </div>
+
+        <div class="term-item">
+          <h3>Standby (สแตนด์บาย)</h3>
+          <p><strong>ความหมาย:</strong> สถานะที่คนขับพร้อมทำงานแต่ยังไม่มีคิว</p>
+        </div>
+
+        <div class="term-item">
+          <h3>คะแนนวินัยการใช้งานรถ</h3>
+          <p><strong>ความหมาย:</strong> คะแนนที่ประเมินจากการบันทึกการใช้งานรถอย่างสม่ำเสมอ</p>
+          <p><strong>ใช้เพื่อ:</strong> การพัฒนา ไม่ใช่การลงโทษ</p>
+        </div>
+      </div>
+
+      <div class="glossary-section">
+        <h2>⛽ การจัดการน้ำมัน</h2>
+
+        <div class="term-item">
+          <h3>บันทึกน้ำมัน (Fuel Log)</h3>
+          <p><strong>ความหมาย:</strong> บันทึกการเติมน้ำมันของรถแต่ละคัน</p>
+          <p><strong>ข้อมูล:</strong> ประเภทน้ำมัน, จำนวนลิตร, ราคาต่อลิตร, ราคารวม, เลขไมล์, รูปสลิป</p>
+        </div>
+
+        <div class="term-item">
+          <h3>อัตราสิ้นเปลือง (Fuel Consumption)</h3>
+          <div class="simple-explanation">
+            <strong>อธิบายง่ายๆ:</strong> อัตราสิ้นเปลืองคือ "รถกินน้ำมันมากแค่ไหน" วัดเป็น "กี่กิโลเมตรต่อลิตร"
+            ยิ่งตัวเลขมากยิ่งดี เพราะหมายความว่ารถวิ่งได้ไกลด้วยน้ำมันน้อย
+          </div>
+          <p><strong>ความหมาย:</strong> จำนวนกิโลเมตรต่อลิตร (กม./ลิตร) ที่รถใช้</p>
+          <p><strong>การคำนวณ:</strong> ระยะทาง (กม.) ÷ ปริมาณน้ำมัน (ลิตร)</p>
+          <div class="example">
+            <strong>ตัวอย่าง:</strong>
+            <br>• รถวิ่งได้ 100 กิโลเมตร ใช้น้ำมัน 10 ลิตร → อัตราสิ้นเปลือง = 100 ÷ 10 = 10 กม./ลิตร
+            <br>• รถวิ่งได้ 150 กิโลเมตร ใช้น้ำมัน 10 ลิตร → อัตราสิ้นเปลือง = 150 ÷ 10 = 15 กม./ลิตร (ดีกว่า)
+            <br>• รถวิ่งได้ 80 กิโลเมตร ใช้น้ำมัน 10 ลิตร → อัตราสิ้นเปลือง = 80 ÷ 10 = 8 กม./ลิตร (แย่กว่า)
+          </div>
+          <div class="tip">
+            <strong>💡 เคล็ดลับ:</strong> ถ้าอัตราสิ้นเปลืองต่ำกว่าปกติ (เช่น จาก 12 กม./ลิตร เหลือ 8 กม./ลิตร)
+            อาจหมายความว่ารถมีปัญหา ควรตรวจสอบ
+          </div>
+        </div>
+
+        <div class="term-item">
+          <h3>Threshold แจ้งเตือนน้ำมันผิดปกติ</h3>
+          <p><strong>ความหมาย:</strong> ค่าที่ Admin ตั้งไว้เพื่อแจ้งเตือนเมื่อรถใช้น้ำมันผิดปกติ</p>
+          <p><strong>ตัวอย่าง:</strong> ถ้าใช้น้ำมันมากกว่าค่าเฉลี่ย 20% ระบบจะแจ้งเตือน</p>
+        </div>
+      </div>
+
+      <div class="glossary-section">
+        <h2>🛠️ การซ่อมบำรุง</h2>
+
+        <div class="term-item">
+          <h3>ซ่อมตามแผน (Scheduled Repair)</h3>
+          <p><strong>ความหมาย:</strong> การซ่อมที่วางแผนไว้ล่วงหน้าตามระยะทางหรือเวลา</p>
+          <p><strong>ตัวอย่าง:</strong> เปลี่ยนน้ำมันเครื่องทุก 10,000 กม. หรือ 6 เดือน</p>
+        </div>
+
+        <div class="term-item">
+          <h3>ซ่อมฉุกเฉิน (Emergency Repair)</h3>
+          <p><strong>ความหมาย:</strong> การซ่อมที่เกิดขึ้นทันทีเนื่องจากความเสียหายที่ไม่คาดคิด</p>
+        </div>
+
+        <div class="term-item">
+          <h3>สถานะซ่อม</h3>
+          <p><strong>ความหมาย:</strong> สถานะของรถในกระบวนการซ่อม</p>
+          <p><strong>สถานะ:</strong> รอซ่อม, กำลังซ่อม, ซ่อมเสร็จ, เลื่อน</p>
+        </div>
+
+        <div class="term-item">
+          <h3>คะแนนความพร้อมใช้งานรถ</h3>
+          <p><strong>ความหมาย:</strong> คะแนนที่ประเมินจากความพร้อมใช้งานของรถ</p>
+          <p><strong>ปัจจัย:</strong> อัตราการใช้งาน, ความถี่ซ่อม, ค่าใช้จ่าย, ความเสื่อมสภาพ</p>
+        </div>
+
+        <div class="term-item">
+          <h3>การตรวจสภาพรถ (Daily Check)</h3>
+          <p><strong>ความหมาย:</strong> การตรวจสอบสภาพรถพื้นฐานก่อนใช้งานทุกวัน</p>
+          <p><strong>รายการ:</strong> ระดับของเหลว, แรงดันลมยาง, ท่อยางรั่วซึม, เครื่องยนต์/เกียร์/เฟืองท้าย, ระบบไฟ</p>
+        </div>
+      </div>
+
+      <div class="glossary-section">
+        <h2>📊 การบันทึกและการรายงาน</h2>
+
+        <div class="term-item">
+          <h3>บันทึกการใช้รถ (Usage Record)</h3>
+          <p><strong>ความหมาย:</strong> บันทึกการใช้งานรถแต่ละครั้ง</p>
+          <p><strong>ประเภท:</strong> ก่อนออกเดินทาง, กลับจากเดินทาง</p>
+          <p><strong>ข้อมูล:</strong> วันเวลา, คนขับ, ผู้ขอใช้, จุดหมายปลายทาง, เลขไมล์</p>
+        </div>
+
+        <div class="term-item">
+          <h3>Auto-Recovery (บันทึกอัตโนมัติ)</h3>
+          <div class="simple-explanation">
+            <strong>อธิบายง่ายๆ:</strong> Auto-Recovery คือ "ผู้ช่วยอัตโนมัติ"
+            ที่จะบันทึกให้คุณอัตโนมัติเมื่อคุณลืมบันทึก เหมือนเพื่อนที่ช่วยจดบันทึกให้เมื่อคุณลืม
+          </div>
+          <p><strong>ความหมาย:</strong> ระบบบันทึกให้อัตโนมัติเมื่อลืมบันทึกก่อนออกหรือหลังกลับ</p>
+          <p><strong>ผลที่เกิดขึ้น:</strong></p>
+          <ul style="margin-left: 20px; line-height: 1.8;">
+            <li>ระบบจะบันทึกให้อัตโนมัติเมื่อคุณลืม</li>
+            <li>บันทึกจะถูกทำเครื่องหมายว่า "ระบบบันทึกแทน"</li>
+            <li>ระบบจะเก็บสถิติว่าคุณลืมบันทึกกี่ครั้ง</li>
+          </ul>
+          <div class="example">
+            <strong>ตัวอย่าง:</strong> คุณขับรถออกไปแล้วลืมบันทึก
+            ระบบจะบันทึกให้อัตโนมัติโดยใช้ข้อมูลจากคิวรถที่คุณจองไว้ แต่จะทำเครื่องหมายว่า "ระบบบันทึกแทน"
+            เพื่อให้รู้ว่าคุณลืมบันทึก
+          </div>
+          <div class="tip">
+            <strong>💡 เคล็ดลับ:</strong> แม้ว่าระบบจะบันทึกให้อัตโนมัติ
+            แต่ควรพยายามบันทึกเองทุกครั้งเพื่อความถูกต้องและครบถ้วน
+          </div>
+        </div>
+
+        <div class="term-item">
+          <h3>QR Code (คิวอาร์โค้ด)</h3>
+          <div class="simple-explanation">
+            <strong>อธิบายง่ายๆ:</strong> QR Code คือ "รหัสสี่เหลี่ยม" ที่ติดอยู่บนรถแต่ละคัน
+            เมื่อสแกนด้วยมือถือจะเปิดหน้าจอสำหรับบันทึกข้อมูลทันที เหมือนบาร์โค้ดแต่ใช้มือถือสแกนได้
+          </div>
+          <p><strong>ความหมาย:</strong> รหัส QR ที่ติดอยู่บนรถแต่ละคัน สำหรับสแกนเพื่อบันทึกข้อมูล</p>
+          <p><strong>วิธีใช้:</strong></p>
+          <ol style="margin-left: 20px; line-height: 1.8;">
+            <li>เปิดกล้องมือถือหรือแอปสแกน QR Code</li>
+            <li>สแกน QR Code ที่ติดอยู่บนรถ</li>
+            <li>ระบบจะเปิดหน้าจอสำหรับบันทึกข้อมูลทันที</li>
+            <li>กรอกข้อมูลและบันทึก</li>
+          </ol>
+          <p><strong>ใช้สำหรับ:</strong></p>
+          <ul style="margin-left: 20px; line-height: 1.8;">
+            <li><strong>บันทึกการใช้รถ:</strong> บันทึกก่อนออกและหลังกลับ</li>
+            <li><strong>บันทึกน้ำมัน:</strong> บันทึกการเติมน้ำมัน</li>
+            <li><strong>ตรวจสภาพรถ:</strong> บันทึกการตรวจสภาพรถประจำวัน</li>
+          </ul>
+          <div class="example">
+            <strong>ตัวอย่าง:</strong> เมื่อคุณจะขับรถออก คุณสแกน QR Code ที่ติดอยู่บนรถ
+            ระบบจะเปิดหน้าจอให้คุณกรอกข้อมูล เช่น เลขไมล์ จุดหมายปลายทาง แล้วบันทึก
+          </div>
+          <div class="tip">
+            <strong>💡 เคล็ดลับ:</strong> QR Code ทำให้บันทึกข้อมูลได้ง่ายและรวดเร็ว ไม่ต้องพิมพ์เลขทะเบียนรถเอง
+            ระบบจะรู้ทันทีว่าคุณใช้รถคันไหน
+          </div>
+        </div>
+
+        <div class="term-item">
+          <h3>Dashboard (หน้าแรก)</h3>
+          <div class="simple-explanation">
+            <strong>อธิบายง่ายๆ:</strong> Dashboard คือ "หน้าจอหลัก" ที่แสดงภาพรวมของวันนี้
+            เหมือนหน้าปัดรถยนต์ที่แสดงข้อมูลสำคัญทั้งหมดในที่เดียว
+          </div>
+          <p><strong>ความหมาย:</strong> หน้าหลักที่แสดงสถานะวันนี้เท่านั้น</p>
+          <p><strong>ข้อมูลที่แสดง:</strong></p>
+          <ul style="margin-left: 20px; line-height: 1.8;">
+            <li><strong>คนขับ:</strong> ใครกำลังทำงาน ใครว่าง</li>
+            <li><strong>รถ:</strong> รถคันไหนออกงาน รถคันไหนว่าง รถคันไหนซ่อม</li>
+            <li><strong>คิววันนี้:</strong> มีคิวอะไรบ้างในวันนี้</li>
+            <li><strong>ปฏิทิน:</strong> แสดงคิวในรูปแบบปฏิทิน</li>
+          </ul>
+          <div class="example">
+            <strong>ตัวอย่าง:</strong> เมื่อคุณเปิด Dashboard คุณจะเห็นทันทีว่า "วันนี้มีคิว 5 คิว คนขับ 3 คนกำลังทำงาน
+            รถ 2 คันออกงาน รถ 1 คันซ่อม"
+          </div>
+          <div class="tip">
+            <strong>💡 เคล็ดลับ:</strong> Dashboard เป็นหน้าหลักที่ควรเปิดดูทุกวันเพื่อดูภาพรวมของวันนี้
+          </div>
+        </div>
+
+        <div class="term-item">
+          <h3>รายงานประเมินผล (Evaluation Report)</h3>
+          <p><strong>ความหมาย:</strong> รายงานที่ใช้ประเมินผลการทำงานในช่วงเวลาที่กำหนด</p>
+          <p><strong>ใช้เพื่อ:</strong> ตัดสินใจ, ทำรายงานราชการ, ประเมินประสิทธิภาพ</p>
+          <p><strong>ช่วงเวลา:</strong> รายเดือน, รายไตรมาส, รายปีงบประมาณ, Custom Range</p>
+        </div>
+
+        <div class="term-item">
+          <h3>KPI (Key Performance Indicator)</h3>
+          <div class="simple-explanation">
+            <strong>อธิบายง่ายๆ:</strong> KPI คือ "คะแนน" ที่บอกว่ารถหรือคนขับทำงานได้ดีแค่ไหน
+            เหมือนคะแนนสอบที่บอกว่าคุณทำได้ดีแค่ไหน
+          </div>
+          <p><strong>ความหมาย:</strong> ตัวชี้วัดประสิทธิภาพหลัก (คะแนนที่บอกว่าทำงานได้ดีแค่ไหน)</p>
+          <p><strong>ตัวอย่าง KPI:</strong></p>
+          <ul style="margin-left: 20px; line-height: 1.8;">
+            <li><strong>อัตราการใช้งานรถ:</strong> รถถูกใช้งานบ่อยแค่ไหน</li>
+            <li><strong>ค่าเฉลี่ยระยะทางต่อวัน:</strong> รถวิ่งเฉลี่ยกี่กิโลเมตรต่อวัน</li>
+            <li><strong>ค่าใช้จ่ายต่อกิโลเมตร:</strong> ใช้เงินเฉลี่ยกี่บาทต่อกิโลเมตร</li>
+            <li><strong>อัตราสิ้นเปลือง:</strong> รถกินน้ำมันมากแค่ไหน</li>
+          </ul>
+          <p><strong>ระดับคะแนน:</strong></p>
+          <ul style="margin-left: 20px; line-height: 1.8;">
+            <li><strong>80-100 คะแนน:</strong> ดีมาก (สีเขียว) ✅</li>
+            <li><strong>60-79 คะแนน:</strong> ปกติ (สีเหลือง) ⚠️</li>
+            <li><strong>น้อยกว่า 60 คะแนน:</strong> ควรพัฒนา (สีแดง) ❌</li>
+          </ul>
+          <div class="example">
+            <strong>ตัวอย่าง:</strong>
+            <br>• รถคัน A มี KPI = 85 คะแนน → ดีมาก (ใช้งานดี ค่าใช้จ่ายต่ำ)
+            <br>• รถคัน B มี KPI = 65 คะแนน → ปกติ (ใช้งานได้ แต่ควรปรับปรุง)
+            <br>• รถคัน C มี KPI = 45 คะแนน → ควรพัฒนา (มีปัญหาต้องแก้ไข)
+          </div>
+          <div class="tip">
+            <strong>💡 เคล็ดลับ:</strong> KPI ใช้เพื่อดูว่ารถหรือคนขับทำงานได้ดีแค่ไหน และควรปรับปรุงอะไรบ้าง
+            ไม่ใช่เพื่อลงโทษ
+          </div>
+        </div>
+      </div>
+
+      <div class="glossary-section">
+        <h2>📋 ข้อมูลหลัก (Master Data)</h2>
+
+        <div class="term-item">
+          <h3>รถใช้งานหลัก</h3>
+          <p><strong>ความหมาย:</strong> รถที่ใช้งานเป็นหลักในงานประจำวัน</p>
+        </div>
+
+        <div class="term-item">
+          <h3>รถใช้งานสนับสนุน</h3>
+          <p><strong>ความหมาย:</strong> รถที่ใช้งานเสริมหรือสำรอง</p>
+        </div>
+
+        <div class="term-item">
+          <h3>เลขไมล์ (Mileage)</h3>
+          <div class="simple-explanation">
+            <strong>อธิบายง่ายๆ:</strong> เลขไมล์คือตัวเลขที่บอกว่ารถวิ่งไปแล้วกี่กิโลเมตร
+            เหมือนตัวเลขบนหน้าปัดรถยนต์ที่บอกว่ารถวิ่งไปแล้วกี่กิโลเมตร
+          </div>
+          <p><strong>ความหมาย:</strong> ระยะทางที่รถวิ่งไปแล้ว (หน่วย: กิโลเมตร)</p>
+          <p><strong>ใช้เพื่อ:</strong></p>
+          <ul style="margin-left: 20px; line-height: 1.8;">
+            <li><strong>คำนวณอัตราสิ้นเปลือง:</strong> ดูว่ารถกินน้ำมันมากแค่ไหน</li>
+            <li><strong>กำหนดรอบซ่อม:</strong> รู้ว่าควรซ่อมเมื่อไหร่ (เช่น ทุก 10,000 กม.)</li>
+            <li><strong>ติดตามการใช้งาน:</strong> ดูว่ารถถูกใช้งานมากแค่ไหน</li>
+          </ul>
+          <div class="example">
+            <strong>ตัวอย่าง:</strong>
+            <br>• รถคันใหม่มีเลขไมล์ = 0 กม.
+            <br>• หลังจากขับไป 1 เดือน มีเลขไมล์ = 1,500 กม.
+            <br>• หลังจากขับไป 1 ปี มีเลขไมล์ = 15,000 กม.
+            <br>• เมื่อถึง 20,000 กม. ควรเปลี่ยนน้ำมันเครื่อง
+          </div>
+          <div class="tip">
+            <strong>💡 เคล็ดลับ:</strong> ควรบันทึกเลขไมล์ทุกครั้งที่เติมน้ำมันหรือใช้รถ
+            เพื่อให้ระบบคำนวณและเตือนได้ถูกต้อง
+          </div>
+        </div>
+
+        <div class="term-item">
+          <h3>ภาษีรถยนต์</h3>
+          <p><strong>ความหมาย:</strong> ภาษีประจำปีที่ต้องชำระ</p>
+          <p><strong>ระบบ:</strong> แจ้งเตือนล่วงหน้า 3 เดือนก่อนหมดอายุ</p>
+        </div>
+
+        <div class="term-item">
+          <h3>ประกันภัยภาคสมัครใจ</h3>
+          <p><strong>ความหมาย:</strong> ประกันภัยที่ซื้อเพิ่มเติมนอกเหนือจากประกันภาคบังคับ</p>
+          <p><strong>ข้อมูล:</strong> เลขกรมธรรม์, เบี้ยประกัน, ทุนประกัน, วันเริ่ม-วันหมดอายุ</p>
+          <p><strong>ระบบ:</strong> แจ้งเตือนล่วงหน้า 3 เดือนก่อนหมดอายุ</p>
+        </div>
+      </div>
+
+      <div class="glossary-section">
+        <h2>🔔 การแจ้งเตือน</h2>
+
+        <div class="term-item">
+          <h3>Telegram Notification</h3>
+          <div class="simple-explanation">
+            <strong>อธิบายง่ายๆ:</strong> Telegram Notification คือ "ข้อความแจ้งเตือน" ที่ระบบส่งไปที่แอป Telegram
+            ของคุณ เหมือนข้อความแจ้งเตือนจากแอปอื่นๆ แต่ส่งผ่าน Telegram
+          </div>
+          <p><strong>ความหมาย:</strong> การแจ้งเตือนผ่าน Telegram (แอปแชท)</p>
+          <p><strong>เหตุการณ์ที่ระบบจะแจ้งเตือน:</strong></p>
+          <ul style="margin-left: 20px; line-height: 1.8;">
+            <li><strong>สร้าง/แก้ไข/ยกเลิกคิว:</strong> เมื่อมีคนสร้าง แก้ไข หรือยกเลิกคิว</li>
+            <li><strong>บันทึกการใช้รถ:</strong> เมื่อมีคนบันทึกการใช้รถ</li>
+            <li><strong>ซ่อมบำรุง:</strong> เมื่อรถเข้าซ่อมหรือซ่อมเสร็จ</li>
+            <li><strong>ภาษี/ประกันใกล้หมดอายุ:</strong> เมื่อภาษีหรือประกันใกล้หมดอายุ (3 เดือนก่อน)</li>
+            <li><strong>น้ำมันผิดปกติ:</strong> เมื่อรถใช้น้ำมันผิดปกติ</li>
+          </ul>
+          <div class="example">
+            <strong>ตัวอย่าง:</strong>
+            <br>• เมื่อมีคนสร้างคิวใหม่ → คุณจะได้รับข้อความแจ้งเตือนว่า "มีคิวใหม่: ไปเชียงใหม่ วันที่ 20 ม.ค."
+            <br>• เมื่อภาษีใกล้หมดอายุ → คุณจะได้รับข้อความแจ้งเตือนว่า "ภาษีรถ กข 1234 ใกล้หมดอายุใน 3 เดือน"
+          </div>
+          <div class="tip">
+            <strong>💡 เคล็ดลับ:</strong> การแจ้งเตือนช่วยให้คุณรู้ทันทีเมื่อมีอะไรเกิดขึ้น ไม่ต้องเข้าไปเช็คในระบบเอง
+          </div>
+        </div>
+
+        <div class="term-item">
+          <h3>Flag ความผิดปกติ</h3>
+          <p><strong>ความหมาย:</strong> สัญลักษณ์เตือนเมื่อพบความผิดปกติ</p>
+          <p><strong>ตัวอย่าง:</strong> ลืมบันทึกซ้ำบ่อย, น้ำมันผิดปกติ, ซ่อมบ่อย</p>
+        </div>
+      </div>
+
+      <div class="glossary-section">
+        <h2>💾 ระบบสำรองข้อมูล</h2>
+
+        <div class="term-item">
+          <h3>Backup (สำรองข้อมูล)</h3>
+          <p><strong>ความหมาย:</strong> การสำรองข้อมูลอัตโนมัติทุกวันเวลา 02:00</p>
+          <p><strong>เก็บ:</strong> Google Sheets + ไฟล์ที่อัปโหลด</p>
+          <p><strong>Retention:</strong> เก็บย้อนหลัง 30 วัน</p>
+        </div>
+
+        <div class="term-item">
+          <h3>Recovery (กู้คืนข้อมูล)</h3>
+          <p><strong>ความหมาย:</strong> การกู้คืนข้อมูลจาก backup</p>
+          <p><strong>ทำได้:</strong> ทั้งระบบหรือเฉพาะโมดูล</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+      <p style="margin-top: 10px;">
+        <a href="user-guide.html" style="color: #4285f4; text-decoration: none; margin: 0 10px;">📖 วิธีการใช้งาน</a>
+        <a href="about.html" style="color: #4285f4; text-decoration: none; margin: 0 10px;">ℹ️ เกี่ยวกับโปรแกรม</a>
+      </p>
+    </div>
+  </div>
+
+
+</body>
+
+</html>

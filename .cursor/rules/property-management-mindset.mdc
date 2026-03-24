@@ -1,0 +1,25 @@
+---
+description: เมื่อพัฒนาฟีเจอร์ระบบจัดการทรัพย์สิน/ที่พัก (property, building, unit, occupancy, resident, utility, billing, payment, maintenance, waitlist) ให้ใช้แนวคิดจาก PROPERTY_MANAGEMENT_MINDSET.md
+globs: 
+alwaysApply: false
+---
+
+# Property Management Mindset
+
+อ้างอิง **PROPERTY_MANAGEMENT_MINDSET.md** เป็น spec เมื่อพัฒนาระบบหรือฟีเจอร์ที่เกี่ยวกับ:
+
+- ทรัพย์สิน / อาคาร / หน่วย (property, building, unit)
+- การเข้าพัก (occupancy) — vacant / reserved / occupied / unavailable / released
+- ผู้พัก (resident) และการผูกกับหน่วย
+- ค่าสาธารณูปโภค (meter, reading, bill, allocation, loss)
+- การชำระเงิน การออกใบเสร็จ การกระทบยอด (payment, receipt, reconciliation)
+- กองทุนดำเนินการ และรายจ่าย (operating fund, expense)
+- คำขอ / งานซ่อม / คิวหรือรอรายชื่อ (request, maintenance ticket, queue/waitlist)
+
+## หลักที่ต้องปฏิบัติ
+
+1. **Unit-first** — หน่วยเป็น entity หลัก; คนมาไป หน่วยอยู่
+2. **แยกการเงิน** — ค่าสาธารณูปโภคเป็น pass-through; เงินกลางเป็นกองทุนดำเนินการ; ไม่ผสมเงินผู้พักกับกำไรดำเนินการ
+3. **Workflow แยกขั้น** — Reservation ≠ Occupancy, Billing ≠ Payment, Payment ≠ Verification, Request ≠ Approval ≠ Execution; ทุกขั้นมี status, timestamp, responsible role
+4. **ความไม่ตรงกัน** — ไม่ซ่อน ไม่แก้เงียบ; แสดง discrepancy, ต้องมีคำอธิบายหรือการตัดสินใจ, log เสมอ
+5. **Audit และ handover** — ออกแบบให้ตรวจสอบได้ รับมือข้อพิพาทได้ และคนอื่นรับงานต่อได้
