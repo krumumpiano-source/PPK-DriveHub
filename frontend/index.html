@@ -5,17 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PPK DriveHub</title>
+    <script src="js/api.js"></script>
     <script>
         // Check authentication and redirect
-        var userStr = API.getToken();
-        if (userStr) {
-            try {
-                var user = JSON.parse(userStr);
-                window.location.href = 'dashboard.html';
-            } catch (e) {
-                API.clearAuth();
-                window.location.href = 'login.html';
-            }
+        var token = API.getToken();
+        if (token) {
+            window.location.href = 'dashboard.html';
         } else {
             window.location.href = 'login.html';
         }
