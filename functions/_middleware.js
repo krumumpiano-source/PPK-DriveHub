@@ -10,7 +10,7 @@ export const PUBLIC_ACTIONS = new Set([
   'createDailyCheck', 'createUsageRecord', 'createFuelLog',
   'getFuelTypes', 'getVehicleById', 'scanQRForUsageRecord',
   'getPublicLandingStats', 'getDefaultSettings', 'isExecutiveMode',
-  'setup'
+  'checkSetupStatus'
 ]);
 
 export async function withAuth(request, env, action) {
@@ -24,7 +24,8 @@ export async function withAuth(request, env, action) {
     return { user: null, error: fail('ต้องล็อกอินก่อนใช้งาน', 'AUTHENTICATION_REQUIRED', 401) };
   }
 
-  const secret = env.JWT_SECRET || 'ppk-drivehub-secret-2569-change-in-production';
+  const secret = env.JWT_SECRET;
+  if (!secret) return { user: null, error: fail('Server configuration error', 'SERVER_ERROR', 500) };
   const payload = await verifyJWT(token, secret);
   if (!payload) {
     return { user: null, error: fail('Session หมดอายุหรือไม่ถูกต้อง กรุณาล็อกอินใหม่', 'TOKEN_INVALID', 401) };

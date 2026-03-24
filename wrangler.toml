@@ -1,9 +1,9 @@
 name = "ppk-drivehub"
 compatibility_date = "2024-11-01"
-pages_build_output_dir = "./frontend"
+pages_build_output_dir = "./dist"
 
 [vars]
-JWT_SECRET = "ppk-drivehub-secret-2569-change-in-production"
+JWT_SECRET = "PPK2569-DH-8x2k9m4p7-n1q5v3t6w0a1r4-j8"
 SYSTEM_NAME = "PPK DriveHub"
 
 [[d1_databases]]

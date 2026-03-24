@@ -6,26 +6,11 @@ const JWT_EXPIRY = 60 * 60 * 24; // 24 hours
 export async function handleAuth(ctx) {
   const { action, body, env, DB } = ctx;
 
-  // ── Setup (initial admin creation) ─────────────────────────────────────
-  if (action === 'setup') {
-    const done = await DB.prepare(`SELECT value FROM MASTER WHERE key='setup_completed'`).first();
-    if (done && done.value === '1') return fail('ระบบถูกตั้งค่าแล้ว', 'ALREADY_SETUP');
-    const hash = await hashPassword('Admin@2569');
-    const uid = uuid();
-    await DB.prepare(
-      `INSERT OR REPLACE INTO USERS (user_id,password_hash,title,full_name,department,role,active,first_login,created_at,created_by,permissions)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?)`
-    ).bind(uid, hash, 'นาย', 'ผู้ดูแลระบบ', 'ฝ่ายบริหาร', 'admin', 1, 0, nowThai(), 'system',
-      JSON.stringify({ queue:'delete',fuel:'delete',repair:'delete',reports:'delete',vehicles:'delete',drivers:'delete',usage_log:'delete' })
-    ).run();
-    // Also store username->user_id mapping
-    await DB.prepare(`INSERT OR REPLACE INTO MASTER (key,value,description,updated_at,updated_by,version) VALUES (?,?,?,?,?,?)`)
-      .bind('admin_username', 'admin', 'Admin login username', nowThai(), 'system', 1).run();
-    await DB.prepare(`INSERT OR REPLACE INTO MASTER (key,value,description,updated_at,updated_by,version) VALUES (?,?,?,?,?,?)`)
-      .bind('admin_user_id', uid, 'Admin user ID', nowThai(), 'system', 1).run();
-    await DB.prepare(`INSERT OR REPLACE INTO MASTER (key,value,updated_at,updated_by,version) VALUES (?,?,?,?,?)`)
-      .bind('setup_completed', '1', nowThai(), 'system', 1).run();
-    return ok({ message: 'ตั้งค่าระบบสำเร็จ', username: 'admin', password: 'Admin@2569', user_id: uid });
+  // ── Check Setup Status ────────────────────────────────────────────────────
+  if (action === 'checkSetupStatus') {
+    const row = await DB.prepare(`SELECT COUNT(*) AS cnt FROM USERS WHERE active=1`).first();
+    const isFirstAdmin = !row || row.cnt === 0;
+    return ok({ isFirstAdmin }, isFirstAdmin ? 'ระบบยังไม่มีผู้ใช้งาน' : 'มีผู้ใช้งานในระบบแล้ว');
   }
 
   // ── Login ────────────────────────────────────────────────────────────────
@@ -74,7 +59,8 @@ export async function handleAuth(ctx) {
     await DB.prepare(`DELETE FROM MASTER WHERE key=?`).bind(rlKey).run();
 
     const permissions = user.permissions ? JSON.parse(user.permissions) : {};
-    const secret = env.JWT_SECRET || 'ppk-drivehub-secret-2569-change-in-production';
+    const secret = env.JWT_SECRET;
+    if (!secret) return fail('Server configuration error', 'SERVER_ERROR', 500);
     const token = await signJWT({
       user_id: user.user_id, role: user.role,
       full_name: user.full_name, permissions,
@@ -101,6 +87,38 @@ export async function handleAuth(ctx) {
   if (action === 'register' || action === 'registerUser') {
     const d = body.data || body;
     if (!d.full_name || !d.email) return fail('กรุณากรอกชื่อและอีเมล');
+
+    // ── First user → auto-create admin ──────────────────────────────────
+    const countRow = await DB.prepare(`SELECT COUNT(*) AS cnt FROM USERS WHERE active=1`).first();
+    if (!countRow || countRow.cnt === 0) {
+      if (!d.password) return fail('กรุณาตั้งรหัสผ่านสำหรับบัญชีผู้ดูแลระบบ');
+      const pwErr = validatePasswordPolicy(d.password);
+      if (pwErr) return fail(pwErr, 'INVALID_INPUT');
+
+      const uid = uuid();
+      const hash = await hashPassword(d.password);
+      const perms = { queue:'delete',fuel:'delete',repair:'delete',reports:'delete',vehicles:'delete',drivers:'delete',usage_log:'delete' };
+      await DB.prepare(
+        `INSERT INTO USERS (user_id,password_hash,title,full_name,department,phone,email,role,active,first_login,created_at,created_by,permissions)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
+      ).bind(uid, hash, sanitize(d.title||''), sanitize(d.full_name), sanitize(d.department||''),
+        sanitize(d.phone||''), sanitize(d.email), 'admin', 1, 0, nowThai(), 'system',
+        JSON.stringify(perms)).run();
+      await DB.prepare(`INSERT OR REPLACE INTO MASTER (key,value,description,updated_at,updated_by,version) VALUES (?,?,?,?,?,?)`)
+        .bind('admin_username', sanitize(d.email), 'Admin login email', nowThai(), 'system', 1).run();
+      await DB.prepare(`INSERT OR REPLACE INTO MASTER (key,value,description,updated_at,updated_by,version) VALUES (?,?,?,?,?,?)`)
+        .bind('admin_user_id', uid, 'Admin user ID', nowThai(), 'system', 1).run();
+      await DB.prepare(`INSERT OR REPLACE INTO MASTER (key,value,updated_at,updated_by,version) VALUES (?,?,?,?,?)`)
+        .bind('setup_completed', '1', nowThai(), 'system', 1).run();
+
+      if (!env.JWT_SECRET) return fail('Server configuration error', 'SERVER_ERROR', 500);
+      const token = await signJWT({ user_id: uid, role: 'admin', full_name: d.full_name, permissions: perms, exp: Math.floor(Date.now() / 1000) + JWT_EXPIRY }, env.JWT_SECRET);
+      await writeAudit(DB, uid, 'register_first_admin', 'USERS', uid, 'สร้างบัญชี Admin คนแรก');
+      return ok({ autoLogin: true, token, user_id: uid, full_name: d.full_name, permissions: perms },
+        'สร้างบัญชีผู้ดูแลระบบสำเร็จ');
+    }
+
+    // ── Normal registration → pending request ───────────────────────────
     const existing = await DB.prepare(`SELECT request_id FROM USER_REQUESTS WHERE email=? AND status='pending'`)
       .bind(sanitize(d.email)).first();
     if (existing) return fail('อีเมลนี้มีคำขอรออนุมัติแล้ว', 'DUPLICATE');

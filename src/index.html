@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>PPK DriveHub</title>
+  <script src="/config.js"></script>
+  <script>
+    var s = sessionStorage.getItem('ppk_drivehub_user')
+    location.replace(s ? '/dashboard' : '/login')
+  </script>
+</head>
+<body></body>
+</html>

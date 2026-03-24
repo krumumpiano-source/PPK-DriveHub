@@ -17,9 +17,9 @@ import { handleReports } from './_reports.js';
 
 // ── Action → Handler routing map ─────────────────────────────────────────────
 const AUTH_ACTIONS = new Set([
-  'setup','login','register','registerUser','changePassword','forgotPassword',
+  'login','register','registerUser','changePassword','forgotPassword',
   'resetPasswordConfirm','getCurrentUserInfo','getMyProfile','acceptPDPAPolicy',
-  'checkPDPAAccepted','getPDPALog',
+  'checkPDPAAccepted','getPDPALog','checkSetupStatus',
 ]);
 
 const USER_ACTIONS = new Set([

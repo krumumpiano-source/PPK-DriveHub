@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>สมัครใช้งาน - PPK DriveHub</title>
+  <script src="/config.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Kanit',sans-serif;background:linear-gradient(135deg,#312E81 0%,#4F46E5 50%,#06B6D4 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+    .reg-box{background:rgba(255,255,255,.97);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:2rem 1.8rem;max-width:440px;width:100%;display:flex;flex-direction:column;gap:.8rem;animation:fadein .4s ease-out}
+    @keyframes fadein{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    .brand{display:flex;flex-direction:column;align-items:center;gap:.3rem;margin-bottom:.3rem}
+    .brand-icon{font-size:2.2rem}
+    .brand-title{font-size:1.15rem;font-weight:700;color:#4F46E5;line-height:1.2}
+    .brand-sub{font-size:.85rem;color:#555;text-align:center;line-height:1.4}
+    .page-title{font-size:1.15rem;font-weight:700;color:#4F46E5;text-align:center;margin:.3rem 0}
+    .form-group{display:flex;flex-direction:column;gap:.35rem}
+    .form-row{display:flex;gap:.6rem}
+    .form-row .form-group{flex:1}
+    .form-row .form-group.sm{flex:.45}
+    label{font-size:.88rem;color:#374151;font-weight:500}
+    .required{color:#EF4444}
+    input,select,textarea{padding:.65rem .9rem;border:1.5px solid #E5E7EB;border-radius:10px;font:inherit;font-size:.92rem;transition:border-color .15s;width:100%;box-sizing:border-box;background:#fff;color:#1E293B}
+    input:focus,select:focus,textarea:focus{outline:none;border-color:#4F46E5;box-shadow:0 0 0 3px rgba(79,70,229,.1)}
+    select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right .75rem center;padding-right:2rem}
+    textarea{resize:vertical;min-height:80px}
+    .pw-wrap{position:relative}
+    .pw-wrap input{padding-right:2.8rem}
+    .pw-toggle{position:absolute;right:.75rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:1.1rem;color:#9CA3AF;padding:0;line-height:1}
+    .pw-toggle:hover{color:#4F46E5}
+    #pw-strength{margin-top:.35rem;font-size:.8rem}
+    #pw-match{margin-top:.25rem;font-size:.8rem}
+    .pdpa-box{background:#F8FAFC;border:1px solid #E5E7EB;border-radius:10px;padding:.9rem}
+    .pdpa-box .pdpa-title{font-size:.93rem;font-weight:600;color:#374151;margin-bottom:.5rem}
+    .pdpa-box .pdpa-text{font-size:.82rem;color:#6B7280;line-height:1.6;margin-bottom:.6rem}
+    .pdpa-check{display:flex;align-items:center;gap:.5rem;font-size:.9rem;cursor:pointer}
+    .pdpa-check input[type=checkbox]{width:1.1em;height:1.1em;accent-color:#4F46E5;cursor:pointer;flex-shrink:0}
+    .banner{border-radius:10px;padding:.85rem;font-size:.88rem;margin-bottom:.2rem}
+    .banner-first{background:#EEF2FF;border:1.5px solid #818CF8;color:#3730A3}
+    .banner-first strong{display:block;margin-bottom:.3rem;font-size:.93rem}
+    .banner-normal{background:#FFFBEB;border:1px solid #F59E0B;color:#92400E}
+    .banner-normal strong{display:block;margin-bottom:.3rem}
+    .check-banner{background:#EFF6FF;border:1px solid #3B82F6;color:#1E40AF;border-radius:10px;padding:.7rem .9rem;font-size:.85rem}
+    .error-msg{color:#DC2626;font-size:.88rem;text-align:center;display:none;padding:.5rem;background:#FEF2F2;border-radius:8px}
+    .btn-submit{background:linear-gradient(135deg,#4F46E5,#06B6D4);color:#fff;border:none;border-radius:10px;padding:.8rem;font:inherit;font-size:1.05rem;font-weight:700;cursor:pointer;transition:all .2s;width:100%}
+    .btn-submit:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(79,70,229,.35)}
+    .btn-submit:disabled{opacity:.6;transform:none;cursor:not-allowed}
+    .links{display:flex;flex-direction:column;gap:.4rem;margin-top:.3rem}
+    .links a{color:#4F46E5;text-decoration:none;font-size:.92rem;text-align:center}
+    .links a:hover{color:#06B6D4}
+    .footer-credit{text-align:center;color:#94A3B8;font-size:.8rem;margin-top:.5rem;line-height:1.5}
+    @media(max-width:480px){.reg-box{padding:1.2rem .8rem}}
+  </style>
+</head>
+<body>
+  <div class="reg-box">
+    <div class="brand">
+      <div class="brand-icon">🚌</div>
+      <div class="brand-title">PPK DriveHub</div>
+      <div class="brand-sub">ระบบจัดการยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</div>
+    </div>
+    <div class="page-title" id="pageTitle">สมัครใช้บริการ</div>
+
+    <div id="checkBanner" class="check-banner">⏳ กำลังตรวจสอบสถานะระบบ...</div>
+    <div id="firstAdminBanner" class="banner banner-first" style="display:none">
+      <strong>🎉 ยินดีต้อนรับ! คุณกำลังสร้างบัญชีผู้ดูแลระบบคนแรก</strong>
+      บัญชีนี้จะได้รับสิทธิ์ Admin โดยอัตโนมัติและเข้าใช้งานได้ทันที
+    </div>
+    <div id="normalBanner" class="banner banner-normal" style="display:none">
+      <strong>⚠️ หมายเหตุ</strong>
+      การสมัครนี้เป็นการส่งคำขอเท่านั้น คุณจะเข้าใช้งานได้หลังจากผู้ดูแลระบบอนุมัติ
+    </div>
+
+    <form id="regForm" autocomplete="on">
+      <div style="display:flex;flex-direction:column;gap:.8rem">
+        <!-- อีเมล + เบอร์โทร -->
+        <div class="form-row">
+          <div class="form-group">
+            <label for="fEmail">อีเมล <span class="required">*</span></label>
+            <input type="email" id="fEmail" name="email" required autocomplete="email" placeholder="example@email.com">
+          </div>
+          <div class="form-group">
+            <label for="fPhone">เบอร์โทร <span class="required">*</span></label>
+            <input type="tel" id="fPhone" name="phone" required placeholder="0xxxxxxxxx" pattern="[0-9]{9,10}" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+          </div>
+        </div>
+
+        <!-- คำนำหน้า + ชื่อ + นามสกุล -->
+        <div class="form-row">
+          <div class="form-group sm">
+            <label for="fPrefix">คำนำหน้า <span class="required">*</span></label>
+            <select id="fPrefix" name="prefix" required onchange="onPrefixChange()">
+              <option value="">เลือก</option>
+              <option value="นาย">นาย</option>
+              <option value="นาง">นาง</option>
+              <option value="นางสาว">นางสาว</option>
+              <option value="อื่นๆ">อื่นๆ</option>
+            </select>
+            <input type="text" id="fPrefixCustom" placeholder="ระบุคำนำหน้า เช่น ดร." style="display:none;margin-top:.4rem">
+          </div>
+          <div class="form-group">
+            <label for="fFirstname">ชื่อ <span class="required">*</span></label>
+            <input type="text" id="fFirstname" name="firstname" required autocomplete="given-name" placeholder="กรอกชื่อ">
+          </div>
+          <div class="form-group">
+            <label for="fLastname">นามสกุล <span class="required">*</span></label>
+            <input type="text" id="fLastname" name="lastname" required autocomplete="family-name" placeholder="กรอกนามสกุล">
+          </div>
+        </div>
+
+        <!-- ตำแหน่ง -->
+        <div class="form-group">
+          <label for="fPosition">ตำแหน่ง <span class="required">*</span></label>
+          <select id="fPosition" name="position" required>
+            <option value="">เลือกตำแหน่ง</option>
+            <optgroup label="── ครู ──">
+              <option value="ครูผู้ช่วย">ครูผู้ช่วย</option>
+              <option value="ครู">ครู</option>
+              <option value="ครูชำนาญการ (คศ.2)">ครูชำนาญการ (คศ.2)</option>
+              <option value="ครูชำนาญการพิเศษ (คศ.3)">ครูชำนาญการพิเศษ (คศ.3)</option>
+              <option value="ครูเชี่ยวชาญ (คศ.4)">ครูเชี่ยวชาญ (คศ.4)</option>
+              <option value="ครูเชี่ยวชาญพิเศษ (คศ.5)">ครูเชี่ยวชาญพิเศษ (คศ.5)</option>
+            </optgroup>
+            <optgroup label="── ผู้บริหาร ──">
+              <option value="รองผู้อำนวยการ">รองผู้อำนวยการ</option>
+              <option value="ผู้อำนวยการโรงเรียน">ผู้อำนวยการโรงเรียน</option>
+            </optgroup>
+            <optgroup label="── บุคลากรสนับสนุน ──">
+              <option value="เจ้าหน้าที่">เจ้าหน้าที่</option>
+              <option value="ลูกจ้างประจำ">ลูกจ้างประจำ</option>
+              <option value="ลูกจ้างชั่วคราว">ลูกจ้างชั่วคราว</option>
+            </optgroup>
+            <optgroup label="── อื่นๆ ──">
+              <option value="บุคคลภายนอก">บุคคลภายนอก</option>
+              <option value="อื่นๆ">อื่นๆ</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <!-- หน่วยงาน -->
+        <div class="form-group">
+          <label for="fDept">หน่วยงาน / กลุ่มงาน <span class="required">*</span></label>
+          <select id="fDept" name="department" required>
+            <option value="">เลือกหน่วยงาน</option>
+            <optgroup label="── ฝ่ายบริหาร ──">
+              <option value="ฝ่ายบริหารงานทั่วไป">ฝ่ายบริหารงานทั่วไป</option>
+              <option value="งานยานพาหนะ">งานยานพาหนะ</option>
+              <option value="งานอาคารสถานที่">งานอาคารสถานที่</option>
+              <option value="งานธุรการ">งานธุรการ</option>
+              <option value="งานการเงินและบัญชี">งานการเงินและบัญชี</option>
+              <option value="งานพัสดุ">งานพัสดุ</option>
+            </optgroup>
+            <optgroup label="── กลุ่มบริหารวิชาการ ──">
+              <option value="กลุ่มบริหารวิชาการ">กลุ่มบริหารวิชาการ</option>
+            </optgroup>
+            <optgroup label="── กลุ่มบริหารงานบุคคล ──">
+              <option value="กลุ่มบริหารงานบุคคล">กลุ่มบริหารงานบุคคล</option>
+            </optgroup>
+            <optgroup label="── กลุ่มสาระ ──">
+              <option value="กลุ่มสาระภาษาไทย">กลุ่มสาระภาษาไทย</option>
+              <option value="กลุ่มสาระคณิตศาสตร์">กลุ่มสาระคณิตศาสตร์</option>
+              <option value="กลุ่มสาระวิทยาศาสตร์และเทคโนโลยี">กลุ่มสาระวิทยาศาสตร์และเทคโนโลยี</option>
+              <option value="กลุ่มสาระสังคมศึกษาฯ">กลุ่มสาระสังคมศึกษาฯ</option>
+              <option value="กลุ่มสาระสุขศึกษาและพลศึกษา">กลุ่มสาระสุขศึกษาและพลศึกษา</option>
+              <option value="กลุ่มสาระศิลปะ">กลุ่มสาระศิลปะ</option>
+              <option value="กลุ่มสาระการงานอาชีพ">กลุ่มสาระการงานอาชีพ</option>
+              <option value="กลุ่มสาระภาษาต่างประเทศ">กลุ่มสาระภาษาต่างประเทศ</option>
+              <option value="กิจกรรมพัฒนาผู้เรียน">กิจกรรมพัฒนาผู้เรียน</option>
+            </optgroup>
+            <optgroup label="── อื่นๆ ──">
+              <option value="อื่นๆ">อื่นๆ</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <!-- รหัสผ่าน -->
+        <div class="form-group">
+          <label for="fPw">รหัสผ่าน <span class="required">*</span></label>
+          <div class="pw-wrap">
+            <input type="password" id="fPw" name="password" required minlength="8" autocomplete="new-password" placeholder="รหัสผ่านอย่างน้อย 8 ตัว" oninput="checkStrength(this.value)">
+            <button type="button" class="pw-toggle" onclick="togglePw('fPw',this)" title="แสดง/ซ่อนรหัสผ่าน">👁️</button>
+          </div>
+          <div id="pw-strength"></div>
+        </div>
+        <div class="form-group">
+          <label for="fPwConfirm">ยืนยันรหัสผ่าน <span class="required">*</span></label>
+          <div class="pw-wrap">
+            <input type="password" id="fPwConfirm" name="confirm_password" required minlength="8" autocomplete="new-password" placeholder="ยืนยันรหัสผ่านอีกครั้ง" oninput="checkMatch()">
+            <button type="button" class="pw-toggle" onclick="togglePw('fPwConfirm',this)" title="แสดง/ซ่อนรหัสผ่าน">👁️</button>
+          </div>
+          <div id="pw-match"></div>
+        </div>
+
+        <!-- เหตุผล (แสดงเฉพาะกรณีไม่ใช่ Admin คนแรก) -->
+        <div class="form-group" id="reasonGroup">
+          <label for="fReason">เหตุผลการขอใช้งาน <span class="required">*</span></label>
+          <textarea id="fReason" name="reason" placeholder="ระบุเหตุผลที่ต้องการใช้งานระบบ เช่น หน้าที่รับผิดชอบ"></textarea>
+        </div>
+
+        <!-- PDPA -->
+        <div class="pdpa-box">
+          <div class="pdpa-title">📋 ประกาศความเป็นส่วนตัว (PDPA)</div>
+          <div class="pdpa-text">
+            ข้อมูลส่วนบุคคลที่ท่านกรอกในระบบนี้ จะถูกใช้เพื่อวัตถุประสงค์ในการลงทะเบียนและบริหารจัดการงานยานพาหนะเท่านั้น
+            ข้อมูลจะไม่ถูกนำไปใช้หรือเปิดเผยต่อบุคคลภายนอกโดยไม่ได้รับอนุญาต
+            ท่านมีสิทธิ์ขอเข้าถึง แก้ไข หรือถอนความยินยอมได้ตลอดเวลา
+          </div>
+          <label class="pdpa-check">
+            <input type="checkbox" id="fPdpa" required>
+            ข้าพเจ้ายินยอมให้เก็บและใช้ข้อมูลส่วนบุคคลตามประกาศนี้
+          </label>
+        </div>
+
+        <div class="error-msg" id="errorMsg"></div>
+        <button type="submit" class="btn-submit" id="submitBtn">📤 ส่งคำขอสมัคร</button>
+      </div>
+    </form>
+
+    <div class="links">
+      <a href="/login">← กลับสู่หน้าเข้าสู่ระบบ</a>
+    </div>
+    <div class="footer-credit">
+      ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว<br>
+      งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569
+    </div>
+  </div>
+
+  <script>
+    function togglePw(id, btn) {
+      const inp = document.getElementById(id)
+      if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈' }
+      else { inp.type = 'password'; btn.textContent = '👁️' }
+    }
+    function onPrefixChange() {
+      const sel = document.getElementById('fPrefix')
+      const cus = document.getElementById('fPrefixCustom')
+      if (sel.value === 'อื่นๆ') { cus.style.display = 'block'; cus.required = true; cus.focus() }
+      else { cus.style.display = 'none'; cus.required = false; cus.value = '' }
+    }
+    function checkStrength(pw) {
+      const el = document.getElementById('pw-strength')
+      if (!pw) { el.textContent = ''; return }
+      let s = 0
+      if (pw.length >= 8) s++
+      if (/[A-Z]/.test(pw)) s++
+      if (/[0-9]/.test(pw)) s++
+      if (/[^A-Za-z0-9]/.test(pw)) s++
+      const labels = ['','❌ อ่อนมาก','⚠️ อ่อน','✅ ปานกลาง','💪 แข็งแรง']
+      const clrs   = ['','#DC2626','#D97706','#2563EB','#16A34A']
+      el.style.color = clrs[s]; el.textContent = labels[s] || ''
+    }
+    function checkMatch() {
+      const pw = document.getElementById('fPw').value
+      const cf = document.getElementById('fPwConfirm').value
+      const el = document.getElementById('pw-match')
+      if (!cf) { el.textContent = ''; return }
+      el.textContent = pw === cf ? '✅ รหัสผ่านตรงกัน' : '❌ รหัสผ่านไม่ตรงกัน'
+      el.style.color  = pw === cf ? '#16A34A' : '#DC2626'
+    }
+    function showError(msg) {
+      const el = document.getElementById('errorMsg')
+      el.textContent = msg; el.style.display = 'block'
+      el.scrollIntoView({behavior:'smooth', block:'center'})
+    }
+    function hideError() { document.getElementById('errorMsg').style.display = 'none' }
+  </script>
+  <script type="module" src="/js/pages/register.js"></script>
+</body>
+</html>

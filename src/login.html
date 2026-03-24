@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เข้าสู่ระบบ - PPK DriveHub</title>
+  <script src="/config.js"></script>
+  <link rel="stylesheet" href="/css/base.css">
+  <style>
+    body { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+    .login-box { background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,.28); max-width: 440px; width: 100%; overflow: hidden; }
+    .login-head { background: linear-gradient(135deg, #4285f4, #34a853); color: white; padding: 40px 32px; text-align: center; }
+    .login-head .logo { font-size: 3em; margin-bottom: 10px; }
+    .login-head h1 { font-size: 1.9em; margin-bottom: 6px; }
+    .login-head p { font-size: .93em; opacity: .9; }
+    .login-body { padding: 36px 32px; }
+    .form-group { margin-bottom: 22px; }
+    .form-group label { display: block; margin-bottom: 7px; font-weight: 600; color: #333; }
+    .form-group input { width: 100%; padding: 12px 15px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1em; font-family: inherit; transition: border-color .2s; }
+    .form-group input:focus { outline: none; border-color: #4285f4; box-shadow: 0 0 0 3px rgba(66,133,244,.1); }
+    .forgot-link { text-align: right; margin-bottom: 20px; }
+    .forgot-link a { color: #4285f4; font-size: .88em; text-decoration: none; }
+    .btn-login { width: 100%; padding: 14px; background: linear-gradient(135deg, #4285f4, #34a853); color: white; border: none; border-radius: 8px; font-size: 1.05em; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .2s; }
+    .btn-login:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(66,133,244,.3); }
+    .btn-login:disabled { opacity: .6; transform: none; cursor: not-allowed; }
+    .btn-register { width: 100%; padding: 12px; margin-top: 12px; background: white; color: #4285f4; border: 2px solid #4285f4; border-radius: 8px; font-size: .97em; font-weight: 600; cursor: pointer; font-family: inherit; transition: background .2s; }
+    .btn-register:hover { background: #f5f8ff; }
+    #alert-area { margin-bottom: 16px; }
+    .login-footer { margin-top: 20px; text-align: center; color: rgba(255,255,255,.85); font-size: .82em; max-width: 440px; }
+    .pw-wrap { position: relative; }
+    .pw-wrap input { padding-right: 46px; }
+    .pw-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: #888; font-size: 1.15em; line-height: 1; }
+    .pw-toggle:hover { color: #4285f4; }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <div class="login-head">
+      <div class="logo">🏫</div>
+      <h1>PPK DriveHub</h1>
+      <p>ระบบจัดการยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+    </div>
+    <div class="login-body">
+      <div id="alert-area"></div>
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="username">ชื่อผู้ใช้ / รหัสประจำตัว</label>
+          <input type="text" id="username" autocomplete="username" autofocus required>
+        </div>
+        <div class="form-group">
+          <label for="password">รหัสผ่าน</label>
+          <div class="pw-wrap">
+            <input type="password" id="password" autocomplete="current-password" required>
+            <button type="button" class="pw-toggle" onclick="togglePw('password',this)" title="แสดง/ซ่อนรหัสผ่าน">👁️</button>
+          </div>
+        </div>
+        <div class="forgot-link"><a href="/forgot-password">ลืมรหัสผ่าน?</a></div>
+        <button type="submit" class="btn-login" id="loginBtn">🔐 เข้าสู่ระบบ</button>
+      </form>
+      <button class="btn-register" onclick="location.href='/register'">📝 สมัครเข้าใช้งานครั้งแรก</button>
+    </div>
+  </div>
+  <p class="login-footer">ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+  <script type="module" src="/js/pages/login.js"></script>
+  <script>
+    function togglePw(id, btn) {
+      const inp = document.getElementById(id)
+      if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈' }
+      else { inp.type = 'password'; btn.textContent = '👁️' }
+    }
+  </script>
+</body>
+</html>

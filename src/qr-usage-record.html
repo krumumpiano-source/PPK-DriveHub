@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR บันทึกใช้รถ - PPK DriveHub</title>
+  <script src="/config.js"></script>
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/nav.css">
+  <link rel="stylesheet" href="/css/forms.css">
+  <style>
+    body { padding: 0; }
+    .container { max-width: 1300px; border-radius: 0; box-shadow: none; min-height: 100vh; }
+    @media (min-width: 900px) { body { padding: 20px; } .container { border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,.28); min-height: auto; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="page-header">
+      <h1>&#128247; QR บันทึกใช้รถ</h1>
+      <p>PPK DriveHub - ระบบจัดการยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+    </div>
+    <div id="navigation"></div>
+    <div class="content">
+      <div id="loading" class="spinner-center"><div class="spinner"></div><p>กำลังโหลดข้อมูล...</p></div>
+      <div id="pageContent" style="display:none">
+        <!-- TODO: เนื้อหาหน้านี้จะถูกพัฒนาต่อไป -->
+        <div class="empty-state">
+          <div class="empty-state-icon">&#128247;</div>
+          <p>หน้า QR บันทึกใช้รถ กำลังอยู่ระหว่างการพัฒนา</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>window.REQUIRE_AUTH = false</script>
+  <script type="module" src="/js/pages/qr-usage-record.js"></script>
+</body>
+</html>

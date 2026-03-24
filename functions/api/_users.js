@@ -94,12 +94,15 @@ export async function handleUsers(ctx) {
     const adminErr = requireAdmin(user);
     if (adminErr) return adminErr;
     const uid = sanitize(body.user_id || body.userId);
-    const newPwd = body.newPassword || 'Ppk@2569';
+    if (!body.newPassword) return fail('กรุณาระบุรหัสผ่านใหม่', 'INVALID_INPUT');
+    const pwErr = validatePasswordPolicy(body.newPassword);
+    if (pwErr) return fail(pwErr, 'INVALID_INPUT');
+    const newPwd = body.newPassword;
     const hash = await hashPassword(newPwd);
     await DB.prepare(`UPDATE USERS SET password_hash=?,first_login=1,updated_at=? WHERE user_id=?`)
       .bind(hash, nowThai(), uid).run();
     await writeAudit(DB, user.user_id, 'resetUserPassword', 'USERS', uid, '');
-    return ok({ temporaryPassword: newPwd }, 'รีเซ็ตรหัสผ่านสำเร็จ');
+    return ok(null, 'รีเซ็ตรหัสผ่านสำเร็จ');
   }
 
   // ── Get User Requests (Admin) ─────────────────────────────────────────────

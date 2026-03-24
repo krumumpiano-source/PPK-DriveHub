@@ -1,0 +1,40 @@
+/* PPK DriveHub - Form Styles */
+
+.form-group { margin-bottom: 20px; }
+.form-group label { display: block; margin-bottom: 7px; color: #333; font-weight: 600; font-size: .93em; }
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%; padding: 11px 14px; border: 2px solid #e0e0e0; border-radius: 8px;
+  font-size: .97em; font-family: inherit; transition: border-color .2s, box-shadow .2s;
+  background: white; color: #333;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none; border-color: #4285f4; box-shadow: 0 0 0 3px rgba(66,133,244,.12);
+}
+.form-group textarea { resize: vertical; min-height: 100px; }
+.form-group .hint { font-size: .8em; color: #888; margin-top: 5px; }
+.form-group .error-msg { font-size: .82em; color: #c62828; margin-top: 5px; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+
+.form-section-title {
+  font-size: 1em; font-weight: 700; color: #4285f4;
+  margin: 24px 0 14px; padding-bottom: 8px;
+  border-bottom: 2px solid #eef0ff;
+}
+
+/* Search bar */
+.search-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+.search-bar input { flex: 1; min-width: 200px; padding: 10px 14px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: .95em; font-family: inherit; }
+.search-bar input:focus { outline: none; border-color: #4285f4; }
+
+/* Alert boxes */
+.alert-box { padding: 13px 16px; border-radius: 8px; margin-bottom: 16px; font-size: .92em; }
+.alert-box-error   { background: #ffebee; color: #c62828; border-left: 4px solid #f44336; }
+.alert-box-success { background: #e8f5e9; color: #2e7d32; border-left: 4px solid #4caf50; }
+.alert-box-warning { background: #fff3e0; color: #e65100; border-left: 4px solid #ff9800; }
+.alert-box-info    { background: #e3f2fd; color: #1565c0; border-left: 4px solid #2196f3; }
