@@ -46,14 +46,14 @@ const API = (() => {
     } catch (e) {
       throw new Error('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบอินเตอร์เน็ต');
     }
+    const data = await resp.json().catch(() => ({ success: false, message: `HTTP ${resp.status}` }));
     if (resp.status === 401) {
       clearAuth();
       if (!window.location.pathname.includes('/login')) {
         window.location.href = '/login.html';
       }
-      throw new Error('กรุณาเข้าสู่ระบบใหม่');
+      throw new Error(data.error || data.message || 'กรุณาเข้าสู่ระบบใหม่');
     }
-    const data = await resp.json().catch(() => ({ success: false, message: `HTTP ${resp.status}` }));
     if (!resp.ok) throw new Error(data.message || data.error || `HTTP ${resp.status}`);
     return data;
   }

@@ -13,7 +13,7 @@
 
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
-  parseBody, requirePermission, extractParam, writeAuditLog
+  parseBody, requirePermission, requireAdmin, extractParam, writeAuditLog
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
@@ -50,7 +50,7 @@ export async function onRequest(context) {
 
   // PUT /api/queue/rules
   if (path === '/api/queue/rules' && method === 'PUT') {
-    try { requirePermission(user, 'queue', 'admin'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    try { requireAdmin(user); } catch { return error('ไม่มีสิทธิ์', 403); }
     const body = await parseBody(request);
     if (!Array.isArray(body?.rules)) return error('ต้องส่งอาร์เรย์ rules');
     for (const r of body.rules) {
@@ -164,7 +164,7 @@ export async function onRequest(context) {
 
   // PUT /api/queue/:id/freeze
   if (path.match(/\/api\/queue\/[^/]+\/freeze/) && method === 'PUT') {
-    try { requirePermission(user, 'queue', 'admin'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    try { requireAdmin(user); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[3];
     const body = await parseBody(request);
     await dbRun(env.DB,
@@ -176,7 +176,7 @@ export async function onRequest(context) {
 
   // PUT /api/queue/:id/unfreeze
   if (path.match(/\/api\/queue\/[^/]+\/unfreeze/) && method === 'PUT') {
-    try { requirePermission(user, 'queue', 'admin'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    try { requireAdmin(user); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[3];
     await dbRun(env.DB,
       `UPDATE queue SET status = 'pending', freeze_reason = NULL, frozen_by = NULL, updated_at = ? WHERE id = ?`,

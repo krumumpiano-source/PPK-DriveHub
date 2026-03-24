@@ -7,9 +7,10 @@ binding = "DB"
 database_name = "ppk-drivehub-db"
 database_id = "4b18fad9-15f5-4741-bfa1-877fb34a8298"
 
-[[r2_buckets]]
-binding = "STORAGE"
-bucket_name = "ppk-drivehub-files"
+# R2 file storage (optional - enable when R2 bucket is created)
+# [[r2_buckets]]
+# binding = "STORAGE"
+# bucket_name = "ppk-drivehub-files"
 
 [vars]
 APP_NAME = "PPK DriveHub"

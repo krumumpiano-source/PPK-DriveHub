@@ -60,8 +60,8 @@ export function json(data, status = 200) {
   });
 }
 
-export function success(data) {
-  return json({ success: true, data });
+export function success(data, status = 200) {
+  return json({ success: true, data }, status);
 }
 
 export function error(message, status = 400) {
@@ -173,6 +173,10 @@ class PermissionError extends Error {
  * @returns {{ key: string, url: string }}
  */
 export async function uploadToR2(env, base64Data, fileName, folder, mimeType = 'image/jpeg') {
+  // R2 is optional — if bucket not configured, skip silently
+  if (!env.STORAGE) return '';
+  if (!base64Data) return '';
+
   // Strip data URL prefix if present
   const clean = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
 
@@ -192,7 +196,7 @@ export async function uploadToR2(env, base64Data, fileName, folder, mimeType = '
     httpMetadata: { contentType: mimeType }
   });
 
-  return { key, url: `/api/files/${key}` };
+  return `/api/files/${key}`;
 }
 
 // ============================================================
