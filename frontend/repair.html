@@ -628,7 +628,7 @@
             <div class="form-group">
               <label>รายการซ่อม <span class="required">*</span></label>
               <div class="help-box"
-                style="margin-bottom:10px; padding:12px; background:#fff8e1; border-left:4px solid #ff9800; border-radius:8px; font-size:0.9em; color:#e65100;">
+                style="margin-bottom:10px; padding:12px; background:#fff8e1; border-left:4px solid var(--color-warning); border-radius:var(--radius-md); font-size:0.9em; color:#e65100;">
                 <strong>⚠️ เตือน:</strong> กรุณาพิมพ์รายการซ่อมให้ตรงกับคำที่แอดมินตั้งในเมนูแจ้งเตือน (ตั้งค่าระบบ →
                 รายการที่ต้องแจ้งเตือน) หรือใช้คำที่ระบบรู้จักด้านล่าง
                 เพื่อให้ระบบประมวลผลและแจ้งเตือนเมื่อครบระยะได้ถูกต้อง
@@ -637,7 +637,7 @@
                 placeholder="เช่น เปลี่ยนน้ำมันเครื่อง, เปลี่ยนไส้กรองอากาศ"></textarea>
               <small style="color: var(--color-text-muted); font-size: 0.85em;">คั่นด้วยจุลภาค (,) หรือขึ้นบรรทัดใหม่</small>
               <div class="help-box"
-                style="margin-top:10px; padding:12px; background:#e8f4fd; border-radius:8px; font-size:0.9em; color:#1565c0;">
+                style="margin-top:10px; padding:12px; background:#e8f4fd; border-radius:var(--radius-md); font-size:0.9em; color:#1565c0;">
                 <strong>คำที่ระบบรู้จัก (พิมพ์ให้ตรงหรือมีคำเหล่านี้ในรายการ):</strong><br>
                 น้ำมันเครื่อง · น้ำมันเกียร์ · น้ำมันเบรก · น้ำยาหล่อเย็น · ไส้กรองอากาศ · ไส้กรองแอร์ · ผ้าเบรก ·
                 จานเบรก · ยาง · โช้คอัพ · แบตเตอรี่ · ใบปัดน้ำฝน · หัวเทียน · สายพาน · ลูกหมาก · บูชยาง<br>
@@ -1188,7 +1188,7 @@
         if (file.isExisting && file.url) {
           // Existing document from server
           if (file.url.toLowerCase().endsWith('.pdf') || file.name.toLowerCase().endsWith('.pdf')) {
-            html += '<div style="width:100%;height:150px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;border-radius:8px;flex-direction:column;gap:8px;">';
+            html += '<div style="width:100%;height:150px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-md);flex-direction:column;gap:8px;">';
             html += '<span style="font-size:2em;">📄</span>';
             html += '<span style="font-size:0.85em;word-break:break-word;text-align:center;padding:0 8px;">' + file.name + '</span>';
             html += '<a href="' + file.url + '" target="_blank" style="font-size:0.8em;color:var(--color-primary);text-decoration:none;">เปิดดู</a>';
@@ -1198,7 +1198,7 @@
           }
           html += '<button type="button" class="remove" onclick="removeDocument(' + index + ')" title="ลบ">×</button>';
         } else if (file.name.toLowerCase().endsWith('.pdf')) {
-          html += '<div style="width:100%;height:150px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;border-radius:8px;">📄 ' + file.name + '</div>';
+          html += '<div style="width:100%;height:150px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-md);">📄 ' + file.name + '</div>';
           html += '<button type="button" class="remove" onclick="removeDocument(' + index + ')">×</button>';
         } else {
           html += '<img src="data:' + file.mime + ';base64,' + file.data + '" alt="Preview">';
