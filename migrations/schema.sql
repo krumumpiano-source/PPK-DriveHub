@@ -1,8 +1,5 @@
--- PPK DriveHub - D1 Database Schema
--- Migration from Google Sheets (26 tables)
--- All column names preserved from GAS project
-
-PRAGMA foreign_keys = ON;
+-- PPK DriveHub - D1 Database Schema v2
+-- No PRAGMA/FK constraints for D1 compatibility
 
 -- ============================================================
 -- 1. USERS
@@ -25,7 +22,6 @@ CREATE TABLE IF NOT EXISTS USERS (
   permissions TEXT,
   password_changed_at TEXT
 );
-
 -- ============================================================
 -- 2. USER_REQUESTS
 -- ============================================================
@@ -45,7 +41,6 @@ CREATE TABLE IF NOT EXISTS USER_REQUESTS (
   initial_password TEXT,
   notes TEXT
 );
-
 -- ============================================================
 -- 3. QUEUE
 -- ============================================================
@@ -60,6 +55,7 @@ CREATE TABLE IF NOT EXISTS QUEUE (
   status TEXT NOT NULL DEFAULT 'scheduled',
   created_at TEXT NOT NULL,
   created_by TEXT,
+  updated_at TEXT,
   started_at TEXT,
   ended_at TEXT,
   mileage_start REAL,
@@ -74,11 +70,8 @@ CREATE TABLE IF NOT EXISTS QUEUE (
   requested_by TEXT,
   destination TEXT,
   frozen INTEGER DEFAULT 0,
-  freeze_at TEXT,
-  FOREIGN KEY (car_id) REFERENCES CARS(car_id),
-  FOREIGN KEY (driver_id) REFERENCES DRIVERS(driver_id)
+  freeze_at TEXT
 );
-
 -- ============================================================
 -- 4. CARS
 -- ============================================================
@@ -111,7 +104,6 @@ CREATE TABLE IF NOT EXISTS CARS (
   notes TEXT,
   active INTEGER NOT NULL DEFAULT 1
 );
-
 -- ============================================================
 -- 5. DRIVERS
 -- ============================================================
@@ -145,168 +137,160 @@ CREATE TABLE IF NOT EXISTS DRIVERS (
   updated_at TEXT,
   notes TEXT
 );
-
 -- ============================================================
 -- 6. VEHICLE_MAINTENANCE
 -- ============================================================
 CREATE TABLE IF NOT EXISTS VEHICLE_MAINTENANCE (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  maintenance_id TEXT PRIMARY KEY,
   car_id TEXT NOT NULL,
-  item_key TEXT NOT NULL,
-  last_km REAL,
-  last_date TEXT,
+  maintenance_date TEXT NOT NULL,
+  maintenance_type TEXT NOT NULL,
+  mileage REAL,
+  cost REAL,
+  description TEXT,
   notes TEXT,
-  updated_at TEXT,
-  updated_by TEXT,
-  UNIQUE(car_id, item_key)
+  created_at TEXT NOT NULL,
+  created_by TEXT,
+  next_maintenance_km REAL,
+  next_maintenance_date TEXT
 );
-
 -- ============================================================
 -- 7. MAINTENANCE_SETTINGS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS MAINTENANCE_SETTINGS (
   setting_id TEXT PRIMARY KEY,
-  car_id TEXT NOT NULL,
-  check_type TEXT NOT NULL,
-  check_interval REAL,
-  average_daily_km REAL,
-  enabled INTEGER DEFAULT 1,
+  maintenance_type TEXT NOT NULL,
+  interval_km REAL,
+  interval_days INTEGER,
+  warning_km REAL,
+  warning_days INTEGER,
+  active INTEGER DEFAULT 1,
+  created_at TEXT NOT NULL,
+  description TEXT,
   updated_at TEXT
 );
-
 -- ============================================================
 -- 8. FUEL_LOG
 -- ============================================================
 CREATE TABLE IF NOT EXISTS FUEL_LOG (
   fuel_id TEXT PRIMARY KEY,
-  date TEXT NOT NULL,
-  time TEXT,
   car_id TEXT,
   driver_id TEXT,
-  mileage_before REAL,
-  mileage_after REAL,
+  queue_id TEXT,
+  fuel_date TEXT NOT NULL,
+  fuel_type TEXT,
   liters REAL,
   price_per_liter REAL,
-  amount REAL,
-  fuel_type TEXT,
-  gas_station_name TEXT,
-  gas_station_address TEXT,
-  gas_station_tax_id TEXT,
-  receipt_number TEXT,
-  receipt_image TEXT,
-  receipt_pdf TEXT,
+  total_cost REAL,
+  current_mileage REAL,
+  previous_mileage REAL,
   fuel_consumption_rate REAL,
+  station_name TEXT,
+  notes TEXT,
   created_at TEXT NOT NULL,
   created_by TEXT,
-  updated_at TEXT,
-  notes TEXT
+  receipt_image TEXT,
+  fuel_full_tank INTEGER DEFAULT 0,
+  odometer_image TEXT
 );
-
 -- ============================================================
 -- 9. REPAIR_LOG
 -- ============================================================
 CREATE TABLE IF NOT EXISTS REPAIR_LOG (
   repair_id TEXT PRIMARY KEY,
   car_id TEXT,
-  date_reported TEXT,
-  date_started TEXT,
-  date_completed TEXT,
-  mileage_at_repair REAL,
-  taken_by TEXT,
+  driver_id TEXT,
+  queue_id TEXT,
+  repair_date TEXT NOT NULL,
+  repair_type TEXT,
+  description TEXT,
+  mechanic TEXT,
   garage_name TEXT,
-  repair_items TEXT,
-  issue_description TEXT,
-  repair_description TEXT,
-  cost REAL,
+  parts_cost REAL,
+  labor_cost REAL,
+  total_cost REAL,
+  mileage_at_repair REAL,
   status TEXT NOT NULL DEFAULT 'pending',
-  documents TEXT,
+  images TEXT,
+  notes TEXT,
   created_at TEXT NOT NULL,
   created_by TEXT,
-  completed_by TEXT,
-  notes TEXT
+  completed_at TEXT,
+  next_repair_km REAL,
+  next_repair_date TEXT
 );
-
 -- ============================================================
 -- 10. CHECK_LOG
 -- ============================================================
 CREATE TABLE IF NOT EXISTS CHECK_LOG (
   check_id TEXT PRIMARY KEY,
   car_id TEXT,
-  inspector_name TEXT,
-  date TEXT NOT NULL,
-  time TEXT,
+  driver_id TEXT,
+  queue_id TEXT,
+  check_date TEXT NOT NULL,
   check_type TEXT DEFAULT 'daily',
-  overall_status TEXT DEFAULT 'good',
-  checks_data TEXT,
+  check_score REAL,
+  check_items TEXT,
+  issues_found TEXT,
   notes TEXT,
+  images TEXT,
+  signed_by TEXT,
   created_at TEXT NOT NULL,
-  created_by TEXT
+  created_by TEXT,
+  action_required INTEGER DEFAULT 0
 );
-
 -- ============================================================
 -- 11. INSPECTION_ALERTS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS INSPECTION_ALERTS (
   alert_id TEXT PRIMARY KEY,
-  check_id TEXT,
   car_id TEXT,
-  risk_level TEXT,
-  items TEXT,
-  recommendations TEXT,
-  inspector_name TEXT,
-  vehicle_info TEXT,
-  actions_taken TEXT,
-  notification_sent INTEGER DEFAULT 0,
+  check_id TEXT,
+  alert_date TEXT NOT NULL,
+  alert_type TEXT,
+  severity TEXT,
+  description TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
   created_at TEXT NOT NULL,
   resolved_at TEXT,
   resolved_by TEXT,
-  why_this_alert TEXT,
-  data_used TEXT,
-  recommendation TEXT
+  notes TEXT,
+  updated_at TEXT
 );
-
 -- ============================================================
 -- 12. USAGE_RECORDS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS USAGE_RECORDS (
-  record_id TEXT PRIMARY KEY,
+  usage_id TEXT PRIMARY KEY,
   car_id TEXT,
   driver_id TEXT,
-  record_type TEXT NOT NULL DEFAULT 'departure',
+  queue_id TEXT,
   datetime TEXT NOT NULL,
-  requested_by TEXT,
-  destination TEXT,
+  action TEXT NOT NULL DEFAULT 'departure',
   mileage REAL,
-  created_at TEXT NOT NULL,
-  created_by TEXT,
+  location TEXT,
+  fuel_level REAL,
+  odometer_image TEXT,
   notes TEXT,
-  auto_generated INTEGER DEFAULT 0,
-  auto_reason TEXT,
-  original_user TEXT,
-  audit_tag TEXT
+  created_at TEXT NOT NULL,
+  created_by TEXT
 );
-
 -- ============================================================
 -- 13. SCHEDULED_REPAIRS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS SCHEDULED_REPAIRS (
   scheduled_repair_id TEXT PRIMARY KEY,
   car_id TEXT,
-  request_type TEXT,
-  start_date TEXT,
-  start_time TEXT,
-  expected_return_date TEXT,
-  expected_return_time TEXT,
-  issue_description TEXT,
-  garage_name TEXT,
-  status TEXT NOT NULL DEFAULT 'pending',
+  scheduled_date TEXT NOT NULL,
+  repair_type TEXT,
+  description TEXT,
+  estimated_cost REAL,
+  status TEXT NOT NULL DEFAULT 'scheduled',
+  notes TEXT,
   created_at TEXT NOT NULL,
   created_by TEXT,
-  updated_at TEXT,
-  actual_repair_id TEXT,
-  notes TEXT
+  updated_at TEXT
 );
-
 -- ============================================================
 -- 14. LEAVES
 -- ============================================================
@@ -322,13 +306,13 @@ CREATE TABLE IF NOT EXISTS LEAVES (
   priority TEXT DEFAULT 'normal',
   status TEXT NOT NULL DEFAULT 'pending',
   approved_by TEXT,
+  approved_at TEXT,
   created_at TEXT NOT NULL,
   created_by TEXT,
   updated_at TEXT,
   notes TEXT,
   is_emergency INTEGER DEFAULT 0
 );
-
 -- ============================================================
 -- 15. PASSWORD_HISTORY
 -- ============================================================
@@ -339,7 +323,6 @@ CREATE TABLE IF NOT EXISTS PASSWORD_HISTORY (
   changed_at TEXT NOT NULL,
   changed_by TEXT
 );
-
 -- ============================================================
 -- 16. RESET_PASSWORD_REQUESTS
 -- ============================================================
@@ -354,7 +337,6 @@ CREATE TABLE IF NOT EXISTS RESET_PASSWORD_REQUESTS (
   reset_at TEXT,
   reset_by TEXT
 );
-
 -- ============================================================
 -- 17. NOTIFICATIONS
 -- ============================================================
@@ -365,27 +347,21 @@ CREATE TABLE IF NOT EXISTS NOTIFICATIONS (
   title TEXT,
   message TEXT,
   read INTEGER DEFAULT 0,
+  read_at TEXT,
   created_at TEXT NOT NULL
 );
-
 -- ============================================================
 -- 18. AUDIT_LOG
 -- ============================================================
 CREATE TABLE IF NOT EXISTS AUDIT_LOG (
   log_id TEXT PRIMARY KEY,
-  timestamp TEXT NOT NULL,
+  created_at TEXT NOT NULL,
   user_id TEXT,
   action TEXT,
   entity_type TEXT,
   entity_id TEXT,
-  old_value TEXT,
-  new_value TEXT,
-  details TEXT,
-  ip_address TEXT,
-  user_agent TEXT,
-  notes TEXT
+  details TEXT
 );
-
 -- ============================================================
 -- 19. PDPA_LOG
 -- ============================================================
@@ -398,9 +374,8 @@ CREATE TABLE IF NOT EXISTS PDPA_LOG (
   user_agent TEXT,
   notes TEXT
 );
-
 -- ============================================================
--- 20. MASTER (system settings key-value)
+-- 20. MASTER
 -- ============================================================
 CREATE TABLE IF NOT EXISTS MASTER (
   key TEXT PRIMARY KEY,
@@ -412,7 +387,6 @@ CREATE TABLE IF NOT EXISTS MASTER (
   effective_from TEXT,
   effective_to TEXT
 );
-
 -- ============================================================
 -- 21. QUEUE_RULES
 -- ============================================================
@@ -430,26 +404,16 @@ CREATE TABLE IF NOT EXISTS QUEUE_RULES (
   effective_from TEXT,
   effective_to TEXT
 );
-
 -- ============================================================
 -- 22. SYSTEM_SNAPSHOT
 -- ============================================================
 CREATE TABLE IF NOT EXISTS SYSTEM_SNAPSHOT (
   snapshot_id TEXT PRIMARY KEY,
-  date TEXT NOT NULL,
-  active_cars INTEGER DEFAULT 0,
-  cars_in_repair INTEGER DEFAULT 0,
-  active_drivers INTEGER DEFAULT 0,
-  queue_count INTEGER DEFAULT 0,
-  override_count INTEGER DEFAULT 0,
-  auto_recovery_count INTEGER DEFAULT 0,
-  fuel_logs_today INTEGER DEFAULT 0,
-  repair_logs_today INTEGER DEFAULT 0,
-  check_logs_today INTEGER DEFAULT 0,
+  snapshot_date TEXT NOT NULL,
+  data TEXT,
   created_at TEXT NOT NULL,
   created_by TEXT
 );
-
 -- ============================================================
 -- 23. SELF_REPORTED_FATIGUE
 -- ============================================================
@@ -464,7 +428,6 @@ CREATE TABLE IF NOT EXISTS SELF_REPORTED_FATIGUE (
   resolved_at TEXT,
   resolved_by TEXT
 );
-
 -- ============================================================
 -- 24. TAX_RECORDS
 -- ============================================================
@@ -472,75 +435,52 @@ CREATE TABLE IF NOT EXISTS TAX_RECORDS (
   tax_id TEXT PRIMARY KEY,
   car_id TEXT NOT NULL,
   tax_year TEXT,
-  amount REAL,
-  due_date TEXT,
-  paid_date TEXT,
-  receipt_number TEXT,
+  tax_amount REAL,
+  payment_date TEXT,
+  expiry_date TEXT,
   receipt_image TEXT,
-  status TEXT DEFAULT 'pending',
   notes TEXT,
   created_at TEXT NOT NULL,
   created_by TEXT,
+  status TEXT DEFAULT 'pending',
   updated_at TEXT
 );
-
 -- ============================================================
 -- 25. INSURANCE_RECORDS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS INSURANCE_RECORDS (
   insurance_id TEXT PRIMARY KEY,
   car_id TEXT NOT NULL,
-  insurance_type TEXT,
-  company_name TEXT,
+  insurance_company TEXT,
   policy_number TEXT,
+  insurance_type TEXT,
+  coverage_amount REAL,
+  premium_amount REAL,
+  payment_date TEXT,
   start_date TEXT,
   end_date TEXT,
-  premium REAL,
-  coverage REAL,
-  document_image TEXT,
-  status TEXT DEFAULT 'active',
+  policy_image TEXT,
   notes TEXT,
   created_at TEXT NOT NULL,
   created_by TEXT,
+  status TEXT DEFAULT 'active',
   updated_at TEXT
 );
-
 -- ============================================================
 -- 26. FUEL_REQUESTS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS FUEL_REQUESTS (
-  fuel_request_id TEXT PRIMARY KEY,
+  request_id TEXT PRIMARY KEY,
   car_id TEXT,
   driver_id TEXT,
-  requested_date TEXT NOT NULL,
+  queue_id TEXT,
+  requested_liters REAL,
   fuel_type TEXT,
-  estimated_liters REAL,
-  reason TEXT,
+  request_date TEXT NOT NULL,
   status TEXT DEFAULT 'pending',
-  approved_by TEXT,
-  approved_at TEXT,
   notes TEXT,
   created_at TEXT NOT NULL,
-  created_by TEXT
+  created_by TEXT,
+  approved_by TEXT,
+  approved_at TEXT
 );
-
--- ============================================================
--- INDEXES for performance
--- ============================================================
-CREATE INDEX IF NOT EXISTS idx_queue_date ON QUEUE(date);
-CREATE INDEX IF NOT EXISTS idx_queue_car_id ON QUEUE(car_id);
-CREATE INDEX IF NOT EXISTS idx_queue_driver_id ON QUEUE(driver_id);
-CREATE INDEX IF NOT EXISTS idx_queue_status ON QUEUE(status);
-CREATE INDEX IF NOT EXISTS idx_fuel_date ON FUEL_LOG(date);
-CREATE INDEX IF NOT EXISTS idx_fuel_car_id ON FUEL_LOG(car_id);
-CREATE INDEX IF NOT EXISTS idx_repair_car_id ON REPAIR_LOG(car_id);
-CREATE INDEX IF NOT EXISTS idx_repair_status ON REPAIR_LOG(status);
-CREATE INDEX IF NOT EXISTS idx_check_date ON CHECK_LOG(date);
-CREATE INDEX IF NOT EXISTS idx_check_car_id ON CHECK_LOG(car_id);
-CREATE INDEX IF NOT EXISTS idx_usage_car_id ON USAGE_RECORDS(car_id);
-CREATE INDEX IF NOT EXISTS idx_usage_datetime ON USAGE_RECORDS(datetime);
-CREATE INDEX IF NOT EXISTS idx_notif_user_id ON NOTIFICATIONS(user_id);
-CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON AUDIT_LOG(timestamp);
-CREATE INDEX IF NOT EXISTS idx_leaves_driver_id ON LEAVES(driver_id);
-CREATE INDEX IF NOT EXISTS idx_cars_active ON CARS(active);
-CREATE INDEX IF NOT EXISTS idx_drivers_status ON DRIVERS(status);

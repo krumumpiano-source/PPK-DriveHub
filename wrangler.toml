@@ -9,7 +9,4 @@ SYSTEM_NAME = "PPK DriveHub"
 [[d1_databases]]
 binding = "DB"
 database_name = "ppk-drivehub-db"
-database_id = "REPLACE_WITH_REAL_DATABASE_ID"
-
-[triggers]
-crons = ["0 1 * * *"]
+database_id = "4b18fad9-15f5-4741-bfa1-877fb34a8298"

@@ -3,7 +3,7 @@
 
 import { verifyJWT, fail, corsHeaders } from './_helpers.js';
 
-const PUBLIC_ACTIONS = new Set([
+export const PUBLIC_ACTIONS = new Set([
   'login', 'register', 'registerUser',
   'forgotPassword', 'resetPasswordConfirm', 'checkEmailVerification',
   'sendEmailVerification', 'verifyEmail',

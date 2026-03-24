@@ -150,7 +150,7 @@ export async function verifyJWT(token, secret) {
 export async function writeAudit(DB, userId, action, entityType, entityId, details = '') {
   try {
     await DB.prepare(
-      `INSERT INTO AUDIT_LOG (log_id, timestamp, user_id, action, entity_type, entity_id, details)
+      `INSERT INTO AUDIT_LOG (log_id, created_at, user_id, action, entity_type, entity_id, details)
        VALUES (?, ?, ?, ?, ?, ?, ?)`
     ).bind(uuid(), nowThai(), userId, action, entityType, entityId, details).run();
   } catch (_) { /* audit failures should never break the main flow */ }

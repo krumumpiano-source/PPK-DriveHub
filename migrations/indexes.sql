@@ -1,0 +1,17 @@
+CREATE INDEX IF NOT EXISTS idx_queue_date ON QUEUE(date);
+CREATE INDEX IF NOT EXISTS idx_queue_car_id ON QUEUE(car_id);
+CREATE INDEX IF NOT EXISTS idx_queue_driver_id ON QUEUE(driver_id);
+CREATE INDEX IF NOT EXISTS idx_queue_status ON QUEUE(status);
+CREATE INDEX IF NOT EXISTS idx_fuel_date ON FUEL_LOG(fuel_date);
+CREATE INDEX IF NOT EXISTS idx_fuel_car_id ON FUEL_LOG(car_id);
+CREATE INDEX IF NOT EXISTS idx_repair_car_id ON REPAIR_LOG(car_id);
+CREATE INDEX IF NOT EXISTS idx_repair_status ON REPAIR_LOG(status);
+CREATE INDEX IF NOT EXISTS idx_check_date ON CHECK_LOG(check_date);
+CREATE INDEX IF NOT EXISTS idx_check_car_id ON CHECK_LOG(car_id);
+CREATE INDEX IF NOT EXISTS idx_usage_car_id ON USAGE_RECORDS(car_id);
+CREATE INDEX IF NOT EXISTS idx_usage_datetime ON USAGE_RECORDS(datetime);
+CREATE INDEX IF NOT EXISTS idx_notif_user_id ON NOTIFICATIONS(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_created_at ON AUDIT_LOG(created_at);
+CREATE INDEX IF NOT EXISTS idx_leaves_driver_id ON LEAVES(driver_id);
+CREATE INDEX IF NOT EXISTS idx_cars_active ON CARS(active);
+CREATE INDEX IF NOT EXISTS idx_drivers_status ON DRIVERS(status);
