@@ -128,16 +128,23 @@ function renderNavigation() {
     if (hasModulePermission('queue', 'edit') || hasPermission(['admin'])) nav += '<a class="nav-btn" href="queue-manage.html" data-page="queue">✏️ จัดคิว</a>';
     if (hasModulePermission('vehicles', 'view') || hasPermission(['admin'])) nav += '<a class="nav-btn" href="vehicles.html" data-page="vehicles">🚙 รถ</a>';
     if (hasModulePermission('drivers', 'view') || hasPermission(['admin'])) nav += '<a class="nav-btn" href="drivers.html" data-page="drivers">👤 คนขับ</a>';
-    if (hasModulePermission('fuel', 'view') || hasPermission(['admin'])) nav += '<a class="nav-btn" href="fuel-record.html" data-page="fuel">⛽ น้ำมัน</a>';
+    if (hasModulePermission('fuel', 'view') || hasPermission(['admin'])) nav += '<a class="nav-btn" href="fuel-record.html" data-page="fuel-record">⛽ น้ำมัน</a>';
     if (hasModulePermission('repair', 'view') || hasPermission(['admin'])) nav += '<a class="nav-btn" href="repair.html" data-page="repair">🔧 ซ่อมบำรุง</a>';
+    if (hasModulePermission('vehicles', 'view') || hasPermission(['admin'])) nav += '<a class="nav-btn" href="tax-insurance.html" data-page="tax-insurance">📋 ภาษี/ประกัน</a>';
     if (hasModulePermission('reports', 'view') || hasPermission(['admin'])) nav += '<a class="nav-btn" href="reports.html" data-page="reports">📊 รายงาน</a>';
     if (hasModulePermission('usage_log', 'view') || hasPermission(['admin'])) nav += '<a class="nav-btn" href="usage-log.html" data-page="usage-log">📝 บันทึกการใช้งาน</a>';
     nav += '<a class="nav-btn" href="qr-usage-record.html" data-page="qr-usage-record">📷 สแกน QR บันทึกใช้รถ</a>';
     nav += '<a class="nav-btn" href="qr-fuel-record.html" data-page="qr-fuel-record">⛽ สแกน QR เติมน้ำมัน</a>';
     nav += '<a class="nav-btn" href="qr-daily-check.html" data-page="qr-daily-check">🔧 สแกน QR ตรวจสภาพ+แจ้งซ่อม</a>';
     nav += '<a class="nav-btn" href="notifications.html" data-page="notifications">🔔 การแจ้งเตือน</a>';
-    if (hasPermission(['admin', 'super_admin'])) nav += '<a class="nav-btn" href="admin-settings.html" data-page="settings">⚙️ ตั้งค่าระบบ</a>';
+    if (hasPermission(['admin', 'super_admin'])) {
+        nav += '<a class="nav-btn" href="admin-settings.html" data-page="settings">⚙️ ตั้งค่าระบบ</a>';
+        nav += '<a class="nav-btn" href="audit-log.html" data-page="audit-log">📜 บันทึกกิจกรรม</a>';
+        nav += '<a class="nav-btn" href="backup-recovery.html" data-page="backup-recovery">💾 สำรอง/กู้คืน</a>';
+    }
     nav += '<a class="nav-btn" href="user-guide.html" data-page="user-guide">📖 วิธีใช้งาน</a>';
+    nav += '<a class="nav-btn" href="glossary.html" data-page="glossary">📚 คำศัพท์</a>';
+    nav += '<a class="nav-btn" href="about.html" data-page="about">ℹ️ เกี่ยวกับ</a>';
     nav += '<a class="nav-btn" href="profile.html" data-page="profile">👤 ตั้งค่าส่วนตัว</a>';
     nav += '<a class="nav-btn" href="#" onclick="logout();return false;" style="background:#f44336;color:white;border-color:#f44336;">🚪 ออกจากระบบ</a>';
     nav += '</div>';

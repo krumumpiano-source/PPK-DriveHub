@@ -769,7 +769,7 @@
 
     var thaiDays = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
 
-    // Wait for common.html to load
+    // Wait for common.js to load
     function waitForCommon() {
       return new Promise(function (resolve) {
         if (typeof apiCall !== 'undefined' && typeof requireAuth !== 'undefined') {
@@ -785,7 +785,7 @@
             resolve();
           } else if (checkCount > 50) { // Wait max 5 seconds
             clearInterval(checkInterval);
-            console.warn('common.html not loaded after 5 seconds');
+            console.warn('common.js not loaded after 5 seconds');
             resolve(); // Continue anyway
           }
         }, 100);
@@ -794,12 +794,12 @@
 
     // Initialize page
     document.addEventListener('DOMContentLoaded', async function () {
-      // Wait for common.html to load
+      // Wait for common.js to load
       await waitForCommon();
 
-      // Check if common.html is loaded
+      // Check if common.js is loaded
       if (typeof apiCall === 'undefined' || typeof requireAuth === 'undefined') {
-        console.error('common.html not loaded! Make sure to open via web server, not file://');
+        console.error('common.js not loaded! Make sure to open via web server, not file://');
         // Still show calendar even without API
         renderCalendar();
         alert('⚠️ กรุณาเปิดผ่าน Web Server (ไม่ใช่ file://) เพื่อให้ระบบทำงานได้เต็มที่\n\nตอนนี้แสดงปฏิทินแบบไม่มีข้อมูล');

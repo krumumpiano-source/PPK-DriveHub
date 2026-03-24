@@ -14,6 +14,8 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
+  <link rel="stylesheet" href="common.css">
+  <script src="js/api.js"></script><script src="common.js"></script>
   <style>
     * {
       margin: 0;
@@ -643,8 +645,6 @@
       </div>
     </div>
   </div>
-
-  <script src="common.html"></script>
   <script>
     var currentTab = 'tax';
     var records = [];
@@ -653,7 +653,7 @@
     var receiptFile = null;
     var datePickers = {};
 
-    // Wait for common.html to load
+    // Wait for common.js to load
     function waitForCommon() {
       return new Promise(function (resolve) {
         if (typeof apiCall !== 'undefined' && typeof requireAuth !== 'undefined') {
@@ -669,7 +669,7 @@
             resolve();
           } else if (checkCount > 50) { // Wait max 5 seconds
             clearInterval(checkInterval);
-            console.warn('common.html not loaded after 5 seconds');
+            console.warn('common.js not loaded after 5 seconds');
             resolve(); // Continue anyway
           }
         }, 100);
@@ -677,12 +677,12 @@
     }
 
     document.addEventListener('DOMContentLoaded', async function () {
-      // Wait for common.html to load
+      // Wait for common.js to load
       await waitForCommon();
 
-      // Check if common.html is loaded
+      // Check if common.js is loaded
       if (typeof apiCall === 'undefined' || typeof requireAuth === 'undefined') {
-        console.error('common.html not loaded! Make sure to open via web server, not file://');
+        console.error('common.js not loaded! Make sure to open via web server, not file://');
         // Still show UI even without API
         document.getElementById('loading').style.display = 'none';
         document.getElementById('recordsContainer').style.display = 'block';

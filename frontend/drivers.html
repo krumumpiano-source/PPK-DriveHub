@@ -1079,7 +1079,7 @@
       }
 
       try {
-        // Check if common.html is loaded (optional check)
+        // Check if common.js is loaded (optional check)
         var currentUser = null;
         var hasPermission = true; // Default to true, check later
 
@@ -1115,7 +1115,7 @@
           }
         } else {
           console.warn('getCurrentUser not available - opening modal anyway');
-          // If common.html not loaded, still allow modal to open
+          // If common.js not loaded, still allow modal to open
         }
 
         // Reset form
