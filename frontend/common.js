@@ -311,6 +311,19 @@ function renderNav() {
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderNav);
 else renderNav();
 
+/* ── Wrap all plain <table> elements in a scrollable div ── */
+function wrapTablesForMobile() {
+    document.querySelectorAll('table').forEach(function (tbl) {
+        if (tbl.parentElement && tbl.parentElement.classList.contains('table-wrap')) return;
+        var wrap = document.createElement('div');
+        wrap.className = 'table-wrap';
+        tbl.parentNode.insertBefore(wrap, tbl);
+        wrap.appendChild(tbl);
+    });
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wrapTablesForMobile);
+else wrapTablesForMobile();
+
 
 function handleError(error, context) {
     try {
