@@ -1,0 +1,434 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>สมัครเข้าใช้งาน - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>
+    window.API_BASE_URL = CONFIG.API_BASE_URL; // ใช้ค่าจาก config.js
+    window.currentPage = 'register';
+  </script>
+  <link rel="stylesheet" href="common.css">
+  <script src="js/api.js"></script><script src="common.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background: var(--gradient-primary);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .register-container {
+      background: white;
+      border-radius: var(--radius-2xl);
+      box-shadow: var(--shadow-container);
+      max-width: 550px;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .register-header {
+      background: var(--gradient-primary);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .register-header h1 {
+      font-size: 1.8em;
+      margin-bottom: 10px;
+    }
+
+    .register-header p {
+      font-size: 0.95em;
+      opacity: 0.95;
+    }
+
+    .register-body {
+      padding: 30px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--color-text);
+      font-weight: 600;
+      font-size: 0.9em;
+    }
+
+    .form-group label .required {
+      color: var(--color-danger);
+    }
+
+    .title-options {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .title-option-btn {
+      flex: 1;
+      min-width: 80px;
+      padding: 10px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: var(--radius-md);
+      background: white;
+      color: var(--color-text);
+      font-size: 0.95em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-family: inherit;
+    }
+
+    .title-option-btn:hover {
+      border-color: var(--color-primary);
+      background: #f0f7ff;
+    }
+
+    .title-option-btn.active {
+      background: var(--gradient-primary);
+      color: white;
+      border-color: var(--color-primary);
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 12px 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: var(--radius-md);
+      font-size: 0.95em;
+      transition: all 0.3s;
+      font-family: inherit;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: var(--shadow-focus);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .form-group small {
+      display: block;
+      margin-top: 5px;
+      color: var(--color-text-muted);
+      font-size: 0.85em;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--gradient-primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-family: inherit;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: white;
+      color: var(--color-primary);
+      border: 2px solid var(--color-primary);
+      margin-top: 15px;
+    }
+
+    .btn-secondary:hover {
+      background: var(--color-bg-lighter);
+    }
+
+    .alert {
+      padding: 12px 15px;
+      border-radius: var(--radius-md);
+      margin-bottom: 20px;
+      font-size: 0.9em;
+    }
+
+    .alert-info {
+      background: var(--color-bg-info);
+      color: #1565c0;
+      border-left: 4px solid #1565c0;
+    }
+
+    .alert-success {
+      background: var(--color-bg-success);
+      color: var(--color-secondary-dark);
+      border-left: 4px solid #2e7d32;
+    }
+
+    .alert-error {
+      background: var(--color-bg-danger);
+      color: var(--color-danger-dark);
+      border-left: 4px solid #c62828;
+    }
+
+    .info-box {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: var(--radius-md);
+      padding: 15px;
+      margin-bottom: 20px;
+      font-size: 0.9em;
+      color: #856404;
+    }
+
+    .info-box strong {
+      display: block;
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="register-container">
+    <div class="register-header">
+      <h1>📝 สมัครเข้าใช้งานครั้งแรก</h1>
+      <p>PPK DriveHub - ระบบจัดการยานพาหนะ</p>
+    </div>
+    <div class="register-body">
+      <div class="info-box">
+        <strong>⚠️ หมายเหตุสำคัญ</strong>
+        การสมัครนี้เป็นการส่งคำขอใช้งานเท่านั้น คุณจะสามารถเข้าใช้งานได้หลังจากผู้ดูแลระบบอนุมัติแล้วเท่านั้น
+      </div>
+
+      <div id="alert-container"></div>
+
+      <form id="registerForm" onsubmit="handleRegister(event); return false;">
+        <div class="form-group">
+          <label for="title">คำนำหน้า <span class="required">*</span></label>
+          <div class="title-options">
+            <button type="button" class="title-option-btn" data-title="นาย" onclick="selectTitle('นาย')">นาย</button>
+            <button type="button" class="title-option-btn" data-title="นาง" onclick="selectTitle('นาง')">นาง</button>
+            <button type="button" class="title-option-btn" data-title="นางสาว"
+              onclick="selectTitle('นางสาว')">นางสาว</button>
+            <button type="button" class="title-option-btn" data-title="__custom__"
+              onclick="selectTitle('__custom__')">อื่นๆ</button>
+          </div>
+          <input type="hidden" id="title" name="title" required>
+          <input type="text" id="title_custom" name="title_custom" placeholder="พิมพ์คำนำหน้าของคุณ"
+            style="display: none; margin-top: 8px; width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: var(--radius-md); font-size: 1em; font-family: inherit;">
+        </div>
+
+        <div class="form-group">
+          <label for="full_name">ชื่อ-สกุล <span class="required">*</span></label>
+          <input type="text" id="full_name" name="full_name" required>
+        </div>
+
+        <div class="form-group">
+          <label for="department">หน่วยงาน / กลุ่มงาน <span class="required">*</span></label>
+          <input type="text" id="department" name="department" required>
+          <small>เช่น งานยานพาหนะ, กลุ่มงานบริหาร, กลุ่มงานวิชาการ</small>
+        </div>
+
+        <div class="form-group">
+          <label for="phone">เบอร์โทร <span class="required">*</span></label>
+          <input type="tel" id="phone" name="phone" required pattern="[0-9]{9,10}">
+          <small>ใช้สำหรับติดต่อยืนยัน</small>
+        </div>
+
+        <div class="form-group">
+          <label for="email">อีเมล <span class="required">*</span></label>
+          <input type="email" id="email" name="email" required>
+          <small>ใช้สำหรับแจ้งผลอนุมัติ</small>
+        </div>
+
+        <div class="form-group">
+          <label for="password">ตั้งรหัสผ่าน <span class="required">*</span></label>
+          <input type="password" id="password" name="password" required minlength="8" autocomplete="new-password">
+          <small>อย่างน้อย 8 ตัว มีอักษรภาษาอังกฤษ ตัวเลข และเครื่องหมาย</small>
+          <div id="password-strength" style="margin-top: 5px; font-size: 0.85em;"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="password_confirm">ยืนยันรหัสผ่าน <span class="required">*</span></label>
+          <input type="password" id="password_confirm" name="password_confirm" required minlength="8"
+            autocomplete="new-password">
+          <div id="password-match" style="margin-top: 5px; font-size: 0.85em;"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="reason">เหตุผลการขอใช้งาน <span class="required">*</span></label>
+          <textarea id="reason" name="reason" required placeholder="ระบุเหตุผลที่ต้องการใช้งานระบบ"></textarea>
+          <small>ผู้ดูแลระบบจะใช้ข้อมูลนี้ในการพิจารณาอนุมัติ</small>
+        </div>
+
+        <button type="submit" class="btn" id="registerBtn">
+          📤 ส่งคำขอสมัคร
+        </button>
+      </form>
+
+      <button type="button" class="btn btn-secondary" onclick="window.location.href='login.html'">
+        ← กลับไปหน้าเข้าสู่ระบบ
+      </button>
+    </div>
+
+    <div
+      style="background: var(--color-bg-light); padding: 20px; text-align: center; color: var(--color-text-muted); font-size: 0.9em; margin-top: 20px; border-radius: 0 0 20px 20px;">
+      <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+    </div>
+  </div>
+
+  <script>
+    function selectTitle(value) {
+      var titleHidden = document.getElementById('title');
+      var titleCustom = document.getElementById('title_custom');
+      var buttons = document.querySelectorAll('.title-option-btn');
+
+      buttons.forEach(function (btn) {
+        btn.classList.remove('active');
+      });
+
+      var selectedBtn = document.querySelector('.title-option-btn[data-title="' + value + '"]');
+      if (selectedBtn) {
+        selectedBtn.classList.add('active');
+      }
+
+      if (value === '__custom__') {
+        if (titleHidden) {
+          titleHidden.value = '';
+          titleHidden.required = false;
+        }
+        if (titleCustom) {
+          titleCustom.style.display = 'block';
+          titleCustom.required = true;
+          titleCustom.focus();
+        }
+      } else {
+        if (titleHidden) {
+          titleHidden.value = value;
+          titleHidden.required = true;
+        }
+        if (titleCustom) {
+          titleCustom.style.display = 'none';
+          titleCustom.required = false;
+          titleCustom.value = '';
+        }
+      }
+    }
+
+    async function handleRegister(event) {
+      event.preventDefault();
+
+      var titleHidden = document.getElementById('title');
+      var titleCustom = document.getElementById('title_custom');
+      var titleValue = '';
+      if (titleHidden && titleHidden.value === '') {
+        // Custom title
+        titleValue = titleCustom ? titleCustom.value.trim() : '';
+        if (!titleValue) {
+          document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">กรุณากรอกคำนำหน้า</div>';
+          return;
+        }
+      } else {
+        titleValue = titleHidden ? titleHidden.value : '';
+      }
+
+      if (!titleValue) {
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">กรุณาเลือกคำนำหน้า</div>';
+        return;
+      }
+
+      var formData = {
+        title: titleValue,
+        full_name: document.getElementById('full_name').value.trim(),
+        department: document.getElementById('department').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        password: document.getElementById('password').value,
+        reason: document.getElementById('reason').value.trim()
+      };
+
+      var passwordConfirm = document.getElementById('password_confirm').value;
+      var registerBtn = document.getElementById('registerBtn');
+      var alertContainer = document.getElementById('alert-container');
+
+      // Validate
+      if (!titleValue || !formData.full_name || !formData.department || !formData.phone || !formData.email || !formData.password || !formData.reason) {
+        alertContainer.innerHTML = '<div class="alert alert-error">กรุณากรอกข้อมูลให้ครบถ้วน</div>';
+        return;
+      }
+
+      // Validate password match
+      if (formData.password !== passwordConfirm) {
+        alertContainer.innerHTML = '<div class="alert alert-error">รหัสผ่านไม่ตรงกัน</div>';
+        return;
+      }
+
+      // Validate password policy
+      var passwordError = validatePasswordPolicy(formData.password);
+      if (passwordError) {
+        alertContainer.innerHTML = '<div class="alert alert-error">' + passwordError + '</div>';
+        return;
+      }
+
+      // Disable button
+      registerBtn.disabled = true;
+      registerBtn.textContent = 'กำลังส่งคำขอ...';
+      alertContainer.innerHTML = '';
+
+      try {
+        var result = await apiCall('register', formData);
+
+        if (result.success) {
+          var msg = (result.data && result.data.message) ? result.data.message : 'ส่งคำขอสมัครสมาชิกเรียบร้อย รอการอนุมัติจากผู้ดูแลระบบ';
+          alertContainer.innerHTML = '<div class="alert alert-success">' + msg + '</div>';
+          document.getElementById('registerForm').reset();
+
+          setTimeout(function () {
+            alert('ส่งคำขอสมัครเรียบร้อยแล้ว รอการอนุมัติจากผู้ดูแลระบบ แล้วตรวจสอบอีเมลเมื่อได้รับการอนุมัติ');
+            window.location.href = 'login.html';
+          }, 2000);
+        } else {
+          alertContainer.innerHTML = '<div class="alert alert-error">' + (result.error || result.message || 'ส่งคำขอไม่สำเร็จ') + '</div>';
+          registerBtn.disabled = false;
+          registerBtn.textContent = '📤 ส่งคำขอสมัคร';
+        }
+      } catch (error) {
+        alertContainer.innerHTML = '<div class="alert alert-error">' + handleError(error) + '</div>';
+        registerBtn.disabled = false;
+        registerBtn.textContent = '📤 ส่งคำขอสมัคร';
+      }
+    }
+  </script>
+</body>
+
+</html>

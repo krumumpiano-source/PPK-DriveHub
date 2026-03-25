@@ -1,0 +1,188 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตั้งค่าระบบครั้งแรก - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'setup';</script>
+  <link rel="stylesheet" href="common.css">
+  <script src="js/api.js"></script><script src="common.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--font-family);
+      background: var(--gradient-primary);
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .setup-container {
+      background: white; border-radius: var(--radius-2xl);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 500px; width: 100%; overflow: hidden;
+    }
+    .setup-header {
+      background: var(--gradient-primary);
+      color: white; padding: 40px 30px; text-align: center;
+    }
+    .setup-header h1 { font-size: 1.8em; margin-bottom: 10px; }
+    .setup-header p { font-size: 1em; opacity: 0.95; }
+    .setup-body { padding: 30px; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label {
+      display: block; margin-bottom: 8px; color: var(--color-text);
+      font-weight: 600; font-size: 0.95em;
+    }
+    .form-group input {
+      width: 100%; padding: 12px 15px;
+      border: 2px solid #e0e0e0; border-radius: var(--radius-md);
+      font-size: 1em; transition: all 0.3s; font-family: inherit;
+    }
+    .form-group input:focus {
+      outline: none; border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(66,133,244,0.1);
+    }
+    .btn {
+      width: 100%; padding: 14px;
+      background: var(--gradient-primary);
+      color: white; border: none; border-radius: var(--radius-md);
+      font-size: 1.1em; font-weight: 600; cursor: pointer;
+      transition: all 0.3s; font-family: inherit;
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(66,133,244,0.3); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .alert { padding: 12px 15px; border-radius: var(--radius-md); margin-bottom: 20px; font-size: 0.9em; }
+    .alert-error { background: var(--color-bg-danger); color: var(--color-danger-dark); border-left: 4px solid #c62828; }
+    .alert-success { background: var(--color-bg-success); color: var(--color-secondary-dark); border-left: 4px solid #2e7d32; }
+    .alert-info { background: var(--color-bg-info); color: #1565c0; border-left: 4px solid #1565c0; }
+    .info-box {
+      background: #fff3cd; border: 1px solid #ffc107;
+      border-radius: var(--radius-md); padding: 15px; margin-bottom: 20px;
+      font-size: 0.9em; color: #856404;
+    }
+    .school-logo { width: 80px; height: 80px; margin: 0 auto 20px; background: white; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-size: 2.5em; }
+    .setup-footer {
+      margin-top: 24px; text-align: center; color: rgba(255,255,255,0.9);
+      font-size: 0.9em; max-width: 500px; line-height: 1.5;
+    }
+    .setup-footer p { margin: 0; }
+  </style>
+</head>
+
+<body>
+  <div class="setup-container">
+    <div class="setup-header">
+      <div class="school-logo">&#x1F3EB;</div>
+      <h1>PPK DriveHub</h1>
+      <p>ตั้งค่าระบบครั้งแรก — สร้างบัญชีผู้ดูแลระบบ</p>
+    </div>
+    <div class="setup-body">
+      <div class="info-box">
+        <strong>&#x1F4A1; คำแนะนำ:</strong>
+        นี่คือการตั้งค่าครั้งแรกของระบบ กรุณาสร้างบัญชีผู้ดูแลระบบ (Super Admin) เพื่อเริ่มใช้งาน
+      </div>
+
+      <div id="alert-container"></div>
+
+      <form id="setupForm" onsubmit="handleSetup(event); return false;">
+        <div class="form-group">
+          <label for="username">ชื่อผู้ใช้ (Username) <span style="color:#f44336;">*</span></label>
+          <input type="text" id="username" name="username" required autocomplete="username" autofocus>
+        </div>
+        <div class="form-group">
+          <label for="email">อีเมล <span style="color:#f44336;">*</span></label>
+          <input type="email" id="email" name="email" required>
+        </div>
+        <div class="form-group">
+          <label for="first_name">ชื่อ <span style="color:#f44336;">*</span></label>
+          <input type="text" id="first_name" name="first_name" required>
+        </div>
+        <div class="form-group">
+          <label for="last_name">นามสกุล <span style="color:#f44336;">*</span></label>
+          <input type="text" id="last_name" name="last_name" required>
+        </div>
+        <div class="form-group">
+          <label for="password">รหัสผ่าน <span style="color:#f44336;">*</span></label>
+          <input type="password" id="password" name="password" required minlength="8" autocomplete="new-password">
+          <small style="color:#666;">อย่างน้อย 8 ตัวอักษร</small>
+        </div>
+        <div class="form-group">
+          <label for="confirm_password">ยืนยันรหัสผ่าน <span style="color:#f44336;">*</span></label>
+          <input type="password" id="confirm_password" name="confirm_password" required minlength="8" autocomplete="new-password">
+        </div>
+
+        <button type="submit" class="btn" id="setupBtn">
+          &#x1F680; สร้างบัญชีผู้ดูแลระบบ
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    (async function checkSetup() {
+      try {
+        var result = await API.get('/api/setup');
+        if (result.success && result.data && !result.data.needs_setup) {
+          window.location.href = 'login.html';
+        }
+      } catch (e) { /* ignore — show form anyway */ }
+    })();
+
+    async function handleSetup(event) {
+      event.preventDefault();
+      var username = document.getElementById('username').value.trim();
+      var email = document.getElementById('email').value.trim();
+      var firstName = document.getElementById('first_name').value.trim();
+      var lastName = document.getElementById('last_name').value.trim();
+      var password = document.getElementById('password').value;
+      var confirmPassword = document.getElementById('confirm_password').value;
+      var setupBtn = document.getElementById('setupBtn');
+      var alertContainer = document.getElementById('alert-container');
+
+      if (password !== confirmPassword) {
+        alertContainer.innerHTML = '<div class="alert alert-error">รหัสผ่านไม่ตรงกัน</div>';
+        return;
+      }
+      if (password.length < 8) {
+        alertContainer.innerHTML = '<div class="alert alert-error">รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร</div>';
+        return;
+      }
+
+      setupBtn.disabled = true;
+      setupBtn.textContent = 'กำลังสร้างบัญชี...';
+      alertContainer.innerHTML = '';
+
+      try {
+        var result = await API.post('/api/setup', {
+          username: username,
+          email: email,
+          first_name: firstName,
+          last_name: lastName,
+          password: password
+        });
+        if (result.success) {
+          alertContainer.innerHTML = '<div class="alert alert-success">สร้างบัญชีผู้ดูแลระบบสำเร็จ กำลังไปหน้าเข้าสู่ระบบ...</div>';
+          document.getElementById('setupForm').style.display = 'none';
+          setTimeout(function() { window.location.href = 'login.html'; }, 2000);
+        } else {
+          alertContainer.innerHTML = '<div class="alert alert-error">' + (result.error || result.message || 'เกิดข้อผิดพลาด') + '</div>';
+          setupBtn.disabled = false;
+          setupBtn.textContent = '\uD83D\uDE80 สร้างบัญชีผู้ดูแลระบบ';
+        }
+      } catch (error) {
+        alertContainer.innerHTML = '<div class="alert alert-error">' + (error.message || 'เกิดข้อผิดพลาด') + '</div>';
+        setupBtn.disabled = false;
+        setupBtn.textContent = '\uD83D\uDE80 สร้างบัญชีผู้ดูแลระบบ';
+      }
+    }
+  </script>
+
+  <footer class="setup-footer">
+    <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+  </footer>
+</body>
+
+</html>

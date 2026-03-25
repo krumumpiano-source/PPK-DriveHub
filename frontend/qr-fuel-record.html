@@ -1,0 +1,886 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>บันทึกน้ำมัน - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'qr-fuel-record'; window.REQUIRE_AUTH = false;</script>
+  <link rel="stylesheet" href="common.css">
+  <script src="js/api.js"></script><script src="common.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background: var(--gradient-primary);
+      min-height: 100vh;
+      padding: 10px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 5px;
+      }
+
+      .container {
+        border-radius: var(--radius-xl);
+      }
+    }
+
+    .header {
+      background: var(--gradient-primary);
+      color: white;
+      padding: 20px 15px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 1.5em;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    .header p {
+      font-size: 0.9em;
+      opacity: 0.95;
+    }
+
+    .content {
+      padding: 20px 15px;
+    }
+
+    @media (max-width: 480px) {
+      .header {
+        padding: 15px 12px;
+      }
+
+      .header h1 {
+        font-size: 1.3em;
+      }
+
+      .content {
+        padding: 15px 12px;
+      }
+    }
+
+    .car-info {
+      background: var(--color-bg-light);
+      padding: 15px;
+      border-radius: var(--radius-lg);
+      margin-bottom: 20px;
+      text-align: center;
+      border-left: 4px solid var(--color-primary);
+    }
+
+    .car-info h2 {
+      color: var(--color-primary);
+      font-size: 1.3em;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    @media (max-width: 480px) {
+      .car-info {
+        padding: 12px;
+        margin-bottom: 15px;
+      }
+
+      .car-info h2 {
+        font-size: 1.2em;
+      }
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 10px;
+      color: var(--color-text);
+      font-weight: 600;
+      font-size: 1em;
+    }
+
+    .form-group label .required {
+      color: var(--color-danger);
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: var(--radius-md);
+      font-size: 16px;
+      /* ป้องกัน zoom บน iOS */
+      transition: all 0.3s;
+      font-family: inherit;
+      -webkit-appearance: none;
+      appearance: none;
+      background: white;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: var(--shadow-focus);
+    }
+
+    .form-group input[type="number"] {
+      font-family: 'Courier New', monospace;
+    }
+
+    .form-group input[type="number"]:invalid {
+      border-color: var(--color-danger);
+    }
+
+    .form-group.datetime-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    @media (max-width: 480px) {
+      .form-group {
+        margin-bottom: 18px;
+      }
+
+      .form-group label {
+        font-size: 0.95em;
+        margin-bottom: 8px;
+      }
+
+      .form-group input,
+      .form-group select {
+        padding: 16px 14px;
+        /* เพิ่ม padding สำหรับ touch */
+        font-size: 16px;
+        /* ป้องกัน zoom */
+      }
+
+      .form-group.datetime-group {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+    }
+
+    .form-group .help-text {
+      font-size: 0.85em;
+      color: var(--color-text-muted);
+      margin-top: 5px;
+    }
+
+    .btn-use-current-time {
+      transition: all 0.2s;
+    }
+
+    .btn-use-current-time:active {
+      transform: scale(0.95);
+      background: #45a049 !important;
+    }
+
+    @media (max-width: 480px) {
+      .form-group.datetime-group>div>div[style*="display: flex"] {
+        flex-direction: column !important;
+      }
+
+      .btn-use-current-time {
+        width: 100%;
+        padding: 14px !important;
+        font-size: 1em !important;
+        align-self: stretch !important;
+      }
+    }
+
+    .price-display {
+      background: var(--color-bg-success);
+      padding: 15px;
+      border-radius: var(--radius-md);
+      margin-top: 10px;
+      text-align: center;
+      font-size: 1.2em;
+      font-weight: 600;
+      color: var(--color-secondary-dark);
+    }
+
+    .file-upload {
+      border: 2px dashed #e0e0e0;
+      border-radius: var(--radius-md);
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      user-select: none;
+    }
+
+    .file-upload:active {
+      border-color: var(--color-primary);
+      background: var(--color-bg-lighter);
+      transform: scale(0.98);
+    }
+
+    @media (max-width: 480px) {
+      .file-upload {
+        padding: 25px 15px;
+      }
+    }
+
+    .file-upload input[type="file"] {
+      display: none;
+    }
+
+    .file-upload-label {
+      display: block;
+      color: var(--color-primary);
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .file-preview {
+      margin-top: 15px;
+      text-align: center;
+    }
+
+    .file-preview img {
+      max-width: 100%;
+      max-height: 300px;
+      border-radius: var(--radius-md);
+      border: 2px solid #e0e0e0;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 18px;
+      background: var(--gradient-primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 1.1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-family: inherit;
+      margin-top: 15px;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      user-select: none;
+    }
+
+    .btn:active:not(:disabled) {
+      transform: scale(0.98);
+      box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    @media (max-width: 480px) {
+      .btn {
+        padding: 20px;
+        font-size: 1.05em;
+        margin-top: 12px;
+      }
+    }
+
+    .btn-success {
+      background: var(--gradient-success);
+      font-size: 1.3em;
+      padding: 20px;
+    }
+
+    .alert {
+      padding: 12px 15px;
+      border-radius: var(--radius-md);
+      margin-bottom: 20px;
+      font-size: 0.9em;
+    }
+
+    .alert-error {
+      background: var(--color-bg-danger);
+      color: var(--color-danger-dark);
+      border-left: 4px solid #c62828;
+    }
+
+    .alert-success {
+      background: var(--color-bg-success);
+      color: var(--color-secondary-dark);
+      border-left: 4px solid #2e7d32;
+    }
+
+    #successMessage {
+      display: none;
+      text-align: center;
+      padding: 30px;
+    }
+
+    #successMessage.show {
+      display: block;
+    }
+
+    .info-footer {
+      background: var(--color-bg-light);
+      padding: 15px;
+      border-radius: var(--radius-md);
+      margin-top: 20px;
+      font-size: 0.85em;
+      color: var(--color-text-muted);
+      text-align: center;
+      border-left: 4px solid var(--color-primary);
+    }
+
+    .footer {
+      background: var(--color-bg-light);
+      padding: 15px;
+      text-align: center;
+      color: var(--color-text-muted);
+      border-top: 2px solid #e9ecef;
+      font-size: 0.85em;
+      line-height: 1.5;
+    }
+
+    /* Smooth scrolling */
+    html {
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Prevent text selection on mobile */
+    @media (max-width: 480px) {
+      * {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      input,
+      textarea,
+      select {
+        -webkit-user-select: text;
+        user-select: text;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .price-display {
+        padding: 12px;
+        font-size: 1.1em;
+      }
+
+      .info-footer {
+        padding: 12px;
+        font-size: 0.8em;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>⛽ บันทึกน้ำมัน</h1>
+      <p>สแกน QR Code ที่ติดรถ</p>
+    </div>
+    <div id="navigation"></div>
+
+    <div class="content">
+      <div id="alert-container"></div>
+
+      <!-- Car Info (Read-only) -->
+      <div id="carInfo" class="car-info" style="display: none;">
+        <h2 id="carLicensePlate">-</h2>
+        <div style="color: var(--color-text-muted); font-size: 0.95em;" id="carBrandModel">-</div>
+      </div>
+
+      <!-- Success Message -->
+      <div id="successMessage">
+        <div style="font-size: 3em; margin-bottom: 15px;">✅</div>
+        <h2 style="color: var(--color-secondary-dark); margin-bottom: 10px;">บันทึกสำเร็จ!</h2>
+        <p style="color: var(--color-text-muted); margin-bottom: 20px;">ข้อมูลถูกบันทึกเรียบร้อยแล้ว</p>
+        <button class="btn btn-success" onclick="resetForm()">
+          บันทึกอีกครั้ง
+        </button>
+      </div>
+
+      <!-- Form -->
+      <form id="fuelForm" onsubmit="handleSubmit(event); return false;" style="display: none;">
+        <div class="form-group">
+          <label for="fuel_type">ประเภทน้ำมัน <span class="required">*</span></label>
+          <select id="fuel_type" name="fuel_type" required>
+            <option value="">-- เลือกประเภทน้ำมัน --</option>
+          </select>
+        </div>
+
+        <div class="form-group datetime-group">
+          <div>
+            <label for="fuelDate">วันที่เติม <span class="required">*</span></label>
+            <input type="date" id="fuelDate" name="fuelDate" required>
+          </div>
+          <div>
+            <label for="fuelTime">เวลาที่เติม <span class="required">*</span></label>
+            <div style="display: flex; gap: 10px; align-items: flex-start;">
+              <div style="flex: 1;">
+                <input type="time" id="fuelTime" name="fuelTime" required>
+                <div class="help-text time-ampm-help" style="font-size: 0.85em; color: var(--color-text-muted);">
+                  <strong>AM เช้า</strong> · <strong>PM บ่าย</strong>
+                </div>
+              </div>
+              <button type="button" onclick="useCurrentTime('fuelTime')" class="btn-use-current-time"
+                style="padding: 12px 16px; background: var(--color-success); color: white; border: none; border-radius: var(--radius-md); font-size: 0.9em; font-weight: 600; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; touch-action: manipulation; align-self: flex-end;">
+                ⏰ ใช้เวลาปัจจุบัน
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="liters">จำนวนลิตร <span class="required">*</span></label>
+          <input type="number" id="liters" name="liters" required min="0" step="0.01" placeholder="0.00"
+            oninput="validateAmountCalculation()">
+          <div class="help-text">กรอกจำนวนลิตรที่เติม</div>
+        </div>
+
+        <div class="form-group">
+          <label for="price_per_liter">ราคาต่อลิตร (บาท) <span class="required">*</span></label>
+          <input type="number" id="price_per_liter" name="price_per_liter" required min="0" step="0.01"
+            placeholder="0.00" oninput="validateAmountCalculation()">
+          <div class="help-text">ราคาต่อลิตรที่จ่าย</div>
+        </div>
+
+        <div class="form-group">
+          <label for="total_amount">จำนวนเงินรวม (บาท) <span class="required">*</span></label>
+          <input type="number" id="total_amount" name="total_amount" required min="0" step="0.01" placeholder="0.00"
+            oninput="validateAmountCalculation()">
+          <div class="help-text">กรุณากรอกจำนวนเงินรวมที่จ่ายจริง (ระบบจะตรวจสอบความถูกต้องอัตโนมัติ)</div>
+          <div id="amountError"
+            style="display: none; color: var(--color-danger-dark); font-size: 0.9em; margin-top: 5px; font-weight: 600;"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="mileage">เลขไมล์ขณะเติม <span class="required">*</span></label>
+          <input type="number" id="mileage" name="mileage" required min="0" step="1"
+            placeholder="ตัวเลขเท่านั้น ไม่มีเว้นวรรค" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+          <div class="help-text">เลขไมล์ที่แสดงบนหน้าหัวจ่ายน้ำมัน</div>
+        </div>
+
+        <div class="form-group">
+          <label>แนบรูปสลิป</label>
+          <div class="file-upload" onclick="document.getElementById('receiptFile').click()">
+            <input type="file" id="receiptFile" accept="image/*" capture="environment"
+              onchange="handleFileSelect(event)">
+            <label for="receiptFile" class="file-upload-label">
+              📷 กดเพื่อถ่ายรูปหรือเลือกรูป
+            </label>
+            <div class="help-text" style="margin-top: 10px;">กดเพื่อเปิดกล้องหรือเลือกรูปจากแกลเลอรี</div>
+          </div>
+          <div class="file-preview" id="filePreview"></div>
+        </div>
+
+        <button type="submit" class="btn" id="submitBtn">
+          💾 บันทึก
+        </button>
+
+        <div class="info-footer">
+          <strong>📋 หมายเหตุ:</strong><br>
+          ข้อมูลนี้ใช้เพื่อการตรวจสอบและวิเคราะห์อัตราสิ้นเปลือง<br>
+          กรุณากรอกข้อมูลให้ถูกต้อง
+        </div>
+      </form>
+
+      <div id="loading" style="text-align: center; padding: 40px; color: var(--color-text-muted);">
+        กำลังโหลดข้อมูล...
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+    </div>
+  </div>
+
+
+  <script>
+    var carId = null;
+    var carInfo = null;
+    var receiptFile = null;
+
+    window.addEventListener('DOMContentLoaded', function () {
+      var urlParams = new URLSearchParams(window.location.search);
+      carId = urlParams.get('car');
+
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('fuelForm').style.display = 'block';
+      loadFuelTypes();
+      setDefaultDateTime();
+
+      if (!carId) {
+        document.getElementById('carInfo').style.display = 'none';
+        document.getElementById('submitBtn').disabled = true;
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">กรุณาสแกน QR Code ที่รถเพื่อแสดงเลขทะเบียน รุ่นรถ และเปิดใช้ปุ่มบันทึก</div>';
+      } else {
+        loadCarInfo();
+      }
+
+      setTimeout(function () {
+        if (typeof initAllThaiDateTimePickers === 'function') {
+          initAllThaiDateTimePickers();
+        }
+      }, 200);
+    });
+
+    async function loadCarInfo() {
+      try {
+        var result = await apiCall('getVehicleById', { carId: carId });
+
+        if (result.success && result.data && result.data.vehicle) {
+          carInfo = result.data.vehicle;
+          document.getElementById('carLicensePlate').textContent = carInfo.license_plate || '-';
+          document.getElementById('carBrandModel').textContent = (carInfo.brand || '') + ' ' + (carInfo.model || '');
+          document.getElementById('carInfo').style.display = 'block';
+          document.getElementById('submitBtn').disabled = false;
+          document.getElementById('alert-container').innerHTML = '';
+        } else {
+          document.getElementById('carInfo').style.display = 'none';
+          document.getElementById('submitBtn').disabled = true;
+          document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">ไม่พบข้อมูลรถ</div>';
+        }
+      } catch (error) {
+        document.getElementById('carInfo').style.display = 'none';
+        document.getElementById('submitBtn').disabled = true;
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">' + handleError(error) + '</div>';
+      }
+    }
+
+    async function loadFuelTypes() {
+      try {
+        var result = await apiCall('getFuelTypes', {});
+        var select = document.getElementById('fuel_type');
+        select.innerHTML = '<option value="">-- เลือกประเภทน้ำมัน --</option>';
+
+        if (result.success && result.data && result.data.fuel_types && result.data.fuel_types.length > 0) {
+          // กรองประเภทน้ำมันที่ไม่ต้องการ (LPG, NGV) และแสดงเฉพาะที่ขายในไทยทั่วไป
+          var excludedTypes = ['lpg', 'ngv', 'gas'];
+          result.data.fuel_types.forEach(function (type) {
+            var typeId = (type.id || type.key || '').toLowerCase();
+            var typeName = (type.name || '').toLowerCase();
+            // ข้ามประเภทแก๊ส (LPG/NGV) แต่เก็บแก๊สโซฮอล์ (E20, E85)
+            var isExcluded = excludedTypes.some(function (excluded) {
+              return typeId.indexOf(excluded) !== -1 || typeName.indexOf(excluded) !== -1;
+            });
+            // ถ้าเป็นแก๊สโซฮอล์ (gasohol) ให้เก็บไว้
+            if (typeName.indexOf('gasohol') !== -1 || typeName.indexOf('e20') !== -1 || typeName.indexOf('e85') !== -1) {
+              isExcluded = false;
+            }
+            if (!isExcluded) {
+              var option = document.createElement('option');
+              option.value = type.id || type.key;
+              option.textContent = type.name;
+              select.appendChild(option);
+            }
+          });
+          // ถ้าไม่มีข้อมูลจาก API ให้ใช้ fallback
+          if (select.options.length === 1) {
+            var fallback = [
+              { id: 'gasoline_91', name: 'เบนซิน 91' },
+              { id: 'gasoline_95', name: 'เบนซิน 95' },
+              { id: 'gasoline_e20', name: 'แก๊สโซฮอล์ E20' },
+              { id: 'gasoline_e85', name: 'แก๊สโซฮอล์ E85' },
+              { id: 'diesel', name: 'ดีเซล' },
+              { id: 'diesel_b7', name: 'ดีเซล B7' },
+              { id: 'diesel_b20', name: 'ดีเซล B20' },
+              { id: 'electric', name: 'ไฟฟ้า' }
+            ];
+            fallback.forEach(function (type) {
+              var opt = document.createElement('option');
+              opt.value = type.id;
+              opt.textContent = type.name;
+              select.appendChild(opt);
+            });
+          }
+        } else {
+          // ประเภทน้ำมันที่ขายในไทยทั่วไป (ไม่รวมแก๊ส LPG/NGV)
+          var fallback = [
+            { id: 'gasoline_91', name: 'เบนซิน 91' },
+            { id: 'gasoline_95', name: 'เบนซิน 95' },
+            { id: 'gasoline_e20', name: 'แก๊สโซฮอล์ E20' },
+            { id: 'gasoline_e85', name: 'แก๊สโซฮอล์ E85' },
+            { id: 'diesel', name: 'ดีเซล' },
+            { id: 'diesel_b7', name: 'ดีเซล B7' },
+            { id: 'diesel_b20', name: 'ดีเซล B20' },
+            { id: 'electric', name: 'ไฟฟ้า' }
+          ];
+          fallback.forEach(function (type) {
+            var opt = document.createElement('option');
+            opt.value = type.id;
+            opt.textContent = type.name;
+            select.appendChild(opt);
+          });
+        }
+      } catch (error) {
+        console.error('Error loading fuel types:', error);
+        var select = document.getElementById('fuel_type');
+        if (select) {
+          select.innerHTML = '<option value="">-- เลือกประเภทน้ำมัน --</option>';
+          // ประเภทน้ำมันที่ขายในไทยทั่วไป (ไม่รวมแก๊ส LPG/NGV)
+          var fallback = [
+            { id: 'gasoline_91', name: 'เบนซิน 91' },
+            { id: 'gasoline_95', name: 'เบนซิน 95' },
+            { id: 'gasoline_e20', name: 'แก๊สโซฮอล์ E20' },
+            { id: 'gasoline_e85', name: 'แก๊สโซฮอล์ E85' },
+            { id: 'diesel', name: 'ดีเซล' },
+            { id: 'diesel_b7', name: 'ดีเซล B7' },
+            { id: 'diesel_b20', name: 'ดีเซล B20' },
+            { id: 'electric', name: 'ไฟฟ้า' }
+          ];
+          fallback.forEach(function (type) {
+            var opt = document.createElement('option');
+            opt.value = type.id;
+            opt.textContent = type.name;
+            select.appendChild(opt);
+          });
+        }
+      }
+    }
+
+    function setDefaultDateTime() {
+      var now = new Date();
+      var dateStr = now.getFullYear() + '-' +
+        String(now.getMonth() + 1).padStart(2, '0') + '-' +
+        String(now.getDate()).padStart(2, '0');
+      var timeStr = String(now.getHours()).padStart(2, '0') + ':' +
+        String(now.getMinutes()).padStart(2, '0');
+
+      var dateInput = document.getElementById('fuelDate');
+      var timeInput = document.getElementById('fuelTime');
+      if (dateInput) dateInput.value = dateStr;
+      if (timeInput) {
+        timeInput.value = timeStr;
+      }
+    }
+
+    // Use current time button handler
+    function useCurrentTime(timeInputId) {
+      var now = new Date();
+      var timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      var timeInput = document.getElementById(timeInputId);
+      if (timeInput) {
+        timeInput.value = timeStr;
+        // Trigger change event for Flatpickr if initialized
+        if (timeInput._flatpickr) {
+          timeInput._flatpickr.setDate(timeStr, false);
+        }
+      }
+    }
+
+    // ตรวจสอบการคำนวณจำนวนเงินรวม (แสดงเตือนแต่ไม่บล็อกการกรอก)
+    function validateAmountCalculation() {
+      var liters = parseFloat(document.getElementById('liters').value) || 0;
+      var pricePerLiter = parseFloat(document.getElementById('price_per_liter').value) || 0;
+      var amount = parseFloat(document.getElementById('total_amount').value) || 0;
+      var errorDiv = document.getElementById('amountError');
+
+      // ถ้ายังกรอกไม่ครบ ไม่ต้องแสดง error
+      if (liters <= 0 || pricePerLiter <= 0 || amount <= 0) {
+        if (errorDiv) errorDiv.style.display = 'none';
+        return;
+      }
+
+      // คำนวณจำนวนเงินที่ควรจะเป็น
+      var expectedAmount = liters * pricePerLiter;
+      var difference = Math.abs(amount - expectedAmount);
+
+      // ยอมรับความคลาดเคลื่อน ±0.01 บาท (เพื่อรองรับการปัดเศษ)
+      if (difference > 0.01) {
+        if (errorDiv) {
+          errorDiv.textContent = '⚠️ การคำนวณไม่ถูกต้อง: ปริมาณ (' + liters.toFixed(2) + ') × ราคาต่อลิตร (' + pricePerLiter.toFixed(2) + ') = ' + expectedAmount.toFixed(2) + ' บาท แต่กรอก ' + amount.toFixed(2) + ' บาท กรุณาตรวจสอบอีกครั้ง';
+          errorDiv.style.display = 'block';
+        }
+      } else {
+        if (errorDiv) errorDiv.style.display = 'none';
+      }
+    }
+
+    function handleFileSelect(event) {
+      var file = event.target.files[0];
+      if (!file) return;
+
+      receiptFile = file;
+      var preview = document.getElementById('filePreview');
+
+      if (file.type.startsWith('image/')) {
+        var reader = new FileReader();
+        reader.onload = function (e) {
+          preview.innerHTML = '<img src="' + e.target.result + '" alt="Receipt preview">';
+        };
+        reader.readAsDataURL(file);
+      } else {
+        preview.innerHTML = '<div style="color: var(--color-text-muted);">ไฟล์: ' + file.name + '</div>';
+      }
+    }
+
+    async function handleSubmit(event) {
+      event.preventDefault();
+
+      var liters = parseFloat(document.getElementById('liters').value);
+      var pricePerLiter = parseFloat(document.getElementById('price_per_liter').value);
+      var totalAmount = parseFloat(document.getElementById('total_amount').value);
+      var mileage = parseInt(document.getElementById('mileage').value);
+      var fuelType = document.getElementById('fuel_type').value;
+
+      if (!liters || !pricePerLiter || !totalAmount || !mileage || !fuelType) {
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">กรุณากรอกข้อมูลให้ครบถ้วน (จำนวนลิตร, ราคาต่อลิตร, จำนวนเงินรวม, เลขไมล์, ประเภทน้ำมัน)</div>';
+        return;
+      }
+
+      // ตรวจสอบการคำนวณจำนวนเงินรวม
+      var expectedAmount = liters * pricePerLiter;
+      var difference = Math.abs(totalAmount - expectedAmount);
+
+      // ถ้าคำนวณไม่ตรง (คลาดเคลื่อนมากกว่า 0.01 บาท) ให้แสดงเตือนและหยุดการบันทึก
+      if (difference > 0.01) {
+        var errorMessage = '⚠️ การคำนวณไม่ถูกต้อง!\n\n' +
+          'ปริมาณที่เติม: ' + liters.toFixed(2) + ' ลิตร\n' +
+          'ราคาต่อลิตร: ' + pricePerLiter.toFixed(2) + ' บาท\n' +
+          'จำนวนเงินรวมที่ควรเป็น: ' + expectedAmount.toFixed(2) + ' บาท\n' +
+          'จำนวนเงินรวมที่กรอก: ' + totalAmount.toFixed(2) + ' บาท\n\n' +
+          'กรุณาตรวจสอบ 3 รายการนี้ใหม่ให้ถูกต้อง:\n' +
+          '1. ปริมาณที่เติม (ลิตร)\n' +
+          '2. ราคาต่อลิตร (บาท)\n' +
+          '3. จำนวนเงินรวม (บาท)';
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">' + errorMessage.replace(/\n/g, '<br>') + '</div>';
+        return;
+      }
+
+      var submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'กำลังบันทึก...';
+
+      try {
+        var lastMileage = 0;
+        try {
+          var fuelLogsResult = await apiCall('getFuelLogs', {
+            filters: { car_id: carId, limit: 1 }
+          });
+          if (fuelLogsResult.success && fuelLogsResult.data && fuelLogsResult.data.logs && fuelLogsResult.data.logs.length > 0) {
+            lastMileage = parseInt(fuelLogsResult.data.logs[0].mileage_after) || 0;
+          }
+        } catch (e) {
+          // Use current mileage as before if can't get last
+          lastMileage = mileage;
+        }
+
+        // Prepare receipt image
+        var receiptImageBase64 = null;
+        var receiptImageName = null;
+        var receiptImageMime = null;
+
+        if (receiptFile) {
+          receiptImageBase64 = await fileToBase64(receiptFile);
+          receiptImageName = receiptFile.name;
+          receiptImageMime = receiptFile.type;
+        }
+
+        var dateInput = document.getElementById('fuelDate');
+        var timeInput = document.getElementById('fuelTime');
+        var dateStr = dateInput ? dateInput.value : (function () {
+          var now = new Date();
+          return now.getFullYear() + '-' +
+            String(now.getMonth() + 1).padStart(2, '0') + '-' +
+            String(now.getDate()).padStart(2, '0');
+        })();
+        var timeStr = timeInput ? timeInput.value : (function () {
+          var now = new Date();
+          return String(now.getHours()).padStart(2, '0') + ':' +
+            String(now.getMinutes()).padStart(2, '0');
+        })();
+
+        var fuelData = {
+          date: dateStr,
+          time: timeStr,
+          car_id: carId,
+          driver_id: '', // QR form doesn't require driver
+          mileage_before: lastMileage,
+          mileage_after: mileage,
+          liters: liters,
+          price_per_liter: pricePerLiter,
+          amount: totalAmount,
+          fuel_type: fuelType,
+          receipt_image_base64: receiptImageBase64,
+          receipt_image_name: receiptImageName,
+          receipt_image_mime: receiptImageMime
+        };
+
+        var result = await apiCall('createFuelLog', {
+          data: fuelData
+        });
+
+        if (result.success) {
+          document.getElementById('fuelForm').style.display = 'none';
+          document.getElementById('successMessage').classList.add('show');
+        } else {
+          document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">' + result.message + '</div>';
+          submitBtn.disabled = false;
+          submitBtn.textContent = '💾 บันทึก';
+        }
+      } catch (error) {
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">' + handleError(error) + '</div>';
+        submitBtn.disabled = false;
+        submitBtn.textContent = '💾 บันทึก';
+      }
+    }
+
+    function resetForm() {
+      document.getElementById('fuelForm').reset();
+      document.getElementById('filePreview').innerHTML = '';
+      document.getElementById('amountError').style.display = 'none';
+      document.getElementById('successMessage').classList.remove('show');
+      document.getElementById('fuelForm').style.display = 'block';
+      receiptFile = null;
+      setDefaultDateTime();
+
+      // Re-initialize Flatpickr after reset
+      setTimeout(function () {
+        if (typeof initAllThaiDateTimePickers === 'function') {
+          initAllThaiDateTimePickers();
+        }
+      }, 100);
+    }
+
+    function fileToBase64(file) {
+      return new Promise(function (resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function (e) {
+          var base64 = e.target.result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+  </script>
+</body>
+
+</html>

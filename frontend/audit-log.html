@@ -1,0 +1,381 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ประวัติการเปลี่ยนแปลงระบบ - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>window.REQUIRE_AUTH = true; window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'audit-log';</script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <link rel="stylesheet" href="common.css">
+  <script src="js/api.js"></script><script src="common.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background: var(--gradient-primary);
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    background: white;
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-container);
+    overflow: hidden;
+    }
+
+    .header {
+    background: var(--gradient-primary);
+    color: white;
+    padding: 30px;
+    text-align: center;
+    }
+
+    .header h1 {
+    font-size: 2em;
+    margin-bottom: 10px;
+    }
+
+    .nav {
+    background: var(--gradient-nav);
+    padding: 20px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    border-bottom: 3px solid var(--color-primary);
+    }
+
+    .nav-btn {
+    padding: 12px 20px;
+    background: white;
+    border: 2px solid var(--color-primary);
+    color: var(--color-primary);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    font-size: 0.95em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    }
+
+    .nav-btn:hover {
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-nav-hover);
+    background: var(--gradient-primary);
+    }
+
+    .nav-btn.active {
+    background: var(--gradient-primary);
+    color: white;
+    }
+
+    .content {
+    padding: 40px;
+    }
+
+    .filters {
+    background: var(--color-bg-light);
+    padding: 20px;
+    border-radius: var(--radius-lg);
+    margin-bottom: 30px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    }
+
+    .filter-group {
+    display: flex;
+    flex-direction: column;
+    }
+
+    .filter-group label {
+    font-size: 0.9em;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 5px;
+    }
+
+    .filter-group input,
+    .filter-group select {
+    padding: 8px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: var(--radius-sm);
+    font-size: 0.95em;
+    }
+
+    .filter-group input:focus,
+    .filter-group select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    }
+
+    .btn {
+    padding: 10px 20px;
+    background: var(--gradient-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 0.95em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    }
+
+    .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+    }
+
+    .table-container {
+    overflow-x: auto;
+    }
+
+    table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    }
+
+    th {
+    background: var(--color-primary);
+    color: white;
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    }
+
+    td {
+    padding: 12px;
+    border-bottom: 1px solid var(--color-border-light);
+    }
+
+    tr:hover {
+    background: var(--color-bg-lighter);
+    }
+
+    .badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: var(--radius-xl);
+    font-size: 0.85em;
+    font-weight: 600;
+    }
+
+    .badge-create {
+    background: var(--color-bg-success);
+    color: var(--color-secondary-dark);
+    }
+
+    .badge-update {
+    background: var(--color-bg-warning);
+    color: #f57c00;
+    }
+
+    .badge-delete {
+    background: var(--color-bg-danger);
+    color: var(--color-danger-dark);
+    }
+
+    .footer {
+    background: var(--color-bg-light);
+    padding: 20px;
+    text-align: center;
+    color: var(--color-text-muted);
+    border-top: 2px solid #e9ecef;
+    font-size: 0.9em;
+    }
+  </style>
+</head>
+
+<body>
+      <div class="container">
+        <div class="header">
+          <h1>📋 ประวัติการเปลี่ยนแปลงระบบ</h1>
+          <p>Audit Trail - บันทึกทุกการเปลี่ยนแปลง</p>
+        </div>
+
+        <div id="navigation"></div>
+
+        <div class="content">
+          <div class="filters">
+            <div class="filter-group">
+              <label>วันที่เริ่มต้น</label>
+              <input type="date" id="dateFrom">
+            </div>
+            <div class="filter-group">
+              <label>วันที่สิ้นสุด</label>
+              <input type="date" id="dateTo">
+            </div>
+            <div class="filter-group">
+              <label>ผู้ใช้</label>
+              <input type="text" id="userId" placeholder="user_id หรือ email">
+            </div>
+            <div class="filter-group">
+              <label>ประเภท</label>
+              <select id="entityType">
+                <option value="">ทั้งหมด</option>
+                <option value="user">ผู้ใช้</option>
+                <option value="car">รถ</option>
+                <option value="driver">คนขับ</option>
+                <option value="queue">คิว</option>
+                <option value="fuel">น้ำมัน</option>
+                <option value="repair">ซ่อม</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>การกระทำ</label>
+              <select id="action">
+                <option value="">ทั้งหมด</option>
+                <option value="create">สร้าง</option>
+                <option value="update">แก้ไข</option>
+                <option value="delete">ลบ</option>
+              </select>
+            </div>
+            <div class="filter-group" style="justify-content: flex-end;">
+              <label>&nbsp;</label>
+              <button class="btn" onclick="loadAuditLogs()">🔍 ค้นหา</button>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table id="auditTable">
+              <thead>
+                <tr>
+                  <th>วันที่/เวลา</th>
+                  <th>ผู้ใช้</th>
+                  <th>การกระทำ</th>
+                  <th>ประเภท</th>
+                  <th>ID</th>
+                  <th>รายละเอียด</th>
+                </tr>
+              </thead>
+              <tbody id="auditTableBody">
+                <tr>
+                  <td colspan="6" style="text-align: center; padding: 40px; color: var(--color-text-muted);">
+                    กำลังโหลดข้อมูล...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="footer">
+          <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+        </div>
+      </div>
+      <script>
+        window.addEventListener('DOMContentLoaded', function () {
+          if (!requireAdmin()) {
+            return;
+          }
+
+          var today = new Date();
+          var lastMonth = new Date();
+          lastMonth.setDate(lastMonth.getDate() - 30);
+
+          document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+          document.getElementById('dateFrom').value = lastMonth.toISOString().split('T')[0];
+
+          loadAuditLogs();
+
+          setTimeout(function () {
+            if (typeof initAllThaiDateTimePickers === 'function') {
+              initAllThaiDateTimePickers();
+            }
+          }, 200);
+        });
+
+        async function loadAuditLogs() {
+          var filters = {
+            date_from: document.getElementById('dateFrom').value,
+            date_to: document.getElementById('dateTo').value,
+            user_id: document.getElementById('userId').value.trim(),
+            entity_type: document.getElementById('entityType').value,
+            action: document.getElementById('action').value
+          };
+
+          var tbody = document.getElementById('auditTableBody');
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--color-text-muted);">กำลังโหลดข้อมูล...</td></tr>';
+
+          try {
+            var result = await apiCall('getAuditLogs', { filters: filters });
+
+            if (result.success && result.data && result.data.logs) {
+              var logs = result.data.logs;
+
+              if (logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--color-text-muted);">ไม่พบข้อมูล</td></tr>';
+                return;
+              }
+
+              tbody.innerHTML = '';
+
+              logs.forEach(function (log) {
+                var row = document.createElement('tr');
+
+                var actionBadge = '';
+                var badgeClass = '';
+                if (log.action === 'create') {
+                  actionBadge = '<span class="badge badge-create">สร้าง</span>';
+                } else if (log.action === 'update') {
+                  actionBadge = '<span class="badge badge-update">แก้ไข</span>';
+                } else if (log.action === 'delete') {
+                  actionBadge = '<span class="badge badge-delete">ลบ</span>';
+                } else {
+                  actionBadge = log.action || '-';
+                }
+
+                var timestamp = log.timestamp || log.created_at || '-';
+                if (timestamp !== '-') {
+                  try {
+                    var date = new Date(timestamp);
+                    timestamp = date.toLocaleString('th-TH');
+                  } catch (e) { }
+                }
+
+                var details = '';
+                if (log.old_value && log.new_value) {
+                  details = 'เปลี่ยนจาก "' + (log.old_value || '-') + '" เป็น "' + (log.new_value || '-') + '"';
+                } else if (log.details) {
+                  details = typeof log.details === 'string' ? log.details : JSON.stringify(log.details);
+                }
+
+                row.innerHTML =
+                  '<td>' + timestamp + '</td>' +
+                  '<td>' + (log.user_id || '-') + '</td>' +
+                  '<td>' + actionBadge + '</td>' +
+                  '<td>' + (log.entity_type || '-') + '</td>' +
+                  '<td>' + (log.entity_id || '-') + '</td>' +
+                  '<td>' + details + '</td>';
+
+                tbody.appendChild(row);
+              });
+            } else {
+              tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--color-danger-dark);">' + (typeof getUserMessage !== 'undefined' ? getUserMessage(result.message) : (result.message || 'โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')) + '</td></tr>';
+            }
+          } catch (error) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--color-danger-dark);">' + handleError(error) + '</td></tr>';
+          }
+        }
+      </script>
+    </body>
+
+</html>

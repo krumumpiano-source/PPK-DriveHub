@@ -1,0 +1,639 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตั้งค่าระบบ - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'settings';</script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <link rel="stylesheet" href="common.css">
+  <script src="js/api.js"></script><script src="common.js"></script>
+  <script>
+    window.REQUIRE_AUTH = true;
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background: var(--gradient-primary);
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: white;
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-container);
+    overflow: hidden;
+    }
+
+    .header {
+    background: var(--gradient-primary);
+    color: white;
+    padding: 25px;
+    text-align: center;
+    }
+
+    .header h1 {
+    font-size: 1.8em;
+    margin-bottom: 8px;
+    }
+
+    .content {
+    padding: 25px;
+    }
+
+    .settings-section {
+    background: var(--color-bg-light);
+    border-radius: var(--radius-xl);
+    padding: 20px;
+    margin-bottom: 25px;
+    }
+
+    .section-title {
+    font-size: 1.3em;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--color-primary);
+    }
+
+    .form-group {
+    margin-bottom: 18px;
+    }
+
+    .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--color-text);
+    font-size: 1em;
+    }
+
+    .form-group input,
+    .form-group select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: var(--radius-md);
+    font-size: 1em;
+    font-family: inherit;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-focus);
+    }
+
+    .form-group .help-text {
+    font-size: 0.85em;
+    color: var(--color-text-muted);
+    margin-top: 5px;
+    }
+
+    .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    }
+
+    .checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+    width: auto;
+    }
+
+    .btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-family: inherit;
+    }
+
+    .btn-primary {
+    background: var(--gradient-primary);
+    color: white;
+    }
+
+    .btn-primary:hover {
+    opacity: 0.9;
+    }
+
+    .btn-danger {
+    background: var(--color-danger);
+    color: white;
+    }
+
+    .btn-danger:hover {
+    background: #c82333;
+    }
+
+    .btn-secondary {
+    background: #6c757d;
+    color: white;
+    }
+
+    .btn-secondary:hover {
+    background: #5a6268;
+    }
+
+    .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 25px;
+    flex-wrap: wrap;
+    }
+
+    .alert {
+    padding: 15px;
+    border-radius: var(--radius-md);
+    margin-bottom: 20px;
+    }
+
+    .alert-success {
+    background: #d4edda;
+    color: #155724;
+    border-left: 4px solid #2e7d32;
+    }
+
+    .alert-error {
+    background: var(--color-bg-danger);
+    color: var(--color-danger-dark);
+    border-left: 4px solid #c62828;
+    }
+
+    .maintenance-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+    }
+
+    .maintenance-item {
+    background: white;
+    padding: 15px;
+    border-radius: var(--radius-md);
+    border: 2px solid #e9ecef;
+    }
+
+    .maintenance-item-header {
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: 10px;
+    }
+
+    .maintenance-item-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 8px;
+    }
+
+    .maintenance-item-row input {
+    padding: 8px;
+    font-size: 0.9em;
+    }
+
+    .loading {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--color-text-muted);
+    }
+
+    @media (max-width: 768px) {
+
+    .form-row,
+    .maintenance-item-row {
+    grid-template-columns: 1fr;
+    }
+
+    .maintenance-items {
+    grid-template-columns: 1fr;
+    }
+
+    .btn-row {
+    flex-direction: column;
+    }
+
+    .btn-row .btn {
+    width: 100%;
+    }
+    }
+  </style>
+</head>
+
+<body>
+      <div class="container">
+        <div class="header">
+          <h1>⚙️ ตั้งค่าระบบ</h1>
+          <p>ระบบจัดการยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+        </div>
+
+        <div id="navigation"></div>
+
+        <div class="content">
+          <div id="alertContainer"></div>
+
+          <div id="loading" class="loading">กำลังโหลดข้อมูล...</div>
+
+          <div id="settingsContent" style="display: none;">
+            <!-- การเวียนคิว -->
+            <div class="settings-section">
+              <div class="section-title">🔄 การเวียนคิว</div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>จำนวนครั้งสูงสุดที่รถใช้ต่อสัปดาห์</label>
+                  <input type="number" id="max_car_usage_per_week" min="1" max="10">
+                  <div class="help-text">จำนวนครั้งสูงสุดที่รถคันเดียวกันสามารถใช้งานได้ต่อสัปดาห์</div>
+                </div>
+
+                <div class="form-group">
+                  <label>จำนวนครั้งสูงสุดที่คนขับทำงานนอกต่อสัปดาห์</label>
+                  <input type="number" id="max_driver_long_jobs_per_week" min="1" max="10">
+                  <div class="help-text">จำนวนครั้งสูงสุดที่คนขับคนเดียวกันสามารถทำงานนอกสถานที่ได้ต่อสัปดาห์</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- การพักทุกระยะ -->
+            <div class="settings-section">
+              <div class="section-title">⏸️ การพักทุกระยะ</div>
+
+              <div class="form-group">
+                <label>ระยะทางที่ต้องพัก (กิโลเมตร)</label>
+                <input type="number" id="fatigue_distance_threshold" min="100" max="1000" step="50">
+                <div class="help-text">ตัวอย่าง: ทุก 400 กิโลเมตรต้องพัก 1 วัน</div>
+              </div>
+
+              <div class="form-group">
+                <div class="checkbox-group">
+                  <input type="checkbox" id="recovery_day_enabled">
+                  <label for="recovery_day_enabled" style="margin: 0;">เปิดใช้งานการพักทุกระยะ</label>
+                </div>
+              </div>
+            </div>
+
+            <!-- การแจ้งเตือนซ่อมบำรุง -->
+            <div class="settings-section">
+              <div class="section-title">🔧 การแจ้งเตือนซ่อมบำรุง</div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>แจ้งเตือนล่วงหน้า (วัน)</label>
+                  <input type="number" id="pm_advance_days" min="1" max="30">
+                  <div class="help-text">ตัวอย่าง: แจ้งเตือนล่วงหน้า 7 วัน</div>
+                </div>
+
+                <div class="form-group">
+                  <label>แจ้งเตือนล่วงหน้า (กิโลเมตร)</label>
+                  <input type="number" id="pm_advance_km" min="50" max="500" step="50">
+                  <div class="help-text">ตัวอย่าง: แจ้งเตือนเมื่อใกล้ครบ 100 กิโลเมตร</div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <div class="checkbox-group">
+                  <input type="checkbox" id="emergency_auto_lock">
+                  <label for="emergency_auto_lock" style="margin: 0;">ล็อครถอัตโนมัติเมื่อแจ้งซ่อมฉุกเฉิน</label>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>รายการที่ต้องแจ้งเตือน</label>
+                <div class="help-text" style="margin-bottom:10px;">
+                  ค่าที่ตั้งจะถูกบันทึกลงระบบและใช้เทียบกับเลขไมล์รถ/เวลาที่ผ่าน
+                  เพื่อสร้างแจ้งเตือนเมื่อใกล้ครบหรือเกินเกณฑ์ (ร่วมกับค่า "แจ้งเตือนล่วงหน้า" ด้านบน)</div>
+                <div class="maintenance-items" id="maintenanceItems">
+                  <!-- Will be populated dynamically -->
+                </div>
+              </div>
+            </div>
+
+            <!-- การแจ้งเตือนภาษีและประกัน -->
+            <div class="settings-section">
+              <div class="section-title">📄 การแจ้งเตือนภาษีและประกัน</div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>แจ้งเตือนภาษีล่วงหน้า (เดือน)</label>
+                  <input type="number" id="tax_alert_months" min="1" max="12">
+                  <div class="help-text">ตัวอย่าง: แจ้งเตือนล่วงหน้า 3 เดือน</div>
+                </div>
+
+                <div class="form-group">
+                  <label>แจ้งเตือนประกันล่วงหน้า (เดือน)</label>
+                  <input type="number" id="insurance_alert_months" min="1" max="12">
+                  <div class="help-text">ตัวอย่าง: แจ้งเตือนล่วงหน้า 3 เดือน</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ปุ่มบันทึก -->
+            <div class="btn-row">
+              <button type="button" class="btn btn-danger" onclick="resetToDefault()">
+                🔄 รีเซ็ตเป็นค่าเริ่มต้น
+              </button>
+              <button type="button" class="btn btn-secondary" onclick="window.location.href='dashboard.html'">
+                ← ยกเลิก
+              </button>
+              <button type="button" class="btn btn-primary" onclick="saveSettings()">
+                💾 บันทึกการตั้งค่า
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <script>
+        function waitForCommon() {
+          return new Promise(function (resolve) {
+            if (typeof apiCall !== 'undefined' && typeof getCurrentUser !== 'undefined') {
+              resolve();
+              return;
+            }
+            var checkCount = 0;
+            var checkInterval = setInterval(function () {
+              checkCount++;
+              if (typeof apiCall !== 'undefined' && typeof getCurrentUser !== 'undefined') {
+                clearInterval(checkInterval);
+                resolve();
+              } else if (checkCount > 50) {
+                clearInterval(checkInterval);
+                resolve();
+              }
+            }, 100);
+          });
+        }
+
+        var maintenanceItems = [
+          { key: 'engine_oil', name: 'น้ำมันเครื่อง', default_km: 5000, default_months: 6 },
+          { key: 'gear_oil', name: 'น้ำมันเกียร์', default_km: 40000, default_months: 48 },
+          { key: 'brake_oil', name: 'น้ำมันเบรก', default_km: 60000, default_months: 60 },
+          { key: 'coolant', name: 'น้ำยาหล่อเย็น', default_km: 100000, default_months: 84 },
+          { key: 'power_steering', name: 'น้ำมันพวงมาลัยพาวเวอร์', default_km: 40000, default_months: 48 },
+          { key: 'air_filter', name: 'ไส้กรองอากาศ', default_km: 10000, default_months: 12 },
+          { key: 'ac_filter', name: 'ไส้กรองแอร์', default_km: 20000, default_months: 24 },
+          { key: 'spark_plug', name: 'หัวเทียน (รถเบนซิน)', default_km: 60000, default_months: 60 },
+          { key: 'timing_belt', name: 'สายพานไทม์มิ่ง', default_km: 80000, default_months: 72 },
+          { key: 'serpentine_belt', name: 'สายพานหน้าเครื่อง', default_km: 80000, default_months: 72 },
+          { key: 'brake_pad', name: 'ผ้าเบรก', default_km: 40000, default_months: 48 },
+          { key: 'brake_disc', name: 'จานเบรก', default_km: 60000, default_months: 60 },
+          { key: 'tire', name: 'ยางรถ', default_km: 50000, default_months: 60 },
+          { key: 'shock_absorber', name: 'โช้คอัพ', default_km: 80000, default_months: 72 },
+          { key: 'ball_joint', name: 'ลูกหมาก', default_km: 100000, default_months: 84 },
+          { key: 'bush', name: 'บูชยาง', default_km: 100000, default_months: 84 },
+          { key: 'battery', name: 'แบตเตอรี่', default_km: 0, default_months: 36 },
+          { key: 'wiper', name: 'ใบปัดน้ำฝน', default_km: 0, default_months: 12 }
+        ];
+
+        document.addEventListener('DOMContentLoaded', async function () {
+          await waitForCommon();
+
+          var isAuthenticated = false;
+          if (typeof requireAuth === 'function') {
+            isAuthenticated = requireAuth();
+            if (!isAuthenticated) {
+              window.location.href = 'login.html';
+              return;
+            }
+          }
+
+          var currentUser = getCurrentUser();
+          if (!currentUser || (typeof hasPermission === 'function' && !hasPermission(['admin']))) {
+            showAlert('ต้องเป็น Admin เท่านั้น', 'error');
+            window.location.href = 'dashboard.html';
+            return;
+          }
+
+          if (typeof apiCall === 'undefined') {
+            renderMaintenanceItems();
+            setDefaultFormValues();
+            showSettingsForm();
+            showAlert('โหลดระบบไม่สมบูรณ์ กรุณารีเฟรชหรือเปิดผ่านเว็บของโรงเรียน เพื่อให้บันทึกการตั้งค่าได้', 'error');
+            return;
+          }
+
+          renderMaintenanceItems();
+          loadSettings();
+        });
+
+        function renderMaintenanceItems() {
+          var container = document.getElementById('maintenanceItems');
+          container.innerHTML = '';
+
+          maintenanceItems.forEach(function (item) {
+            var itemDiv = document.createElement('div');
+            itemDiv.className = 'maintenance-item';
+            itemDiv.innerHTML =
+              '<div class="maintenance-item-header">' + item.name + '</div>' +
+              '<div class="maintenance-item-row">' +
+              '<div><label style="font-size: 0.85em;">ระยะทาง (กม.)</label><input type="number" id="maintenance_' + item.key + '_km" min="0" step="1000" placeholder="' + item.default_km + '"></div>' +
+              '<div><label style="font-size: 0.85em;">ระยะเวลา (เดือน)</label><input type="number" id="maintenance_' + item.key + '_months" min="0" step="1" placeholder="' + item.default_months + '"></div>' +
+              '</div>';
+            container.appendChild(itemDiv);
+          });
+        }
+
+        /** ใส่ค่าเริ่มต้นในฟอร์ม (ใช้เมื่อโหลดจากเซิร์ฟเวอร์ไม่ได้ หรือ timeout) */
+        function setDefaultFormValues() {
+          var el = function (id) { return document.getElementById(id); };
+          if (el('max_car_usage_per_week')) el('max_car_usage_per_week').value = 3;
+          if (el('max_driver_long_jobs_per_week')) el('max_driver_long_jobs_per_week').value = 2;
+          if (el('fatigue_distance_threshold')) el('fatigue_distance_threshold').value = 400;
+          if (el('recovery_day_enabled')) el('recovery_day_enabled').checked = true;
+          if (el('pm_advance_days')) el('pm_advance_days').value = 7;
+          if (el('pm_advance_km')) el('pm_advance_km').value = 100;
+          if (el('emergency_auto_lock')) el('emergency_auto_lock').checked = true;
+          if (el('tax_alert_months')) el('tax_alert_months').value = 3;
+          if (el('insurance_alert_months')) el('insurance_alert_months').value = 3;
+          maintenanceItems.forEach(function (item) {
+            var kmEl = el('maintenance_' + item.key + '_km');
+            var moEl = el('maintenance_' + item.key + '_months');
+            if (kmEl) kmEl.value = item.default_km;
+            if (moEl) moEl.value = item.default_months;
+          });
+        }
+
+        /** แสดงฟอร์มตั้งค่าและซ่อน loading */
+        function showSettingsForm() {
+          var loadingEl = document.getElementById('loading');
+          var contentEl = document.getElementById('settingsContent');
+          if (loadingEl) loadingEl.style.display = 'none';
+          if (contentEl) contentEl.style.display = 'block';
+        }
+
+        async function loadSettings() {
+          var loadingEl = document.getElementById('loading');
+          var contentEl = document.getElementById('settingsContent');
+          if (loadingEl) loadingEl.style.display = 'block';
+          if (contentEl) contentEl.style.display = 'none';
+
+          setDefaultFormValues();
+
+          var loadTimeout = 12000;
+          var timeoutPromise = new Promise(function (_, reject) {
+            setTimeout(function () { reject(new Error('TIMEOUT')); }, loadTimeout);
+          });
+
+          try {
+            var result = await Promise.race([
+              apiCall('getAdminSettings', {}, { timeout: 10000 }),
+              timeoutPromise
+            ]);
+
+            if (result && result.success && result.data && result.data.settings) {
+              var settings = result.data.settings;
+              var el = function (id) { return document.getElementById(id); };
+
+              if (settings.queue) {
+                if (settings.queue.rotation_policy) {
+                  if (el('max_car_usage_per_week')) el('max_car_usage_per_week').value = settings.queue.rotation_policy.max_car_usage_per_week || 3;
+                  if (el('max_driver_long_jobs_per_week')) el('max_driver_long_jobs_per_week').value = settings.queue.rotation_policy.max_driver_long_jobs_per_week || 2;
+                }
+                if (settings.queue.fatigue_rule) {
+                  if (el('fatigue_distance_threshold')) el('fatigue_distance_threshold').value = settings.queue.fatigue_rule.distance_threshold || 400;
+                  if (el('recovery_day_enabled')) el('recovery_day_enabled').checked = settings.queue.fatigue_rule.recovery_day_enabled !== false;
+                }
+              }
+
+              if (settings.repair) {
+                if (el('pm_advance_days')) el('pm_advance_days').value = settings.repair.pm_advance_days || 7;
+                if (el('pm_advance_km')) el('pm_advance_km').value = settings.repair.pm_advance_km || 100;
+                if (el('emergency_auto_lock')) el('emergency_auto_lock').checked = settings.repair.emergency_auto_lock !== false;
+              }
+
+              var sys = (settings.system && settings.system.data && settings.system.data.settings) ? settings.system.data.settings : null;
+              if (!sys) {
+                try {
+                  var systemResult = await apiCall('getSystemSettings', {}, { timeout: 8000 });
+                  if (systemResult && systemResult.success && systemResult.data && systemResult.data.settings) sys = systemResult.data.settings;
+                } catch (e) { }
+              }
+              if (sys) {
+                if (el('tax_alert_months')) el('tax_alert_months').value = (sys.tax_alert_months && sys.tax_alert_months.value != null) ? sys.tax_alert_months.value : 3;
+                if (el('insurance_alert_months')) el('insurance_alert_months').value = (sys.insurance_alert_months && sys.insurance_alert_months.value != null) ? sys.insurance_alert_months.value : 3;
+                maintenanceItems.forEach(function (item) {
+                  var kmKey = 'maintenance_' + item.key + '_km';
+                  var moKey = 'maintenance_' + item.key + '_months';
+                  if (sys[kmKey] && sys[kmKey].value != null) { var k = el(kmKey); if (k) k.value = sys[kmKey].value; }
+                  if (sys[moKey] && sys[moKey].value != null) { var m = el(moKey); if (m) m.value = sys[moKey].value; }
+                });
+              }
+            }
+          } catch (error) {
+            console.error('Error loading settings:', error);
+            if (error && error.message === 'TIMEOUT') {
+              showAlert('โหลดค่าจากเซิร์ฟเวอร์ไม่สำเร็จ (หมดเวลา) แสดงค่าเริ่มต้น กรุณาเปิดผ่านเว็บของโรงเรียนหรือลองรีเฟรช', 'error');
+            } else {
+              showAlert(typeof handleError !== 'undefined' ? handleError(error) : 'ไม่สามารถโหลดข้อมูลได้ แสดงค่าเริ่มต้น', 'error');
+            }
+          }
+
+          showSettingsForm();
+        }
+
+        async function saveSettings() {
+          var el = function (id) { return document.getElementById(id); };
+          if (!el('max_car_usage_per_week') || typeof apiCall !== 'function') {
+            showAlert('ระบบยังไม่พร้อม กรุณารีเฟรชหน้า', 'error');
+            return;
+          }
+          try {
+            var maxCar = parseInt(el('max_car_usage_per_week').value, 10) || 3;
+            var maxDriver = parseInt(el('max_driver_long_jobs_per_week').value, 10) || 2;
+            var fatigueKm = parseInt(el('fatigue_distance_threshold').value, 10) || 400;
+            var recoveryEnabled = el('recovery_day_enabled') ? el('recovery_day_enabled').checked : true;
+            var pmDays = parseInt(el('pm_advance_days').value, 10) || 7;
+            var pmKm = parseInt(el('pm_advance_km').value, 10) || 100;
+            var emergencyLock = el('emergency_auto_lock') ? el('emergency_auto_lock').checked : true;
+            var taxMonths = parseInt(el('tax_alert_months').value, 10) || 3;
+            var insMonths = parseInt(el('insurance_alert_months').value, 10) || 3;
+
+            await apiCall('updateSystemSetting', { key: 'max_car_usage_per_week', value: maxCar });
+            await apiCall('updateSystemSetting', { key: 'max_driver_long_jobs_per_week', value: maxDriver });
+            await apiCall('updateSystemSetting', { key: 'fatigue_distance_threshold', value: fatigueKm });
+            await apiCall('updateSystemSetting', { key: 'recovery_day_enabled', value: recoveryEnabled });
+            await apiCall('updateSystemSetting', { key: 'pm_advance_days', value: pmDays });
+            await apiCall('updateSystemSetting', { key: 'pm_advance_km', value: pmKm });
+            await apiCall('updateSystemSetting', { key: 'emergency_auto_lock', value: emergencyLock });
+            await apiCall('updateSystemSetting', { key: 'tax_alert_months', value: taxMonths });
+            await apiCall('updateSystemSetting', { key: 'insurance_alert_months', value: insMonths });
+
+            for (var i = 0; i < maintenanceItems.length; i++) {
+              var item = maintenanceItems[i];
+              var kmVal = parseInt(el('maintenance_' + item.key + '_km') && el('maintenance_' + item.key + '_km').value, 10);
+              var moVal = parseInt(el('maintenance_' + item.key + '_months') && el('maintenance_' + item.key + '_months').value, 10);
+              if (isNaN(kmVal)) kmVal = item.default_km;
+              if (isNaN(moVal)) moVal = item.default_months;
+              await apiCall('updateSystemSetting', { key: 'maintenance_' + item.key + '_km', value: kmVal });
+              await apiCall('updateSystemSetting', { key: 'maintenance_' + item.key + '_months', value: moVal });
+            }
+
+            showAlert('บันทึกการตั้งค่าสำเร็จ', 'success');
+          } catch (error) {
+            console.error('Error saving settings:', error);
+            showAlert(typeof handleError !== 'undefined' ? handleError(error) : 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'error');
+          }
+        }
+
+        async function resetToDefault() {
+          if (!confirm('คุณต้องการรีเซ็ตการตั้งค่าทั้งหมดเป็นค่าเริ่มต้นหรือไม่?')) {
+            return;
+          }
+
+          try {
+            var result = await apiCall('resetAdminSettingsToDefault', {});
+
+            if (result.success) {
+              showAlert('รีเซ็ตเป็นค่าเริ่มต้นสำเร็จ', 'success');
+              loadSettings();
+            } else {
+              showAlert(typeof getUserMessage !== 'undefined' ? getUserMessage(result.message) : (result.message || 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'), 'error');
+            }
+          } catch (error) {
+            showAlert(typeof handleError !== 'undefined' ? handleError(error) : 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'error');
+          }
+        }
+
+        function showAlert(message, type) {
+          var container = document.getElementById('alertContainer');
+          var alert = document.createElement('div');
+          alert.className = 'alert alert-' + type;
+          alert.textContent = message;
+          container.innerHTML = '';
+          container.appendChild(alert);
+
+          setTimeout(function () {
+            alert.remove();
+          }, 5000);
+        }
+      </script>
+
+      <div
+        style="background: var(--color-bg-light); padding: 20px; text-align: center; color: var(--color-text-muted); font-size: 0.9em; margin-top: 20px;">
+        <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+      </div>
+    </body>
+
+</html>
