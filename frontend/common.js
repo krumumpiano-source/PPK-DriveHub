@@ -88,9 +88,13 @@ function requireAdmin() {
 function setActiveMenu() {
     try {
         var currentPage = window.currentPage || 'dashboard';
-        document.querySelectorAll('.nav-btn').forEach(function (btn) { btn.classList.remove('active'); });
-        var active = document.querySelector('.nav-btn[data-page="' + currentPage + '"]');
+        document.querySelectorAll('.sidebar-item').forEach(function (el) { el.classList.remove('active'); });
+        var active = document.querySelector('.sidebar-item[data-page="' + currentPage + '"]');
         if (active) active.classList.add('active');
+        // legacy support for QR pages
+        document.querySelectorAll('.nav-btn').forEach(function (btn) { btn.classList.remove('active'); });
+        var activeBtn = document.querySelector('.nav-btn[data-page="' + currentPage + '"]');
+        if (activeBtn) activeBtn.classList.add('active');
     } catch (e) {}
 }
 
@@ -106,39 +110,116 @@ function renderQROnlyNavigation() {
         '<a class="nav-btn" href="qr-fuel-record.html" data-page="qr-fuel-record">⛽ เติมน้ำมัน</a>' +
         '<a class="nav-btn" href="qr-daily-check.html" data-page="qr-daily-check">🔧 ตรวจสภาพ+แจ้งซ่อม</a>' +
         '<a class="nav-btn" href="user-guide.html" data-page="user-guide">📖 วิธีใช้งาน</a>' +
-        '<a class="nav-btn" href="login.html" style="background:#5c6bc0;color:white;border-color:#5c6bc0;">🔐 เข้าสู่ระบบ</a>' +
+        '<a class="nav-btn" href="login.html" style="background:rgba(30,136,229,0.5);color:white;border-color:#1e88e5;">🔐 เข้าสู่ระบบ</a>' +
         '</div>';
+}
+
+function _sidebarItem(href, page, icon, label) {
+    return '<a class="sidebar-item" href="' + href + '" data-page="' + page + '">' +
+        '<span class="si-icon">' + icon + '</span>' +
+        '<span class="si-label">' + label + '</span>' +
+        '</a>';
+}
+
+function _sidebarSection(title) {
+    return '<div class="sidebar-section-title">' + title + '</div>';
 }
 
 function renderNavigation() {
     var user = getCurrentUser();
     if (!user) return '';
-    var nav = '<div class="nav">';
-    nav += '<a class="nav-btn" href="dashboard.html" data-page="dashboard">🏠 หน้าแรก</a>';
-    if (user.driver_id) nav += '<a class="nav-btn" href="driver-history.html" data-page="driver-history">🚗 คิวและประวัติ</a>';
-    if (hasModulePermission('queue', 'edit') || hasPermission(['admin'])) nav += '<a class="nav-btn" href="queue-manage.html" data-page="queue">✏️ จัดคิว</a>';
-    if (hasModulePermission('vehicles', 'view') || hasPermission(['admin'])) nav += '<a class="nav-btn" href="vehicles.html" data-page="vehicles">🚙 รถ</a>';
-    if (hasModulePermission('drivers', 'view') || hasPermission(['admin'])) nav += '<a class="nav-btn" href="drivers.html" data-page="drivers">👤 คนขับ</a>';
-    if (hasModulePermission('fuel', 'view') || hasPermission(['admin'])) nav += '<a class="nav-btn" href="fuel-record.html" data-page="fuel-record">⛽ น้ำมัน</a>';
-    if (hasModulePermission('repair', 'view') || hasPermission(['admin'])) nav += '<a class="nav-btn" href="repair.html" data-page="repair">🔧 ซ่อมบำรุง</a>';
-    if (hasModulePermission('vehicles', 'view') || hasPermission(['admin'])) nav += '<a class="nav-btn" href="tax-insurance.html" data-page="tax-insurance">📋 ภาษี/ประกัน</a>';
-    if (hasModulePermission('reports', 'view') || hasPermission(['admin'])) nav += '<a class="nav-btn" href="reports.html" data-page="reports">📊 รายงาน</a>';
-    if (hasModulePermission('usage_log', 'view') || hasPermission(['admin'])) nav += '<a class="nav-btn" href="usage-log.html" data-page="usage-log">📝 บันทึกการใช้งาน</a>';
-    nav += '<a class="nav-btn" href="qr-usage-record.html" data-page="qr-usage-record">📷 สแกน QR บันทึกใช้รถ</a>';
-    nav += '<a class="nav-btn" href="qr-fuel-record.html" data-page="qr-fuel-record">⛽ สแกน QR เติมน้ำมัน</a>';
-    nav += '<a class="nav-btn" href="qr-daily-check.html" data-page="qr-daily-check">🔧 สแกน QR ตรวจสภาพ+แจ้งซ่อม</a>';
-    nav += '<a class="nav-btn" href="notifications.html" data-page="notifications">🔔 การแจ้งเตือน</a>';
-    if (hasPermission(['admin', 'super_admin'])) {
-        nav += '<a class="nav-btn" href="admin-settings.html" data-page="settings">⚙️ ตั้งค่าระบบ</a>';
-        nav += '<a class="nav-btn" href="audit-log.html" data-page="audit-log">📜 บันทึกกิจกรรม</a>';
-        nav += '<a class="nav-btn" href="backup-recovery.html" data-page="backup-recovery">💾 สำรอง/กู้คืน</a>';
+
+    var roleLabel = { super_admin: 'ผู้ดูแลสูงสุด', admin: 'ผู้ดูแลระบบ', manager: 'ผู้จัดการ', driver: 'พนักงานขับรถ', staff: 'เจ้าหน้าที่' };
+    var initials = (user.full_name || user.username || '?').charAt(0).toUpperCase();
+
+    var nav = '';
+    // Brand
+    nav += '<a class="sidebar-brand" href="dashboard.html">' +
+        '<div class="sidebar-brand-icon">🚐</div>' +
+        '<div class="sidebar-brand-text">' +
+        '<div class="sidebar-brand-title">PPK DriveHub</div>' +
+        '<div class="sidebar-brand-sub">ระบบจัดการยานพาหนะ</div>' +
+        '</div></a>';
+
+    // User info
+    nav += '<div class="sidebar-user">' +
+        '<div class="sidebar-user-avatar">' + initials + '</div>' +
+        '<div class="sidebar-user-info">' +
+        '<div class="sidebar-user-name">' + (user.full_name || user.username || '') + '</div>' +
+        '<div class="sidebar-user-role">' + (roleLabel[user.role] || user.role || '') + '</div>' +
+        '</div></div>';
+
+    nav += '<nav class="sidebar-nav">';
+
+    // ── ภาพรวม ──
+    nav += _sidebarSection('ภาพรวม');
+    nav += _sidebarItem('dashboard.html', 'dashboard', '🏠', 'หน้าแรก');
+
+    // ── งานยานพาหนะ ──
+    nav += _sidebarSection('งานยานพาหนะ');
+    if (hasModulePermission('queue', 'edit') || hasPermission(['admin'])) {
+        nav += _sidebarItem('queue-manage.html', 'queue', '📅', 'จัดการคิวรถ');
     }
-    nav += '<a class="nav-btn" href="user-guide.html" data-page="user-guide">📖 วิธีใช้งาน</a>';
-    nav += '<a class="nav-btn" href="glossary.html" data-page="glossary">📚 คำศัพท์</a>';
-    nav += '<a class="nav-btn" href="about.html" data-page="about">ℹ️ เกี่ยวกับ</a>';
-    nav += '<a class="nav-btn" href="profile.html" data-page="profile">👤 ตั้งค่าส่วนตัว</a>';
-    nav += '<a class="nav-btn" href="#" onclick="logout();return false;" style="background:#f44336;color:white;border-color:#f44336;">🚪 ออกจากระบบ</a>';
-    nav += '</div>';
+    if (hasModulePermission('vehicles', 'view') || hasPermission(['admin'])) {
+        nav += _sidebarItem('vehicles.html', 'vehicles', '🚙', 'ทะเบียนรถ');
+    }
+    if (hasModulePermission('usage_log', 'view') || hasPermission(['admin'])) {
+        nav += _sidebarItem('usage-log.html', 'usage-log', '📝', 'บันทึกการใช้รถ');
+    }
+    if (hasModulePermission('vehicles', 'view') || hasPermission(['admin'])) {
+        nav += _sidebarItem('tax-insurance.html', 'tax-insurance', '📄', 'ภาษีและประกันภัย');
+    }
+
+    // ── พนักงานขับรถ ──
+    nav += _sidebarSection('พนักงานขับรถ');
+    if (hasModulePermission('drivers', 'view') || hasPermission(['admin'])) {
+        nav += _sidebarItem('drivers.html', 'drivers', '👷', 'ข้อมูลพนักงาน');
+    }
+    if (user.driver_id || hasPermission(['admin'])) {
+        nav += _sidebarItem('driver-history.html', 'driver-history', '📋', 'คิวและประวัติงาน');
+    }
+
+    // ── เชื้อเพลิง & ซ่อมบำรุง ──
+    nav += _sidebarSection('เชื้อเพลิง & ซ่อมบำรุง');
+    if (hasModulePermission('fuel', 'view') || hasPermission(['admin'])) {
+        nav += _sidebarItem('fuel-record.html', 'fuel-record', '⛽', 'บันทึกเติมน้ำมัน');
+    }
+    if (hasModulePermission('repair', 'view') || hasPermission(['admin'])) {
+        nav += _sidebarItem('repair.html', 'repair', '🔧', 'บันทึกการซ่อม');
+    }
+
+    // ── รายงาน ──
+    nav += _sidebarSection('รายงานและสถิติ');
+    if (hasModulePermission('reports', 'view') || hasPermission(['admin'])) {
+        nav += _sidebarItem('reports.html', 'reports', '📊', 'รายงาน');
+    }
+    nav += _sidebarItem('notifications.html', 'notifications', '🔔', 'การแจ้งเตือน');
+
+    // ── QR Code ──
+    nav += _sidebarSection('สแกน QR Code');
+    nav += _sidebarItem('qr-usage-record.html', 'qr-usage-record', '📷', 'บันทึกใช้รถ');
+    nav += _sidebarItem('qr-fuel-record.html', 'qr-fuel-record', '🛢️', 'เติมน้ำมัน');
+    nav += _sidebarItem('qr-daily-check.html', 'qr-daily-check', '✅', 'ตรวจสภาพ+แจ้งซ่อม');
+
+    // ── ผู้ดูแลระบบ ──
+    if (hasPermission(['admin', 'super_admin'])) {
+        nav += _sidebarSection('ผู้ดูแลระบบ');
+        nav += _sidebarItem('admin-settings.html', 'settings', '⚙️', 'ตั้งค่าระบบ');
+        nav += _sidebarItem('audit-log.html', 'audit-log', '📜', 'บันทึกกิจกรรม');
+        nav += _sidebarItem('backup-recovery.html', 'backup-recovery', '💾', 'สำรอง/กู้คืน');
+    }
+
+    // ── ส่วนตัว ──
+    nav += '<div class="sidebar-divider"></div>';
+    nav += _sidebarItem('profile.html', 'profile', '👤', 'ตั้งค่าส่วนตัว');
+    nav += _sidebarItem('user-guide.html', 'user-guide', '📖', 'วิธีใช้งาน');
+    nav += _sidebarItem('glossary.html', 'glossary', '📚', 'คำศัพท์');
+    nav += _sidebarItem('about.html', 'about', 'ℹ️', 'เกี่ยวกับโปรแกรม');
+    nav += '<div class="sidebar-divider"></div>';
+    nav += '<a class="sidebar-item sidebar-item-logout" href="#" onclick="logout();return false;">' +
+        '<span class="si-icon">🚪</span><span class="si-label">ออกจากระบบ</span></a>';
+
+    nav += '</nav>';
     return nav;
 }
 
@@ -153,9 +234,77 @@ function logout() {
 }
 
 function renderNav() {
-    var navContainer = document.getElementById('navigation');
-    if (!navContainer) return;
-    navContainer.innerHTML = window.REQUIRE_AUTH === false ? renderQROnlyNavigation() : renderNavigation();
+    if (window.REQUIRE_AUTH === false) {
+        // QR pages: inject simple bar nav into #navigation
+        var navContainer = document.getElementById('navigation');
+        if (navContainer) {
+            navContainer.innerHTML = renderQROnlyNavigation();
+            setActiveMenu();
+        }
+        return;
+    }
+
+    // Full sidebar layout — rebuild body structure
+    var body = document.body;
+    var oldContainer = body.querySelector('.container');
+    if (!oldContainer) return;
+
+    // Extract inner parts from old container
+    var headerEl = oldContainer.querySelector('.header');
+    var contentEl = oldContainer.querySelector('.content');
+    var navEl = oldContainer.querySelector('#navigation');
+
+    // Remove old #navigation placeholder (sidebar will live outside .container)
+    if (navEl) navEl.parentNode.removeChild(navEl);
+
+    // Build sidebar element
+    var sidebar = document.createElement('div');
+    sidebar.className = 'sidebar';
+    sidebar.id = 'sidebar';
+    sidebar.innerHTML = renderNavigation();
+
+    // Build overlay (mobile)
+    var overlay = document.createElement('div');
+    overlay.className = 'sidebar-overlay';
+    overlay.id = 'sidebar-overlay';
+    overlay.addEventListener('click', function () {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('open');
+    });
+
+    // Build topbar
+    var user = getCurrentUser();
+    var initials = user ? (user.full_name || user.username || '?').charAt(0).toUpperCase() : '?';
+    var pageTitle = headerEl ? (headerEl.querySelector('h1') || {}).textContent || document.title : document.title;
+    var topbar = document.createElement('div');
+    topbar.className = 'topbar';
+    topbar.innerHTML =
+        '<button class="topbar-hamburger" id="topbar-hamburger" aria-label="เมนู">&#9776;</button>' +
+        '<div class="topbar-title">' + pageTitle + '</div>' +
+        '<div class="topbar-user">' +
+        '<div class="topbar-avatar">' + initials + '</div>' +
+        '</div>';
+
+    // Build main-area: topbar + container (existing header + content)
+    var mainArea = document.createElement('div');
+    mainArea.className = 'main-area';
+    mainArea.appendChild(topbar);
+    mainArea.appendChild(oldContainer); // moves oldContainer out of body into mainArea
+
+    // Insert: sidebar → overlay → mainArea at the top of body (before scripts etc.)
+    body.insertBefore(mainArea, body.firstChild);
+    body.insertBefore(overlay, body.firstChild);
+    body.insertBefore(sidebar, body.firstChild);
+
+    // Hamburger toggle
+    var hamburger = document.getElementById('topbar-hamburger');
+    if (hamburger) {
+        hamburger.addEventListener('click', function () {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('open');
+        });
+    }
+
     setActiveMenu();
 }
 
