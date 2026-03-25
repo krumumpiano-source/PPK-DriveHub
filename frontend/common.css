@@ -693,3 +693,14 @@ body.qr-page .content { padding: clamp(14px, 3vw, 20px); }
 @media (max-width: 380px) {
   .sidebar { --sidebar-w: 100vw; width: 100vw; }
 }
+
+/* ── PAGE FOOTER ────────────────────────────────────────── */
+.footer {
+  background: var(--color-bg-light) !important;
+  padding: 16px 20px !important;
+  text-align: center;
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border-light);
+  font-size: var(--fs-xs);
+  margin-top: 24px;
+}

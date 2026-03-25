@@ -299,6 +299,13 @@ function renderNav() {
     body.insertBefore(overlay, body.firstChild);
     body.insertBefore(sidebar, body.firstChild);
 
+    // Move any remaining visible elements (e.g. .footer divs outside .container) into mainArea
+    Array.from(body.children).forEach(function(el) {
+        if (el === sidebar || el === overlay || el === mainArea) return;
+        if (['SCRIPT','LINK','STYLE','META','NOSCRIPT'].indexOf(el.tagName) !== -1) return;
+        mainArea.appendChild(el);
+    });
+
     // Hamburger toggle
     var hamburger = document.getElementById('topbar-hamburger');
     if (hamburger) {
