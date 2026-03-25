@@ -61,7 +61,7 @@ body {
   background: #0d1b2a;
   min-height: 100vh;
   padding: 0;
-  display: flex;
+  margin: 0;
 }
 
 /* ── SIDEBAR ───────────────────────────────────────────── */
@@ -227,11 +227,12 @@ body {
 /* ── MAIN AREA ─────────────────────────────────────────── */
 .main-area {
   margin-left: 260px;
-  flex: 1;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   background: #f0f4f8;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 /* ── TOPBAR ────────────────────────────────────────────── */
@@ -294,38 +295,33 @@ body {
 /* ── PAGE CONTENT ──────────────────────────────────────── */
 .container {
   flex: 1;
-  padding: 24px;
+  padding: 20px 24px 32px;
+  width: 100%;
   max-width: 100%;
+  box-sizing: border-box;
 }
 
 .header {
   background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
   color: white;
-  padding: 24px 28px;
-  border-radius: 14px;
+  padding: 20px 24px;
+  border-radius: 12px;
   margin-bottom: 20px;
-  box-shadow: 0 4px 16px rgba(13,71,161,0.3);
-  display: flex;
-  align-items: center;
-  gap: 16px;
+  box-shadow: 0 4px 16px rgba(13,71,161,0.28);
 }
-
-.header-icon {
-  font-size: 2em;
-  flex-shrink: 0;
-}
-
-.header-text { flex: 1; }
 
 .header h1 {
-  font-size: 1.5em;
-  margin-bottom: 4px;
+  font-size: 1.3em;
   font-weight: 700;
+  margin-bottom: 4px;
+  line-height: 1.3;
 }
 
 .header p {
-  font-size: 0.9em;
-  opacity: 0.85;
+  font-size: 0.85em;
+  opacity: 0.82;
+  margin: 0;
+  line-height: 1.4;
 }
 
 .content {
@@ -356,16 +352,16 @@ body {
     margin-left: 0;
   }
   .topbar-hamburger {
-    display: flex;
+    display: flex !important;
   }
   .container {
-    padding: 14px;
+    padding: 12px 14px 24px;
   }
   .header {
-    padding: 16px 18px;
+    padding: 14px 16px;
   }
   .header h1 {
-    font-size: 1.2em;
+    font-size: 1.1em;
   }
 }
 
