@@ -321,6 +321,7 @@
 
           // Populate create select
           var createSelect = document.getElementById('create_driver_id');
+          if (!createSelect) return;
           drivers.forEach(function (driver) {
             var option = document.createElement('option');
             option.value = driver.driver_id;
@@ -368,10 +369,10 @@
           date_to: formatDate(endDate)
         };
 
-        var result = await apiCall('getQueues', { filters: filters });
+        var result = await apiCall('getQueue', { date_from: filters.date_from, date_to: filters.date_to });
 
-        if (result && result.success && result.data && result.data.queues) {
-          queues = result.data.queues || [];
+        if (result && result.success && result.data) {
+          queues = Array.isArray(result.data) ? result.data : [];
         } else {
           queues = [];
         }
@@ -418,9 +419,10 @@
       });
 
       // Empty cells for days before month starts
+      var lastDayOfPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
       for (var i = 0; i < firstDayOfWeek; i++) {
-        var prevDate = new Date(currentYear, currentMonth, -i);
-        html += '<div class="calendar-day other-month"><div class="calendar-day-number">' + prevDate.getDate() + '</div></div>';
+        var dayNum = lastDayOfPrevMonth - firstDayOfWeek + 1 + i;
+        html += '<div class="calendar-day other-month"><div class="calendar-day-number">' + dayNum + '</div></div>';
       }
 
       // Days of the month
@@ -439,30 +441,27 @@
       function isQueueCurrent(queue, dateStr) {
         if (dateStr !== todayStr) return false;
         if (queue.status === 'active' || queue.status === 'running') return true;
-        if (!queue.time_start) return false;
+        if (!queue.departure_time) return false;
 
-        var queueStart = parseTimeToMinutes(queue.time_start);
-        var queueEnd = queue.time_end ? parseTimeToMinutes(queue.time_end) : (queueStart + 8 * 60);
+        var queueStart = parseTimeToMinutes(queue.departure_time);
+        var queueEnd = queue.return_time ? parseTimeToMinutes(queue.return_time) : (queueStart + 8 * 60);
 
         return currentTimeMinutes >= queueStart && currentTimeMinutes <= queueEnd;
       }
 
       function isQueueUpcoming(queue, dateStr) {
         if (dateStr !== todayStr) return false;
-        if (queue.status === 'done' || queue.status === 'cancel') return false;
-        if (!queue.time_start) return false;
+        if (queue.status === 'cancelled' || queue.status === 'completed') return false;
+        if (!queue.departure_time) return false;
 
-        var queueStart = parseTimeToMinutes(queue.time_start);
-        // Upcoming: starts within next 60 minutes
-        return queueStart > currentTimeMinutes && queueStart <= currentTimeMinutes + 60;
-      }
+        var queueStart = parseTimeToMinutes(queue.departure_time);
 
       for (var day = 1; day <= daysInMonth; day++) {
         var dateStr = formatDate(new Date(currentYear, currentMonth, day));
         var dateObj = new Date(currentYear, currentMonth, day);
         dateObj.setHours(0, 0, 0, 0);
         var isToday = dateStr === todayStr;
-        var dayQueues = queues.filter(function (q) { return q.date === dateStr; });
+        var dayQueues = queues.filter(function (q) { return q.departure_date === dateStr; });
 
         // Determine status class
         var statusClass = '';
@@ -504,9 +503,9 @@
           var vehicle = vehiclesMap[queue.car_id];
           var driver = driversMap[queue.driver_id];
           var licensePlate = vehicle ? vehicle.license_plate : (queue.car_id ? queue.car_id.substring(0, 8) : '-');
-          var driverName = driver ? (driver.full_name || driver.first_name + ' ' + driver.last_name) : (queue.driver_id ? queue.driver_id.substring(0, 10) : '-');
+          var driverName = driver ? (driver.full_name || driver.first_name + ' ' + driver.last_name) : (queue.driver_name || '-');
 
-          html += '<div class="queue-item" onclick="openEditModal(\'' + queue.queue_id + '\'); event.stopPropagation();">';
+          html += '<div class="queue-item" onclick="openEditModal(\'' + queue.id + '\'); event.stopPropagation();">';
           html += '<span class="queue-plate">' + licensePlate + '</span> ' + driverName;
           html += '</div>';
         });
@@ -757,13 +756,13 @@
       }
 
       var formData = {
-        time_start: time_start,
-        time_end: time_end,
+        departure_time: time_start,
+        return_time: time_end,
         car_id: car_id,
         driver_id: driver_id,
-        mission: mission,
+        purpose: mission,
         destination: destination,
-        requested_by: requested_by,
+        requester_name: requested_by,
         passenger_count: parseInt(passenger_count) || 0,
         notes: document.getElementById('create_notes').value.trim() || '',
         allow_flexible: false,
@@ -824,57 +823,53 @@
 
     async function checkQueueConflicts(queueData) {
       try {
-        var carResult = await apiCall('getQueues', {
-          filters: {
-            date: queueData.date,
-            car_id: queueData.car_id
-          }
+        var carResult = await apiCall('getQueue', {
+          date_from: queueData.departure_date,
+          date_to: queueData.departure_date
         });
 
-        var driverResult = await apiCall('getQueues', {
-          filters: {
-            date: queueData.date,
-            driver_id: queueData.driver_id
-          }
+        var driverResult = await apiCall('getQueue', {
+          date_from: queueData.departure_date,
+          date_to: queueData.departure_date
         });
 
         var existingQueues = [];
-        if (carResult.success && carResult.data && carResult.data.queues) {
-          existingQueues = existingQueues.concat(carResult.data.queues);
+        if (carResult.success && carResult.data) {
+          existingQueues = existingQueues.concat(Array.isArray(carResult.data) ? carResult.data : []);
         }
-        if (driverResult.success && driverResult.data && driverResult.data.queues) {
-          existingQueues = existingQueues.concat(driverResult.data.queues);
+        if (driverResult.success && driverResult.data) {
+          existingQueues = existingQueues.concat(Array.isArray(driverResult.data) ? driverResult.data : []);
         }
 
         var seen = {};
         existingQueues = existingQueues.filter(function (q) {
-          if (seen[q.queue_id]) return false;
-          if (editingQueueId && q.queue_id === editingQueueId) return false;
-          seen[q.queue_id] = true;
-          return q.status !== 'cancel' && q.status !== 'done';
+          if (seen[q.id]) return false;
+          if (editingQueueId && q.id === editingQueueId) return false;
+          seen[q.id] = true;
+          return q.status !== 'cancelled' && q.status !== 'completed';
         });
 
-        var queueTimeStart = parseTime(queueData.time_start);
-        var queueTimeEnd = queueData.time_end ? parseTime(queueData.time_end) : null;
+        var queueTimeStart = parseTime(queueData.departure_time);
+        var queueTimeEnd = queueData.return_time ? parseTime(queueData.return_time) : null;
 
         var conflicts = [];
         var seenConflicts = {};
 
         existingQueues.forEach(function (q) {
-          var qTimeStart = parseTime(q.time_start);
-          var qTimeEnd = q.time_end ? parseTime(q.time_end) : null;
+          var qTimeStart = parseTime(q.departure_time);
+          var qTimeEnd = q.return_time ? parseTime(q.return_time) : null;
 
           if (isTimeOverlap(queueTimeStart, queueTimeEnd, qTimeStart, qTimeEnd)) {
             var conflictKey = '';
             var conflictMsg = '';
 
             if (q.car_id === queueData.car_id) {
-              conflictKey = 'car_' + q.queue_id;
-              conflictMsg = 'รถนี้มีคิวในช่วงเวลา ' + q.time_start + (q.time_end ? '-' + q.time_end : '');
+              conflictKey = 'car_' + q.id;
+              conflictMsg = 'รถนี้มีคิวในช่วงเวลา ' + q.departure_time + (q.return_time ? '-' + q.return_time : '');
             }
             if (q.driver_id === queueData.driver_id) {
-              conflictKey = 'driver_' + q.queue_id;
-              conflictMsg = 'คนขับนี้มีคิวในช่วงเวลา ' + q.time_start + (q.time_end ? '-' + q.time_end : '');
+              conflictKey = 'driver_' + q.id;
+              conflictMsg = 'คนขับนี้มีคิวในช่วงเวลา ' + q.departure_time + (q.return_time ? '-' + q.return_time : '');
             }
 
             if (conflictMsg && !seenConflicts[conflictKey]) {
@@ -980,8 +975,8 @@
         document.getElementById('createProgressText').textContent = 'กำลังสร้างคิววันที่ ' + formatDateThai(date) + ' (' + (i + 1) + '/' + total + ')';
 
         try {
-          var queueData = Object.assign({}, formData, { date: date });
-          var result = await apiCall('createQueue', { data: queueData });
+          var queueData = Object.assign({}, formData, { departure_date: date });
+          var result = await apiCall('createQueue', queueData);
 
           if (result.success) {
             successCount++;
@@ -1019,12 +1014,12 @@
       editingQueueId = queueId;
 
       try {
-        var result = await apiCall('getQueueById', { queueId: queueId });
+        var result = await apiCall('getQueueItem', { id: queueId });
 
-        if (result.success && result.data && result.data.queue) {
-          editingQueueData = result.data.queue;
+        if (result.success && result.data) {
+          editingQueueData = result.data;
 
-          var frozen = editingQueueData.frozen === true || editingQueueData.frozen === 'TRUE';
+          var frozen = editingQueueData.status === 'frozen';
           var status = editingQueueData.status || 'pending';
 
           var vehicle = vehiclesMap[editingQueueData.car_id];
@@ -1040,7 +1035,7 @@
           document.getElementById('editQueueInfo').innerHTML = infoHtml;
           document.getElementById('editQueueInfo').style.display = 'block';
 
-          if (frozen || status === 'active' || status === 'done') {
+          if (frozen || status === 'active' || status === 'completed') {
             showAlert('⚠️ คิวนี้ถูก Freeze หรือเริ่มใช้งานแล้ว ไม่สามารถแก้ไขได้', 'warning');
             setTimeout(function () {
               closeEditModal();
@@ -1048,9 +1043,9 @@
             return;
           }
 
-          document.getElementById('edit_date').value = editingQueueData.date || '';
-          document.getElementById('edit_time_start').value = editingQueueData.time_start || '';
-          document.getElementById('edit_time_end').value = editingQueueData.time_end || '';
+          document.getElementById('edit_date').value = editingQueueData.departure_date || '';
+          document.getElementById('edit_time_start').value = editingQueueData.departure_time || '';
+          document.getElementById('edit_time_end').value = editingQueueData.return_time || '';
           document.getElementById('edit_car_id').value = editingQueueData.car_id || '';
           document.getElementById('edit_driver_id').value = editingQueueData.driver_id || '';
           document.getElementById('edit_mission').value = editingQueueData.mission || '';
@@ -1104,8 +1099,9 @@
       var statusMap = {
         'pending': 'รอออก',
         'active': 'กำลังใช้งาน',
-        'done': 'เสร็จสิ้น',
-        'cancel': 'ยกเลิก'
+        'completed': 'เสร็จสิ้น',
+        'cancelled': 'ยกเลิก',
+        'frozen': 'ระงับ'
       };
       return statusMap[status] || status;
     }
@@ -1129,14 +1125,14 @@
       }
 
       var formData = {
-        date: date,
-        time_start: time_start,
-        time_end: time_end,
+        departure_date: date,
+        departure_time: time_start,
+        return_time: time_end,
         car_id: car_id,
         driver_id: driver_id,
-        mission: mission,
+        purpose: mission,
         destination: destination,
-        requested_by: requested_by,
+        requester_name: requested_by,
         passenger_count: parseInt(passenger_count) || 0,
         notes: document.getElementById('edit_notes').value.trim() || '',
         allow_flexible: false,
@@ -1181,10 +1177,7 @@
       submitBtn.textContent = 'กำลังบันทึก...';
 
       try {
-        var result = await apiCall('updateQueue', {
-          queueId: editingQueueId,
-          data: formData
-        });
+        var result = await apiCall('updateQueue', Object.assign({ id: editingQueueId }, formData));
 
         if (result.success) {
           showAlert('✅ แก้ไขคิวสำเร็จ', 'success');
@@ -1215,7 +1208,7 @@
 
       try {
         var result = await apiCall('cancelQueue', {
-          queueId: queueId,
+          id: queueId,
           reason: reason
         });
 
