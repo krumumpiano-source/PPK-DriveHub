@@ -553,10 +553,10 @@
 
     async function loadCarInfo() {
       try {
-        var result = await apiCall('getVehicleById', { carId: carId });
+        var result = await apiCall('getVehicle', { id: carId });
 
-        if (result.success && result.data && result.data.vehicle) {
-          carInfo = result.data.vehicle;
+        if (result.success && result.data) {
+          carInfo = result.data;
           document.getElementById('carLicensePlate').textContent = carInfo.license_plate || '-';
           document.getElementById('carBrandModel').textContent = (carInfo.brand || '') + ' ' + (carInfo.model || '');
           document.getElementById('carInfo').style.display = 'block';
@@ -781,11 +781,14 @@
       try {
         var lastMileage = 0;
         try {
-          var fuelLogsResult = await apiCall('getFuelLogs', {
-            filters: { car_id: carId, limit: 1 }
+          var fuelLogsResult = await apiCall('getFuelLog', {
+            car_id: carId, limit: 1
           });
-          if (fuelLogsResult.success && fuelLogsResult.data && fuelLogsResult.data.logs && fuelLogsResult.data.logs.length > 0) {
-            lastMileage = parseInt(fuelLogsResult.data.logs[0].mileage_after) || 0;
+          if (fuelLogsResult.success && fuelLogsResult.data) {
+            var logs = Array.isArray(fuelLogsResult.data) ? fuelLogsResult.data : [];
+            if (logs.length > 0) {
+              lastMileage = parseInt(logs[0].mileage_after) || 0;
+            }
           }
         } catch (e) {
           // Use current mileage as before if can't get last
@@ -833,9 +836,7 @@
           receipt_image_mime: receiptImageMime
         };
 
-        var result = await apiCall('createFuelLog', {
-          data: fuelData
-        });
+        var result = await apiCall('createFuel', fuelData);
 
         if (result.success) {
           document.getElementById('fuelForm').style.display = 'none';

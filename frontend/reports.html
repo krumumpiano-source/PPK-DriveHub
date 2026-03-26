@@ -347,10 +347,10 @@
         if (filterCar) filters.car_id = filterCar;
         if (filterDriver) filters.driver_id = filterDriver;
 
-        var result = await apiCall('getComprehensiveReport', { filters: filters });
+        var result = await apiCall('getDashboard', {});
 
-        if (result.success && result.data && result.data.report) {
-          reportData = result.data.report;
+        if (result.success && result.data) {
+          reportData = result.data;
           displayReport();
         } else {
           document.getElementById('reportContent').innerHTML = '<div class="empty-state"><div class="empty-state-icon">📊</div><p>ไม่พบข้อมูลรายงาน</p></div>';

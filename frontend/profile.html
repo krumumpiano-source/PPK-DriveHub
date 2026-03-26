@@ -72,9 +72,7 @@
 
     async function loadProfile() {
       try {
-        var result = await apiCall('getMyProfile', {
-          userId: currentUser.id
-        });
+        var result = await apiCall('getMe', {});
 
         if (result.success && result.data) {
           var user = result.data;
@@ -391,10 +389,7 @@
         var updateData = {};
         updateData[fieldName] = newValue;
 
-        var result = await apiCall('updateMyProfile', {
-          userId: currentUser.id,
-          data: updateData
-        });
+        var result = await apiCall('updateProfile', updateData);
 
         if (result.success) {
           displayEl.textContent = newValue || '-';
@@ -651,12 +646,9 @@
           var base64Data = e.target.result;
 
           try {
-            var result = await apiCall('uploadUserProfileImage', {
-              userId: currentUser.id,
-              fileData: {
-                base64: base64Data,
-                fileName: selectedProfileImageFile.name
-              }
+            var result = await apiCall('updateProfile', {
+              profile_image_base64: base64Data,
+              profile_image_name: selectedProfileImageFile.name
             });
 
             if (result.success) {

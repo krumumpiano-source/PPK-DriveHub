@@ -1298,9 +1298,9 @@
         return;
       }
 
-      apiCall('getVehicleById', { carId: carId }).then(function (response) {
-        if (response.success && response.data.vehicle) {
-          vehicleData = response.data.vehicle;
+      apiCall('getVehicle', { id: carId }).then(function (response) {
+        if (response.success && response.data) {
+          vehicleData = response.data;
           displayVehicleInfo();
           setupDynamicForm();
           setDefaultDateTime();
@@ -1554,7 +1554,7 @@
 
     function submitAPI(formData) {
       var submitBtn = document.getElementById('submitBtn');
-      apiCall('createDailyCheck', { data: formData }).then(function (response) {
+      apiCall('createDailyCheck', formData).then(function (response) {
         if (response.success) {
           showAlert('บันทึกผลการตรวจเช็คสำเร็จ', 'success');
           setTimeout(function () {

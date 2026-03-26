@@ -534,7 +534,7 @@
     }
 
     function submitAPI(formData) {
-      apiCall('createFuelLog', { data: formData })
+      apiCall('createFuel', formData)
         .then(function (response) {
           if (response.success) {
             showAlert('บันทึกการเติมน้ำมันสำเร็จ', 'success');

@@ -131,8 +131,8 @@
         var result = await apiCall('getNotifications', {});
         hideLoading('notificationsList');
 
-        if (result.success && result.data && result.data.notifications && result.data.notifications.length > 0) {
-          var notifications = result.data.notifications;
+        if (result.success && result.data) {
+          var notifications = Array.isArray(result.data) ? result.data : [];
 
           var html = '';
           notifications.forEach(function (notif) {
@@ -163,7 +163,7 @@
     async function markAsRead(notificationId) {
       try {
         showLoading('notificationsList');
-        var result = await apiCall('markNotificationRead', { notificationId: notificationId });
+        var result = await apiCall('markNotificationRead', { id: notificationId });
         hideLoading('notificationsList');
         if (result.success) {
           loadNotifications();
@@ -205,7 +205,7 @@
           if (onclickAttr) {
             var match = onclickAttr.match(/'([^']+)'/);
             if (match && match[1]) {
-              promises.push(apiCall('markNotificationRead', { notificationId: match[1] }));
+              promises.push(apiCall('markNotificationRead', { id: match[1] }));
             }
           }
         });

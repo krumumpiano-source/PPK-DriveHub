@@ -513,9 +513,9 @@
             }
 
             if (hasEditPermission) {
-              html += '<button class="btn btn-primary" onclick="editDriver(\'' + driver.driver_id + '\')">✏️ แก้ไข</button>';
-              html += '<button class="btn btn-primary" onclick="manageLeaves(\'' + driver.driver_id + '\', \'' + (driver.full_name || driver.first_name + ' ' + driver.last_name) + '\')">📅 จัดการลา</button>';
-              html += '<button class="btn btn-danger" onclick="deleteDriver(\'' + driver.driver_id + '\')">🗑️ ลบ</button>';
+              html += '<button class="btn btn-primary" onclick="editDriver(\'' + driver.id + '\')">✏️ แก้ไข</button>';
+              html += '<button class="btn btn-primary" onclick="manageLeaves(\'' + driver.id + '\', \'' + (driver.full_name || driver.first_name + ' ' + driver.last_name) + '\')">📅 จัดการลา</button>';
+              html += '<button class="btn btn-danger" onclick="deleteDriver(\'' + driver.id + '\')">🗑️ ลบ</button>';
             }
           } catch (e) {
             console.error('Error checking permissions:', e);
@@ -697,13 +697,13 @@
           return;
         }
 
-        var driver = drivers.find(function (d) { return d.driver_id === driverId; });
+        var driver = drivers.find(function (d) { return d.id === driverId; });
         if (!driver) {
           alert('ไม่พบข้อมูลคนขับรายการนี้');
           return;
         }
 
-        editingDriverId = driverId;
+        editingDriverId = driver.id;
         document.getElementById('modalTitle').textContent = 'แก้ไขข้อมูลพนักงานขับรถ';
 
         // Populate form
@@ -897,14 +897,10 @@
 
         var result;
         if (editingDriverId) {
-          result = await apiCall('updateDriver', {
-            driverId: editingDriverId,
-            data: driverData
-          });
+          driverData.id = editingDriverId;
+          result = await apiCall('updateDriver', driverData);
         } else {
-          result = await apiCall('createDriver', {
-            data: driverData
-          });
+          result = await apiCall('createDriver', driverData);
         }
 
         if (result.success) {
@@ -957,7 +953,7 @@
         }
 
         var result = await apiCall('deactivateDriver', {
-          driverId: driverId,
+          id: driverId,
           reason: 'ลบโดยผู้ดูแลระบบ'
         });
 
@@ -1046,12 +1042,13 @@
     async function loadLeaves(driverId) {
       try {
         var result = await apiCall('getDriverLeaves', {
-          driverId: driverId
+          id: driverId
         });
 
         var html = '';
-        if (result.success && result.data && result.data.leaves && result.data.leaves.length > 0) {
-          result.data.leaves.forEach(function (leave) {
+        var leaves = result.success && result.data ? (Array.isArray(result.data) ? result.data : []) : [];
+        if (leaves.length > 0) {
+          leaves.forEach(function (leave) {
             html += '<div class="leave-item">';
             html += '<div class="leave-info">';
             html += '<div class="leave-dates">' + formatDateThai(leave.start_date) + ' - ' + formatDateThai(leave.end_date) + '</div>';
@@ -1059,7 +1056,7 @@
             if (leave.reason) html += '<div style="color: var(--color-text-muted); font-size: 0.85em; margin-top: 5px;">' + leave.reason + '</div>';
             html += '</div>';
             html += '<div class="leave-actions">';
-            html += '<button class="btn btn-danger" onclick="deleteLeave(\'' + leave.leave_id + '\')">🗑️</button>';
+            html += '<button class="btn btn-danger" onclick="deleteLeave(\'' + leave.id + '\')">🗑️</button>';
             html += '</div>';
             html += '</div>';
           });
@@ -1110,9 +1107,8 @@
           reason: document.getElementById('leave_reason').value.trim() || ''
         };
 
-        var result = await apiCall('createDriverLeave', {
-          data: leaveData
-        });
+        leaveData.id = currentLeaveDriverId;
+        var result = await apiCall('createDriverLeave', leaveData);
 
         if (result.success) {
           showAlert('เพิ่มการลาสำเร็จ', 'success');
@@ -1138,6 +1134,7 @@
 
       try {
         var result = await apiCall('deleteDriverLeave', {
+          id: currentLeaveDriverId,
           leaveId: leaveId
         });
 

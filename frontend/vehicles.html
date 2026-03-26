@@ -528,16 +528,16 @@
 
           html += '<div class="vehicle-actions">';
           if (hasModulePermission('vehicles', 'edit') || getCurrentUser().role === 'admin') {
-            html += '<button class="btn btn-primary" onclick="editVehicle(\'' + vehicle.car_id + '\')">✏️ แก้ไข</button>';
-            html += '<button class="btn btn-danger" onclick="deleteVehicle(\'' + vehicle.car_id + '\')">🗑️ ลบ</button>';
+            html += '<button class="btn btn-primary" onclick="editVehicle(\'' + vehicle.id + '\')">✏️ แก้ไข</button>';
+            html += '<button class="btn btn-danger" onclick="deleteVehicle(\'' + vehicle.id + '\')">🗑️ ลบ</button>';
             html += '<div style="margin-top:8px;font-size:0.85em;">';
-            html += '<button type="button" class="btn btn-secondary" style="padding:4px 8px;font-size:0.9em;" onclick="changeVehicleCategory(\'' + vehicle.car_id + '\', \'' + (vehicle.vehicle_category === 'support' ? 'primary' : 'support') + '\')">' + (vehicle.vehicle_category === 'support' ? '↩ เปลี่ยนเป็นรถหลัก' : 'เปลี่ยนเป็นรถสนับสนุน') + '</button> ';
+            html += '<button type="button" class="btn btn-secondary" style="padding:4px 8px;font-size:0.9em;" onclick="changeVehicleCategory(\'' + vehicle.id + '\', \'' + (vehicle.vehicle_category === 'support' ? 'primary' : 'support') + '\')">' + (vehicle.vehicle_category === 'support' ? '↩ เปลี่ยนเป็นรถหลัก' : 'เปลี่ยนเป็นรถสนับสนุน') + '</button> ';
             if (vehicle.status !== 'unavailable') {
-              html += '<button type="button" class="btn btn-secondary" style="padding:4px 8px;font-size:0.9em;" onclick="setVehicleUnavailable(\'' + vehicle.car_id + '\')">ยกเลิกใช้รถ</button>';
+              html += '<button type="button" class="btn btn-secondary" style="padding:4px 8px;font-size:0.9em;" onclick="setVehicleUnavailable(\'' + vehicle.id + '\')">ยกเลิกใช้รถ</button>';
             } else {
-              html += '<button type="button" class="btn btn-secondary" style="padding:4px 8px;font-size:0.9em;" onclick="setVehicleAvailable(\'' + vehicle.car_id + '\')">เปิดใช้รถอีกครั้ง</button>';
+              html += '<button type="button" class="btn btn-secondary" style="padding:4px 8px;font-size:0.9em;" onclick="setVehicleAvailable(\'' + vehicle.id + '\')">เปิดใช้รถอีกครั้ง</button>';
             }
-            html += '<button type="button" class="btn btn-secondary" style="padding:4px 8px;font-size:0.9em;margin-top:4px;" onclick="initializeMaintenanceFromToday(\'' + vehicle.car_id + '\')" title="ใช้เลขไมล์และวันนี้เป็นจุดเริ่มต้นสำหรับแจ้งเตือนซ่อมบำรุง (ครั้งแรกที่ใช้ระบบหรือรถที่ยังไม่เคยจดประวัติ)">📋 ตั้งค่าประวัติการบำรุงครั้งแรก</button>';
+            html += '<button type="button" class="btn btn-secondary" style="padding:4px 8px;font-size:0.9em;margin-top:4px;" onclick="initializeMaintenanceFromToday(\'' + vehicle.id + '\')" title="ใช้เลขไมล์และวันนี้เป็นจุดเริ่มต้นสำหรับแจ้งเตือนซ่อมบำรุง (ครั้งแรกที่ใช้ระบบหรือรถที่ยังไม่เคยจดประวัติ)">📋 ตั้งค่าประวัติการบำรุงครั้งแรก</button>';
             html += '</div>';
           }
           html += '</div>';
@@ -584,13 +584,13 @@
         return;
       }
 
-      var vehicle = vehicles.find(function (v) { return v.car_id === carId; });
+      var vehicle = vehicles.find(function (v) { return v.id === carId; });
       if (!vehicle) {
         alert('ไม่พบข้อมูลรถ');
         return;
       }
 
-      editingVehicleId = carId;
+      editingVehicleId = vehicle.id;
       document.getElementById('modalTitle').textContent = 'แก้ไขข้อมูลรถ';
 
       // สถานะการใช้งาน: รถใช้งานหลัก / รถใช้งานสนับสนุน / รถยกเลิกการใช้งาน
@@ -769,14 +769,10 @@
 
         var result;
         if (editingVehicleId) {
-          result = await apiCall('updateVehicle', {
-            carId: editingVehicleId,
-            data: vehicleData
-          });
+          vehicleData.id = editingVehicleId;
+          result = await apiCall('updateVehicle', vehicleData);
         } else {
-          result = await apiCall('createVehicle', {
-            data: vehicleData
-          });
+          result = await apiCall('createVehicle', vehicleData);
         }
 
         if (result.success) {
@@ -807,7 +803,7 @@
 
       try {
         var result = await apiCall('deactivateVehicle', {
-          carId: carId,
+          id: carId,
           reason: 'ลบโดยผู้ดูแลระบบ'
         });
 
@@ -831,7 +827,7 @@
       var label = newCategory === 'primary' ? 'รถใช้งานหลัก' : 'รถใช้งานสนับสนุน';
       if (!confirm('เปลี่ยนสถานะรถเป็น \"' + label + '\" ใช่หรือไม่?')) return;
       try {
-        var result = await apiCall('updateVehicle', { carId: carId, data: { vehicle_category: newCategory } });
+        var result = await apiCall('updateVehicle', { id: carId, vehicle_category: newCategory });
         if (result.success) {
           showAlert('เปลี่ยนสถานะรถสำเร็จ', 'success');
           loadVehicles();
@@ -850,7 +846,7 @@
       }
       if (!confirm('ยกเลิกใช้รถคันนี้หรือไม่? รถจะไม่แสดงในรายการใช้งาน')) return;
       try {
-        var result = await apiCall('updateVehicle', { carId: carId, data: { status: 'unavailable' } });
+        var result = await apiCall('updateVehicle', { id: carId, status: 'unavailable' });
         if (result.success) {
           showAlert('ยกเลิกใช้รถแล้ว', 'success');
           loadVehicles();
@@ -869,7 +865,7 @@
       }
       if (!confirm('เปิดใช้รถคันนี้อีกครั้งหรือไม่?')) return;
       try {
-        var result = await apiCall('updateVehicle', { carId: carId, data: { status: 'available' } });
+        var result = await apiCall('updateVehicle', { id: carId, status: 'available' });
         if (result.success) {
           showAlert('เปิดใช้รถแล้ว', 'success');
           loadVehicles();
@@ -888,7 +884,7 @@
       }
       if (!confirm('ตั้งค่าประวัติการบำรุงครั้งแรกสำหรับรถคันนี้?\n\nระบบจะใช้เลขไมล์ปัจจุบันและวันนี้เป็นจุดเริ่มต้น ทุกรายการ (น้ำมันเครื่อง, น้ำมันเกียร์ ฯลฯ) ครั้งถัดไปจะแจ้งเตือนเมื่อครบตามเกณฑ์ที่ตั้งในเมนูแอดมิน\n\nเหมาะกับรถที่ยังไม่เคยจดประวัติหรือครั้งแรกที่ใช้ระบบ')) return;
       try {
-        var result = await apiCall('initializeVehicleMaintenanceFromToday', { carId: carId });
+        var result = await apiCall('initializeVehicleMaintenanceFromToday', { id: carId });
         if (result && result.success) {
           showAlert('ตั้งค่าประวัติการบำรุงครั้งแรกสำเร็จ (ใช้เลขไมล์และวันนี้เป็นจุดเริ่มต้น)', 'success');
         } else {

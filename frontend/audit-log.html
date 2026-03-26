@@ -193,10 +193,10 @@
           tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--color-text-muted);">กำลังโหลดข้อมูล...</td></tr>';
 
           try {
-            var result = await apiCall('getAuditLogs', { filters: filters });
+            var result = await apiCall('getAuditLog', filters);
 
-            if (result.success && result.data && result.data.logs) {
-              var logs = result.data.logs;
+            if (result.success && result.data) {
+              var logs = Array.isArray(result.data) ? result.data : [];
 
               if (logs.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--color-text-muted);">ไม่พบข้อมูล</td></tr>';

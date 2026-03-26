@@ -90,6 +90,9 @@ const ACTION_MAP = {
   'updateDriver':        (d) => API.put(`/api/drivers/${d.id}`, d),
   'deactivateDriver':    (d) => API.put(`/api/drivers/${d.id}/deactivate`, d),
   'reportFatigue':       (d) => API.post('/api/drivers/fatigue', d),
+  'getDriverLeaves':     (d) => API.get(`/api/drivers/${d.id}/leaves`),
+  'createDriverLeave':   (d) => API.post(`/api/drivers/${d.id}/leaves`, d),
+  'deleteDriverLeave':   (d) => API.del(`/api/drivers/${d.id}/leaves/${d.leaveId}`),
 
   // Queue
   'getQueue':            (d) => API.get('/api/queue' + _q(d)),
@@ -186,6 +189,28 @@ const ACTION_MAP = {
 
   // OCR
   'ocrExtract':          (d) => API.post('/api/ocr/extract', d),
+
+  // Backward-Compatible Aliases
+  'getVehicleById':      (d) => API.get(`/api/vehicles/${d.id || d.carId}`),
+  'getAllUsers':         (d) => API.get('/api/admin/users' + _q(d)),
+  'createDailyCheck':    (d) => API.post('/api/check/daily', d),
+  'createFuelLog':       (d) => API.post('/api/fuel', d),
+  'getFuelLogs':         (d) => API.get('/api/fuel' + _q(d)),
+  'getRepairLogs':       (d) => API.get('/api/repair' + _q(d)),
+  'getRepairLogById':    (d) => API.get(`/api/repair/${d.id}`),
+  'updateRepairLog':     (d) => API.put(`/api/repair/${d.id}`, d),
+  'createRepairLog':     (d) => API.post('/api/repair', d),
+  'updateInsuranceRecord':(d) => API.put(`/api/tax-insurance/insurance/${d.id}`, d),
+  'createInsuranceRecord':(d) => API.post('/api/tax-insurance/insurance', d),
+  'getMyProfile':        ()  => API.get('/api/auth/me'),
+  'updateMyProfile':     (d) => API.put('/api/auth/profile', d),
+  'getAuditLogs':        (d) => API.get('/api/admin/audit-log' + _q(d)),
+  'updateSystemSetting': (d) => API.put('/api/admin/settings', { [d.key]: d.value }),
+  'resetAdminSettingsToDefault': () => API.put('/api/admin/settings', {}),
+  'getUsageRecords':     (d) => API.get('/api/usage' + _q(d)),
+  'createUsageRecord':   (d) => API.post('/api/usage', d),
+  'submitUsageQR':       (d) => API.post('/api/usage/qr', d),
+  'initializeVehicleMaintenanceFromToday': () => API.get('/api/maintenance/schedule'),
 };
 
 /** Convert object to query string: { status: 'active' } → '?status=active' */

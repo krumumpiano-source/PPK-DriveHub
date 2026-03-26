@@ -574,13 +574,10 @@
         if (dateFrom) filters.date_from = dateFrom;
         if (dateTo) filters.date_to = dateTo;
 
-        var result = await apiCall('getRepairLogs', { filters: filters });
+        var result = await apiCall('getRepairs', filters);
 
-        if (result.success && result.data && result.data.repair_logs) {
-          repairs = result.data.repair_logs || [];
-          displayRepairs(repairs);
-        } else if (result.success && result.data && result.data.repairs) {
-          repairs = result.data.repairs || [];
+        if (result.success && result.data) {
+          repairs = Array.isArray(result.data) ? result.data : [];
           displayRepairs(repairs);
         } else {
           repairs = [];
@@ -618,7 +615,7 @@
           html += '<td>' + (repair.cost ? repair.cost.toLocaleString() + ' บาท' : '-') + '</td>';
           html += '<td>';
           if (hasModulePermission('repair', 'edit') || getCurrentUser().role === 'admin') {
-            html += '<button class="btn btn-primary" style="padding: 5px 10px; font-size: 0.9em;" onclick="editRepair(\'' + repair.repair_id + '\')" title="แก้ไข">✏️</button>';
+            html += '<button class="btn btn-primary" style="padding: 5px 10px; font-size: 0.9em;" onclick="editRepair(\'' + repair.id + '\')" title="แก้ไข">✏️</button>';
           }
           html += '</td>';
           html += '</tr>';
@@ -686,13 +683,13 @@
         return;
       }
 
-      var repair = repairs.find(function (r) { return r.repair_id === repairId; });
+      var repair = repairs.find(function (r) { return r.id === repairId; });
       if (!repair) {
         // Try to load repair details from backend
         try {
-          var result = await apiCall('getRepairLogById', { repairId: repairId });
-          if (result.success && result.data && result.data.repair_log) {
-            repair = result.data.repair_log;
+          var result = await apiCall('getRepair', { id: repairId });
+          if (result.success && result.data) {
+            repair = result.data;
           } else {
             alert('ไม่พบข้อมูลรายการซ่อมนี้');
             return;
@@ -703,7 +700,7 @@
         }
       }
 
-      editingRepairId = repairId;
+      editingRepairId = repair.id;
       document.getElementById('modalTitle').textContent = 'แก้ไขบันทึกการซ่อมบำรุง';
 
       // Populate form
@@ -900,15 +897,14 @@
         // This will unlock the vehicle after repair is completed
         try {
           var scheduledRepairsResult = await apiCall('getScheduledRepairs', {
-            filters: {
-              car_id: repairData.car_id,
-              status: 'pending'
-            }
+            car_id: repairData.car_id,
+            status: 'pending'
           });
 
-          if (scheduledRepairsResult.success && scheduledRepairsResult.data.scheduled_repairs && scheduledRepairsResult.data.scheduled_repairs.length > 0) {
+          var scheduledList = scheduledRepairsResult.success && Array.isArray(scheduledRepairsResult.data) ? scheduledRepairsResult.data : [];
+          if (scheduledList.length > 0) {
             // Link to the first pending scheduled repair
-            repairData.scheduled_repair_id = scheduledRepairsResult.data.scheduled_repairs[0].scheduled_repair_id;
+            repairData.scheduled_repair_id = scheduledList[0].id;
           }
         } catch (schedError) {
           console.warn('Could not check scheduled repairs:', schedError);
@@ -928,14 +924,10 @@
 
         var result;
         if (editingRepairId) {
-          result = await apiCall('updateRepairLog', {
-            repairId: editingRepairId,
-            data: repairData
-          });
+          repairData.id = editingRepairId;
+          result = await apiCall('updateRepair', repairData);
         } else {
-          result = await apiCall('createRepairLog', {
-            data: repairData
-          });
+          result = await apiCall('createRepair', repairData);
         }
 
         if (result.success) {

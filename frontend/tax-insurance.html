@@ -344,14 +344,13 @@
 
         var result;
         if (currentTab === 'tax') {
-          result = await apiCall('getTaxRecords', { filters: filters });
+          result = await apiCall('getTaxRecords', filters);
         } else {
-          result = await apiCall('getInsuranceRecords', { filters: filters });
+          result = await apiCall('getInsuranceRecords', filters);
         }
 
         if (result.success && result.data) {
-          var recordsList = currentTab === 'tax' ? (result.data.records || []) : (result.data.records || []);
-          records = recordsList;
+          records = Array.isArray(result.data) ? result.data : [];
           displayRecords(records);
         } else {
           document.getElementById('recordsGrid').innerHTML = '<div class="empty-state"><div class="empty-state-icon">📄</div><p>ไม่พบข้อมูล</p></div>';
@@ -430,7 +429,7 @@
 
           html += '<div class="record-actions">';
           if (hasModulePermission('vehicles', 'edit') || getCurrentUser().role === 'admin') {
-            html += '<button class="btn btn-primary" onclick="editRecord(\'' + (currentTab === 'tax' ? record.tax_id : record.insurance_id) + '\')">✏️ แก้ไข</button>';
+            html += '<button class="btn btn-primary" onclick="editRecord(\'' + record.id + '\')">✏️ แก้ไข</button>';
           }
           html += '</div>';
           html += '</div>';
@@ -540,14 +539,14 @@
       }
 
       var record = records.find(function (r) {
-        return (currentTab === 'tax' ? r.tax_id : r.insurance_id) === recordId;
+        return r.id === recordId;
       });
       if (!record) {
         alert('ไม่พบข้อมูลรายการนี้');
         return;
       }
 
-      editingRecordId = recordId;
+      editingRecordId = record.id;
       document.getElementById('modalTitle').textContent = currentTab === 'tax' ? 'แก้ไขบันทึกภาษี' : 'แก้ไขบันทึกประกันภัย';
 
       // Populate form
@@ -661,10 +660,8 @@
           recordData.expiry_date = expiryDatePicker ? expiryDatePicker.input.value : document.getElementById('expiry_date').value;
 
           if (editingRecordId) {
-            var result = await apiCall('updateTaxRecord', {
-              taxId: editingRecordId,
-              data: recordData
-            });
+            recordData.id = editingRecordId;
+            var result = await apiCall('updateTaxRecord', recordData);
 
             if (result.success) {
               showAlert('แก้ไขบันทึกภาษีสำเร็จ', 'success');
@@ -674,9 +671,7 @@
               showAlert(typeof getUserMessage !== 'undefined' ? getUserMessage(result.message) : (result.message || 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'), 'error');
             }
           } else {
-            var result = await apiCall('createTaxRecord', {
-              data: recordData
-            });
+            var result = await apiCall('createTaxRecord', recordData);
 
             if (result.success) {
               showAlert('เพิ่มบันทึกภาษีสำเร็จ', 'success');
@@ -700,10 +695,8 @@
           recordData.expiry_date = expiryDatePicker ? expiryDatePicker.input.value : document.getElementById('insurance_expiry_date').value;
 
           if (editingRecordId) {
-            var result = await apiCall('updateInsuranceRecord', {
-              insuranceId: editingRecordId,
-              data: recordData
-            });
+            recordData.id = editingRecordId;
+            var result = await apiCall('updateInsurance', recordData);
 
             if (result.success) {
               showAlert('แก้ไขบันทึกประกันภัยสำเร็จ', 'success');
@@ -713,9 +706,7 @@
               showAlert(typeof getUserMessage !== 'undefined' ? getUserMessage(result.message) : (result.message || 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'), 'error');
             }
           } else {
-            var result = await apiCall('createInsuranceRecord', {
-              data: recordData
-            });
+            var result = await apiCall('createInsurance', recordData);
 
             if (result.success) {
               showAlert('เพิ่มบันทึกประกันภัยสำเร็จ', 'success');

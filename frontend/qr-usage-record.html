@@ -566,12 +566,19 @@
           return;
         }
 
-        var result = await apiCall('scanQRForUsageRecord', { qrData: qrData });
+        carId = qrData.car_id;
 
-        if (result.success) {
-          carId = result.data.car_id;
-          carInfo = result.data.car_info;
-          drivers = result.data.drivers || [];
+        var carResult = await apiCall('getVehicle', { id: carId });
+
+        if (carResult.success && carResult.data) {
+          carInfo = carResult.data;
+
+          try {
+            var driversResult = await apiCall('getDrivers', { status: 'active' });
+            drivers = (driversResult.success && Array.isArray(driversResult.data)) ? driversResult.data : [];
+          } catch (e) {
+            drivers = [];
+          }
 
           displayCarInfo();
           populateDrivers();
@@ -637,25 +644,27 @@
 
     async function loadLastMileage() {
       try {
-        var result = await apiCall('getUsageRecords', {
+        var result = await apiCall('getUsageLog', {
           car_id: carId,
           limit: 1,
           sort: 'desc'
         });
 
-        if (result.success && result.data.records && result.data.records.length > 0) {
-          var latestRecord = result.data.records[0];
-          lastMileage = latestRecord.mileage || 0;
-          document.getElementById('lastMileage').textContent = lastMileage.toLocaleString();
+        if (result.success && result.data) {
+          var records = Array.isArray(result.data) ? result.data : [];
+          if (records.length > 0) {
+            var latestRecord = records[0];
+            lastMileage = latestRecord.mileage || 0;
+            document.getElementById('lastMileage').textContent = lastMileage.toLocaleString();
 
-          var today = formatDate(new Date());
-          var todayRecords = result.data.records.filter(function (r) {
-            return r.date === today && r.record_type === 'before_trip';
-          });
-          hasBeforeTrip = todayRecords.length > 0;
-        } else {
-          document.getElementById('lastMileage').textContent = 'ไม่มีข้อมูล';
-        }
+            var today = formatDate(new Date());
+            var todayRecords = records.filter(function (r) {
+              return r.date === today && r.record_type === 'before_trip';
+            });
+            hasBeforeTrip = todayRecords.length > 0;
+          } else {
+            document.getElementById('lastMileage').textContent = 'ไม่มีข้อมูล';
+          }
       } catch (error) {
         console.error('Error loading last mileage:', error);
         document.getElementById('lastMileage').textContent = 'ไม่สามารถโหลดได้';
@@ -814,7 +823,7 @@
       alertContainer.innerHTML = '';
 
       try {
-        var result = await apiCall('createUsageRecord', { data: recordData });
+        var result = await apiCall('createUsage', recordData);
 
         if (result.success) {
           document.getElementById('usageForm').style.display = 'none';
