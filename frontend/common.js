@@ -239,6 +239,12 @@ function renderNav() {
         return;
     }
 
+    // Redirect to login if not authenticated on auth-required pages
+    if (window.REQUIRE_AUTH === true && !checkAuth()) {
+        window.location.href = 'login.html';
+        return;
+    }
+
     // Full sidebar layout — rebuild body structure
     var body = document.body;
     var oldContainer = body.querySelector('.container');
