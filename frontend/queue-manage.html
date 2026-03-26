@@ -1463,11 +1463,11 @@
 
       function isQueueCurrent(queue, dateStr) {
         if (dateStr !== todayStr) return false;
-        if (queue.status === 'active' || queue.status === 'running') return true;
-        if (!queue.departure_time) return false;
+        if (queue.status === 'ongoing' || queue.status === 'running') return true;
+        if (!queue.time_start) return false;
 
-        var queueStart = parseTimeToMinutes(queue.departure_time);
-        var queueEnd = queue.return_time ? parseTimeToMinutes(queue.return_time) : (queueStart + 8 * 60);
+        var queueStart = parseTimeToMinutes(queue.time_start);
+        var queueEnd = queue.time_end ? parseTimeToMinutes(queue.time_end) : (queueStart + 8 * 60);
 
         return currentTimeMinutes >= queueStart && currentTimeMinutes <= queueEnd;
       }
@@ -1475,16 +1475,18 @@
       function isQueueUpcoming(queue, dateStr) {
         if (dateStr !== todayStr) return false;
         if (queue.status === 'cancelled' || queue.status === 'completed') return false;
-        if (!queue.departure_time) return false;
+        if (!queue.time_start) return false;
 
-        var queueStart = parseTimeToMinutes(queue.departure_time);
+        var queueStart = parseTimeToMinutes(queue.time_start);
+        return currentTimeMinutes < queueStart;
+      }
 
       for (var day = 1; day <= daysInMonth; day++) {
         var dateStr = formatDate(new Date(currentYear, currentMonth, day));
         var dateObj = new Date(currentYear, currentMonth, day);
         dateObj.setHours(0, 0, 0, 0);
         var isToday = dateStr === todayStr;
-        var dayQueues = queues.filter(function (q) { return q.departure_date === dateStr; });
+        var dayQueues = queues.filter(function (q) { return q.date === dateStr; });
 
         // Determine status class
         var statusClass = '';
@@ -1779,8 +1781,8 @@
       }
 
       var formData = {
-        departure_time: time_start,
-        return_time: time_end,
+        time_start: time_start,
+        time_end: time_end,
         car_id: car_id,
         driver_id: driver_id,
         purpose: mission,
@@ -1847,13 +1849,13 @@
     async function checkQueueConflicts(queueData) {
       try {
         var carResult = await apiCall('getQueue', {
-          date_from: queueData.departure_date,
-          date_to: queueData.departure_date
+          date_from: queueData.date,
+          date_to: queueData.date
         });
 
         var driverResult = await apiCall('getQueue', {
-          date_from: queueData.departure_date,
-          date_to: queueData.departure_date
+          date_from: queueData.date,
+          date_to: queueData.date
         });
 
         var existingQueues = [];
@@ -1872,15 +1874,15 @@
           return q.status !== 'cancelled' && q.status !== 'completed';
         });
 
-        var queueTimeStart = parseTime(queueData.departure_time);
-        var queueTimeEnd = queueData.return_time ? parseTime(queueData.return_time) : null;
+        var queueTimeStart = parseTime(queueData.time_start);
+        var queueTimeEnd = queueData.time_end ? parseTime(queueData.time_end) : null;
 
         var conflicts = [];
         var seenConflicts = {};
 
         existingQueues.forEach(function (q) {
-          var qTimeStart = parseTime(q.departure_time);
-          var qTimeEnd = q.return_time ? parseTime(q.return_time) : null;
+          var qTimeStart = parseTime(q.time_start);
+          var qTimeEnd = q.time_end ? parseTime(q.time_end) : null;
 
           if (isTimeOverlap(queueTimeStart, queueTimeEnd, qTimeStart, qTimeEnd)) {
             var conflictKey = '';
@@ -1888,11 +1890,11 @@
 
             if (q.car_id === queueData.car_id) {
               conflictKey = 'car_' + q.id;
-              conflictMsg = 'รถนี้มีคิวในช่วงเวลา ' + q.departure_time + (q.return_time ? '-' + q.return_time : '');
+              conflictMsg = 'รถนี้มีคิวในช่วงเวลา ' + q.time_start + (q.time_end ? '-' + q.time_end : '');
             }
             if (q.driver_id === queueData.driver_id) {
               conflictKey = 'driver_' + q.id;
-              conflictMsg = 'คนขับนี้มีคิวในช่วงเวลา ' + q.departure_time + (q.return_time ? '-' + q.return_time : '');
+              conflictMsg = 'คนขับนี้มีคิวในช่วงเวลา ' + q.time_start + (q.time_end ? '-' + q.time_end : '');
             }
 
             if (conflictMsg && !seenConflicts[conflictKey]) {
@@ -2066,9 +2068,9 @@
             return;
           }
 
-          document.getElementById('edit_date').value = editingQueueData.departure_date || '';
-          document.getElementById('edit_time_start').value = editingQueueData.departure_time || '';
-          document.getElementById('edit_time_end').value = editingQueueData.return_time || '';
+          document.getElementById('edit_date').value = editingQueueData.date || '';
+          document.getElementById('edit_time_start').value = editingQueueData.time_start || '';
+          document.getElementById('edit_time_end').value = editingQueueData.time_end || '';
           document.getElementById('edit_car_id').value = editingQueueData.car_id || '';
           document.getElementById('edit_driver_id').value = editingQueueData.driver_id || '';
           document.getElementById('edit_mission').value = editingQueueData.mission || '';
@@ -2148,18 +2150,16 @@
       }
 
       var formData = {
-        departure_date: date,
-        departure_time: time_start,
-        return_time: time_end,
+        date: date,
+        time_start: time_start,
+        time_end: time_end,
         car_id: car_id,
         driver_id: driver_id,
-        purpose: mission,
+        mission: mission,
         destination: destination,
-        requester_name: requested_by,
-        passenger_count: parseInt(passenger_count) || 0,
-        notes: document.getElementById('edit_notes').value.trim() || '',
-        allow_flexible: false,
-        emergency_override: false
+        requested_by: requested_by,
+        passengers: parseInt(passenger_count) || 0,
+        notes: document.getElementById('edit_notes').value.trim() || ''
       };
 
       var conflictCheck = await checkQueueConflicts(formData);
