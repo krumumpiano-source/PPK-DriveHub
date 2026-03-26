@@ -1,4 +1,4 @@
-// Vehicle CRUD, health scores, images
+﻿// Vehicle CRUD, health scores, images
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, extractParam, writeAuditLog, uploadToR2
@@ -17,9 +17,15 @@ export async function onRequest(context) {
     const car_id = url.searchParams.get('car_id');
     if (!car_id) return error('กรุณาระบุ car_id');
     const car = await dbFirst(env.DB,
-      'SELECT id, car_id, brand, model, license_plate, car_type, status, image_url FROM cars WHERE car_id = ? AND active = 1', [car_id]
+      `SELECT id, license_plate, brand, model, status, vehicle_images FROM cars WHERE id = ? AND status != 'inactive'`, [car_id]
     );
-    return car ? success(car) : error('ไม่พบยานพาหนะ', 404);
+    if (!car) {
+      const carByPlate = await dbFirst(env.DB,
+        `SELECT id, license_plate, brand, model, status, vehicle_images FROM cars WHERE license_plate = ? AND status != 'inactive'`, [car_id]
+      );
+      return carByPlate ? success(carByPlate) : error('ไม่พบยานพาหนะ', 404);
+    }
+    return success(car);
   }
 
   if (!user) return error('Unauthorized', 401);
@@ -27,13 +33,11 @@ export async function onRequest(context) {
   if (path === '/api/vehicles' && method === 'GET') {
     try { requirePermission(user, 'vehicles', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const status = url.searchParams.get('status');
-    const type = url.searchParams.get('car_type');
     const params = [];
-    const where = ['active = 1'];
+    const where = ["status != 'inactive'"];
     if (status) { where.push('status = ?'); params.push(status); }
-    if (type) { where.push('car_type = ?'); params.push(type); }
     const vehicles = await dbAll(env.DB,
-      `SELECT * FROM cars WHERE ${where.join(' AND ')} ORDER BY car_id ASC`, params
+      `SELECT * FROM cars WHERE ${where.join(' AND ')} ORDER BY license_plate ASC`, params
     );
     return success(vehicles);
   }
@@ -41,31 +45,36 @@ export async function onRequest(context) {
   if (path === '/api/vehicles' && method === 'POST') {
     try { requirePermission(user, 'vehicles', 'create'); } catch { return error('ไม่มีสิทธิ์เพิ่มยานพาหนะ', 403); }
     const body = await parseBody(request);
-    if (!body?.car_id || !body?.brand || !body?.license_plate) return error('กรุณากรอกข้อมูลให้ครบ');
+    if (!body?.license_plate || !body?.brand) return error('กรุณากรอกข้อมูลให้ครบ');
     const id = generateUUID();
     const ts = now();
-    let imageUrl = '';
+    let images = '[]';
     if (body.image_base64 && body.image_mime) {
-      imageUrl = await uploadToR2(env, body.image_base64, `vehicle_${id}.jpg`, 'VEHICLES', body.image_mime);
+      const imgUrl = await uploadToR2(env, body.image_base64, `vehicle_${id}.jpg`, 'VEHICLES', body.image_mime);
+      images = JSON.stringify([imgUrl]);
     }
     await dbRun(env.DB,
-      `INSERT INTO cars (id, car_id, brand, model, license_plate, car_type, color, year, fuel_type, mileage,
-        status, active, image_url, last_check_date, registration_expiry, insurance_expiry, notes, created_by, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, body.car_id, body.brand, body.model || '', body.license_plate,
-       body.car_type || 'sedan', body.color || '', body.year || null, body.fuel_type || 'เบนซิน',
-       body.mileage || 0, body.status || 'active', imageUrl,
-       body.last_check_date || null, body.registration_expiry || null, body.insurance_expiry || null,
-       body.notes || '', user.id, ts, ts]
+      `INSERT INTO cars (id, license_plate, brand, model, year, color, fuel_type, seat_count,
+        chassis_number, engine_number, registration_date, registration_expiry,
+        owner_name, owner_address, status, current_mileage, qr_code,
+        vehicle_images, registration_book_image, notes, created_by, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, body.license_plate, body.brand, body.model || '', body.year || null,
+       body.color || '', body.fuel_type || 'diesel', body.seat_count || 4,
+       body.chassis_number || '', body.engine_number || '',
+       body.registration_date || null, body.registration_expiry || null,
+       body.owner_name || '', body.owner_address || '',
+       body.status || 'active', body.current_mileage || 0, body.qr_code || '',
+       images, body.registration_book_image || '', body.notes || '', user.id, ts, ts]
     );
-    await writeAuditLog(env.DB, user.id, user.displayName, 'create_vehicle', 'vehicles', id, { car_id: body.car_id });
+    await writeAuditLog(env.DB, user.id, user.displayName, 'create_vehicle', 'vehicles', id, { license_plate: body.license_plate });
     return success({ id, message: 'เพิ่มยานพาหนะเรียบร้อย' }, 201);
   }
 
   if (path.match(/^\/api\/vehicles\/[^/]+$/) && method === 'GET') {
     try { requirePermission(user, 'vehicles', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = extractParam(path, '/api/vehicles/');
-    const car = await dbFirst(env.DB, 'SELECT * FROM cars WHERE id = ? AND active = 1', [id]);
+    const car = await dbFirst(env.DB, "SELECT * FROM cars WHERE id = ? AND status != 'inactive'", [id]);
     return car ? success(car) : error('ไม่พบยานพาหนะ', 404);
   }
 
@@ -73,16 +82,18 @@ export async function onRequest(context) {
     try { requirePermission(user, 'vehicles', 'edit'); } catch { return error('ไม่มีสิทธิ์แก้ไขยานพาหนะ', 403); }
     const id = extractParam(path, '/api/vehicles/');
     const body = await parseBody(request);
-    const fields = ['brand', 'model', 'license_plate', 'car_type', 'color', 'year', 'fuel_type', 'mileage',
-      'status', 'notes', 'last_check_date', 'registration_expiry', 'insurance_expiry'];
+    const fields = ['license_plate', 'brand', 'model', 'year', 'color', 'fuel_type', 'seat_count',
+      'chassis_number', 'engine_number', 'registration_date', 'registration_expiry',
+      'owner_name', 'owner_address', 'status', 'current_mileage', 'qr_code',
+      'registration_book_image', 'notes'];
     const updates = [];
     const params = [];
     for (const f of fields) {
       if (body[f] !== undefined) { updates.push(`${f} = ?`); params.push(body[f]); }
     }
     if (body.image_base64 && body.image_mime) {
-      const url = await uploadToR2(env, body.image_base64, `vehicle_${id}.jpg`, 'VEHICLES', body.image_mime);
-      updates.push('image_url = ?'); params.push(url);
+      const imgUrl = await uploadToR2(env, body.image_base64, `vehicle_${id}.jpg`, 'VEHICLES', body.image_mime);
+      updates.push('vehicle_images = ?'); params.push(JSON.stringify([imgUrl]));
     }
     if (!updates.length) return error('ไม่มีข้อมูลที่จะอัปเดต');
     updates.push('updated_at = ?'); params.push(now(), id);
@@ -94,7 +105,11 @@ export async function onRequest(context) {
   if (path.match(/\/api\/vehicles\/[^/]+\/deactivate/) && method === 'PUT') {
     try { requirePermission(user, 'vehicles', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[3];
-    await dbRun(env.DB, 'UPDATE cars SET active = 0, updated_at = ? WHERE id = ?', [now(), id]);
+    const body = await parseBody(request);
+    await dbRun(env.DB,
+      `UPDATE cars SET status = 'inactive', deactivated_reason = ?, deactivated_at = ?, updated_at = ? WHERE id = ?`,
+      [body?.reason || '', now(), now(), id]
+    );
     await writeAuditLog(env.DB, user.id, user.displayName, 'deactivate_vehicle', 'vehicles', id, null);
     return success({ message: 'ปิดการใช้งานยานพาหนะเรียบร้อย' });
   }
@@ -103,27 +118,36 @@ export async function onRequest(context) {
     try { requirePermission(user, 'vehicles', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[3];
     const logs = await dbAll(env.DB,
-      'SELECT * FROM vehicle_maintenance WHERE car_id = ? ORDER BY service_date DESC', [id]
+      'SELECT * FROM vehicle_maintenance WHERE car_id = ? ORDER BY updated_at DESC', [id]
     );
     return success(logs);
   }
 
   if (path.match(/\/api\/vehicles\/[^/]+\/maintenance/) && method === 'POST') {
     try { requirePermission(user, 'maintenance', 'create'); } catch { return error('ไม่มีสิทธิ์', 403); }
-    const id = path.split('/')[3];
+    const carId = path.split('/')[3];
     const body = await parseBody(request);
-    const mid = generateUUID();
+    if (!body?.item_key) return error('กรุณาระบุ item_key');
     const ts = now();
-    await dbRun(env.DB,
-      `INSERT INTO vehicle_maintenance (id, car_id, maintenance_type, description, service_date, mileage_at_service,
-        cost, shop_name, technician, status, next_service_date, next_mileage, notes, created_by, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [mid, id, body.maintenance_type, body.description || '', body.service_date || ts,
-       body.mileage_at_service || 0, body.cost || 0, body.shop_name || '', body.technician || '',
-       body.status || 'completed', body.next_service_date || null, body.next_mileage || null,
-       body.notes || '', user.id, ts]
+    // Upsert: update if exists, insert if not
+    const existing = await dbFirst(env.DB,
+      'SELECT id FROM vehicle_maintenance WHERE car_id = ? AND item_key = ?', [carId, body.item_key]
     );
-    return success({ id: mid, message: 'บันทึกการซ่อมบำรุงเรียบร้อย' }, 201);
+    if (existing) {
+      await dbRun(env.DB,
+        `UPDATE vehicle_maintenance SET last_km = ?, last_date = ?, next_km = ?, next_date = ?, updated_at = ? WHERE id = ?`,
+        [body.last_km || null, body.last_date || null, body.next_km || null, body.next_date || null, ts, existing.id]
+      );
+      return success({ id: existing.id, message: 'อัปเดตข้อมูลบำรุงรักษาเรียบร้อย' });
+    }
+    const id = generateUUID();
+    await dbRun(env.DB,
+      `INSERT INTO vehicle_maintenance (id, car_id, item_key, last_km, last_date, next_km, next_date, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, carId, body.item_key, body.last_km || null, body.last_date || null,
+       body.next_km || null, body.next_date || null, ts]
+    );
+    return success({ id, message: 'บันทึกข้อมูลบำรุงรักษาเรียบร้อย' }, 201);
   }
 
   return error('Not Found', 404);

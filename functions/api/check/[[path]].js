@@ -1,14 +1,8 @@
-// Daily vehicle inspections (incl. public QR)
+﻿// Daily vehicle inspections (incl. public QR)
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, extractParam, uploadToR2
 } from '../../_helpers.js';
-
-const ALERT_THRESHOLDS = {
-  tire: 30,       // days before scheduled check
-  brake: 20000,   // km overdue
-  oil: 5000,      // km or 30 days
-};
 
 export async function onRequest(context) {
   try {
@@ -22,42 +16,56 @@ export async function onRequest(context) {
   if (path === '/api/check/daily' && method === 'POST') {
     const body = await parseBody(request);
     if (!body?.car_id) return error('กรุณาระบุ car_id');
-    const car = await dbFirst(env.DB,
-      'SELECT id, car_id FROM cars WHERE car_id = ? AND active = 1', [body.car_id]
+    // Try finding car by id or license_plate
+    let car = await dbFirst(env.DB,
+      "SELECT id, license_plate FROM cars WHERE id = ? AND status != 'inactive'", [body.car_id]
     );
+    if (!car) {
+      car = await dbFirst(env.DB,
+        "SELECT id, license_plate FROM cars WHERE license_plate = ? AND status != 'inactive'", [body.car_id]
+      );
+    }
     if (!car) return error('ไม่พบยานพาหนะ');
 
     const id = generateUUID();
     const ts = now();
 
-    // Handle multiple images (dashboard, exterior etc.)
-    let dashboardUrl = '';
-    if (body.dashboard_base64 && body.dashboard_mime) {
-      dashboardUrl = await uploadToR2(env, body.dashboard_base64, `check_dashboard_${id}.jpg`, 'CHECK', body.dashboard_mime);
-    }
+    // Build checks_data JSON from individual check fields
+    const checksData = JSON.stringify({
+      tire: body.tire_condition || 'ok',
+      brake: body.brake_condition || 'ok',
+      light: body.light_condition || 'ok',
+      fuel_level: body.fuel_level || '',
+      mileage: body.mileage || 0,
+      ...(body.checklist || {}),
+      ...(body.checks_data || {})
+    });
 
-    const checklist = JSON.stringify(body.checklist || {});
+    // Determine overall_status
+    let overallStatus = 'ok';
+    if (body.issues_found || body.overall_status === 'critical') overallStatus = 'critical';
+    else if (body.overall_status === 'warning') overallStatus = 'warning';
+
+    const notes = [body.notes || '', body.issue_description || ''].filter(Boolean).join('; ');
 
     await dbRun(env.DB,
-      `INSERT INTO check_log (id, car_id, check_date, checker_name, checker_phone,
-        mileage, fuel_level, tire_condition, brake_condition, light_condition,
-        dashboard_url, checklist, issues_found, issue_description, status, notes, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, car.id, body.check_date || ts.split('T')[0],
-       body.checker_name || '', body.checker_phone || '',
-       body.mileage || 0, body.fuel_level || '',
-       body.tire_condition || 'ok', body.brake_condition || 'ok', body.light_condition || 'ok',
-       dashboardUrl, checklist,
-       body.issues_found ? 1 : 0, body.issue_description || '',
-       body.issues_found ? 'has_issues' : 'ok', body.notes || '', ts]
+      `INSERT INTO check_log (id, car_id, inspector, check_type, overall_status, checks_data, notes, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, car.id, body.checker_name || body.inspector || 'QR',
+       body.check_type || 'daily', overallStatus, checksData, notes, ts]
     );
 
     // Auto-create inspection alert if issues found
-    if (body.issues_found && body.issue_description) {
+    if (overallStatus !== 'ok' && (body.issue_description || body.issues_found)) {
+      const alertItems = JSON.stringify([{
+        type: 'inspection',
+        description: body.issue_description || 'พบปัญหาจากการตรวจสภาพ'
+      }]);
       await dbRun(env.DB,
-        `INSERT INTO inspection_alerts (id, car_id, alert_type, severity, description, source_check_id, status, created_at)
-         VALUES (?, ?, 'inspection', 'medium', ?, ?, 'open', ?)`,
-        [generateUUID(), car.id, body.issue_description, id, ts]
+        `INSERT INTO inspection_alerts (id, car_id, risk_level, items, recommendations, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [generateUUID(), car.id, overallStatus === 'critical' ? 'high' : 'medium',
+         alertItems, body.issue_description || '', ts]
       );
     }
 
@@ -74,13 +82,13 @@ export async function onRequest(context) {
     const where = [];
     const params = [];
     if (carId) { where.push('cl.car_id = ?'); params.push(carId); }
-    if (dateFrom) { where.push('cl.check_date >= ?'); params.push(dateFrom); }
-    if (dateTo) { where.push('cl.check_date <= ?'); params.push(dateTo); }
+    if (dateFrom) { where.push('cl.created_at >= ?'); params.push(dateFrom); }
+    if (dateTo) { where.push('cl.created_at <= ?'); params.push(dateTo + ' 23:59:59'); }
     const rows = await dbAll(env.DB,
-      `SELECT cl.*, c.car_id as car_code, c.brand, c.license_plate FROM check_log cl
+      `SELECT cl.*, c.license_plate, c.brand FROM check_log cl
        LEFT JOIN cars c ON cl.car_id = c.id
        ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
-       ORDER BY cl.check_date DESC, cl.created_at DESC LIMIT 200`,
+       ORDER BY cl.created_at DESC LIMIT 200`,
       params
     );
     return success(rows);
@@ -88,12 +96,13 @@ export async function onRequest(context) {
 
   if (path === '/api/check/alerts' && method === 'GET') {
     try { requirePermission(user, 'check', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
-    const status = url.searchParams.get('status') || 'open';
+    const resolved = url.searchParams.get('resolved');
+    const where = resolved === '1' ? 'WHERE ia.resolved = 1' : 'WHERE ia.resolved = 0';
     const rows = await dbAll(env.DB,
-      `SELECT ia.*, c.car_id as car_code, c.brand, c.license_plate FROM inspection_alerts ia
+      `SELECT ia.*, c.license_plate, c.brand FROM inspection_alerts ia
        LEFT JOIN cars c ON ia.car_id = c.id
-       WHERE ia.status = ? ORDER BY ia.created_at DESC`,
-      [status]
+       ${where} ORDER BY ia.created_at DESC`,
+      []
     );
     return success(rows);
   }
@@ -103,8 +112,8 @@ export async function onRequest(context) {
     const id = path.split('/')[4];
     const body = await parseBody(request);
     await dbRun(env.DB,
-      `UPDATE inspection_alerts SET status = 'resolved', resolved_by = ?, resolved_at = ?, resolution_notes = ? WHERE id = ?`,
-      [user.id, now(), body?.notes || '', id]
+      `UPDATE inspection_alerts SET resolved = 1, resolved_by = ?, resolved_at = ? WHERE id = ?`,
+      [user.id, now(), id]
     );
     return success({ message: 'ปิดแจ้งเตือนเรียบร้อย' });
   }

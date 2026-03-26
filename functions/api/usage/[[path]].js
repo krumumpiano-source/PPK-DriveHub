@@ -1,7 +1,7 @@
-// Vehicle usage records (incl. public QR)
+﻿// Usage records — event-based (departure/return/refuel/inspection)
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
-  parseBody, requirePermission, extractParam, writeAuditLog
+  parseBody, requirePermission, extractParam
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
@@ -12,98 +12,141 @@ export async function onRequest(context) {
   const method = request.method;
   const user = env.user;
 
-  // PUBLIC — QR submit
-  if (path === '/api/usage/qr' && method === 'POST') {
+  // PUBLIC QR usage record
+  if (path === '/api/usage/record' && method === 'POST') {
     const body = await parseBody(request);
-    if (!body?.car_id || !body?.purpose) return error('กรุณากรอกข้อมูลให้ครบ');
-    const car = await dbFirst(env.DB, 'SELECT id, car_id FROM cars WHERE car_id = ? AND active = 1', [body.car_id]);
-    if (!car) return error('ไม่พบยานพาหนะ');
+    if (!body?.car_id || !body?.record_type) return error('กรุณาระบุ car_id และ record_type');
+    const validTypes = ['departure', 'return', 'refuel', 'inspection'];
+    if (!validTypes.includes(body.record_type)) return error('record_type ต้องเป็น: ' + validTypes.join(', '));
     const id = generateUUID();
     const ts = now();
     await dbRun(env.DB,
-      `INSERT INTO usage_records (id, car_id, driver_id, driver_name, purpose, destination,
-        departure_date, departure_time, return_date, mileage_start, mileage_end, passenger_count,
-        status, notes, submitted_by_qr, created_by, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, 1, ?, ?, ?)`,
-      [id, car.id, body.driver_id || null, body.driver_name || '', body.purpose, body.destination || '',
-       body.departure_date || ts.split('T')[0], body.departure_time || ts.split('T')[1]?.slice(0,5),
-       body.return_date || null, body.mileage_start || 0, body.mileage_end || null,
-       body.passenger_count || 1, body.notes || '', body.submitter_name || 'QR', ts, ts]
+      `INSERT INTO usage_records (id, car_id, driver_id, record_type, datetime, mileage, location, notes, queue_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, body.car_id, body.driver_id || null, body.record_type,
+       body.datetime || ts, body.mileage || null,
+       body.location || '', body.notes || '', body.queue_id || null, ts]
     );
-    return success({ id, message: 'บันทึกการใช้รถเรียบร้อย' }, 201);
+    // Update car mileage if provided
+    if (body.mileage && body.mileage > 0) {
+      await dbRun(env.DB,
+        'UPDATE cars SET current_mileage = ? WHERE id = ? AND (current_mileage IS NULL OR current_mileage < ?)',
+        [body.mileage, body.car_id, body.mileage]
+      );
+    }
+    return success({ id, message: 'บันทึกการใช้งานเรียบร้อย' }, 201);
   }
 
   if (!user) return error('Unauthorized', 401);
 
+  // --- GET /api/usage ---
   if (path === '/api/usage' && method === 'GET') {
     try { requirePermission(user, 'usage', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const carId = url.searchParams.get('car_id');
+    const recordType = url.searchParams.get('record_type');
     const dateFrom = url.searchParams.get('date_from');
     const dateTo = url.searchParams.get('date_to');
-    const carId = url.searchParams.get('car_id');
-    const status = url.searchParams.get('status');
+    const queueId = url.searchParams.get('queue_id');
     const where = [];
     const params = [];
-    if (dateFrom) { where.push('ur.departure_date >= ?'); params.push(dateFrom); }
-    if (dateTo) { where.push('ur.departure_date <= ?'); params.push(dateTo); }
     if (carId) { where.push('ur.car_id = ?'); params.push(carId); }
-    if (status) { where.push('ur.status = ?'); params.push(status); }
+    if (recordType) { where.push('ur.record_type = ?'); params.push(recordType); }
+    if (dateFrom) { where.push('ur.datetime >= ?'); params.push(dateFrom); }
+    if (dateTo) { where.push('ur.datetime <= ?'); params.push(dateTo + ' 23:59:59'); }
+    if (queueId) { where.push('ur.queue_id = ?'); params.push(queueId); }
     const rows = await dbAll(env.DB,
-      `SELECT ur.*, c.car_id as car_code, c.brand, c.license_plate FROM usage_records ur
+      `SELECT ur.*, c.license_plate, c.brand, d.name AS driver_name
+       FROM usage_records ur
        LEFT JOIN cars c ON ur.car_id = c.id
+       LEFT JOIN drivers d ON ur.driver_id = d.id
        ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
-       ORDER BY ur.departure_date DESC, ur.departure_time DESC LIMIT 200`,
+       ORDER BY ur.datetime DESC LIMIT 500`,
       params
     );
     return success(rows);
   }
 
+  // --- GET /api/usage/:id ---
+  if (path.match(/^\/api\/usage\/[^/]+$/) && method === 'GET') {
+    try { requirePermission(user, 'usage', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const id = extractParam(path, 'usage');
+    const row = await dbFirst(env.DB,
+      `SELECT ur.*, c.license_plate, c.brand, d.name AS driver_name
+       FROM usage_records ur
+       LEFT JOIN cars c ON ur.car_id = c.id
+       LEFT JOIN drivers d ON ur.driver_id = d.id
+       WHERE ur.id = ?`, [id]);
+    if (!row) return error('ไม่พบข้อมูล', 404);
+    return success(row);
+  }
+
+  // --- POST /api/usage ---
   if (path === '/api/usage' && method === 'POST') {
     try { requirePermission(user, 'usage', 'create'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const body = await parseBody(request);
-    if (!body?.car_id || !body?.purpose) return error('กรุณากรอกข้อมูลให้ครบ');
-    const car = await dbFirst(env.DB, 'SELECT id FROM cars WHERE id = ? AND active = 1', [body.car_id]);
-    if (!car) return error('ไม่พบยานพาหนะ');
+    if (!body?.car_id || !body?.record_type) return error('กรุณาระบุยานพาหนะและประเภทการบันทึก');
     const id = generateUUID();
     const ts = now();
     await dbRun(env.DB,
-      `INSERT INTO usage_records (id, car_id, driver_id, driver_name, purpose, destination,
-        departure_date, departure_time, return_date, mileage_start, mileage_end, passenger_count,
-        status, notes, submitted_by_qr, created_by, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, 0, ?, ?, ?)`,
-      [id, body.car_id, body.driver_id || null, body.driver_name || '', body.purpose, body.destination || '',
-       body.departure_date || ts.split('T')[0], body.departure_time || '08:00',
-       body.return_date || null, body.mileage_start || 0, body.mileage_end || null,
-       body.passenger_count || 1, body.notes || '', user.id, ts, ts]
+      `INSERT INTO usage_records (id, car_id, driver_id, record_type, datetime, mileage, location, notes, queue_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, body.car_id, body.driver_id || null, body.record_type,
+       body.datetime || ts, body.mileage || null,
+       body.location || '', body.notes || '', body.queue_id || null, ts]
     );
-    await writeAuditLog(env.DB, user.id, user.displayName, 'create_usage', 'usage', id, null);
-    return success({ id, message: 'บันทึกการใช้รถเรียบร้อย' }, 201);
+    if (body.mileage && body.mileage > 0) {
+      await dbRun(env.DB,
+        'UPDATE cars SET current_mileage = ? WHERE id = ? AND (current_mileage IS NULL OR current_mileage < ?)',
+        [body.mileage, body.car_id, body.mileage]
+      );
+    }
+    return success({ id, message: 'บันทึกการใช้งานเรียบร้อย' }, 201);
   }
 
-  if (path.match(/^\/api\/usage\/[^/]+$/) && method === 'GET') {
-    try { requirePermission(user, 'usage', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
-    const id = extractParam(path, '/api/usage/');
-    const row = await dbFirst(env.DB,
-      'SELECT ur.*, c.car_id as car_code, c.brand, c.license_plate FROM usage_records ur LEFT JOIN cars c ON ur.car_id = c.id WHERE ur.id = ?',
-      [id]
-    );
-    return row ? success(row) : error('ไม่พบข้อมูลการใช้รถ', 404);
-  }
-
+  // --- PUT /api/usage/:id ---
   if (path.match(/^\/api\/usage\/[^/]+$/) && method === 'PUT') {
     try { requirePermission(user, 'usage', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
-    const id = extractParam(path, '/api/usage/');
+    const id = extractParam(path, 'usage');
     const body = await parseBody(request);
-    const fields = ['driver_id', 'driver_name', 'purpose', 'destination', 'departure_date',
-      'departure_time', 'return_date', 'return_time', 'mileage_start', 'mileage_end', 'passenger_count', 'status', 'notes'];
-    const updates = [];
+    const sets = [];
     const params = [];
+    const fields = ['car_id','driver_id','record_type','datetime','mileage','location','notes','queue_id'];
     for (const f of fields) {
-      if (body[f] !== undefined) { updates.push(`${f} = ?`); params.push(body[f]); }
+      if (body[f] !== undefined) { sets.push(`${f} = ?`); params.push(body[f]); }
     }
-    if (!updates.length) return error('ไม่มีข้อมูลที่จะอัปเดต');
-    updates.push('updated_at = ?'); params.push(now(), id);
-    await dbRun(env.DB, `UPDATE usage_records SET ${updates.join(', ')} WHERE id = ?`, params);
-    return success({ message: 'อัปเดตการใช้รถเรียบร้อย' });
+    if (!sets.length) return error('ไม่มีข้อมูลที่จะอัปเดต');
+    params.push(id);
+    await dbRun(env.DB, `UPDATE usage_records SET ${sets.join(', ')} WHERE id = ?`, params);
+    return success({ message: 'อัปเดตข้อมูลการใช้งานเรียบร้อย' });
+  }
+
+  // --- DELETE /api/usage/:id ---
+  if (path.match(/^\/api\/usage\/[^/]+$/) && method === 'DELETE') {
+    try { requirePermission(user, 'usage', 'delete'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const id = extractParam(path, 'usage');
+    await dbRun(env.DB, 'DELETE FROM usage_records WHERE id = ?', [id]);
+    return success({ message: 'ลบข้อมูลการใช้งานเรียบร้อย' });
+  }
+
+  // --- GET /api/usage/summary ---
+  if (path === '/api/usage/summary' && method === 'GET') {
+    try { requirePermission(user, 'usage', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const carId = url.searchParams.get('car_id');
+    const month = url.searchParams.get('month');
+    const where = [];
+    const params = [];
+    if (carId) { where.push('car_id = ?'); params.push(carId); }
+    if (month) { where.push("datetime LIKE ?"); params.push(month + '%'); }
+    const row = await dbFirst(env.DB,
+      `SELECT COUNT(*) AS total_records,
+       SUM(CASE WHEN record_type = 'departure' THEN 1 ELSE 0 END) AS departures,
+       SUM(CASE WHEN record_type = 'return' THEN 1 ELSE 0 END) AS returns,
+       SUM(CASE WHEN record_type = 'refuel' THEN 1 ELSE 0 END) AS refuels,
+       SUM(CASE WHEN record_type = 'inspection' THEN 1 ELSE 0 END) AS inspections
+       FROM usage_records ${where.length ? 'WHERE ' + where.join(' AND ') : ''}`,
+      params
+    );
+    return success(row);
   }
 
   return error('Not Found', 404);

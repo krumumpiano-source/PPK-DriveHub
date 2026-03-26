@@ -211,6 +211,12 @@ const ACTION_MAP = {
   'createUsageRecord':   (d) => API.post('/api/usage', d),
   'submitUsageQR':       (d) => API.post('/api/usage/qr', d),
   'initializeVehicleMaintenanceFromToday': () => API.get('/api/maintenance/schedule'),
+  'getAdminSettings':    () => API.get('/api/admin/settings'),
+  'getSystemSettings':   () => API.get('/api/admin/settings'),
+  'checkPDPAAccepted':   () => API.get('/api/auth/me'),
+  'acceptPDPAPolicy':    (d) => API.post('/api/auth/accept-pdpa', d),
+  'getCurrentUserInfo':  () => API.get('/api/auth/me'),
+  'getQueues':           (d) => API.get('/api/queue' + _q(d)),
 };
 
 /** Convert object to query string: { status: 'active' } → '?status=active' */

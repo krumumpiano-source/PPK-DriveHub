@@ -1,7 +1,7 @@
-// Driver management + fatigue tracking
+﻿// Driver management + fatigue
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
-  parseBody, requirePermission, extractParam, writeAuditLog, uploadToR2
+  parseBody, requirePermission, extractParam, uploadToR2
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
@@ -11,129 +11,125 @@ export async function onRequest(context) {
   const path = url.pathname;
   const method = request.method;
   const user = env.user;
-
   if (!user) return error('Unauthorized', 401);
 
+  // --- GET /api/drivers ---
   if (path === '/api/drivers' && method === 'GET') {
     try { requirePermission(user, 'drivers', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const status = url.searchParams.get('status');
-    const where = ['active = 1'];
+    const search = url.searchParams.get('search');
+    const where = [];
     const params = [];
-    if (status) { where.push('status = ?'); params.push(status); }
-    const drivers = await dbAll(env.DB,
-      `SELECT * FROM drivers WHERE ${where.join(' AND ')} ORDER BY last_name ASC`, params
+    if (status) { where.push('d.status = ?'); params.push(status); }
+    if (search) { where.push("(d.name LIKE ? OR d.license_number LIKE ? OR d.phone LIKE ?)"); params.push(`%${search}%`, `%${search}%`, `%${search}%`); }
+    const rows = await dbAll(env.DB,
+      `SELECT d.* FROM drivers d
+       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+       ORDER BY d.created_at DESC`,
+      params
     );
-    return success(drivers);
+    return success(rows);
   }
 
+  // --- GET /api/drivers/:id ---
+  if (path.match(/^\/api\/drivers\/[^/]+$/) && method === 'GET') {
+    try { requirePermission(user, 'drivers', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const id = extractParam(path, 'drivers');
+    const row = await dbFirst(env.DB, 'SELECT * FROM drivers WHERE id = ?', [id]);
+    if (!row) return error('ไม่พบข้อมูลพนักงานขับรถ', 404);
+    return success(row);
+  }
+
+  // --- POST /api/drivers ---
   if (path === '/api/drivers' && method === 'POST') {
-    try { requirePermission(user, 'drivers', 'create'); } catch { return error('ไม่มีสิทธิ์เพิ่มคนขับ', 403); }
+    try { requirePermission(user, 'drivers', 'create'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const body = await parseBody(request);
-    if (!body?.first_name || !body?.license_number) return error('กรุณากรอกชื่อและหมายเลขใบขับขี่');
+    if (!body?.name) return error('กรุณาระบุชื่อพนักงานขับรถ');
     const id = generateUUID();
     const ts = now();
-    let imageUrl = '';
-    if (body.image_base64 && body.image_mime) {
-      imageUrl = await uploadToR2(env, body.image_base64, `driver_${id}.jpg`, 'DRIVERS', body.image_mime);
-    }
     await dbRun(env.DB,
-      `INSERT INTO drivers (id, employee_id, title, first_name, last_name, display_name, phone, license_number,
-        license_type, license_expiry, department, position, status, active, image_url, notes, created_by, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)`,
-      [id, body.employee_id || '', body.title || '', body.first_name, body.last_name || '',
-       body.display_name || `${body.title || ''}${body.first_name} ${body.last_name || ''}`.trim(),
-       body.phone || '', body.license_number, body.license_type || 'ท.2',
-       body.license_expiry || null, body.department || '', body.position || '',
-       body.status || 'active', imageUrl, body.notes || '', user.id, ts, ts]
+      `INSERT INTO drivers (id, name, license_number, license_expiry, phone, status,
+        profile_image, id_card_image, fatigue_flag, discipline_score, notes, created_by, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, body.name, body.license_number || '', body.license_expiry || null,
+       body.phone || '', body.status || 'active',
+       body.profile_image || null, body.id_card_image || null,
+       body.fatigue_flag || 0, body.discipline_score ?? 100,
+       body.notes || '', user.id, ts, ts]
     );
-    await writeAuditLog(env.DB, user.id, user.displayName, 'create_driver', 'drivers', id, { name: body.first_name });
-    return success({ id, message: 'เพิ่มคนขับเรียบร้อย' }, 201);
+    return success({ id, message: 'เพิ่มพนักงานขับรถเรียบร้อย' }, 201);
   }
 
-  if (path === '/api/drivers/fatigue' && method === 'POST') {
+  // --- PUT /api/drivers/:id ---
+  if (path.match(/^\/api\/drivers\/[^/]+$/) && method === 'PUT') {
+    try { requirePermission(user, 'drivers', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const id = extractParam(path, 'drivers');
     const body = await parseBody(request);
-    const driver = await dbFirst(env.DB, 'SELECT id FROM drivers WHERE user_id = ? AND active = 1', [user.id]);
-    if (!driver && body?.driver_id) { try { requirePermission(user, 'drivers', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); } }
-    const driverId = driver?.id || body?.driver_id;
-    if (!driverId) return error('ไม่พบข้อมูลคนขับ');
+    const sets = [];
+    const params = [];
+    const fields = ['name', 'license_number', 'license_expiry', 'phone', 'status',
+      'profile_image', 'id_card_image', 'fatigue_flag', 'discipline_score', 'notes',
+      'deactivated_reason', 'deactivated_at'];
+    for (const f of fields) {
+      if (body[f] !== undefined) { sets.push(`${f} = ?`); params.push(body[f]); }
+    }
+    if (!sets.length) return error('ไม่มีข้อมูลที่จะอัปเดต');
+    sets.push('updated_at = ?'); params.push(now());
+    params.push(id);
+    await dbRun(env.DB, `UPDATE drivers SET ${sets.join(', ')} WHERE id = ?`, params);
+    return success({ message: 'อัปเดตข้อมูลพนักงานขับรถเรียบร้อย' });
+  }
+
+  // --- DELETE /api/drivers/:id ---
+  if (path.match(/^\/api\/drivers\/[^/]+$/) && method === 'DELETE') {
+    try { requirePermission(user, 'drivers', 'delete'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const id = extractParam(path, 'drivers');
+    await dbRun(env.DB, "UPDATE drivers SET status = 'inactive', deactivated_at = ? WHERE id = ?", [now(), id]);
+    return success({ message: 'ลบพนักงานขับรถเรียบร้อย' });
+  }
+
+  // --- Fatigue Reporting ---
+  if (path === '/api/drivers/fatigue/report' && method === 'POST') {
+    const body = await parseBody(request);
+    if (!body?.driver_id) return error('กรุณาระบุ driver_id');
     const id = generateUUID();
     const ts = now();
     await dbRun(env.DB,
-      `INSERT INTO self_reported_fatigue (id, driver_id, report_date, fatigue_level, symptoms, notes, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [id, driverId, body.report_date || ts, body.fatigue_level || 1, body.symptoms || '', body.notes || '', ts]
+      `INSERT INTO self_reported_fatigue (id, driver_id, reason, reported_at)
+       VALUES (?, ?, ?, ?)`,
+      [id, body.driver_id, body.reason || '', ts]
     );
+    // Flag driver
+    await dbRun(env.DB, 'UPDATE drivers SET fatigue_flag = 1, updated_at = ? WHERE id = ?', [ts, body.driver_id]);
     return success({ id, message: 'บันทึกรายงานความเหนื่อยล้าเรียบร้อย' }, 201);
   }
 
-  if (path.match(/^\/api\/drivers\/[^/]+$/) && method === 'GET') {
+  if (path === '/api/drivers/fatigue/list' && method === 'GET') {
     try { requirePermission(user, 'drivers', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
-    const id = extractParam(path, '/api/drivers/');
-    const driver = await dbFirst(env.DB, 'SELECT * FROM drivers WHERE id = ? AND active = 1', [id]);
-    return driver ? success(driver) : error('ไม่พบคนขับ', 404);
-  }
-
-  if (path.match(/^\/api\/drivers\/[^/]+$/) && method === 'PUT') {
-    try { requirePermission(user, 'drivers', 'edit'); } catch { return error('ไม่มีสิทธิ์แก้ไข', 403); }
-    const id = extractParam(path, '/api/drivers/');
-    const body = await parseBody(request);
-    const fields = ['employee_id', 'title', 'first_name', 'last_name', 'display_name', 'phone',
-      'license_number', 'license_type', 'license_expiry', 'department', 'position', 'status', 'notes', 'user_id'];
-    const updates = [];
+    const driverId = url.searchParams.get('driver_id');
+    const where = [];
     const params = [];
-    for (const f of fields) {
-      if (body[f] !== undefined) { updates.push(`${f} = ?`); params.push(body[f]); }
-    }
-    if (body.image_base64 && body.image_mime) {
-      const imgUrl = await uploadToR2(env, body.image_base64, `driver_${id}.jpg`, 'DRIVERS', body.image_mime);
-      updates.push('image_url = ?'); params.push(imgUrl);
-    }
-    if (!updates.length) return error('ไม่มีข้อมูลที่จะอัปเดต');
-    updates.push('updated_at = ?'); params.push(now(), id);
-    await dbRun(env.DB, `UPDATE drivers SET ${updates.join(', ')} WHERE id = ?`, params);
-    await writeAuditLog(env.DB, user.id, user.displayName, 'update_driver', 'drivers', id, null);
-    return success({ message: 'อัปเดตข้อมูลคนขับเรียบร้อย' });
-  }
-
-  if (path.match(/\/api\/drivers\/[^/]+\/deactivate/) && method === 'PUT') {
-    try { requirePermission(user, 'drivers', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
-    const id = path.split('/')[3];
-    await dbRun(env.DB, 'UPDATE drivers SET active = 0, updated_at = ? WHERE id = ?', [now(), id]);
-    await writeAuditLog(env.DB, user.id, user.displayName, 'deactivate_driver', 'drivers', id, null);
-    return success({ message: 'ปิดการใช้งานคนขับเรียบร้อย' });
-  }
-
-  if (path.match(/\/api\/drivers\/[^/]+\/fatigue/) && method === 'GET') {
-    try { requirePermission(user, 'drivers', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
-    const id = path.split('/')[3];
-    const logs = await dbAll(env.DB,
-      'SELECT * FROM self_reported_fatigue WHERE driver_id = ? ORDER BY created_at DESC LIMIT 30', [id]
+    if (driverId) { where.push('f.driver_id = ?'); params.push(driverId); }
+    const rows = await dbAll(env.DB,
+      `SELECT f.*, d.name AS driver_name FROM self_reported_fatigue f
+       LEFT JOIN drivers d ON f.driver_id = d.id
+       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+       ORDER BY f.reported_at DESC LIMIT 100`,
+      params
     );
-    return success(logs);
+    return success(rows);
   }
 
-  if (path.match(/\/api\/drivers\/[^/]+\/leaves/) && method === 'GET') {
-    try { requirePermission(user, 'drivers', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
-    const id = path.split('/')[3];
-    const leaves = await dbAll(env.DB,
-      'SELECT * FROM leaves WHERE driver_id = ? ORDER BY start_date DESC', [id]
-    );
-    return success(leaves);
-  }
-
-  if (path.match(/\/api\/drivers\/[^/]+\/leaves/) && method === 'POST') {
+  if (path.match(/\/api\/drivers\/fatigue\/[^/]+\/acknowledge/) && method === 'PUT') {
     try { requirePermission(user, 'drivers', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
-    const id = path.split('/')[3];
+    const id = path.split('/')[4];
     const body = await parseBody(request);
-    if (!body?.start_date || !body?.end_date) return error('กรุณาระบุวันที่');
-    const lid = generateUUID();
-    const ts = now();
     await dbRun(env.DB,
-      `INSERT INTO leaves (id, driver_id, leave_type, start_date, end_date, reason, status, created_by, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
-      [lid, id, body.leave_type || 'sick', body.start_date, body.end_date, body.reason || '', user.id, ts]
+      `UPDATE self_reported_fatigue SET acknowledged = 1, acknowledged_by = ?,
+       admin_notes = ?, acknowledged_at = ? WHERE id = ?`,
+      [user.id, body.admin_notes || '', now(), id]
     );
-    return success({ id: lid, message: 'ยื่นคำขอลาเรียบร้อย' }, 201);
+    return success({ message: 'รับทราบรายงานความเหนื่อยล้าเรียบร้อย' });
   }
 
   return error('Not Found', 404);
