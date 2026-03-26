@@ -347,6 +347,17 @@
     }
 
     // handleLogin is specific to this page
+
+    // Auto-redirect to setup if no admin exists
+    (async function checkNeedsSetup() {
+      try {
+        var result = await API.get('/api/setup');
+        if (result.success && result.data && result.data.needs_setup) {
+          window.location.href = 'setup.html';
+        }
+      } catch (e) { /* ignore */ }
+    })();
+
     async function handleLogin(event) {
       event.preventDefault();
 
