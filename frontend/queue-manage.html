@@ -774,7 +774,7 @@
     <div class="modal" onclick="event.stopPropagation()">
       <div class="modal-header">
         <span>➕ สร้างคิวใหม่</span>
-        <button class="modal-close" onclick="closeCreateModal()">×</button>
+        <button class="modal-close" onclick="closeCreateModal()" title="ปิด">×</button>
       </div>
       <form id="createQueueForm" onsubmit="handleCreateSubmit(event); return false;">
         <div class="form-section">
@@ -924,7 +924,7 @@
     <div class="modal" onclick="event.stopPropagation()">
       <div class="modal-header">
         <span>✏️ แก้ไขคิว</span>
-        <button class="modal-close" onclick="closeEditModal()">×</button>
+        <button class="modal-close" onclick="closeEditModal()" title="ปิด">×</button>
       </div>
       <div id="editQueueInfo" class="queue-info" style="display: none;"></div>
       <form id="editQueueForm" onsubmit="handleEditSubmit(event); return false;">
@@ -1016,7 +1016,7 @@
     <div class="modal" onclick="event.stopPropagation()">
       <div class="modal-header">
         <span>⚠️ เตือน: มีคิวซ้อนทับ</span>
-        <button class="modal-close" onclick="closeConflictModal()">×</button>
+        <button class="modal-close" onclick="closeConflictModal()" title="ปิด">×</button>
       </div>
       <div class="modal-body">
         <div class="modal-warning">

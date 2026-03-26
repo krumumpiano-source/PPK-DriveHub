@@ -491,7 +491,7 @@
     <div class="modal">
       <div class="modal-header">
         <h2 id="editModalTitle">แก้ไขผู้ใช้</h2>
-        <button class="modal-close" onclick="closeEditModal()">✕</button>
+        <button class="modal-close" onclick="closeEditModal()" title="ปิด">✕</button>
       </div>
       <div class="modal-body">
         <input type="hidden" id="editUserId">
@@ -564,7 +564,7 @@
     <div class="modal">
       <div class="modal-header">
         <h2>✅ อนุมัติคำขอสมัครสมาชิก</h2>
-        <button class="modal-close" onclick="closeApproveModal()">✕</button>
+        <button class="modal-close" onclick="closeApproveModal()" title="ปิด">✕</button>
       </div>
       <div class="modal-body">
         <input type="hidden" id="approveReqId">
@@ -603,7 +603,7 @@
     <div class="modal">
       <div class="modal-header">
         <h2>❌ ปฏิเสธคำขอ</h2>
-        <button class="modal-close" onclick="closeRejectModal()">✕</button>
+        <button class="modal-close" onclick="closeRejectModal()" title="ปิด">✕</button>
       </div>
       <div class="modal-body">
         <input type="hidden" id="rejectReqId">
@@ -813,7 +813,7 @@
           (isActive ? '✅ ใช้งาน' : '🚫 ระงับ') + '</span></td>';
         html += '<td>' + renderPermIcons(perms, isAdmin) + '</td>';
         html += '<td><div class="action-btns">';
-        html += '<button class="btn-icon" title="แก้ไข" onclick="openEditModal(' + u.id + ')">✏️</button>';
+        html += '<button class="btn btn-primary" style="padding:5px 12px;font-size:0.85em;" title="แก้ไขผู้ใช้" onclick="openEditModal(' + u.id + ')">✏️ แก้ไข</button>';
         html += '</div></td>';
         html += '</tr>';
       }

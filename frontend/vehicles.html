@@ -68,7 +68,7 @@
     <div class="modal">
       <div class="modal-header">
         <h2 id="modalTitle">เพิ่มรถใหม่</h2>
-        <button class="modal-close" onclick="closeModal()">×</button>
+        <button class="modal-close" onclick="closeModal()" title="ปิด">×</button>
       </div>
       <div class="modal-body">
         <form id="vehicleForm" onsubmit="handleSubmit(event); return false;">
@@ -679,7 +679,7 @@
       images.forEach(function (img, index) {
         html += '<div class="file-preview-item">';
         html += '<img src="' + img + '" alt="Preview">';
-        html += '<button type="button" class="remove" onclick="removeImage(' + index + ')">×</button>';
+        html += '<button type="button" class="remove" onclick="removeImage(' + index + ')" title="ลบรูป">×</button>';
         html += '</div>';
       });
       document.getElementById(previewId).innerHTML = html;
@@ -692,7 +692,7 @@
       } else {
         html += '<img src="' + fileData + '" alt="Preview">';
       }
-      html += '<button type="button" class="remove" onclick="removeRegistrationBook()">×</button>';
+      html += '<button type="button" class="remove" onclick="removeRegistrationBook()" title="ลบเอกสาร">×</button>';
       html += '</div>';
       document.getElementById(previewId).innerHTML = html;
     }
