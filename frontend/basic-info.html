@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ข้อมูลพื้นฐาน - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>window.REQUIRE_AUTH = true; window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'basic-info';</script>
+  <link rel="stylesheet" href="common.css">
+  <script src="js/api.js"></script><script src="common.js"></script>
+  <style>
+    .header {
+      background: var(--gradient-primary);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    .header h1 { font-size: 2em; margin-bottom: 8px; }
+    .header p { font-size: 1em; opacity: 0.92; }
+    .content { padding: 30px; }
+
+    .info-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 0;
+    }
+    .info-tab {
+      padding: 12px 24px;
+      border: none;
+      background: transparent;
+      font-family: inherit;
+      font-size: 1em;
+      font-weight: 600;
+      color: #64748b;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.25s;
+    }
+    .info-tab:hover { color: var(--color-primary); }
+    .info-tab.active {
+      color: var(--color-primary);
+      border-bottom-color: var(--color-primary);
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .search-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .search-bar input {
+      flex: 1;
+      min-width: 200px;
+      padding: 10px 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: var(--radius-md);
+      font-family: inherit;
+      font-size: 0.95em;
+    }
+    .search-bar input:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(66,133,244,0.12);
+    }
+
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93em;
+    }
+    .info-table th {
+      background: #f1f5f9;
+      padding: 12px 14px;
+      text-align: left;
+      font-weight: 600;
+      color: #334155;
+      white-space: nowrap;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    .info-table td {
+      padding: 11px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      color: #475569;
+    }
+    .info-table tr:hover td {
+      background: #f8fafc;
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    .status-dot.active { background: #22c55e; }
+    .status-dot.inactive { background: #ef4444; }
+    .status-dot.maintenance { background: #f59e0b; }
+    .status-dot.on_leave { background: #f59e0b; }
+
+    .vehicle-type-badge, .driver-status-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.85em;
+      font-weight: 500;
+    }
+
+    .summary-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .summary-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 18px;
+      text-align: center;
+    }
+    .summary-card .count {
+      font-size: 2em;
+      font-weight: 700;
+      color: var(--color-primary);
+      line-height: 1.2;
+    }
+    .summary-card .label {
+      font-size: 0.88em;
+      color: #64748b;
+      margin-top: 4px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #94a3b8;
+    }
+    .empty-state .icon { font-size: 2.5em; margin-bottom: 12px; }
+
+    @media (max-width: 768px) {
+      .content { padding: 16px; }
+      .info-table th, .info-table td { padding: 8px 10px; font-size: 0.85em; }
+      .info-tabs { gap: 4px; }
+      .info-tab { padding: 10px 14px; font-size: 0.9em; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div id="navigation"></div>
+    <div class="header">
+      <h1>📋 ข้อมูลพื้นฐาน</h1>
+      <p>ข้อมูลยานพาหนะและพนักงานขับรถ</p>
+    </div>
+    <div class="content">
+      <div class="info-tabs">
+        <button class="info-tab active" onclick="switchTab('vehicles')">🚙 ข้อมูลรถ</button>
+        <button class="info-tab" onclick="switchTab('drivers')">👷 พนักงานขับรถ</button>
+      </div>
+
+      <!-- Tab: Vehicles -->
+      <div id="tab-vehicles" class="tab-content active">
+        <div id="vehicle-summary" class="summary-cards"></div>
+        <div class="search-bar">
+          <input type="text" id="vehicleSearch" placeholder="ค้นหา... ทะเบียน, ยี่ห้อ, รุ่น" oninput="filterVehicles()">
+        </div>
+        <div class="table-wrap">
+          <table class="info-table">
+            <thead>
+              <tr>
+                <th>ลำดับ</th>
+                <th>ทะเบียน</th>
+                <th>ยี่ห้อ / รุ่น</th>
+                <th>ประเภท</th>
+                <th>สี</th>
+                <th>ปีจดทะเบียน</th>
+                <th>สถานะ</th>
+              </tr>
+            </thead>
+            <tbody id="vehicleTableBody">
+              <tr><td colspan="7" class="empty-state"><div class="icon">⏳</div>กำลังโหลด...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab: Drivers -->
+      <div id="tab-drivers" class="tab-content">
+        <div id="driver-summary" class="summary-cards"></div>
+        <div class="search-bar">
+          <input type="text" id="driverSearch" placeholder="ค้นหา... ชื่อ, เบอร์โทร, ใบขับขี่" oninput="filterDrivers()">
+        </div>
+        <div class="table-wrap">
+          <table class="info-table">
+            <thead>
+              <tr>
+                <th>ลำดับ</th>
+                <th>ชื่อ-สกุล</th>
+                <th>เบอร์โทร</th>
+                <th>เลขใบขับขี่</th>
+                <th>วันหมดอายุ</th>
+                <th>สถานะ</th>
+              </tr>
+            </thead>
+            <tbody id="driverTableBody">
+              <tr><td colspan="6" class="empty-state"><div class="icon">⏳</div>กำลังโหลด...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var allVehicles = [];
+    var allDrivers = [];
+
+    function switchTab(tab) {
+      document.querySelectorAll('.info-tab').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+      document.getElementById('tab-' + tab).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    function escHtml(str) {
+      if (!str) return '';
+      var div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    var vehicleTypeMap = {
+      sedan: 'รถเก๋ง', suv: 'SUV', pickup: 'กระบะ', van: 'รถตู้',
+      bus: 'รถบัส', truck: 'รถบรรทุก', motorcycle: 'จักรยานยนต์', other: 'อื่นๆ'
+    };
+    var vehicleStatusMap = {
+      active: 'พร้อมใช้งาน', maintenance: 'ซ่อมบำรุง', inactive: 'ปลดระวาง', reserved: 'จองแล้ว'
+    };
+    var driverStatusMap = {
+      active: 'พร้อมปฏิบัติงาน', inactive: 'ไม่ได้ปฏิบัติงาน', on_leave: 'ลา', suspended: 'พักงาน'
+    };
+
+    async function loadData() {
+      try {
+        var [vehicleResult, driverResult] = await Promise.all([
+          apiCall('getVehicles'),
+          apiCall('getDrivers')
+        ]);
+
+        if (vehicleResult.success && Array.isArray(vehicleResult.data)) {
+          allVehicles = vehicleResult.data;
+        }
+        if (driverResult.success && Array.isArray(driverResult.data)) {
+          allDrivers = driverResult.data;
+        }
+
+        renderVehicleSummary();
+        renderDriverSummary();
+        renderVehicles(allVehicles);
+        renderDrivers(allDrivers);
+      } catch (e) {
+        document.getElementById('vehicleTableBody').innerHTML =
+          '<tr><td colspan="7" class="empty-state"><div class="icon">❌</div>โหลดข้อมูลไม่สำเร็จ</td></tr>';
+      }
+    }
+
+    function renderVehicleSummary() {
+      var total = allVehicles.length;
+      var active = allVehicles.filter(function(v) { return v.status === 'active'; }).length;
+      var maint = allVehicles.filter(function(v) { return v.status === 'maintenance'; }).length;
+      document.getElementById('vehicle-summary').innerHTML =
+        '<div class="summary-card"><div class="count">' + total + '</div><div class="label">รถทั้งหมด</div></div>' +
+        '<div class="summary-card"><div class="count" style="color:#22c55e;">' + active + '</div><div class="label">พร้อมใช้งาน</div></div>' +
+        '<div class="summary-card"><div class="count" style="color:#f59e0b;">' + maint + '</div><div class="label">ซ่อมบำรุง</div></div>';
+    }
+
+    function renderDriverSummary() {
+      var total = allDrivers.length;
+      var active = allDrivers.filter(function(d) { return d.status === 'active'; }).length;
+      var onLeave = allDrivers.filter(function(d) { return d.status === 'on_leave'; }).length;
+      document.getElementById('driver-summary').innerHTML =
+        '<div class="summary-card"><div class="count">' + total + '</div><div class="label">พนักงานทั้งหมด</div></div>' +
+        '<div class="summary-card"><div class="count" style="color:#22c55e;">' + active + '</div><div class="label">พร้อมปฏิบัติงาน</div></div>' +
+        '<div class="summary-card"><div class="count" style="color:#f59e0b;">' + onLeave + '</div><div class="label">ลา</div></div>';
+    }
+
+    function renderVehicles(list) {
+      if (list.length === 0) {
+        document.getElementById('vehicleTableBody').innerHTML =
+          '<tr><td colspan="7" class="empty-state"><div class="icon">🚙</div>ยังไม่มีข้อมูลรถ</td></tr>';
+        return;
+      }
+      var html = '';
+      list.forEach(function(v, i) {
+        var statusClass = v.status || 'active';
+        html += '<tr>';
+        html += '<td>' + (i + 1) + '</td>';
+        html += '<td><strong>' + escHtml(v.license_plate) + '</strong></td>';
+        html += '<td>' + escHtml(v.brand || '') + ' ' + escHtml(v.model || '') + '</td>';
+        html += '<td>' + (vehicleTypeMap[v.vehicle_type] || v.vehicle_type || '-') + '</td>';
+        html += '<td>' + escHtml(v.color || '-') + '</td>';
+        html += '<td>' + (v.registration_year ? (v.registration_year + 543) : '-') + '</td>';
+        html += '<td><span class="status-dot ' + statusClass + '"></span>' + (vehicleStatusMap[v.status] || v.status || '-') + '</td>';
+        html += '</tr>';
+      });
+      document.getElementById('vehicleTableBody').innerHTML = html;
+    }
+
+    function renderDrivers(list) {
+      if (list.length === 0) {
+        document.getElementById('driverTableBody').innerHTML =
+          '<tr><td colspan="6" class="empty-state"><div class="icon">👷</div>ยังไม่มีข้อมูลพนักงาน</td></tr>';
+        return;
+      }
+      var html = '';
+      list.forEach(function(d, i) {
+        var statusClass = d.status || 'active';
+        var expiry = d.license_expiry ? formatDateThai(d.license_expiry) : '-';
+        var isExpired = d.license_expiry && new Date(d.license_expiry) < new Date();
+        html += '<tr>';
+        html += '<td>' + (i + 1) + '</td>';
+        html += '<td><strong>' + escHtml(d.name || d.full_name || '') + '</strong></td>';
+        html += '<td>' + escHtml(d.phone || '-') + '</td>';
+        html += '<td>' + escHtml(d.license_number || '-') + '</td>';
+        html += '<td' + (isExpired ? ' style="color:#ef4444;font-weight:600;"' : '') + '>' + expiry + (isExpired ? ' (หมดอายุ)' : '') + '</td>';
+        html += '<td><span class="status-dot ' + statusClass + '"></span>' + (driverStatusMap[d.status] || d.status || '-') + '</td>';
+        html += '</tr>';
+      });
+      document.getElementById('driverTableBody').innerHTML = html;
+    }
+
+    function filterVehicles() {
+      var q = document.getElementById('vehicleSearch').value.toLowerCase();
+      if (!q) { renderVehicles(allVehicles); return; }
+      var filtered = allVehicles.filter(function(v) {
+        return (v.license_plate || '').toLowerCase().indexOf(q) !== -1 ||
+               (v.brand || '').toLowerCase().indexOf(q) !== -1 ||
+               (v.model || '').toLowerCase().indexOf(q) !== -1;
+      });
+      renderVehicles(filtered);
+    }
+
+    function filterDrivers() {
+      var q = document.getElementById('driverSearch').value.toLowerCase();
+      if (!q) { renderDrivers(allDrivers); return; }
+      var filtered = allDrivers.filter(function(d) {
+        return ((d.name || d.full_name || '') + ' ' + (d.phone || '') + ' ' + (d.license_number || '')).toLowerCase().indexOf(q) !== -1;
+      });
+      renderDrivers(filtered);
+    }
+
+    function formatDateThai(dateStr) {
+      if (!dateStr) return '-';
+      try {
+        var d = new Date(dateStr);
+        return d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+      } catch (e) { return dateStr; }
+    }
+
+    loadData();
+  </script>
+</body>
+
+</html>
