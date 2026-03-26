@@ -20,9 +20,1032 @@
       box-sizing: border-box;
     }
 
-    body { }
+    body {
+      font-family: var(--font-family);
+      background: linear-gradient(135deg, #81d4fa 0%, #b2dfdb 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
 
-    .container { };
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: white;
+      border-radius: var(--radius-2xl);
+      box-shadow: var(--shadow-container);
+      overflow: hidden;
+    }
+
+    .header {
+      background: var(--gradient-info);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      font-size: 1.1em;
+      opacity: 0.95;
+    }
+
+    .content {
+      padding: 40px;
+    }
+
+    .actions-bar {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 25px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-family: inherit;
+      min-height: 48px;
+    }
+
+    .btn-primary {
+      background: var(--gradient-info);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.9;
+      transform: translateY(-2px);
+    }
+
+    .btn-success {
+      background: var(--color-success);
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #45a049;
+    }
+
+    .btn-danger {
+      background: var(--color-danger);
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #da190b;
+    }
+
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #5a6268;
+    }
+
+    .calendar-container {
+      margin-bottom: 30px;
+    }
+
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .calendar-nav {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .calendar-nav-btn {
+      padding: 8px 16px;
+      background: #4fc3f7;
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      font-size: 1em;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .calendar-nav-btn:hover {
+      background: #29b6f6;
+    }
+
+    .calendar-month-year {
+      font-size: 1.5em;
+      font-weight: 700;
+      color: var(--color-text);
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 1px;
+      background: var(--color-bg-gray);
+      border: 1px solid #e9ecef;
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+    }
+
+    .calendar-day-header {
+      background: var(--gradient-info);
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 0.9em;
+    }
+
+    .calendar-day {
+      background: white;
+      min-height: 140px;
+      max-height: 200px;
+      padding: 8px;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.3s;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .calendar-day::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .calendar-day::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .calendar-day::-webkit-scrollbar-thumb {
+      background: #b0bec5;
+      border-radius: 2px;
+    }
+
+    .calendar-day::-webkit-scrollbar-thumb:hover {
+      background: #90a4ae;
+    }
+
+    .calendar-day:hover {
+      background: var(--color-bg-light);
+      transform: scale(1.02);
+    }
+
+    .calendar-day.other-month {
+      background: var(--color-bg-light);
+      color: var(--color-text-light);
+    }
+
+    .calendar-day-number {
+      font-weight: 700;
+      font-size: 1.1em;
+      margin-bottom: 5px;
+      color: var(--color-text);
+    }
+
+    .calendar-day.other-month .calendar-day-number {
+      color: #ccc;
+    }
+
+    .calendar-day.today {
+      background: #e1f5fe;
+      border: 2px solid #4fc3f7;
+    }
+
+    .calendar-day.today .calendar-day-number {
+      color: #0277bd;
+      font-size: 1.3em;
+    }
+
+    /* Queue status colors - different from dashboard */
+    .calendar-day.queue-past {
+      background: var(--color-bg-gray) !important;
+    }
+
+    .calendar-day.queue-past .calendar-day-number {
+      color: var(--color-text-muted);
+    }
+
+    .calendar-day.queue-current {
+      background: var(--color-bg-danger) !important;
+      border: 2px solid #f44336 !important;
+    }
+
+    .calendar-day.queue-current .calendar-day-number {
+      color: var(--color-danger-dark);
+      font-weight: 700;
+    }
+
+    .calendar-day.queue-upcoming {
+      background: var(--color-bg-warning) !important;
+    }
+
+    .calendar-day.queue-upcoming .calendar-day-number {
+      color: #e65100;
+    }
+
+    .calendar-day .calendar-day.queue-future {
+      background: #e0f2f1 !important;
+    }
+
+    .calendar-day.queue-future .calendar-day-number {
+      color: #00695c;
+    }
+
+    .queue-item {
+      font-size: 0.7em;
+      padding: 3px 5px;
+      margin-bottom: 2px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.95);
+      border-left: 2px solid #4fc3f7;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.2s;
+      line-height: 1.3;
+    }
+
+    .queue-item:hover {
+      background: rgba(79, 195, 247, 0.15);
+      transform: translateX(2px);
+      border-left-width: 3px;
+    }
+
+    .queue-item .queue-plate {
+      font-weight: 700;
+      color: #0277bd;
+    }
+
+    .queue-more {
+      font-size: 0.7em;
+      color: var(--color-text-muted);
+      text-align: center;
+      margin-top: 4px;
+      font-style: italic;
+    }
+
+    .legend {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: var(--color-bg-light);
+      border-radius: var(--radius-md);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9em;
+    }
+
+    .legend-color {
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      border: 2px solid #ddd;
+    }
+
+    .legend-color.past {
+      background: var(--color-bg-gray);
+    }
+
+    .legend-color.upcoming {
+      background: var(--color-bg-warning);
+    }
+
+    .legend-color.current {
+      background: var(--color-bg-danger);
+      border-color: var(--color-danger);
+    }
+
+    .legend-color.future {
+      background: var(--color-bg-success);
+    }
+
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--color-text-muted);
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal {
+      background: white;
+      border-radius: var(--radius-xl);
+      padding: 30px;
+      max-width: 900px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      position: relative;
+    }
+
+    .modal-header {
+      font-size: 1.5em;
+      font-weight: 700;
+      color: #0277bd;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5em;
+      cursor: pointer;
+      color: var(--color-text-muted);
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.3s;
+    }
+
+    .modal-close:hover {
+      background: var(--color-bg-lighter);
+      color: var(--color-text);
+    }
+
+    .form-section {
+      background: var(--color-bg-light);
+      border-radius: var(--radius-xl);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .form-section-title {
+      font-size: 1.2em;
+      font-weight: 700;
+      color: #0277bd;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: var(--color-text);
+      font-size: 1em;
+    }
+
+    .form-group label .required {
+      color: var(--color-danger);
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: var(--radius-md);
+      font-size: 1em;
+      font-family: inherit;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #4fc3f7;
+      box-shadow: 0 0 0 3px rgba(79, 195, 247, 0.1);
+    }
+
+    .form-group .help-text {
+      font-size: 0.8em;
+      color: var(--color-text-muted);
+      margin-top: 4px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .date-type-selector {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+
+    .date-type-btn {
+      padding: 10px 18px;
+      border: 2px solid #ddd;
+      border-radius: var(--radius-md);
+      background: white;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+      font-size: 0.95em;
+      min-height: 44px;
+    }
+
+    .date-type-btn.active {
+      background: #4fc3f7;
+      color: white;
+      border-color: #4fc3f7;
+    }
+
+    .date-type-btn:hover {
+      border-color: #4fc3f7;
+    }
+
+    .date-range-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .weekday-selector {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .weekday-btn {
+      padding: 12px 8px;
+      border: 2px solid #ddd;
+      border-radius: var(--radius-md);
+      background: white;
+      cursor: pointer;
+      text-align: center;
+      font-weight: 600;
+      transition: all 0.3s;
+      font-size: 0.9em;
+      min-height: 44px;
+    }
+
+    .weekday-btn.selected {
+      background: #4fc3f7;
+      color: white;
+      border-color: #4fc3f7;
+    }
+
+    .weekday-btn:hover {
+      border-color: #4fc3f7;
+    }
+
+    .selected-dates-preview {
+      background: white;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      margin-top: 10px;
+      border: 2px solid #e9ecef;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .selected-dates-preview .date-tag {
+      display: inline-block;
+      padding: 4px 10px;
+      margin: 4px;
+      background: #e1f5fe;
+      border-radius: 15px;
+      font-size: 0.85em;
+      color: #0277bd;
+    }
+
+    .modal-warning {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      border-radius: var(--radius-md);
+      margin-bottom: 20px;
+      color: #856404;
+    }
+
+    .modal-warning strong {
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .modal-options {
+      background: var(--color-bg-light);
+      padding: 15px;
+      border-radius: var(--radius-md);
+      margin-bottom: 20px;
+    }
+
+    .modal-options .checkbox-group {
+      margin-bottom: 12px;
+    }
+
+    .modal-options .checkbox-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      width: auto;
+    }
+
+    .modal-footer {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 25px;
+    }
+
+    .alert {
+      padding: 15px;
+      border-radius: var(--radius-md);
+      margin-bottom: 20px;
+    }
+
+    .alert-info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border-left: 4px solid #0c5460;
+    }
+
+    .alert-warning {
+      background: #fff3cd;
+      color: #856404;
+      border-left: 4px solid #ffc107;
+    }
+
+    .alert-error {
+      background: var(--color-bg-danger);
+      color: var(--color-danger-dark);
+      border-left: 4px solid #c62828;
+    }
+
+    .alert-success {
+      background: #d4edda;
+      color: #155724;
+      border-left: 4px solid #2e7d32;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: var(--color-bg-gray);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--gradient-info);
+      transition: width 0.3s;
+    }
+
+    .queue-info {
+      background: #e1f5fe;
+      padding: 15px;
+      border-radius: var(--radius-md);
+      margin-bottom: 20px;
+      border-left: 4px solid #4fc3f7;
+    }
+
+    .queue-info strong {
+      color: #0277bd;
+    }
+
+    @media (max-width: 768px) {
+      .calendar-day {
+        min-height: 120px;
+        max-height: 180px;
+        padding: 6px;
+      }
+
+      .queue-item {
+        font-size: 0.65em;
+        padding: 2px 4px;
+        margin-bottom: 1px;
+      }
+
+      .form-row,
+      .date-range-group {
+        grid-template-columns: 1fr;
+      }
+
+      .weekday-selector {
+        grid-template-columns: repeat(4, 1fr);
+      }
+
+      .modal-footer {
+        flex-direction: column;
+      }
+
+      .modal-footer .btn {
+        width: 100%;
+      }
+
+      .date-type-selector {
+        flex-direction: column;
+      }
+
+      .date-type-btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>✏️ จัดคิว</h1>
+      <p>ระบบจัดการยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+    </div>
+
+    <div id="navigation"></div>
+
+    <div class="content">
+      <div id="alertContainer"></div>
+
+      <!-- Actions Bar -->
+      <div class="actions-bar">
+        <div class="calendar-nav">
+          <button class="calendar-nav-btn" onclick="changeMonth(-1)">‹ เดือนก่อน</button>
+          <button class="calendar-nav-btn" onclick="goToToday()">วันนี้</button>
+          <button class="calendar-nav-btn" onclick="changeMonth(1)">เดือนถัดไป ›</button>
+        </div>
+        <div class="calendar-month-year" id="monthYear"></div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-success" onclick="openCreateModal()">➕ เพิ่มคิว</button>
+          <button class="btn btn-secondary" onclick="loadQueues()">🔄 รีเฟรช</button>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-color past"></div>
+          <span>คิวที่ผ่านมาแล้ว</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color upcoming"></div>
+          <span>คิวที่ใกล้จะถึง</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color current"></div>
+          <span>คิวปัจจุบัน</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color future"></div>
+          <span>คิวในอนาคต</span>
+        </div>
+      </div>
+
+      <!-- Calendar -->
+      <div id="loading" class="loading">กำลังโหลดข้อมูล...</div>
+      <div id="calendarContainer" style="display: none;">
+        <div class="calendar-grid" id="calendarGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Queue Modal -->
+  <div id="createModal" class="modal-overlay" onclick="if(event.target === this) closeCreateModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <span>➕ สร้างคิวใหม่</span>
+        <button class="modal-close" onclick="closeCreateModal()">×</button>
+      </div>
+      <form id="createQueueForm" onsubmit="handleCreateSubmit(event); return false;">
+        <div class="form-section">
+          <div class="form-section-title">📋 ข้อมูลพื้นฐาน</div>
+
+          <div class="form-group">
+            <label>ประเภทการสร้างคิว <span class="required">*</span></label>
+            <div class="date-type-selector">
+              <button type="button" class="date-type-btn active" onclick="setDateType('single')">📅 วันเดียว</button>
+              <button type="button" class="date-type-btn" onclick="setDateType('range')">📆 ช่วงวันที่</button>
+              <button type="button" class="date-type-btn" onclick="setDateType('weekly')">🔄 รายสัปดาห์</button>
+            </div>
+          </div>
+
+          <div id="singleDateGroup" class="form-group">
+            <label>วันที่ <span class="required">*</span></label>
+            <input type="date" id="create_date" required>
+          </div>
+
+          <div id="dateRangeGroup" class="form-group" style="display: none;">
+            <label>ช่วงวันที่ <span class="required">*</span></label>
+            <div class="date-range-group">
+              <div>
+                <label style="font-size: 0.85em; margin-bottom: 4px;">วันที่เริ่มต้น</label>
+                <input type="date" id="create_date_from">
+              </div>
+              <div>
+                <label style="font-size: 0.85em; margin-bottom: 4px;">วันที่สิ้นสุด</label>
+                <input type="date" id="create_date_to">
+              </div>
+            </div>
+            <div class="help-text">ระบบจะสร้างคิวทุกวันในช่วงวันที่ที่เลือก (ยกเว้นวันหยุด)</div>
+            <div id="dateRangePreview" class="selected-dates-preview" style="display: none;"></div>
+          </div>
+
+          <div id="weeklyGroup" class="form-group" style="display: none;">
+            <label>เลือกวันในสัปดาห์ <span class="required">*</span></label>
+            <div class="weekday-selector">
+              <button type="button" class="weekday-btn" data-day="1" onclick="toggleWeekday(1)">จ</button>
+              <button type="button" class="weekday-btn" data-day="2" onclick="toggleWeekday(2)">อ</button>
+              <button type="button" class="weekday-btn" data-day="3" onclick="toggleWeekday(3)">พ</button>
+              <button type="button" class="weekday-btn" data-day="4" onclick="toggleWeekday(4)">พฤ</button>
+              <button type="button" class="weekday-btn" data-day="5" onclick="toggleWeekday(5)">ศ</button>
+              <button type="button" class="weekday-btn" data-day="6" onclick="toggleWeekday(6)">ส</button>
+              <button type="button" class="weekday-btn" data-day="0" onclick="toggleWeekday(0)">อา</button>
+            </div>
+            <div class="form-row" style="margin-top: 15px;">
+              <div>
+                <label>วันที่เริ่มต้น</label>
+                <input type="date" id="weekly_date_from">
+              </div>
+              <div>
+                <label>วันที่สิ้นสุด</label>
+                <input type="date" id="weekly_date_to">
+              </div>
+            </div>
+            <div class="help-text">ระบบจะสร้างคิวทุกสัปดาห์ตามวันที่เลือก</div>
+            <div id="weeklyPreview" class="selected-dates-preview" style="display: none;"></div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label>เวลาเริ่มต้น <span class="required">*</span></label>
+              <input type="time" id="create_time_start" required>
+            </div>
+            <div>
+              <label>เวลาสิ้นสุด</label>
+              <input type="time" id="create_time_end">
+              <div class="help-text">ไม่บังคับ</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-title">🚗 รถและคนขับ</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>รถ <span class="required">*</span></label>
+              <select id="create_car_id" required
+                onchange="updateCarWarning('create_car_id', 'createCarWarning'); checkCreatePassengerCount();">
+                <option value="">-- เลือกรถ --</option>
+              </select>
+              <div class="checkbox-group" style="margin-top:8px;">
+                <input type="checkbox" id="create_show_all_vehicles" onchange="toggleShowAllVehicles()">
+                <label for="create_show_all_vehicles"
+                  style="margin:0;font-weight:500;">รวมรถสนับสนุนและรถยกเลิกใช้</label>
+              </div>
+              <div id="createCarWarning"
+                style="display:none; margin-top:8px; padding:8px; background:#fff3cd; color:#856404; border-radius:var(--radius-md); font-size:0.9em; font-weight:600;">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>คนขับ <span class="required">*</span></label>
+              <select id="create_driver_id" required>
+                <option value="">-- เลือกคนขับ --</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-title">📝 ข้อมูลการใช้งาน</div>
+          <div class="form-group">
+            <label>ผู้ขอใช้รถ <span class="required">*</span></label>
+            <input type="text" id="create_requested_by" required placeholder="ชื่อผู้ขอใช้รถ">
+          </div>
+          <div class="form-group">
+            <label>จำนวนผู้โดยสาร <span class="required">*</span></label>
+            <input type="number" id="create_passenger_count" min="0" required placeholder="จำนวนผู้โดยสาร"
+              oninput="checkCreatePassengerCount()">
+            <div id="createPassengerWarning"
+              style="display: none; color: var(--color-warning); font-size: 0.9em; margin-top: 5px; font-weight: 600;"></div>
+          </div>
+          <div class="form-group">
+            <label>จุดหมายปลายทาง <span class="required">*</span></label>
+            <input type="text" id="create_destination" required placeholder="ระบุจุดหมายปลายทาง">
+          </div>
+          <div class="form-group">
+            <label>ภารกิจ <span class="required">*</span></label>
+            <textarea id="create_mission" rows="3" required placeholder="ระบุภารกิจหรือวัตถุประสงค์"></textarea>
+          </div>
+          <div class="form-group">
+            <label>หมายเหตุ</label>
+            <textarea id="create_notes" rows="2" placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)"></textarea>
+          </div>
+        </div>
+
+        <div id="createProgressContainer" style="display: none;">
+          <div style="margin-bottom: 10px; font-weight: 600; color: var(--color-text);">
+            <span id="createProgressText">กำลังสร้างคิว...</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="createProgressFill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeCreateModal()">ยกเลิก</button>
+          <button type="submit" class="btn btn-primary" id="createSubmitBtn">💾 สร้างคิว</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Queue Modal -->
+  <div id="editModal" class="modal-overlay" onclick="if(event.target === this) closeEditModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <span>✏️ แก้ไขคิว</span>
+        <button class="modal-close" onclick="closeEditModal()">×</button>
+      </div>
+      <div id="editQueueInfo" class="queue-info" style="display: none;"></div>
+      <form id="editQueueForm" onsubmit="handleEditSubmit(event); return false;">
+        <div class="form-section">
+          <div class="form-section-title">📅 ข้อมูลพื้นฐาน</div>
+          <div class="form-group">
+            <label>วันที่ <span class="required">*</span></label>
+            <input type="date" id="edit_date" required>
+          </div>
+          <div class="form-row">
+            <div>
+              <label>เวลาเริ่มต้น <span class="required">*</span></label>
+              <input type="time" id="edit_time_start" required>
+            </div>
+            <div>
+              <label>เวลาสิ้นสุด</label>
+              <input type="time" id="edit_time_end">
+              <div class="help-text">ไม่บังคับ</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-title">🚗 รถและคนขับ</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>รถ <span class="required">*</span></label>
+              <select id="edit_car_id" required
+                onchange="updateCarWarning('edit_car_id', 'editCarWarning'); if(typeof checkEditPassengerCount === 'function') checkEditPassengerCount();">
+                <option value="">-- เลือกรถ --</option>
+              </select>
+              <div class="checkbox-group" style="margin-top:8px;">
+                <input type="checkbox" id="edit_show_all_vehicles" onchange="toggleShowAllVehicles()">
+                <label for="edit_show_all_vehicles"
+                  style="margin:0;font-weight:500;">รวมรถสนับสนุนและรถยกเลิกใช้</label>
+              </div>
+              <div id="editCarWarning"
+                style="display:none; margin-top:8px; padding:8px; background:#fff3cd; color:#856404; border-radius:var(--radius-md); font-size:0.9em; font-weight:600;">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>คนขับ <span class="required">*</span></label>
+              <select id="edit_driver_id" required>
+                <option value="">-- เลือกคนขับ --</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-title">📝 ข้อมูลการใช้งาน</div>
+          <div class="form-group">
+            <label>ผู้ขอใช้รถ <span class="required">*</span></label>
+            <input type="text" id="edit_requested_by" required placeholder="ชื่อผู้ขอใช้รถ">
+          </div>
+          <div class="form-group">
+            <label>จำนวนผู้โดยสาร <span class="required">*</span></label>
+            <input type="number" id="edit_passenger_count" min="0" required placeholder="จำนวนผู้โดยสาร"
+              oninput="checkEditPassengerCount()">
+            <div id="editPassengerWarning"
+              style="display: none; color: var(--color-warning); font-size: 0.9em; margin-top: 5px; font-weight: 600;"></div>
+          </div>
+          <div class="form-group">
+            <label>จุดหมายปลายทาง <span class="required">*</span></label>
+            <input type="text" id="edit_destination" required placeholder="ระบุจุดหมายปลายทาง">
+          </div>
+          <div class="form-group">
+            <label>ภารกิจ <span class="required">*</span></label>
+            <textarea id="edit_mission" rows="3" required placeholder="ระบุภารกิจหรือวัตถุประสงค์"></textarea>
+          </div>
+          <div class="form-group">
+            <label>หมายเหตุ</label>
+            <textarea id="edit_notes" rows="2" placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-danger" onclick="deleteQueue(editingQueueId)"
+            style="margin-right: auto;">🗑️ ลบคิว</button>
+          <button type="button" class="btn btn-secondary" onclick="closeEditModal()">ยกเลิก</button>
+          <button type="submit" class="btn btn-primary" id="editSubmitBtn">💾 บันทึกการแก้ไข</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Conflict Confirmation Modal -->
+  <div id="conflictModal" class="modal-overlay" onclick="if(event.target === this) closeConflictModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <span>⚠️ เตือน: มีคิวซ้อนทับ</span>
+        <button class="modal-close" onclick="closeConflictModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-warning">
+          <strong id="conflictTitle">พบคิวที่ซ้อนทับ:</strong>
+          <div id="conflictDetails"></div>
+          <div style="margin-top: 10px; font-size: 0.9em;">
+            กรุณาเลือกตัวเลือกด้านล่างเพื่อดำเนินการต่อ:
+          </div>
+        </div>
+        <div class="modal-options">
+          <div class="checkbox-group">
+            <input type="checkbox" id="modal_allow_flexible">
+            <label for="modal_allow_flexible" style="margin: 0;">อนุญาตให้ยืดหยุ่นได้ (ถ้ามีคิวซ้อนทับแต่ปลายทางใกล้
+              สามารถวิ่งรอบได้)</label>
+          </div>
+          <div class="checkbox-group">
+            <input type="checkbox" id="modal_emergency_override">
+            <label for="modal_emergency_override" style="margin: 0;">Override การตรวจสอบ (กรณีฉุกเฉิน -
+              ข้ามการตรวจสอบซ่อม/ลา)</label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeConflictModal()">ยกเลิก</button>
+        <button type="button" class="btn btn-primary" onclick="confirmWithOptions()">ยืนยัน</button>
+      </div>
+    </div>
+  </div>
+  <script>
     var driversMap = {};
     var showSupportAndUnavailableVehicles = false;
     var currentDate = new Date();
