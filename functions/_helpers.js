@@ -177,3 +177,45 @@ export async function sendTelegramMessage(env, message) {
     // Telegram failures are non-critical
   }
 }
+
+export async function createNotification(db, userId, type, title, message) {
+  try {
+    await dbRun(db,
+      `INSERT INTO notifications (id, user_id, type, title, message, read, created_at)
+       VALUES (?, ?, ?, ?, ?, 0, ?)`,
+      [generateUUID(), userId || null, type, title, message, now()]
+    );
+  } catch {
+    // Notification failures should not crash the main request
+  }
+}
+
+export async function notifyAllAdmins(db, type, title, message) {
+  try {
+    const admins = await dbAll(db,
+      "SELECT id FROM users WHERE role IN ('admin','super_admin') AND active = 1"
+    );
+    for (const admin of admins) {
+      await createNotification(db, admin.id, type, title, message);
+    }
+  } catch { /* non-critical */ }
+}
+
+export function validatePasswordComplexity(password) {
+  if (!password || password.length < 8) return 'รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร';
+  if (!/[a-zA-Z]/.test(password)) return 'รหัสผ่านต้องมีตัวอักษรภาษาอังกฤษอย่างน้อย 1 ตัว';
+  if (!/[0-9]/.test(password)) return 'รหัสผ่านต้องมีตัวเลขอย่างน้อย 1 ตัว';
+  return null;
+}
+
+export async function checkPasswordReuse(db, userId, newPassword, limit = 5) {
+  const history = await dbAll(db,
+    'SELECT password_hash, salt FROM password_history WHERE user_id = ? ORDER BY changed_at DESC LIMIT ?',
+    [userId, limit]
+  );
+  for (const h of history) {
+    const match = await verifyPassword(newPassword, h.salt, h.password_hash);
+    if (match) return true;
+  }
+  return false;
+}

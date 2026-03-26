@@ -1,7 +1,8 @@
 ﻿// Repair logs + scheduled repairs
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
-  parseBody, requirePermission, extractParam
+  parseBody, requirePermission, extractParam, writeAuditLog,
+  sendTelegramMessage, createNotification, notifyAllAdmins
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
@@ -58,7 +59,7 @@ export async function onRequest(context) {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, body.car_id, body.date_reported || ts.substr(0,10),
        body.date_started || null, body.date_completed || null,
-       body.status || 'reported', body.mileage_at_repair || 0,
+       body.status || 'pending', body.mileage_at_repair || 0,
        body.reporter_id || user.id, body.reporter_name || user.display_name || '',
        body.garage_name || body.shop_name || '',
        JSON.stringify(body.repair_items || []),
@@ -66,6 +67,15 @@ export async function onRequest(context) {
        body.cost || 0, JSON.stringify(body.documents || []),
        body.notes || '', user.id, ts, ts]
     );
+
+    const car = await dbFirst(env.DB, 'SELECT license_plate, brand FROM cars WHERE id = ?', [body.car_id]);
+    const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : body.car_id;
+    await writeAuditLog(env.DB, user.id, user.displayName, 'create_repair', 'repair', id, { car: carLabel });
+    await notifyAllAdmins(env.DB, 'repair', 'แจ้งซ่อม',
+      `${user.displayName} แจ้งซ่อม ${carLabel} — ${body.issue_description || body.description || '-'}`);
+    await sendTelegramMessage(env,
+      `🔧 <b>แจ้งซ่อม</b>\n🚗 ${carLabel}\n📝 ${body.issue_description || body.description || '-'}\n🏪 ${body.garage_name || body.shop_name || '-'}\n💰 ${body.cost || 0} บาท\n👨‍💼 โดย: ${user.displayName}`);
+
     return success({ id, message: 'บันทึกข้อมูลซ่อมเรียบร้อย' }, 201);
   }
 

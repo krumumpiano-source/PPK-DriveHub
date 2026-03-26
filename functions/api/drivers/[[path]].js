@@ -1,7 +1,7 @@
-﻿// Driver management + fatigue
+﻿// Driver management + fatigue + leaves
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
-  parseBody, requirePermission, extractParam, uploadToR2
+  parseBody, requirePermission, extractParam, uploadToR2, writeAuditLog
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
@@ -130,6 +130,70 @@ export async function onRequest(context) {
       [user.id, body.admin_notes || '', now(), id]
     );
     return success({ message: 'รับทราบรายงานความเหนื่อยล้าเรียบร้อย' });
+  }
+
+  // --- Leaves CRUD ---
+  // GET /api/drivers/:id/leaves
+  if (path.match(/^\/api\/drivers\/[^/]+\/leaves$/) && method === 'GET') {
+    try { requirePermission(user, 'drivers', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const driverId = path.split('/')[3];
+    const rows = await dbAll(env.DB,
+      `SELECT l.*, d.name AS driver_name FROM leaves l
+       LEFT JOIN drivers d ON l.driver_id = d.id
+       WHERE l.driver_id = ? ORDER BY l.start_date DESC`, [driverId]);
+    return success(rows);
+  }
+
+  // POST /api/drivers/:id/leaves
+  if (path.match(/^\/api\/drivers\/[^/]+\/leaves$/) && method === 'POST') {
+    try { requirePermission(user, 'drivers', 'create'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const driverId = path.split('/')[3];
+    const body = await parseBody(request);
+    if (!body?.start_date || !body?.end_date) return error('กรุณาระบุวันที่เริ่มและสิ้นสุด');
+    const id = generateUUID();
+    await dbRun(env.DB,
+      `INSERT INTO leaves (id, driver_id, leave_type, start_date, end_date, reason, status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`,
+      [id, driverId, body.leave_type || 'personal', body.start_date, body.end_date,
+       body.reason || '', now()]
+    );
+    await writeAuditLog(env.DB, user.id, user.displayName, 'create_leave', 'drivers', id, { driver_id: driverId });
+    return success({ id, message: 'บันทึกการลาเรียบร้อย' }, 201);
+  }
+
+  // PUT /api/drivers/leaves/:id (approve/reject/cancel)
+  if (path.match(/^\/api\/drivers\/leaves\/[^/]+$/) && method === 'PUT') {
+    try { requirePermission(user, 'drivers', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const id = path.split('/').pop();
+    const body = await parseBody(request);
+    const sets = [];
+    const params = [];
+    if (body.status) { sets.push('status = ?'); params.push(body.status); }
+    if (body.status === 'approved') { sets.push('approved_by = ?', 'approved_at = ?'); params.push(user.id, now()); }
+    if (!sets.length) return error('ไม่มีข้อมูลที่จะอัปเดต');
+    params.push(id);
+    await dbRun(env.DB, `UPDATE leaves SET ${sets.join(', ')} WHERE id = ?`, params);
+
+    // Update driver status if leave is approved
+    if (body.status === 'approved') {
+      const leave = await dbFirst(env.DB, 'SELECT driver_id, start_date, end_date FROM leaves WHERE id = ?', [id]);
+      if (leave) {
+        const today = now().substr(0,10);
+        if (today >= leave.start_date && today <= leave.end_date) {
+          await dbRun(env.DB, "UPDATE drivers SET status = 'on_leave', updated_at = ? WHERE id = ?", [now(), leave.driver_id]);
+        }
+      }
+    }
+
+    return success({ message: 'อัปเดตการลาเรียบร้อย' });
+  }
+
+  // DELETE /api/drivers/leaves/:id
+  if (path.match(/^\/api\/drivers\/leaves\/[^/]+$/) && method === 'DELETE') {
+    try { requirePermission(user, 'drivers', 'delete'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const id = path.split('/').pop();
+    await dbRun(env.DB, 'DELETE FROM leaves WHERE id = ?', [id]);
+    return success({ message: 'ลบข้อมูลการลาเรียบร้อย' });
   }
 
   return error('Not Found', 404);

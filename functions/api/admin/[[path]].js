@@ -2,7 +2,8 @@
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, hashPassword, generateSalt, requireAdmin,
-  extractParam, writeAuditLog
+  extractParam, writeAuditLog, validatePasswordComplexity,
+  sendTelegramMessage, createNotification
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
@@ -28,6 +29,13 @@ export async function onRequest(context) {
   if (path.startsWith('/api/admin/users/') && method === 'PUT' && !path.includes('/deactivate') && !path.includes('/reset-password')) {
     const id = extractParam(path, '/api/admin/users/');
     const body = await parseBody(request);
+
+    // Super admin protection: only super_admin can modify another super_admin
+    const targetUser = await dbFirst(env.DB, 'SELECT role FROM users WHERE id = ?', [id]);
+    if (targetUser?.role === 'super_admin' && user.role !== 'super_admin') {
+      return error('ไม่สามารถแก้ไขผู้ดูแลสูงสุดได้', 403);
+    }
+
     const allowed = ['role', 'permissions', 'title', 'first_name', 'last_name', 'phone', 'email', 'active', 'driver_id'];
     const updates = [];
     const params = [];
@@ -48,6 +56,13 @@ export async function onRequest(context) {
   if (path.match(/\/api\/admin\/users\/[^/]+\/deactivate/) && method === 'PUT') {
     const id = path.split('/')[4];
     const body = await parseBody(request);
+
+    // Super admin protection
+    const targetUser = await dbFirst(env.DB, 'SELECT role FROM users WHERE id = ?', [id]);
+    if (targetUser?.role === 'super_admin' && user.role !== 'super_admin') {
+      return error('ไม่สามารถระงับผู้ดูแลสูงสุดได้', 403);
+    }
+
     await dbRun(env.DB,
       'UPDATE users SET active = 0, updated_at = ? WHERE id = ?', [now(), id]
     );
@@ -61,6 +76,10 @@ export async function onRequest(context) {
     const id = path.split('/')[4];
     const body = await parseBody(request);
     if (!body?.new_password) return error('กรุณาระบุรหัสผ่านใหม่');
+
+    const complexityErr = validatePasswordComplexity(body.new_password);
+    if (complexityErr) return error(complexityErr);
+
     const salt = generateSalt();
     const hash = await hashPassword(body.new_password, salt);
     await dbRun(env.DB,

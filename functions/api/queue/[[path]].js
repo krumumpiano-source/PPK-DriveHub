@@ -1,7 +1,8 @@
 ﻿// Vehicle dispatch queue management
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
-  parseBody, requirePermission, extractParam
+  parseBody, requirePermission, extractParam, writeAuditLog,
+  sendTelegramMessage, createNotification, notifyAllAdmins
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
@@ -59,6 +60,25 @@ export async function onRequest(context) {
     try { requirePermission(user, 'queue', 'create'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const body = await parseBody(request);
     if (!body?.car_id || !body?.date) return error('กรุณาระบุยานพาหนะและวันที่');
+
+    // Backend conflict detection — prevent double-booking
+    const timeStart = body.time_start || body.departure_time || '00:00';
+    const timeEnd = body.time_end || body.return_time || '23:59';
+    const conflicts = await dbAll(env.DB,
+      `SELECT q.id, q.time_start, q.time_end, c.license_plate, d.name AS driver_name
+       FROM queue q
+       LEFT JOIN cars c ON q.car_id = c.id
+       LEFT JOIN drivers d ON q.driver_id = d.id
+       WHERE q.date = ? AND q.status NOT IN ('cancelled','completed')
+       AND ((q.car_id = ?) OR (q.driver_id = ? AND ? IS NOT NULL))
+       AND q.time_start < ? AND q.time_end > ?`,
+      [body.date, body.car_id, body.driver_id || null, body.driver_id || null, timeEnd, timeStart]
+    );
+    if (conflicts.length > 0) {
+      const labels = conflicts.map(c => `${c.license_plate || ''} ${c.driver_name || ''} (${c.time_start}-${c.time_end})`).join(', ');
+      return error(`คิวซ้อนกัน: ${labels}`, 409);
+    }
+
     const id = generateUUID();
     const ts = now();
     await dbRun(env.DB,
@@ -66,14 +86,27 @@ export async function onRequest(context) {
         requester_id, requested_by, mission, destination, passengers,
         status, notes, created_by, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?, ?, ?, ?)`,
-      [id, body.date, body.time_start || body.departure_time || '',
-       body.time_end || body.return_time || '',
+      [id, body.date, timeStart, timeEnd,
        body.car_id, body.driver_id || null,
-       body.requester_id || user.id, body.requested_by || body.requester_name || user.display_name || '',
+       body.requester_id || user.id, body.requested_by || body.requester_name || user.displayName || '',
        body.mission || body.purpose || '', body.destination || '',
        body.passengers || body.passenger_count || '',
        body.notes || '', user.id, ts, ts]
     );
+
+    // Resolve names for notifications
+    const car = await dbFirst(env.DB, 'SELECT license_plate, brand FROM cars WHERE id = ?', [body.car_id]);
+    const driver = body.driver_id ? await dbFirst(env.DB, 'SELECT name FROM drivers WHERE id = ?', [body.driver_id]) : null;
+    const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : body.car_id;
+    const driverLabel = driver ? driver.name : '-';
+    const mission = body.mission || body.purpose || '-';
+
+    await writeAuditLog(env.DB, user.id, user.displayName, 'create_queue', 'queue', id, { date: body.date, car: carLabel });
+    await notifyAllAdmins(env.DB, 'queue', 'สร้างคิวใหม่',
+      `${user.displayName} สร้างคิววันที่ ${body.date} | ${carLabel} | ${driverLabel} | ${mission}`);
+    await sendTelegramMessage(env,
+      `🚐 <b>คิวใหม่</b>\n📅 ${body.date} (${timeStart}-${timeEnd})\n🚗 ${carLabel}\n👤 ${driverLabel}\n📋 ${mission}\n👨‍💼 สร้างโดย: ${user.displayName}`);
+
     return success({ id, message: 'สร้างคิวเรียบร้อย' }, 201);
   }
 
@@ -135,10 +168,20 @@ export async function onRequest(context) {
     try { requirePermission(user, 'queue', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[3];
     const body = await parseBody(request);
+    const q = await dbFirst(env.DB,
+      `SELECT q.date, q.time_start, c.license_plate, d.name AS driver_name
+       FROM queue q LEFT JOIN cars c ON q.car_id = c.id LEFT JOIN drivers d ON q.driver_id = d.id WHERE q.id = ?`, [id]);
     await dbRun(env.DB,
       `UPDATE queue SET status = 'cancelled', cancel_reason = ?, updated_at = ? WHERE id = ?`,
       [body.cancel_reason || body.reason || '', now(), id]
     );
+    await writeAuditLog(env.DB, user.id, user.displayName, 'cancel_queue', 'queue', id, null);
+    if (q) {
+      await notifyAllAdmins(env.DB, 'queue', 'ยกเลิกคิว',
+        `${user.displayName} ยกเลิกคิววันที่ ${q.date} | ${q.license_plate || ''} | ${q.driver_name || ''}`);
+      await sendTelegramMessage(env,
+        `❌ <b>ยกเลิกคิว</b>\n📅 ${q.date} (${q.time_start})\n🚗 ${q.license_plate || ''}\n👤 ${q.driver_name || ''}\n💬 ${body.cancel_reason || body.reason || '-'}\n👨‍💼 โดย: ${user.displayName}`);
+    }
     return success({ message: 'ยกเลิกคิวเรียบร้อย' });
   }
 

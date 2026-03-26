@@ -7,10 +7,9 @@ const PUBLIC_PATHS = [
   '/api/auth/reset-password',
   '/api/setup',
   '/api/check/daily',           // QR ตรวจสภาพ+แจ้งซ่อม
-  '/api/usage/qr',              // QR บันทึกใช้รถ
-  '/api/fuel/qr',               // QR เติมน้ำมัน
+  '/api/usage/record',          // QR บันทึกใช้รถ
+  '/api/fuel/record',           // QR เติมน้ำมัน
   '/api/vehicles/qr-info',      // QR โหลดข้อมูลรถ (ไม่ต้อง login)
-  '/api/fuel/types',            // โหลด fuel types สำหรับ QR
 ];
 
 const ALLOWED_ORIGINS = [

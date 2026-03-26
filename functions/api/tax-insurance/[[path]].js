@@ -1,7 +1,8 @@
 ﻿// Tax & insurance record tracking
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
-  parseBody, requirePermission, extractParam, writeAuditLog, uploadToR2
+  parseBody, requirePermission, extractParam, writeAuditLog, uploadToR2,
+  sendTelegramMessage, notifyAllAdmins
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
@@ -65,6 +66,13 @@ export async function onRequest(context) {
         [body.expiry_date, ts, body.car_id]);
     }
     await writeAuditLog(env.DB, user.id, user.displayName, 'create_tax', 'tax', id, null);
+    if (body.expiry_date) {
+      const daysLeft = Math.floor((new Date(body.expiry_date) - Date.now()) / 86400000);
+      if (daysLeft <= 30) {
+        await sendTelegramMessage(env,
+          `📋 <b>ภาษีใกล้หมดอายุ</b>\n🚗 ${(await dbFirst(env.DB, 'SELECT license_plate FROM cars WHERE id = ?', [body.car_id]))?.license_plate || ''}\n📅 หมดอายุ: ${body.expiry_date} (เหลือ ${daysLeft} วัน)`);
+      }
+    }
     return success({ id, message: 'บันทึกข้อมูลภาษีรถเรียบร้อย' }, 201);
   }
 
@@ -143,6 +151,24 @@ export async function onRequest(context) {
     params.push(id);
     await dbRun(env.DB, `UPDATE insurance_records SET ${updates.join(', ')} WHERE id = ?`, params);
     return success({ message: 'อัปเดตข้อมูลประกันภัยเรียบร้อย' });
+  }
+
+  // --- DELETE /api/tax-insurance/tax/:id ---
+  if (path.match(/\/api\/tax-insurance\/tax\/[^/]+/) && method === 'DELETE') {
+    try { requirePermission(user, 'tax', 'delete'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const id = path.split('/')[4];
+    await dbRun(env.DB, 'DELETE FROM tax_records WHERE id = ?', [id]);
+    await writeAuditLog(env.DB, user.id, user.displayName, 'delete_tax', 'tax', id, null);
+    return success({ message: 'ลบข้อมูลภาษีรถเรียบร้อย' });
+  }
+
+  // --- DELETE /api/tax-insurance/insurance/:id ---
+  if (path.match(/\/api\/tax-insurance\/insurance\/[^/]+/) && method === 'DELETE') {
+    try { requirePermission(user, 'insurance', 'delete'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const id = path.split('/')[4];
+    await dbRun(env.DB, 'DELETE FROM insurance_records WHERE id = ?', [id]);
+    await writeAuditLog(env.DB, user.id, user.displayName, 'delete_insurance', 'insurance', id, null);
+    return success({ message: 'ลบข้อมูลประกันภัยเรียบร้อย' });
   }
 
   return error('Not Found', 404);

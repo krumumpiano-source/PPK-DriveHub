@@ -582,6 +582,7 @@
 
           displayCarInfo();
           populateDrivers();
+          await autoFillDriverFromQueue();
           loadLastMileage();
           document.getElementById('submitBtn').disabled = false;
           document.getElementById('alert-container').innerHTML = '';
@@ -640,6 +641,20 @@
         option.textContent = driver.full_name;
         select.appendChild(option);
       });
+    }
+
+    async function autoFillDriverFromQueue() {
+      try {
+        var today = new Date().toISOString().slice(0, 10);
+        var result = await apiCall('getQueue', { car_id: carId, date: today, status: 'approved' });
+        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+          var queue = result.data[0];
+          if (queue.driver_id) {
+            var select = document.getElementById('driver_id');
+            select.value = queue.driver_id;
+          }
+        }
+      } catch (e) { /* ignore — user can select manually */ }
     }
 
     async function loadLastMileage() {

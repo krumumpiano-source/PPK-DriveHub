@@ -2,7 +2,8 @@
 import {
   dbFirst, dbRun, dbAll, generateUUID, now, success, error,
   parseBody, hashPassword, verifyPassword, generateSalt, generateToken,
-  writeAuditLog
+  writeAuditLog, validatePasswordComplexity, checkPasswordReuse,
+  sendTelegramMessage, notifyAllAdmins
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
@@ -89,6 +90,11 @@ export async function onRequest(context) {
        body.role || 'viewer', body.permissions ? JSON.stringify(body.permissions) : '{}', now()]
     );
 
+    await notifyAllAdmins(env.DB, 'system', 'ผู้ใช้ใหม่ลงทะเบียน',
+      `${displayName} (${email}) สมัครเข้าใช้งาน รอการอนุมัติ`);
+    await sendTelegramMessage(env,
+      `👤 <b>ผู้ใช้ใหม่ลงทะเบียน</b>\n📛 ${displayName}\n📧 ${email}\n⏳ รอการอนุมัติจากผู้ดูแล`);
+
     return success({ message: 'ส่งคำขอสมัครสมาชิกเรียบร้อย รอการอนุมัติจากผู้ดูแลระบบ' });
   }
 
@@ -115,15 +121,21 @@ export async function onRequest(context) {
     if (!env.user) return error('กรุณาเข้าสู่ระบบ', 401);
     const body = await parseBody(request);
     if (!body?.new_password) return error('กรุณาระบุรหัสผ่านใหม่');
-    if (body.new_password.length < 8) return error('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');
+    if (!body?.old_password) return error('กรุณาระบุรหัสผ่านเดิม');
+
+    // Password complexity validation
+    const complexityErr = validatePasswordComplexity(body.new_password);
+    if (complexityErr) return error(complexityErr);
 
     const user = await dbFirst(env.DB, 'SELECT * FROM users WHERE id = ?', [env.user.id]);
 
-    // Verify old password (skip if admin forcing reset)
-    if (body.old_password) {
-      const valid = await verifyPassword(body.old_password, user.salt, user.password_hash);
-      if (!valid) return error('รหัสผ่านเดิมไม่ถูกต้อง');
-    }
+    // Verify old password — always required
+    const valid = await verifyPassword(body.old_password, user.salt, user.password_hash);
+    if (!valid) return error('รหัสผ่านเดิมไม่ถูกต้อง');
+
+    // Check password reuse
+    const reused = await checkPasswordReuse(env.DB, user.id, body.new_password);
+    if (reused) return error('รหัสผ่านนี้เคยใช้แล้ว กรุณาตั้งรหัสผ่านใหม่ที่ไม่ซ้ำกับ 5 ครั้งหลังสุด');
 
     const salt = generateSalt();
     const hash = await hashPassword(body.new_password, salt);
@@ -164,6 +176,9 @@ export async function onRequest(context) {
   if (path === '/api/auth/reset-password' && method === 'POST') {
     const body = await parseBody(request);
     if (!body?.token || !body?.new_password) return error('กรุณาระบุ token และรหัสผ่านใหม่');
+
+    const complexityErr = validatePasswordComplexity(body.new_password);
+    if (complexityErr) return error(complexityErr);
 
     const req = await dbFirst(env.DB,
       'SELECT * FROM reset_password_requests WHERE token = ? AND used = 0 AND expires_at > ?',

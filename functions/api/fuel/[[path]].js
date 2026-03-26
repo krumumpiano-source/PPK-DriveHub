@@ -1,7 +1,8 @@
 ﻿// Fuel logs + fuel requests
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
-  parseBody, requirePermission, extractParam, uploadToR2
+  parseBody, requirePermission, extractParam, uploadToR2, writeAuditLog,
+  sendTelegramMessage, createNotification, notifyAllAdmins
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
@@ -41,7 +42,7 @@ export async function onRequest(context) {
        body.gas_station_address || '', body.gas_station_tax_id || '',
        body.receipt_number || '', body.pump_meter_number || '',
        receiptImage, receiptPdf,
-       body.fuel_consumption_rate || null, body.expense_type || 'fuel',
+       body.fuel_consumption_rate || null, body.expense_type || 'procurement',
        body.notes || '', body.created_by || user?.id || 'qr', ts, ts]
     );
 
@@ -52,6 +53,14 @@ export async function onRequest(context) {
         [body.mileage_after, body.car_id, body.mileage_after]
       );
     }
+
+    const car = await dbFirst(env.DB, 'SELECT license_plate, brand FROM cars WHERE id = ?', [body.car_id]);
+    const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : body.car_id;
+    await writeAuditLog(env.DB, null, 'QR', 'create_fuel', 'fuel', id, { car: carLabel });
+    await notifyAllAdmins(env.DB, 'fuel', 'เติมน้ำมัน',
+      `บันทึกเติมน้ำมัน ${carLabel} — ${body.liters || 0} ลิตร, ${body.amount || 0} บาท`);
+    await sendTelegramMessage(env,
+      `⛽ <b>เติมน้ำมัน</b>\n🚗 ${carLabel}\n🛢️ ${body.liters || 0} ลิตร | ${body.amount || 0} บาท\n⛽ ${body.gas_station_name || body.station_name || '-'}\n📏 ${body.mileage_before || '-'} → ${body.mileage_after || '-'} กม.`);
 
     return success({ id, message: 'บันทึกข้อมูลเชื้อเพลิงเรียบร้อย' }, 201);
   }
