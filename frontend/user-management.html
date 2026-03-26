@@ -6,23 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>จัดการผู้ใช้ - PPK DriveHub</title>
   <script src="config.js"></script>
-  <script>window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'user-management';</script>
+  <script>window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'user-management'; window.REQUIRE_AUTH = true;</script>
   <link rel="stylesheet" href="common.css">
   <script src="js/api.js"></script><script src="common.js"></script>
-  <script>window.REQUIRE_AUTH = true;</script>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: var(--font-family); background: var(--gradient-primary); min-height: 100vh; padding: 0; }
-
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      background: white;
-      border-radius: var(--radius-2xl);
-      box-shadow: var(--shadow-container);
-      overflow: hidden;
-    }
-
     .header {
       background: var(--gradient-primary);
       color: white;
@@ -471,18 +458,15 @@
 </head>
 
 <body>
-  <div id="app">
-    <div class="main-content">
-      <div class="container">
-        <div class="header">
-          <h1>👥 จัดการผู้ใช้</h1>
-          <p>จัดการบัญชีผู้ใช้ บทบาท และสิทธิ์การเข้าถึง</p>
-        </div>
+  <div class="container">
+    <div id="navigation"></div>
+    <div class="header">
+      <h1>👥 จัดการผู้ใช้</h1>
+      <p>จัดการบัญชีผู้ใช้ บทบาท และสิทธิ์การเข้าถึง</p>
+    </div>
 
-        <div class="content" id="pageContent">
-          <div class="loading-spinner" id="loadingState">⏳ กำลังโหลดข้อมูล...</div>
-        </div>
-      </div>
+    <div class="content" id="pageContent">
+      <div class="loading-spinner" id="loadingState">⏳ กำลังโหลดข้อมูล...</div>
     </div>
   </div>
 
