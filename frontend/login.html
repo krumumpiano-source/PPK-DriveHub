@@ -30,35 +30,43 @@
     .login-container {
       background: white;
       border-radius: var(--radius-2xl);
-      box-shadow: var(--shadow-container);
-      max-width: 450px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      max-width: 440px;
       width: 100%;
       overflow: hidden;
+      animation: slideUp 0.5s ease-out;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .login-header {
       background: var(--gradient-primary);
       color: white;
-      padding: 40px 30px;
+      padding: 36px 30px 32px;
       text-align: center;
     }
 
     .login-header h1 {
-      font-size: 2em;
-      margin-bottom: 10px;
+      font-size: 1.9em;
+      margin-bottom: 6px;
+      letter-spacing: -0.5px;
     }
 
     .login-header p {
-      font-size: 1em;
-      opacity: 0.95;
+      font-size: 0.92em;
+      opacity: 0.92;
+      line-height: 1.5;
     }
 
     .login-body {
-      padding: 40px 30px;
+      padding: 32px 30px 28px;
     }
 
     .form-group {
-      margin-bottom: 25px;
+      margin-bottom: 22px;
     }
 
     .form-group label {
@@ -66,23 +74,72 @@
       margin-bottom: 8px;
       color: var(--color-text);
       font-weight: 600;
-      font-size: 0.95em;
+      font-size: 0.93em;
     }
 
     .form-group input {
       width: 100%;
-      padding: 12px 15px;
-      border: 2px solid #e0e0e0;
+      padding: 13px 16px;
+      border: 2px solid #e2e8f0;
       border-radius: var(--radius-md);
       font-size: 1em;
-      transition: all 0.3s;
+      transition: all 0.25s;
       font-family: inherit;
+      background: #f8fafc;
     }
 
     .form-group input:focus {
       outline: none;
       border-color: var(--color-primary);
-      box-shadow: var(--shadow-focus);
+      box-shadow: 0 0 0 3px rgba(66,133,244,0.15);
+      background: #fff;
+    }
+
+    .password-wrapper {
+      position: relative;
+    }
+
+    .password-wrapper input {
+      padding-right: 48px;
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 4px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px 10px;
+      font-size: 1.2em;
+      color: #94a3b8;
+      transition: color 0.2s;
+      border-radius: var(--radius-sm);
+      line-height: 1;
+    }
+
+    .toggle-password:hover {
+      color: var(--color-primary);
+    }
+
+    .login-links {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 24px;
+    }
+
+    .login-links a {
+      color: var(--color-primary);
+      text-decoration: none;
+      font-size: 0.9em;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .login-links a:hover {
+      color: var(--color-primary-dark, #1a56db);
+      text-decoration: underline;
     }
 
     .btn {
@@ -92,31 +149,60 @@
       color: white;
       border: none;
       border-radius: var(--radius-md);
-      font-size: 1.1em;
+      font-size: 1.08em;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.3s;
+      transition: all 0.25s;
       font-family: inherit;
+      letter-spacing: 0.3px;
     }
 
     .btn:hover {
       transform: translateY(-2px);
-      box-shadow: var(--shadow-hover);
+      box-shadow: 0 8px 24px rgba(66,133,244,0.35);
     }
 
     .btn:active {
       transform: translateY(0);
     }
 
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
     .btn-secondary {
       background: white;
       color: var(--color-primary);
       border: 2px solid var(--color-primary);
-      margin-top: 15px;
+      margin-top: 14px;
+      font-size: 1em;
     }
 
     .btn-secondary:hover {
-      background: var(--color-bg-lighter);
+      background: #f0f7ff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(66,133,244,0.15);
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 20px 0;
+      color: #94a3b8;
+      font-size: 0.85em;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .divider span {
+      padding: 0 14px;
     }
 
     .alert {
@@ -138,31 +224,26 @@
       border-left: 4px solid #2e7d32;
     }
 
-    .loading {
-      text-align: center;
-      padding: 20px;
-      color: var(--color-text-muted);
-    }
-
     .school-logo {
       width: 80px;
       height: 80px;
-      margin: 0 auto 20px;
-      background: white;
+      margin: 0 auto 16px;
+      background: rgba(255,255,255,0.2);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 2.5em;
+      backdrop-filter: blur(4px);
     }
 
     .login-footer {
       margin-top: 24px;
       text-align: center;
-      color: rgba(255, 255, 255, 0.9);
-      font-size: 0.9em;
-      max-width: 450px;
-      line-height: 1.5;
+      color: rgba(255, 255, 255, 0.88);
+      font-size: 0.88em;
+      max-width: 440px;
+      line-height: 1.6;
     }
 
     .login-footer p {
@@ -176,7 +257,7 @@
     <div class="login-header">
       <div class="school-logo">🏫</div>
       <h1>PPK DriveHub</h1>
-      <p>ระบบจัดการยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+      <p>ระบบจัดการยานพาหนะ<br>โรงเรียนพะเยาพิทยาคม 2569</p>
     </div>
     <div class="login-body">
       <div id="alert-container"></div>
@@ -184,24 +265,31 @@
       <form id="loginForm" onsubmit="handleLogin(event); return false;">
         <div class="form-group">
           <label for="username">ชื่อผู้ใช้ / รหัสประจำตัว</label>
-          <input type="text" id="username" name="username" required autocomplete="username" autofocus>
+          <input type="text" id="username" name="username" required autocomplete="username" autofocus
+            placeholder="กรอกชื่อผู้ใช้หรืออีเมล">
         </div>
 
         <div class="form-group">
           <label for="password">รหัสผ่าน</label>
-          <input type="password" id="password" name="password" required autocomplete="current-password">
+          <div class="password-wrapper">
+            <input type="password" id="password" name="password" required autocomplete="current-password"
+              placeholder="กรอกรหัสผ่าน">
+            <button type="button" class="toggle-password" onclick="togglePassword('password', this)" title="แสดง/ซ่อนรหัสผ่าน">
+              👁️
+            </button>
+          </div>
         </div>
 
-        <div style="text-align: right; margin-bottom: 20px;">
-          <a href="forgot-password.html" style="color: var(--color-primary); text-decoration: none; font-size: 0.9em;">
-            ลืมรหัสผ่าน?
-          </a>
+        <div class="login-links">
+          <a href="forgot-password.html">ลืมรหัสผ่าน?</a>
         </div>
 
         <button type="submit" class="btn" id="loginBtn">
           🔐 เข้าสู่ระบบ
         </button>
       </form>
+
+      <div class="divider"><span>หรือ</span></div>
 
       <button type="button" class="btn btn-secondary" onclick="window.location.href='register.html'">
         📝 สมัครเข้าใช้งานครั้งแรก
@@ -210,6 +298,19 @@
   </div>
 
   <script>
+    function togglePassword(inputId, btn) {
+      var input = document.getElementById(inputId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🙈';
+        btn.title = 'ซ่อนรหัสผ่าน';
+      } else {
+        input.type = 'password';
+        btn.textContent = '👁️';
+        btn.title = 'แสดงรหัสผ่าน';
+      }
+    }
+
     // handleLogin is specific to this page
     async function handleLogin(event) {
       event.preventDefault();

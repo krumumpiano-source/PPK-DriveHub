@@ -69,6 +69,15 @@
       font-size: 0.9em; max-width: 500px; line-height: 1.5;
     }
     .setup-footer p { margin: 0; }
+    .password-wrapper { position: relative; }
+    .password-wrapper input { padding-right: 48px; }
+    .toggle-password {
+      position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; padding: 8px 10px;
+      font-size: 1.2em; color: #94a3b8; transition: color 0.2s;
+      border-radius: var(--radius-sm); line-height: 1;
+    }
+    .toggle-password:hover { color: var(--color-primary); }
   </style>
 </head>
 
@@ -106,12 +115,18 @@
         </div>
         <div class="form-group">
           <label for="password">รหัสผ่าน <span style="color:#f44336;">*</span></label>
-          <input type="password" id="password" name="password" required minlength="8" autocomplete="new-password">
-          <small style="color:#666;">อย่างน้อย 8 ตัวอักษร</small>
+          <div class="password-wrapper">
+            <input type="password" id="password" name="password" required minlength="8" autocomplete="new-password" placeholder="อย่างน้อย 8 ตัวอักษร มีตัวอักษรและตัวเลข">
+            <button type="button" class="toggle-password" onclick="togglePassword('password', this)" title="แสดง/ซ่อนรหัสผ่าน">👁️</button>
+          </div>
+          <small style="color:#666;">อย่างน้อย 8 ตัวอักษร ต้องมีตัวอักษรและตัวเลข</small>
         </div>
         <div class="form-group">
           <label for="confirm_password">ยืนยันรหัสผ่าน <span style="color:#f44336;">*</span></label>
-          <input type="password" id="confirm_password" name="confirm_password" required minlength="8" autocomplete="new-password">
+          <div class="password-wrapper">
+            <input type="password" id="confirm_password" name="confirm_password" required minlength="8" autocomplete="new-password" placeholder="กรอกรหัสผ่านอีกครั้ง">
+            <button type="button" class="toggle-password" onclick="togglePassword('confirm_password', this)" title="แสดง/ซ่อนรหัสผ่าน">👁️</button>
+          </div>
         </div>
 
         <button type="submit" class="btn" id="setupBtn">
@@ -122,6 +137,19 @@
   </div>
 
   <script>
+    function togglePassword(inputId, btn) {
+      var input = document.getElementById(inputId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🙈';
+        btn.title = 'ซ่อนรหัสผ่าน';
+      } else {
+        input.type = 'password';
+        btn.textContent = '👁️';
+        btn.title = 'แสดงรหัสผ่าน';
+      }
+    }
+
     (async function checkSetup() {
       try {
         var result = await API.get('/api/setup');
