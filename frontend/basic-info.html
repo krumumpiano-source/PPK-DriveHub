@@ -257,8 +257,12 @@
           apiCall('getDrivers')
         ]);
 
-        if (vehicleResult.success && Array.isArray(vehicleResult.data)) {
-          allVehicles = vehicleResult.data;
+        if (vehicleResult.success) {
+          if (Array.isArray(vehicleResult.data)) {
+            allVehicles = vehicleResult.data;
+          } else if (vehicleResult.data && vehicleResult.data.vehicles) {
+            allVehicles = vehicleResult.data.vehicles;
+          }
         }
         if (driverResult.success && Array.isArray(driverResult.data)) {
           allDrivers = driverResult.data;
@@ -307,9 +311,9 @@
         html += '<td>' + (i + 1) + '</td>';
         html += '<td><strong>' + escHtml(v.license_plate) + '</strong></td>';
         html += '<td>' + escHtml(v.brand || '') + ' ' + escHtml(v.model || '') + '</td>';
-        html += '<td>' + (vehicleTypeMap[v.vehicle_type] || v.vehicle_type || '-') + '</td>';
+        html += '<td>' + escHtml(v.vehicle_type || v.notes || '-') + '</td>';
         html += '<td>' + escHtml(v.color || '-') + '</td>';
-        html += '<td>' + (v.registration_year ? (v.registration_year + 543) : '-') + '</td>';
+        html += '<td>' + (v.year || '-') + '</td>';
         html += '<td><span class="status-dot ' + statusClass + '"></span>' + (vehicleStatusMap[v.status] || v.status || '-') + '</td>';
         html += '</tr>';
       });
