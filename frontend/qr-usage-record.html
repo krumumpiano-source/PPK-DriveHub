@@ -576,7 +576,7 @@
 
           try {
             var driversResult = await apiCall('getDrivers', { status: 'active' });
-            drivers = (driversResult.success && Array.isArray(driversResult.data)) ? driversResult.data : [];
+            drivers = (driversResult.success && driversResult.data) ? (driversResult.data.drivers || (Array.isArray(driversResult.data) ? driversResult.data : [])) : [];
           } catch (e) {
             drivers = [];
           }

@@ -389,8 +389,8 @@
             allVehicles = vehicleResult.data.vehicles;
           }
         }
-        if (driverResult.success && Array.isArray(driverResult.data)) {
-          allDrivers = driverResult.data;
+        if (driverResult.success && driverResult.data) {
+          allDrivers = driverResult.data.drivers || (Array.isArray(driverResult.data) ? driverResult.data : []);
         }
 
         renderVehicleSummary();

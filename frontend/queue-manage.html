@@ -1224,12 +1224,12 @@
     }
 
     function includeVehicleInQueueList(vehicle) {
-      if (vehicle.active === false || vehicle.status === 'repair') return false;
+      if (vehicle.active === false || vehicle.status === 'maintenance') return false;
       if (showSupportAndUnavailableVehicles) {
-        return vehicle.status === 'unavailable' ||
-          (vehicle.status === 'available' && (vehicle.vehicle_category === 'primary' || vehicle.vehicle_category === 'support'));
+        return vehicle.status === 'inactive' ||
+          (vehicle.status === 'active' && (vehicle.vehicle_category === 'primary' || vehicle.vehicle_category === 'support'));
       }
-      return vehicle.vehicle_category === 'primary' && vehicle.status === 'available';
+      return vehicle.vehicle_category === 'primary' && vehicle.status === 'active';
     }
 
     function populateCarSelects() {
@@ -1249,17 +1249,17 @@
       var editCarIdToInclude = (editingQueueData && editingQueueData.car_id) ? editingQueueData.car_id : null;
       vehicles.forEach(function (vehicle) {
         var includeCreate = includeVehicleInQueueList(vehicle);
-        var includeEdit = includeCreate || (editCarIdToInclude === vehicle.car_id);
+        var includeEdit = includeCreate || (editCarIdToInclude === vehicle.id);
         if (!includeCreate && !includeEdit) return;
         var displayText = vehicle.license_plate + ' - ' + (vehicle.brand || '') + ' ' + (vehicle.model || '');
         if (vehicle.seat_count) displayText += ' (' + vehicle.seat_count + ' ที่นั่ง)';
         var cat = vehicle.vehicle_category || 'primary';
-        var st = vehicle.status || 'available';
+        var st = vehicle.status || 'active';
         if (cat === 'support') displayText += ' [รถสนับสนุน]';
-        if (st === 'unavailable') displayText += ' [ยกเลิกใช้]';
+        if (st === 'inactive') displayText += ' [ยกเลิกใช้]';
         if (includeCreate) {
           var opt1 = document.createElement('option');
-          opt1.value = vehicle.car_id;
+          opt1.value = vehicle.id;
           opt1.textContent = displayText;
           opt1.setAttribute('data-seat-count', vehicle.seat_count || '');
           opt1.setAttribute('data-vehicle-category', cat);
@@ -1268,7 +1268,7 @@
         }
         if (includeEdit) {
           var opt2 = document.createElement('option');
-          opt2.value = vehicle.car_id;
+          opt2.value = vehicle.id;
           opt2.textContent = displayText;
           opt2.setAttribute('data-seat-count', vehicle.seat_count || '');
           opt2.setAttribute('data-vehicle-category', cat);
@@ -1319,7 +1319,7 @@
           vehicles = result.data.vehicles || [];
           vehiclesMap = {};
           vehicles.forEach(function (v) {
-            vehiclesMap[v.car_id] = v;
+            vehiclesMap[v.id] = v;
           });
           var cb = document.getElementById('create_show_all_vehicles');
           var cbEdit = document.getElementById('edit_show_all_vehicles');
@@ -1339,7 +1339,7 @@
         if (result.success && result.data && result.data.drivers) {
           drivers = result.data.drivers || [];
           drivers.forEach(function (d) {
-            driversMap[d.driver_id] = d;
+            driversMap[d.id] = d;
           });
 
           // Populate create select
@@ -1347,8 +1347,8 @@
           if (!createSelect) return;
           drivers.forEach(function (driver) {
             var option = document.createElement('option');
-            option.value = driver.driver_id;
-            option.textContent = driver.full_name || (driver.first_name + ' ' + driver.last_name);
+            option.value = driver.id;
+            option.textContent = driver.name || '-';
             createSelect.appendChild(option);
           });
 
@@ -1356,8 +1356,8 @@
           var editSelect = document.getElementById('edit_driver_id');
           drivers.forEach(function (driver) {
             var option = document.createElement('option');
-            option.value = driver.driver_id;
-            option.textContent = driver.full_name || (driver.first_name + ' ' + driver.last_name);
+            option.value = driver.id;
+            option.textContent = driver.name || '-';
             editSelect.appendChild(option);
           });
         }
@@ -1526,7 +1526,7 @@
           var vehicle = vehiclesMap[queue.car_id];
           var driver = driversMap[queue.driver_id];
           var licensePlate = vehicle ? vehicle.license_plate : (queue.car_id ? queue.car_id.substring(0, 8) : '-');
-          var driverName = driver ? (driver.full_name || driver.first_name + ' ' + driver.last_name) : (queue.driver_name || '-');
+          var driverName = driver ? (driver.name || '-') : (queue.driver_name || '-');
 
           html += '<div class="queue-item" onclick="openEditModal(\'' + queue.id + '\'); event.stopPropagation();">';
           html += '<span class="queue-plate">' + licensePlate + '</span> ' + driverName;
@@ -1904,7 +1904,7 @@
 
         var passengerWarnings = [];
         if (queueData.car_id && queueData.passenger_count) {
-          var vehicle = vehicles.find(function (v) { return v.car_id === queueData.car_id; });
+          var vehicle = vehicles.find(function (v) { return v.id === queueData.car_id; });
           if (vehicle && vehicle.seat_count) {
             var seatCount = parseInt(vehicle.seat_count) || 0;
             var passengerCount = parseInt(queueData.passenger_count) || 0;
@@ -2048,7 +2048,7 @@
           var vehicle = vehiclesMap[editingQueueData.car_id];
           var driver = driversMap[editingQueueData.driver_id];
           var vehicleName = vehicle ? (vehicle.license_plate + ' - ' + (vehicle.brand || '') + ' ' + (vehicle.model || '')) : editingQueueData.car_id;
-          var driverName = driver ? (driver.full_name || driver.first_name + ' ' + driver.last_name) : editingQueueData.driver_id;
+          var driverName = driver ? (driver.name || '-') : editingQueueData.driver_id;
 
           var infoHtml = '<strong>ข้อมูลคิว:</strong><br>';
           infoHtml += 'รถ: ' + vehicleName + '<br>';

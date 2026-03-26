@@ -459,8 +459,8 @@
 
             try {
               var driversResult = await apiCall('getDrivers', { status: 'active' });
-              if (driversResult && driversResult.success && Array.isArray(driversResult.data)) {
-                drivers = driversResult.data;
+              if (driversResult && driversResult.success && driversResult.data) {
+                drivers = driversResult.data.drivers || (Array.isArray(driversResult.data) ? driversResult.data : []);
                 drivers.forEach(function (d) {
                   driversMap[d.id] = d;
                 });

@@ -28,7 +28,7 @@ export async function onRequest(context) {
        ORDER BY d.created_at DESC`,
       params
     );
-    return success(rows);
+    return success({ drivers: rows });
   }
 
   // --- GET /api/drivers/:id ---
