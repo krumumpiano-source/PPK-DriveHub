@@ -1998,7 +1998,7 @@
         document.getElementById('createProgressText').textContent = 'กำลังสร้างคิววันที่ ' + formatDateThai(date) + ' (' + (i + 1) + '/' + total + ')';
 
         try {
-          var queueData = Object.assign({}, formData, { departure_date: date });
+          var queueData = Object.assign({}, formData, { date: date });
           var result = await apiCall('createQueue', queueData);
 
           if (result.success) {
