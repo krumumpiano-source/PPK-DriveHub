@@ -32,8 +32,7 @@ const CSP = [
   "img-src 'self' data: blob: https:",
   "connect-src 'self' https://generativelanguage.googleapis.com",
   "media-src 'self' blob:",
-  "worker-src 'self' blob:",
-  "camera-src *"
+  "worker-src 'self' blob:"
 ].join('; ');
 
 export async function onRequest(context) {
