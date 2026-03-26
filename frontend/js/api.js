@@ -53,8 +53,35 @@
     return data;
   }
 
+  function startImpersonate(token, userData) {
+    // Save original admin credentials
+    localStorage.setItem('ppk_orig_token', getToken());
+    localStorage.setItem('ppk_orig_user', localStorage.getItem('ppk_user') || sessionStorage.getItem('ppk_user'));
+    // Switch to impersonated user
+    localStorage.setItem('ppk_token', token);
+    setUser(userData);
+  }
+
+  function stopImpersonate() {
+    var origToken = localStorage.getItem('ppk_orig_token');
+    var origUser = localStorage.getItem('ppk_orig_user');
+    if (origToken) {
+      localStorage.setItem('ppk_token', origToken);
+      localStorage.removeItem('ppk_orig_token');
+    }
+    if (origUser) {
+      localStorage.setItem('ppk_user', origUser);
+      localStorage.removeItem('ppk_orig_user');
+    }
+  }
+
+  function isImpersonating() {
+    return !!localStorage.getItem('ppk_orig_token');
+  }
+
   return {
     getToken, setToken, clearAuth, getUser, setUser,
+    startImpersonate, stopImpersonate, isImpersonating,
     get:  (path) => request(path, { method: 'GET' }),
     post: (path, body) => request(path, { method: 'POST', body }),
     put:  (path, body) => request(path, { method: 'PUT', body }),
@@ -177,6 +204,8 @@ const ACTION_MAP = {
   'getUserRequests':     (d) => API.get('/api/admin/requests' + _q(d)),
   'approveUserRequest':  (d) => API.put(`/api/admin/requests/${d.id}/approve`, d),
   'rejectUserRequest':   (d) => API.put(`/api/admin/requests/${d.id}/reject`, d),
+  'impersonateUser':     (d) => API.post(`/api/admin/impersonate/${d.id}`),
+  'stopImpersonate':     ()  => API.post('/api/admin/stop-impersonate'),
   'getSettings':         ()  => API.get('/api/admin/settings'),
   'updateSettings':      (d) => API.put('/api/admin/settings', d),
   'getAuditLog':         (d) => API.get('/api/admin/audit-log' + _q(d)),

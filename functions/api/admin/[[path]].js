@@ -182,6 +182,56 @@ export async function onRequest(context) {
     return success(logs);
   }
 
+  // ── Impersonate: admin views system as another user (read-only) ──
+  if (path.match(/\/api\/admin\/impersonate\/[^/]+$/) && method === 'POST') {
+    const targetId = path.split('/').pop();
+    if (user.role !== 'admin' && user.role !== 'super_admin') {
+      return error('ต้องเป็น Admin เท่านั้น', 403);
+    }
+    const target = await dbFirst(env.DB,
+      `SELECT id, username, email, role, permissions, first_name, last_name, display_name, phone, driver_id, active
+       FROM users WHERE id = ?`, [targetId]
+    );
+    if (!target) return error('ไม่พบผู้ใช้', 404);
+    if (!target.active) return error('ผู้ใช้ถูกระงับการใช้งาน', 400);
+    if (target.role === 'super_admin' && user.role !== 'super_admin') {
+      return error('ไม่สามารถสวมรอยผู้ดูแลสูงสุดได้', 403);
+    }
+
+    const token = generateUUID() + '-' + generateUUID();
+    const sessionId = generateUUID();
+    const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(); // 2 hours
+    await dbRun(env.DB,
+      `INSERT INTO sessions (id, user_id, token, expires_at, created_at, is_impersonated, impersonator_id)
+       VALUES (?, ?, ?, ?, ?, 1, ?)`,
+      [sessionId, targetId, token, expiresAt, now(), user.id]
+    );
+    await writeAuditLog(env.DB, user.id, user.displayName, 'impersonate_user', 'admin', targetId,
+      { target_name: target.display_name || target.username });
+
+    return success({
+      token,
+      user: {
+        user_id: target.id,
+        username: target.username,
+        display_name: target.display_name || ((target.first_name || '') + ' ' + (target.last_name || '')).trim(),
+        full_name: ((target.first_name || '') + ' ' + (target.last_name || '')).trim(),
+        role: target.role,
+        email: target.email,
+        phone: target.phone,
+        driver_id: target.driver_id,
+        permissions: JSON.parse(target.permissions || '{}'),
+        is_impersonated: true
+      }
+    });
+  }
+
+  if (path === '/api/admin/stop-impersonate' && method === 'POST') {
+    // Delete the current impersonated session
+    await dbRun(env.DB, 'DELETE FROM sessions WHERE id = ? AND is_impersonated = 1', [user.sessionId]);
+    return success({ message: 'หยุดสวมรอยเรียบร้อย' });
+  }
+
   return error('Not Found', 404);
   } catch (e) {
     console.error('API Error:', e);

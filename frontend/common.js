@@ -321,6 +321,43 @@ function renderNav() {
 
     setActiveMenu();
     renderFloatingQR();
+    renderImpersonationBanner();
+}
+
+function renderImpersonationBanner() {
+    if (typeof API === 'undefined' || !API.isImpersonating()) return;
+    var user = getCurrentUser();
+    if (!user) return;
+
+    var roleLabel = { super_admin: 'ผู้ดูแลสูงสุด', admin: 'ผู้ดูแลระบบ', manager: 'ผู้จัดการ', driver: 'พนักงานขับรถ', staff: 'เจ้าหน้าที่' };
+    var name = user.full_name || user.display_name || user.username || '';
+    var role = roleLabel[user.role] || user.role || '';
+
+    var banner = document.createElement('div');
+    banner.className = 'impersonate-banner';
+    banner.innerHTML =
+        '<div class="imp-text">👁️ กำลังดูมุมมองของ <strong>' + name + '</strong> <span class="imp-badge">' + role + '</span></div>' +
+        '<button class="imp-stop-btn" onclick="stopImpersonateMode()">⬅️ กลับเป็นแอดมิน</button>';
+
+    // Insert banner at top of main-area (after topbar)
+    var mainArea = document.querySelector('.main-area');
+    if (mainArea) {
+        var topbar = mainArea.querySelector('.topbar');
+        if (topbar && topbar.nextSibling) {
+            mainArea.insertBefore(banner, topbar.nextSibling);
+        } else {
+            mainArea.insertBefore(banner, mainArea.firstChild);
+        }
+    }
+}
+
+function stopImpersonateMode() {
+    if (typeof API === 'undefined') return;
+    // Call backend to delete impersonated session
+    apiCall('stopImpersonate', {}).catch(function() {});
+    // Restore original admin token
+    API.stopImpersonate();
+    window.location.href = 'user-management.html';
 }
 
 function renderFloatingQR() {
@@ -328,6 +365,8 @@ function renderFloatingQR() {
     if (!checkAuth()) return;
     var cp = window.currentPage || '';
     if (cp.indexOf('qr-') === 0) return;
+    // Don't show FAB while impersonating
+    if (typeof API !== 'undefined' && API.isImpersonating()) return;
 
     var fab = document.createElement('div');
     fab.className = 'qr-fab';

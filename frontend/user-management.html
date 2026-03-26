@@ -798,6 +798,9 @@
         html += '<td>' + renderPermIcons(perms, isAdmin) + '</td>';
         html += '<td><div class="action-btns">';
         html += '<button class="btn btn-primary" style="padding:5px 12px;font-size:0.85em;" title="แก้ไขผู้ใช้" onclick="openEditModal(' + u.id + ')">✏️ แก้ไข</button>';
+        if (u.role !== 'super_admin') {
+          html += '<button class="btn btn-secondary" style="padding:5px 12px;font-size:0.85em;" title="ดูมุมมองผู้ใช้นี้" onclick="startImpersonate(\'' + u.id + '\')">👁️ ดูมุมมอง</button>';
+        }
         html += '</div></td>';
         html += '</tr>';
       }
@@ -843,6 +846,24 @@
         var matchRole = !role || row.dataset.role === role;
         row.style.display = (matchName && matchRole) ? '' : 'none';
       });
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  Impersonate User (View-As)
+    // ══════════════════════════════════════════════════════════
+    async function startImpersonate(userId) {
+      if (!confirm('ต้องการดูมุมมองของผู้ใช้นี้?\n(โหมดดูอย่างเดียว — ไม่สามารถแก้ไขข้อมูลได้)')) return;
+      try {
+        var result = await apiCall('impersonateUser', { id: userId });
+        if (result.success && result.data) {
+          API.startImpersonate(result.data.token, result.data.user);
+          window.location.href = 'dashboard.html';
+        } else {
+          alert(result.message || 'ไม่สามารถสวมรอยได้');
+        }
+      } catch (err) {
+        alert(handleError(err, 'impersonate'));
+      }
     }
 
     // ══════════════════════════════════════════════════════════

@@ -88,10 +88,19 @@ export async function onRequest(context) {
         displayName: session.display_name || `${session.first_name} ${session.last_name}`,
         sessionId: session.id,
         permissions: session.permissions || '{}',
-        mustChangePassword: session.must_change_password === 1
+        mustChangePassword: session.must_change_password === 1,
+        isImpersonated: session.is_impersonated === 1,
+        impersonatorId: session.impersonator_id || null
       };
     } catch (e) {
       return addCors(error('เกิดข้อผิดพลาดในการตรวจสอบ session', 500), request);
+    }
+  }
+
+  // Impersonation: enforce read-only (GET only) except stop-impersonate
+  if (env.user?.isImpersonated && request.method !== 'GET') {
+    if (url.pathname !== '/api/admin/stop-impersonate') {
+      return addCors(error('โหมดดูอย่างเดียว — ไม่สามารถแก้ไขข้อมูลได้', 403), request);
     }
   }
 

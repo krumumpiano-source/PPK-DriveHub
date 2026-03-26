@@ -36,6 +36,8 @@ CREATE TABLE IF NOT EXISTS sessions (
   token TEXT UNIQUE NOT NULL,
   expires_at TEXT NOT NULL,
   created_at TEXT NOT NULL,
+  is_impersonated INTEGER NOT NULL DEFAULT 0,
+  impersonator_id TEXT,
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
