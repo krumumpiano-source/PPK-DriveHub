@@ -146,11 +146,125 @@
     }
     .empty-state .icon { font-size: 2.5em; margin-bottom: 12px; }
 
+    .info-table tbody tr { cursor: pointer; transition: background 0.15s; }
+    .info-table tbody tr:hover td { background: #eff6ff; }
+
+    .detail-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 1000;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40px 16px;
+      overflow-y: auto;
+    }
+    .detail-overlay.show { display: flex; }
+
+    .detail-panel {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 640px;
+      overflow: hidden;
+      animation: slideUp 0.25s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .detail-header {
+      background: var(--gradient-primary, linear-gradient(135deg, #1e3a5f, #2d5f8a));
+      color: white;
+      padding: 24px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .detail-header h2 { font-size: 1.4em; margin: 0; }
+    .detail-header .close-btn {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      font-size: 1.3em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .detail-header .close-btn:hover { background: rgba(255,255,255,0.35); }
+
+    .detail-body {
+      padding: 24px 28px;
+    }
+
+    .detail-section {
+      margin-bottom: 20px;
+    }
+    .detail-section-title {
+      font-size: 0.85em;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 8px 0;
+      border-bottom: 1px solid #f8fafc;
+      gap: 12px;
+    }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label {
+      color: #64748b;
+      font-weight: 500;
+      font-size: 0.9em;
+      white-space: nowrap;
+      min-width: 120px;
+    }
+    .detail-value {
+      color: #1e293b;
+      font-weight: 500;
+      text-align: right;
+      word-break: break-word;
+      font-size: 0.93em;
+    }
+    .detail-value.empty { color: #cbd5e1; font-style: italic; }
+
+    .detail-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85em;
+      font-weight: 600;
+    }
+    .detail-badge.active { background: #dcfce7; color: #166534; }
+    .detail-badge.maintenance { background: #fef3c7; color: #92400e; }
+    .detail-badge.inactive { background: #fee2e2; color: #991b1b; }
+    .detail-badge.on_leave { background: #fef3c7; color: #92400e; }
+
     @media (max-width: 768px) {
       .content { padding: 16px; }
       .info-table th, .info-table td { padding: 8px 10px; font-size: 0.85em; }
       .info-tabs { gap: 4px; }
       .info-tab { padding: 10px 14px; font-size: 0.9em; }
+      .detail-overlay { padding: 20px 10px; }
+      .detail-header { padding: 18px 20px; }
+      .detail-body { padding: 18px 20px; }
+      .detail-row { flex-direction: column; gap: 2px; }
+      .detail-value { text-align: left; }
     }
   </style>
 </head>
@@ -218,6 +332,17 @@
           </table>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Detail Modal -->
+  <div id="detailOverlay" class="detail-overlay" onclick="if(event.target===this)closeDetail()">
+    <div class="detail-panel">
+      <div class="detail-header">
+        <h2 id="detailTitle">รายละเอียด</h2>
+        <button class="close-btn" onclick="closeDetail()" title="ปิด">&times;</button>
+      </div>
+      <div class="detail-body" id="detailBody"></div>
     </div>
   </div>
 
@@ -307,11 +432,11 @@
       var html = '';
       list.forEach(function(v, i) {
         var statusClass = v.status || 'active';
-        html += '<tr>';
+        html += '<tr onclick="showVehicleDetail(\'' + v.id + '\')">';
         html += '<td>' + (i + 1) + '</td>';
         html += '<td><strong>' + escHtml(v.license_plate) + '</strong></td>';
         html += '<td>' + escHtml(v.brand || '') + ' ' + escHtml(v.model || '') + '</td>';
-        html += '<td>' + escHtml(v.vehicle_type || v.notes || '-') + '</td>';
+        html += '<td>' + escHtml(v.vehicle_type || '-') + '</td>';
         html += '<td>' + escHtml(v.color || '-') + '</td>';
         html += '<td>' + (v.year || '-') + '</td>';
         html += '<td><span class="status-dot ' + statusClass + '"></span>' + (vehicleStatusMap[v.status] || v.status || '-') + '</td>';
@@ -331,7 +456,7 @@
         var statusClass = d.status || 'active';
         var expiry = d.license_expiry ? formatDateThai(d.license_expiry) : '-';
         var isExpired = d.license_expiry && new Date(d.license_expiry) < new Date();
-        html += '<tr>';
+        html += '<tr onclick="showDriverDetail(\'' + d.id + '\')">';
         html += '<td>' + (i + 1) + '</td>';
         html += '<td><strong>' + escHtml(d.name || d.full_name || '') + '</strong></td>';
         html += '<td>' + escHtml(d.phone || '-') + '</td>';
@@ -370,6 +495,106 @@
         return d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
       } catch (e) { return dateStr; }
     }
+
+    var fuelMap = { diesel: 'ดีเซล', gasoline: 'เบนซิน', hybrid: 'ไฮบริด', electric: 'ไฟฟ้า' };
+
+    function showVehicleDetail(id) {
+      var v = allVehicles.find(function(x) { return x.id === id; });
+      if (!v) return;
+      document.getElementById('detailTitle').textContent = '🚙 ' + (v.license_plate || 'รายละเอียดรถ');
+      var regDate = formatDateThai(v.registration_date);
+      var statusBadge = '<span class="detail-badge ' + (v.status || 'active') + '">' + (vehicleStatusMap[v.status] || v.status || '-') + '</span>';
+      var catText = v.vehicle_category === 'support' ? 'รถใช้งานสนับสนุน' : 'รถใช้งานหลัก';
+
+      var html = '';
+      html += '<div class="detail-section">';
+      html += '<div class="detail-section-title">ข้อมูลทั่วไป</div>';
+      html += detailRow('เลขทะเบียน', v.license_plate);
+      html += detailRow('จังหวัด', v.province);
+      html += detailRow('ยี่ห้อ', v.brand);
+      html += detailRow('รุ่น', v.model);
+      html += detailRow('รุ่นปี (พ.ศ.)', v.year);
+      html += detailRow('สี', v.color);
+      html += detailRow('ชนิดรถ', v.vehicle_type);
+      html += detailRow('จำนวนที่นั่ง', v.seat_count ? v.seat_count + ' ที่นั่ง' : '');
+      html += detailRow('ชนิดเชื้อเพลิง', fuelMap[v.fuel_type] || v.fuel_type);
+      html += detailRow('ประเภทการใช้งาน', catText);
+      html += detailRow('สถานะ', statusBadge, true);
+      html += '</div>';
+
+      html += '<div class="detail-section">';
+      html += '<div class="detail-section-title">ทะเบียนและเครื่องยนต์</div>';
+      html += detailRow('เลขทะเบียน (ในเล่ม)', v.registration_number);
+      html += detailRow('เลขตัวถัง (VIN)', v.chassis_number);
+      html += detailRow('เลขเครื่องยนต์', v.engine_number);
+      html += detailRow('วันจดทะเบียน', regDate !== '-' ? regDate : '');
+      html += detailRow('เลขไมล์ปัจจุบัน', v.current_mileage ? Number(v.current_mileage).toLocaleString() + ' กม.' : '');
+      html += '</div>';
+
+      html += '<div class="detail-section">';
+      html += '<div class="detail-section-title">เจ้าของ / ผู้ครอบครอง</div>';
+      html += detailRow('ชื่อเจ้าของ', v.owner_name);
+      html += detailRow('ที่อยู่', v.owner_address);
+      html += '</div>';
+
+      if (v.notes) {
+        html += '<div class="detail-section">';
+        html += '<div class="detail-section-title">หมายเหตุ</div>';
+        html += '<div style="color:#475569;font-size:0.93em;line-height:1.6;">' + escHtml(v.notes) + '</div>';
+        html += '</div>';
+      }
+
+      document.getElementById('detailBody').innerHTML = html;
+      document.getElementById('detailOverlay').classList.add('show');
+    }
+
+    function showDriverDetail(id) {
+      var d = allDrivers.find(function(x) { return x.id === id; });
+      if (!d) return;
+      document.getElementById('detailTitle').textContent = '👷 ' + (d.name || d.full_name || 'รายละเอียดพนักงาน');
+      var statusBadge = '<span class="detail-badge ' + (d.status || 'active') + '">' + (driverStatusMap[d.status] || d.status || '-') + '</span>';
+      var expiry = formatDateThai(d.license_expiry);
+      var isExpired = d.license_expiry && new Date(d.license_expiry) < new Date();
+
+      var html = '';
+      html += '<div class="detail-section">';
+      html += '<div class="detail-section-title">ข้อมูลส่วนตัว</div>';
+      html += detailRow('ชื่อ-สกุล', d.name || d.full_name);
+      html += detailRow('เบอร์โทร', d.phone);
+      html += detailRow('สถานะ', statusBadge, true);
+      html += '</div>';
+
+      html += '<div class="detail-section">';
+      html += '<div class="detail-section-title">ใบอนุญาตขับขี่</div>';
+      html += detailRow('เลขใบขับขี่', d.license_number);
+      html += detailRow('ประเภทใบขับขี่', d.license_type);
+      html += detailRow('วันหมดอายุ', expiry + (isExpired ? ' <span style="color:#ef4444;font-weight:600;">(หมดอายุ)</span>' : ''), isExpired);
+      html += '</div>';
+
+      if (d.notes) {
+        html += '<div class="detail-section">';
+        html += '<div class="detail-section-title">หมายเหตุ</div>';
+        html += '<div style="color:#475569;font-size:0.93em;line-height:1.6;">' + escHtml(d.notes) + '</div>';
+        html += '</div>';
+      }
+
+      document.getElementById('detailBody').innerHTML = html;
+      document.getElementById('detailOverlay').classList.add('show');
+    }
+
+    function detailRow(label, value, isHtml) {
+      var val = value ? (isHtml ? String(value) : escHtml(String(value))) : '';
+      var cls = val ? 'detail-value' : 'detail-value empty';
+      return '<div class="detail-row"><span class="detail-label">' + label + '</span><span class="' + cls + '">' + (val || '-') + '</span></div>';
+    }
+
+    function closeDetail() {
+      document.getElementById('detailOverlay').classList.remove('show');
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeDetail();
+    });
 
     loadData();
   </script>
