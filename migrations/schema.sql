@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS cars (
   registration_expiry TEXT,
   owner_name TEXT,
   owner_address TEXT,
-  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','maintenance','inactive')),
+  status TEXT NOT NULL DEFAULT 'active',
   current_mileage INTEGER DEFAULT 0,
   qr_code TEXT,
   vehicle_images TEXT DEFAULT '[]',               -- JSON array of R2 keys
@@ -105,7 +105,11 @@ CREATE TABLE IF NOT EXISTS cars (
   deactivated_at TEXT,
   created_by TEXT,
   created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
+  updated_at TEXT NOT NULL,
+  province TEXT DEFAULT '',
+  vehicle_type TEXT DEFAULT '',
+  registration_number TEXT DEFAULT '',
+  vehicle_category TEXT DEFAULT 'primary'
 );
 
 CREATE TABLE IF NOT EXISTS vehicle_maintenance (

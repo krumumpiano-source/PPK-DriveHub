@@ -27,6 +27,92 @@
 
     .container { }
 
+    .vehicles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 1rem;
+    }
+
+    .vehicle-card {
+      background: white;
+      border-radius: var(--radius-lg, 12px);
+      box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.08));
+      border: 1px solid var(--color-border, #e2e8f0);
+      overflow: hidden;
+      transition: box-shadow 0.2s;
+    }
+    .vehicle-card:hover {
+      box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.12));
+    }
+
+    .vehicle-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.25rem;
+      background: var(--color-bg-lighter, #f8fafc);
+      border-bottom: 1px solid var(--color-border-light, #f1f5f9);
+    }
+
+    .vehicle-license {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--color-primary, #1e40af);
+    }
+
+    .vehicle-status {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    .vehicle-status.status-active { background: #dcfce7; color: #166534; }
+    .vehicle-status.status-maintenance { background: #fef3c7; color: #92400e; }
+    .vehicle-status.status-unavailable { background: #fee2e2; color: #991b1b; }
+
+    .vehicle-info {
+      padding: 1rem 1.25rem;
+    }
+
+    .vehicle-info-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--color-border-light, #f1f5f9);
+      font-size: 0.88rem;
+      gap: 8px;
+    }
+    .vehicle-info-item:last-child { border-bottom: none; }
+
+    .vehicle-info-label {
+      color: var(--color-text-muted, #64748b);
+      font-weight: 500;
+      white-space: nowrap;
+      min-width: 100px;
+      flex-shrink: 0;
+    }
+
+    .vehicle-info-value {
+      color: var(--color-text, #1e293b);
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .vehicle-actions {
+      padding: 0.75rem 1.25rem;
+      border-top: 1px solid var(--color-border-light, #f1f5f9);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    @media (max-width: 768px) {
+      .vehicles-grid {
+        grid-template-columns: 1fr;
+      }
       .tab {
         white-space: nowrap;
       }
@@ -108,9 +194,9 @@
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label>รุ่นปี (ค.ศ.)</label>
-                <input type="number" id="year" min="1990" max="2030" placeholder="เช่น 2017"
-                  title="ปี พ.ศ. 2560 = ค.ศ. 2017">
+                <label>รุ่นปี (พ.ศ.)</label>
+                <input type="number" id="year" min="2530" max="2590" placeholder="เช่น 2566"
+                  title="กรอกปี พ.ศ. เช่น 2566">
               </div>
               <div class="form-group">
                 <label>สีรถ</label>
@@ -504,13 +590,12 @@
           return (orderStatus[a.status] !== undefined ? orderStatus[a.status] : 4) - (orderStatus[b.status] !== undefined ? orderStatus[b.status] : 4);
         });
         vehiclesList.forEach(function (vehicle) {
-          var statusClass = 'status-' + (vehicle.status || 'available');
+          var statusClass = 'status-' + (vehicle.status || 'active');
           var statusText = {
-            'available': 'ว่าง',
-            'in_use': 'ใช้งาน',
-            'repair': 'ซ่อม',
-            'unavailable': 'ไม่พร้อมใช้งาน'
-          }[vehicle.status] || 'ว่าง';
+            'active': 'พร้อมใช้งาน',
+            'maintenance': 'ซ่อมบำรุง',
+            'unavailable': 'ยกเลิกใช้งาน'
+          }[vehicle.status] || 'พร้อมใช้งาน';
 
           html += '<div class="vehicle-card">';
           html += '<div class="vehicle-card-header">';
@@ -521,9 +606,22 @@
           html += '<div class="vehicle-info">';
           html += '<div class="vehicle-info-item"><span class="vehicle-info-label">ยี่ห้อ/รุ่น:</span><span class="vehicle-info-value">' + (vehicle.brand || '') + ' ' + (vehicle.model || '') + '</span></div>';
           html += '<div class="vehicle-info-item"><span class="vehicle-info-label">ประเภท:</span><span class="vehicle-info-value">' + (vehicle.vehicle_category === 'support' ? 'รถใช้งานสนับสนุน' : 'รถใช้งานหลัก') + '</span></div>';
-          if (vehicle.year) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">รุ่นปี (ค.ศ.):</span><span class="vehicle-info-value">' + vehicle.year + '</span></div>';
+          if (vehicle.year) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">รุ่นปี (พ.ศ.):</span><span class="vehicle-info-value">' + vehicle.year + '</span></div>';
+          if (vehicle.color) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">สี:</span><span class="vehicle-info-value">' + vehicle.color + '</span></div>';
           if (vehicle.seat_count) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">ที่นั่ง:</span><span class="vehicle-info-value">' + vehicle.seat_count + ' ที่นั่ง</span></div>';
-          if (vehicle.mileage) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">เลขไมล์:</span><span class="vehicle-info-value">' + vehicle.mileage.toLocaleString() + ' กม.</span></div>';
+          var fuelMap = { 'diesel': 'ดีเซล', 'gasoline': 'เบนซิน', 'hybrid': 'ไฮบริด', 'electric': 'ไฟฟ้า' };
+          if (vehicle.fuel_type) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">เชื้อเพลิง:</span><span class="vehicle-info-value">' + (fuelMap[vehicle.fuel_type] || vehicle.fuel_type) + '</span></div>';
+          if (vehicle.chassis_number) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">เลขตัวถัง:</span><span class="vehicle-info-value">' + vehicle.chassis_number + '</span></div>';
+          if (vehicle.engine_number) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">เลขเครื่องยนต์:</span><span class="vehicle-info-value">' + vehicle.engine_number + '</span></div>';
+          if (vehicle.registration_date) {
+            var rd = vehicle.registration_date;
+            try { var rdParts = rd.split('-'); var rdBE = parseInt(rdParts[0],10) + 543; rd = rdParts[2] + '/' + rdParts[1] + '/' + rdBE; } catch(e){}
+            html += '<div class="vehicle-info-item"><span class="vehicle-info-label">วันจดทะเบียน:</span><span class="vehicle-info-value">' + rd + '</span></div>';
+          }
+          if (vehicle.owner_name) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">เจ้าของ:</span><span class="vehicle-info-value">' + vehicle.owner_name + '</span></div>';
+          if (vehicle.owner_address) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">ที่อยู่:</span><span class="vehicle-info-value">' + vehicle.owner_address + '</span></div>';
+          if (vehicle.current_mileage) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">เลขไมล์:</span><span class="vehicle-info-value">' + Number(vehicle.current_mileage).toLocaleString() + ' กม.</span></div>';
+          if (vehicle.notes) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">หมายเหตุ:</span><span class="vehicle-info-value">' + vehicle.notes + '</span></div>';
           html += '</div>';
 
           html += '<div class="vehicle-actions">';
@@ -608,7 +706,7 @@
       document.getElementById('vehicle_type').value = vehicle.vehicle_type || '';
       document.getElementById('seat_count').value = vehicle.seat_count || '';
       document.getElementById('fuel_type').value = vehicle.fuel_type || 'gasoline';
-      document.getElementById('mileage').value = vehicle.mileage || '';
+      document.getElementById('mileage').value = vehicle.current_mileage || '';
       var regDate = vehicle.registration_date || '';
       if (regDate && regDate.length >= 10) {
         var parts = regDate.split('-');
@@ -718,7 +816,7 @@
       try {
         var usageStatusVal = (document.getElementById('usage_status') && document.getElementById('usage_status').value) || 'primary';
         var vehicle_category = (usageStatusVal === 'support') ? 'support' : 'primary';
-        var status = (usageStatusVal === 'unavailable') ? 'unavailable' : 'available';
+        var status = (usageStatusVal === 'unavailable') ? 'unavailable' : 'active';
         var vehicleData = {
           vehicle_category: vehicle_category,
           status: status,
@@ -731,7 +829,7 @@
           vehicle_type: document.getElementById('vehicle_type').value.trim(),
           seat_count: document.getElementById('seat_count').value || '',
           fuel_type: document.getElementById('fuel_type').value,
-          mileage: document.getElementById('mileage').value || 0,
+          current_mileage: document.getElementById('mileage').value || 0,
           registration_date: (function () {
             var rd = document.getElementById('reg_day');
             var rm = document.getElementById('reg_month');
@@ -865,7 +963,7 @@
       }
       if (!confirm('เปิดใช้รถคันนี้อีกครั้งหรือไม่?')) return;
       try {
-        var result = await apiCall('updateVehicle', { id: carId, status: 'available' });
+        var result = await apiCall('updateVehicle', { id: carId, status: 'active' });
         if (result.success) {
           showAlert('เปิดใช้รถแล้ว', 'success');
           loadVehicles();

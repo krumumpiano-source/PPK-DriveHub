@@ -39,7 +39,7 @@ export async function onRequest(context) {
     const vehicles = await dbAll(env.DB,
       `SELECT * FROM cars WHERE ${where.join(' AND ')} ORDER BY license_plate ASC`, params
     );
-    return success(vehicles);
+    return success({ vehicles });
   }
 
   if (path === '/api/vehicles' && method === 'POST') {
@@ -57,15 +57,17 @@ export async function onRequest(context) {
       `INSERT INTO cars (id, license_plate, brand, model, year, color, fuel_type, seat_count,
         chassis_number, engine_number, registration_date, registration_expiry,
         owner_name, owner_address, status, current_mileage, qr_code,
-        vehicle_images, registration_book_image, notes, created_by, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        vehicle_images, registration_book_image, notes, created_by, created_at, updated_at,
+        province, vehicle_type, registration_number, vehicle_category)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, body.license_plate, body.brand, body.model || '', body.year || null,
        body.color || '', body.fuel_type || 'diesel', body.seat_count || 4,
        body.chassis_number || '', body.engine_number || '',
        body.registration_date || null, body.registration_expiry || null,
        body.owner_name || '', body.owner_address || '',
        body.status || 'active', body.current_mileage || 0, body.qr_code || '',
-       images, body.registration_book_image || '', body.notes || '', user.id, ts, ts]
+       images, body.registration_book_image || '', body.notes || '', user.id, ts, ts,
+       body.province || '', body.vehicle_type || '', body.registration_number || '', body.vehicle_category || 'primary']
     );
     await writeAuditLog(env.DB, user.id, user.displayName, 'create_vehicle', 'vehicles', id, { license_plate: body.license_plate });
     return success({ id, message: 'เพิ่มยานพาหนะเรียบร้อย' }, 201);
@@ -85,7 +87,7 @@ export async function onRequest(context) {
     const fields = ['license_plate', 'brand', 'model', 'year', 'color', 'fuel_type', 'seat_count',
       'chassis_number', 'engine_number', 'registration_date', 'registration_expiry',
       'owner_name', 'owner_address', 'status', 'current_mileage', 'qr_code',
-      'registration_book_image', 'notes'];
+      'registration_book_image', 'notes', 'province', 'vehicle_type', 'registration_number', 'vehicle_category'];
     const updates = [];
     const params = [];
     for (const f of fields) {
