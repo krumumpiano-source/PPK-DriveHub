@@ -142,48 +142,73 @@
       text-decoration: underline;
     }
 
-    .btn {
+    .btn-login {
       width: 100%;
-      padding: 14px;
-      background: var(--gradient-primary);
+      padding: 15px 20px;
+      background: linear-gradient(135deg, #1e40af, #3b82f6);
       color: white;
       border: none;
-      border-radius: var(--radius-md);
-      font-size: 1.08em;
-      font-weight: 600;
+      border-radius: 12px;
+      font-size: 1.1em;
+      font-weight: 700;
       cursor: pointer;
       transition: all 0.25s;
       font-family: inherit;
-      letter-spacing: 0.3px;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 4px 14px rgba(30,64,175,0.35);
     }
 
-    .btn:hover {
+    .btn-login:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(66,133,244,0.35);
+      box-shadow: 0 8px 28px rgba(30,64,175,0.45);
+      background: linear-gradient(135deg, #1e3a8a, #2563eb);
     }
 
-    .btn:active {
+    .btn-login:active {
       transform: translateY(0);
     }
 
-    .btn:disabled {
+    .btn-login:disabled {
       opacity: 0.6;
       cursor: not-allowed;
       transform: none;
     }
 
-    .btn-secondary {
-      background: white;
-      color: var(--color-primary);
-      border: 2px solid var(--color-primary);
-      margin-top: 14px;
-      font-size: 1em;
+    .btn-login .btn-icon {
+      font-size: 1.3em;
     }
 
-    .btn-secondary:hover {
-      background: #f0f7ff;
+    .btn-register {
+      width: 100%;
+      padding: 14px 20px;
+      background: white;
+      color: #1e40af;
+      border: 2px solid #93c5fd;
+      border-radius: 12px;
+      font-size: 1.02em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-register:hover {
+      background: #eff6ff;
+      border-color: #3b82f6;
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(66,133,244,0.15);
+      box-shadow: 0 4px 12px rgba(59,130,246,0.2);
+    }
+
+    .btn-register .btn-icon {
+      font-size: 1.2em;
     }
 
     .divider {
@@ -224,17 +249,23 @@
       border-left: 4px solid #2e7d32;
     }
 
-    .school-logo {
-      width: 80px;
-      height: 80px;
-      margin: 0 auto 16px;
-      background: rgba(255,255,255,0.2);
-      border-radius: 50%;
+    .login-logo {
+      width: 90px;
+      height: 90px;
+      margin: 0 auto 18px;
+      background: rgba(255,255,255,0.18);
+      border-radius: 22px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 2.5em;
       backdrop-filter: blur(4px);
+      border: 2px solid rgba(255,255,255,0.25);
+    }
+
+    .login-logo svg {
+      width: 52px;
+      height: 52px;
+      fill: white;
     }
 
     .login-footer {
@@ -255,7 +286,9 @@
 <body>
   <div class="login-container">
     <div class="login-header">
-      <div class="school-logo">🏫</div>
+      <div class="login-logo">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.85 7h10.29l1.08 3.11H5.77L6.85 7zM19 17H5v-5h14v5z"/><circle cx="7.5" cy="14.5" r="1.5"/><circle cx="16.5" cy="14.5" r="1.5"/></svg>
+      </div>
       <h1>PPK DriveHub</h1>
       <p>ระบบจัดการยานพาหนะ<br>โรงเรียนพะเยาพิทยาคม 2569</p>
     </div>
@@ -284,15 +317,17 @@
           <a href="forgot-password.html">ลืมรหัสผ่าน?</a>
         </div>
 
-        <button type="submit" class="btn" id="loginBtn">
-          🔐 เข้าสู่ระบบ
+        <button type="submit" class="btn-login" id="loginBtn">
+          <span class="btn-icon">➡️</span>
+          <span>เข้าสู่ระบบ</span>
         </button>
       </form>
 
       <div class="divider"><span>หรือ</span></div>
 
-      <button type="button" class="btn btn-secondary" onclick="window.location.href='register.html'">
-        📝 สมัครเข้าใช้งานครั้งแรก
+      <button type="button" class="btn-register" onclick="window.location.href='register.html'">
+        <span class="btn-icon">✍️</span>
+        <span>สมัครเข้าใช้งานครั้งแรก</span>
       </button>
     </div>
   </div>
@@ -327,7 +362,7 @@
 
       // Disable button
       loginBtn.disabled = true;
-      loginBtn.textContent = 'กำลังเข้าสู่ระบบ...';
+      loginBtn.innerHTML = '<span class="btn-icon">⏳</span><span>กำลังเข้าสู่ระบบ...</span>';
       alertContainer.innerHTML = '';
 
       try {
@@ -362,14 +397,14 @@
           var msg = (result.message && /[\u0E00-\u0E7F]/.test(result.message)) ? result.message : 'เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจสอบชื่อผู้ใช้และรหัสผ่าน';
           showAlert(msg, 'error');
           loginBtn.disabled = false;
-          loginBtn.textContent = '🔐 เข้าสู่ระบบ';
+          loginBtn.innerHTML = '<span class="btn-icon">➡️</span><span>เข้าสู่ระบบ</span>';
         }
       } catch (error) {
         var msg = error.message || 'ดำเนินการไม่สำเร็จ';
         if (msg === 'AUTHENTICATION_REQUIRED') msg = 'กรุณาล็อกอินใหม่';
         showAlert(msg, 'error');
         loginBtn.disabled = false;
-        loginBtn.textContent = '🔐 เข้าสู่ระบบ';
+        loginBtn.innerHTML = '<span class="btn-icon">➡️</span><span>เข้าสู่ระบบ</span>';
       }
     }
   </script>

@@ -62,8 +62,13 @@
       border-radius: var(--radius-md); padding: 15px; margin-bottom: 20px;
       font-size: 0.9em; color: #856404;
     }
-    .school-logo { width: 80px; height: 80px; margin: 0 auto 20px; background: white; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center; font-size: 2.5em; }
+    .setup-logo {
+      width: 90px; height: 90px; margin: 0 auto 18px;
+      background: rgba(255,255,255,0.18); border-radius: 22px;
+      display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(4px); border: 2px solid rgba(255,255,255,0.25);
+    }
+    .setup-logo svg { width: 52px; height: 52px; fill: white; }
     .setup-footer {
       margin-top: 24px; text-align: center; color: rgba(255,255,255,0.9);
       font-size: 0.9em; max-width: 500px; line-height: 1.5;
@@ -84,7 +89,9 @@
 <body>
   <div class="setup-container">
     <div class="setup-header">
-      <div class="school-logo">&#x1F3EB;</div>
+      <div class="setup-logo">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.85 7h10.29l1.08 3.11H5.77L6.85 7zM19 17H5v-5h14v5z"/><circle cx="7.5" cy="14.5" r="1.5"/><circle cx="16.5" cy="14.5" r="1.5"/></svg>
+      </div>
       <h1>PPK DriveHub</h1>
       <p>ตั้งค่าระบบครั้งแรก — สร้างบัญชีผู้ดูแลระบบ</p>
     </div>
