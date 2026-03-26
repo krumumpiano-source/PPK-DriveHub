@@ -207,6 +207,7 @@ function renderNavigation() {
     // ── ผู้ดูแลระบบ ──
     if (hasPermission(['admin', 'super_admin'])) {
         nav += _sidebarSection('ผู้ดูแลระบบ');
+        nav += _sidebarItem('user-management.html', 'user-management', '👥', 'จัดการผู้ใช้');
         nav += _sidebarItem('admin-settings.html', 'settings', '⚙️', 'ตั้งค่าระบบ');
         nav += _sidebarItem('audit-log.html', 'audit-log', '📜', 'บันทึกกิจกรรม');
         nav += _sidebarItem('backup-recovery.html', 'backup-recovery', '💾', 'สำรอง/กู้คืน');
