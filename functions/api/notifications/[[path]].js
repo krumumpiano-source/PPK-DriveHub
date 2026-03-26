@@ -25,7 +25,7 @@ export async function onRequest(context) {
     const unreadOnly = url.searchParams.get('unread') === 'true';
     const limit = Math.min(100, parseInt(url.searchParams.get('limit') || '50'));
     const where = unreadOnly
-      '(user_id = ? OR user_id IS NULL) AND read = 0'
+      ? '(user_id = ? OR user_id IS NULL) AND read = 0'
       : '(user_id = ? OR user_id IS NULL)';
     const rows = await dbAll(env.DB,
       `SELECT * FROM notifications WHERE ${where}
