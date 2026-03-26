@@ -806,6 +806,70 @@ tr:hover td { background: var(--color-primary-bg); }
 .nav-btn:hover  { background: rgba(99,102,241,0.5); color: white; border-color: #6366f1; text-decoration: none; }
 .nav-btn.active { background: #6366f1; color: white; border-color: #6366f1; }
 
+/* ── FLOATING QR FAB ─────────────────────────────────────── */
+.qr-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+}
+.qr-fab-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #6366f1, #4338CA);
+  color: white;
+  font-size: 1.5em;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(99,102,241,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.qr-fab-btn:hover { transform: scale(1.1); box-shadow: 0 6px 24px rgba(99,102,241,0.55); }
+.qr-fab-btn.open { transform: rotate(45deg); background: #ef4444; }
+.qr-fab-icon { line-height: 1; }
+.qr-fab-menu {
+  position: absolute;
+  bottom: 68px;
+  right: 0;
+  background: #111827;
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  padding: 8px;
+  min-width: 200px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px) scale(0.95);
+  transition: all 0.2s ease;
+}
+.qr-fab-menu.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+.qr-fab-item {
+  display: block;
+  padding: 12px 16px;
+  color: #E0E7FF;
+  text-decoration: none;
+  font-size: 0.92em;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.qr-fab-item:hover { background: rgba(99,102,241,0.25); color: white; text-decoration: none; }
+
+@media (max-width: 600px) {
+  .qr-fab { bottom: 16px; right: 16px; }
+  .qr-fab-btn { width: 50px; height: 50px; font-size: 1.3em; }
+  .qr-fab-menu { min-width: 180px; bottom: 60px; }
+}
+
 /* ── QR PAGES ────────────────────────────────────────────── */
 body.qr-page {
   background: linear-gradient(135deg, #6366f1 0%, #10b981 100%);

@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>จัดการ QR Code - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>
+    window.API_BASE_URL = CONFIG.API_BASE_URL;
+    window.currentPage = 'qr-manage';
+    window.REQUIRE_AUTH = true;
+  </script>
+  <link rel="stylesheet" href="common.css">
+  <script src="js/api.js"></script><script src="common.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <style>
+    .qr-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .qr-controls select,
+    .qr-controls input {
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .qr-controls select {
+      min-width: 180px;
+    }
+
+    .qr-controls input {
+      min-width: 200px;
+      flex: 1;
+    }
+
+    .qr-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .qr-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      transition: box-shadow 0.2s;
+    }
+
+    .qr-card:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    }
+
+    .qr-card-title {
+      font-weight: 700;
+      font-size: 16px;
+      margin-bottom: 4px;
+      color: #1e293b;
+    }
+
+    .qr-card-sub {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 12px;
+    }
+
+    .qr-code-wrapper {
+      display: inline-block;
+      padding: 12px;
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+
+    .qr-code-wrapper canvas,
+    .qr-code-wrapper img {
+      display: block !important;
+    }
+
+    .qr-card-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .qr-card-actions .btn {
+      font-size: 13px;
+      padding: 6px 14px;
+    }
+
+    .qr-url {
+      font-size: 11px;
+      color: #94a3b8;
+      word-break: break-all;
+      margin-top: 8px;
+    }
+
+    /* Print styles */
+    .print-area {
+      display: none;
+    }
+
+    .print-sheet {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      padding: 20px;
+    }
+
+    .print-item {
+      text-align: center;
+      border: 1px dashed #ccc;
+      padding: 16px;
+      page-break-inside: avoid;
+    }
+
+    .print-item-title {
+      font-weight: 700;
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+
+    .print-item-sub {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+
+    .print-item-footer {
+      font-size: 11px;
+      color: #999;
+      margin-top: 8px;
+    }
+
+    @media print {
+      body * {
+        visibility: hidden !important;
+      }
+
+      .print-area,
+      .print-area * {
+        visibility: visible !important;
+      }
+
+      .print-area {
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+      }
+    }
+
+    .stats-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 16px 24px;
+      flex: 1;
+      min-width: 140px;
+      text-align: center;
+    }
+
+    .stat-card .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #4f46e5;
+    }
+
+    .stat-card .stat-label {
+      font-size: 13px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+
+    .no-data {
+      text-align: center;
+      color: #94a3b8;
+      padding: 40px;
+      font-size: 15px;
+    }
+
+    @media (max-width: 600px) {
+      .qr-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .qr-controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div id="navigation"></div>
+    <div class="header">
+      <h1>📱 จัดการ QR Code</h1>
+      <p>สร้างและพิมพ์ QR Code สำหรับติดที่รถแต่ละคัน</p>
+    </div>
+
+    <div class="content">
+      <div id="alertContainer"></div>
+
+      <div class="stats-row" id="statsRow">
+        <div class="stat-card">
+          <div class="stat-value" id="statTotal">-</div>
+          <div class="stat-label">จำนวนรถทั้งหมด</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statActive">-</div>
+          <div class="stat-label">ใช้งานอยู่</div>
+        </div>
+      </div>
+
+      <div class="qr-controls">
+        <select id="qrTypeSelect">
+          <option value="all">QR ทุกฟังก์ชัน (รวม 3 ลิงก์)</option>
+          <option value="usage">บันทึกใช้รถ</option>
+          <option value="fuel">เติมน้ำมัน</option>
+          <option value="check">ตรวจสภาพ/แจ้งซ่อม</option>
+        </select>
+        <input type="text" id="searchInput" placeholder="🔍 ค้นหาทะเบียน, รุ่นรถ...">
+        <button class="btn btn-primary" onclick="printAllQR()">🖨️ พิมพ์ทั้งหมด</button>
+        <button class="btn btn-secondary" onclick="loadVehicles()">🔃 รีเฟรช</button>
+      </div>
+
+      <div id="loading" class="loading">กำลังโหลดข้อมูล...</div>
+      <div id="qrGrid" class="qr-grid"></div>
+      <div id="noData" class="no-data" style="display:none;">ไม่พบข้อมูลรถ</div>
+    </div>
+  </div>
+
+  <div class="print-area" id="printArea"></div>
+
+  <script>
+    var allVehicles = [];
+
+    async function loadVehicles() {
+      try {
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('qrGrid').innerHTML = '';
+        document.getElementById('noData').style.display = 'none';
+
+        var result = await apiCall('getVehicles', {});
+        document.getElementById('loading').style.display = 'none';
+
+        if (!result.success || !result.data) {
+          document.getElementById('noData').style.display = 'block';
+          return;
+        }
+
+        allVehicles = Array.isArray(result.data) ? result.data : (result.data.vehicles || []);
+        var active = allVehicles.filter(function (v) { return v.status === 'active'; });
+
+        document.getElementById('statTotal').textContent = allVehicles.length;
+        document.getElementById('statActive').textContent = active.length;
+
+        renderQRCards(allVehicles);
+      } catch (err) {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('noData').textContent = handleError(err, 'loadVehicles');
+        document.getElementById('noData').style.display = 'block';
+      }
+    }
+
+    function getBaseURL() {
+      return window.location.origin + window.location.pathname.replace(/[^/]*$/, '');
+    }
+
+    function buildQRUrl(vehicleId, type) {
+      var base = getBaseURL();
+      var pages = {
+        usage: 'qr-usage-record.html',
+        fuel: 'qr-fuel-record.html',
+        check: 'qr-daily-check.html'
+      };
+      return base + pages[type] + '?car=' + encodeURIComponent(vehicleId);
+    }
+
+    function renderQRCards(vehicles) {
+      var grid = document.getElementById('qrGrid');
+      var noData = document.getElementById('noData');
+      var qrType = document.getElementById('qrTypeSelect').value;
+      var search = (document.getElementById('searchInput').value || '').toLowerCase();
+
+      var filtered = vehicles.filter(function (v) {
+        if (!search) return true;
+        var text = ((v.license_plate || '') + ' ' + (v.brand || '') + ' ' + (v.model || '') + ' ' + (v.type || '')).toLowerCase();
+        return text.indexOf(search) !== -1;
+      });
+
+      grid.innerHTML = '';
+      if (filtered.length === 0) {
+        noData.style.display = 'block';
+        noData.textContent = search ? 'ไม่พบรถที่ตรงกับคำค้น' : 'ไม่พบข้อมูลรถ';
+        return;
+      }
+      noData.style.display = 'none';
+
+      filtered.forEach(function (v) {
+        var card = document.createElement('div');
+        card.className = 'qr-card';
+
+        var statusBadge = v.status === 'active'
+          ? '<span style="color:#16a34a;font-size:12px;">● ใช้งานอยู่</span>'
+          : '<span style="color:#dc2626;font-size:12px;">● ไม่ได้ใช้งาน</span>';
+
+        var title = v.license_plate || 'ไม่ระบุทะเบียน';
+        var sub = [v.brand, v.model, v.type].filter(Boolean).join(' ') || 'ไม่ระบุรุ่น';
+
+        card.innerHTML =
+          '<div class="qr-card-title">' + title + '</div>' +
+          '<div class="qr-card-sub">' + sub + ' ' + statusBadge + '</div>' +
+          '<div class="qr-code-wrapper" id="qr-' + v.id + '"></div>' +
+          '<div class="qr-card-actions">' +
+          '<button class="btn btn-sm btn-secondary" onclick="downloadQR(' + v.id + ',\'' + encodeURIComponent(title) + '\')">💾 ดาวน์โหลด</button>' +
+          '<button class="btn btn-sm btn-primary" onclick="printSingleQR(' + v.id + ')">🖨️ พิมพ์</button>' +
+          '</div>';
+
+        grid.appendChild(card);
+
+        // Generate QR code content
+        var qrContent = '';
+        if (qrType === 'all') {
+          // Multi-link: encode a URL that shows all 3 options
+          // Use usage as primary, since scanning QR on vehicle is most common use case
+          qrContent = buildQRUrl(v.id, 'usage');
+        } else {
+          qrContent = buildQRUrl(v.id, qrType);
+        }
+
+        // Generate QR using qrcodejs
+        try {
+          new QRCode(document.getElementById('qr-' + v.id), {
+            text: qrContent,
+            width: 180,
+            height: 180,
+            colorDark: '#1e293b',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.M
+          });
+        } catch (e) {
+          document.getElementById('qr-' + v.id).innerHTML = '<p style="color:#dc2626;font-size:12px;">QR Error</p>';
+        }
+      });
+    }
+
+    function downloadQR(vehicleId, encodedTitle) {
+      var title = decodeURIComponent(encodedTitle);
+      var container = document.getElementById('qr-' + vehicleId);
+      if (!container) return;
+
+      var canvas = container.querySelector('canvas');
+      var img = container.querySelector('img');
+      var dataUrl = '';
+
+      if (canvas) {
+        dataUrl = canvas.toDataURL('image/png');
+      } else if (img) {
+        // Fallback: draw img to canvas
+        var c = document.createElement('canvas');
+        c.width = img.naturalWidth;
+        c.height = img.naturalHeight;
+        c.getContext('2d').drawImage(img, 0, 0);
+        dataUrl = c.toDataURL('image/png');
+      }
+
+      if (!dataUrl) return;
+      var link = document.createElement('a');
+      link.download = 'QR_' + title + '.png';
+      link.href = dataUrl;
+      link.click();
+    }
+
+    function printSingleQR(vehicleId) {
+      var vehicle = allVehicles.find(function (v) { return v.id === vehicleId; });
+      if (!vehicle) return;
+      preparePrintArea([vehicle]);
+      setTimeout(function () { window.print(); }, 300);
+    }
+
+    function printAllQR() {
+      var search = (document.getElementById('searchInput').value || '').toLowerCase();
+      var filtered = allVehicles.filter(function (v) {
+        if (!search) return true;
+        var text = ((v.license_plate || '') + ' ' + (v.brand || '') + ' ' + (v.model || '')).toLowerCase();
+        return text.indexOf(search) !== -1;
+      });
+      if (filtered.length === 0) {
+        alert('ไม่มีรถที่จะพิมพ์'); return;
+      }
+      preparePrintArea(filtered);
+      setTimeout(function () { window.print(); }, 500);
+    }
+
+    function preparePrintArea(vehicles) {
+      var area = document.getElementById('printArea');
+      var qrType = document.getElementById('qrTypeSelect').value;
+      area.innerHTML = '<div class="print-sheet" id="printSheet"></div>';
+      var sheet = document.getElementById('printSheet');
+
+      vehicles.forEach(function (v) {
+        var item = document.createElement('div');
+        item.className = 'print-item';
+        var title = v.license_plate || 'ไม่ระบุ';
+        var sub = [v.brand, v.model].filter(Boolean).join(' ');
+        var qrContent = buildQRUrl(v.id, qrType === 'all' ? 'usage' : qrType);
+
+        item.innerHTML =
+          '<div class="print-item-title">' + title + '</div>' +
+          '<div class="print-item-sub">' + sub + '</div>' +
+          '<div id="print-qr-' + v.id + '" style="display:inline-block;margin:8px 0;"></div>' +
+          '<div class="print-item-footer">PPK DriveHub — สแกนเพื่อบันทึกการใช้รถ</div>';
+
+        sheet.appendChild(item);
+
+        try {
+          new QRCode(document.getElementById('print-qr-' + v.id), {
+            text: qrContent,
+            width: 160,
+            height: 160,
+            colorDark: '#000000',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.M
+          });
+        } catch (e) { }
+      });
+    }
+
+    // Event listeners
+    document.getElementById('qrTypeSelect').addEventListener('change', function () {
+      renderQRCards(allVehicles);
+    });
+
+    document.getElementById('searchInput').addEventListener('input', function () {
+      renderQRCards(allVehicles);
+    });
+
+    // Init
+    loadVehicles();
+  </script>
+</body>
+
+</html>

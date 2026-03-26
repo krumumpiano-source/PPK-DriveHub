@@ -198,6 +198,7 @@ function renderNavigation() {
         nav += _sidebarSection('ผู้ดูแลระบบ');
         nav += _sidebarItem('vehicles.html', 'vehicles', '🚙', 'จัดการข้อมูลรถ');
         nav += _sidebarItem('drivers.html', 'drivers', '👷', 'จัดการพนักงานขับรถ');
+        nav += _sidebarItem('qr-manage.html', 'qr-manage', '📱', 'จัดการ QR Code');
         nav += _sidebarItem('user-management.html', 'user-management', '👥', 'จัดการผู้ใช้');
         nav += _sidebarItem('admin-settings.html', 'settings', '⚙️', 'ตั้งค่าระบบ');
         nav += _sidebarItem('audit-log.html', 'audit-log', '📜', 'บันทึกกิจกรรม');
@@ -230,13 +231,18 @@ function logout() {
 
 function renderNav() {
     if (window.REQUIRE_AUTH === false) {
-        // QR pages: inject simple bar nav into #navigation
-        var navContainer = document.getElementById('navigation');
-        if (navContainer) {
-            navContainer.innerHTML = renderQROnlyNavigation();
-            setActiveMenu();
+        // QR pages: if user is logged in, show full sidebar
+        if (checkAuth()) {
+            // Fall through to full sidebar layout below
+        } else {
+            // Not logged in: show simple QR-only nav bar
+            var navContainer = document.getElementById('navigation');
+            if (navContainer) {
+                navContainer.innerHTML = renderQROnlyNavigation();
+                setActiveMenu();
+            }
+            return;
         }
-        return;
     }
 
     // Redirect to login if not authenticated on auth-required pages
@@ -314,6 +320,38 @@ function renderNav() {
     }
 
     setActiveMenu();
+    renderFloatingQR();
+}
+
+function renderFloatingQR() {
+    // Only show on sidebar pages (authenticated) and not on QR pages themselves
+    if (!checkAuth()) return;
+    var cp = window.currentPage || '';
+    if (cp.indexOf('qr-') === 0) return;
+
+    var fab = document.createElement('div');
+    fab.className = 'qr-fab';
+    fab.innerHTML = '<button class="qr-fab-btn" id="qrFabBtn" title="สแกน QR Code">' +
+        '<span class="qr-fab-icon">📷</span></button>' +
+        '<div class="qr-fab-menu" id="qrFabMenu">' +
+        '<a href="qr-usage-record.html" class="qr-fab-item">📝 บันทึกใช้รถ</a>' +
+        '<a href="qr-fuel-record.html" class="qr-fab-item">⛽ เติมน้ำมัน</a>' +
+        '<a href="qr-daily-check.html" class="qr-fab-item">✅ ตรวจสภาพ/แจ้งซ่อม</a>' +
+        '</div>';
+    document.body.appendChild(fab);
+
+    var btn = document.getElementById('qrFabBtn');
+    var menu = document.getElementById('qrFabMenu');
+    btn.addEventListener('click', function() {
+        menu.classList.toggle('open');
+        btn.classList.toggle('open');
+    });
+    document.addEventListener('click', function(e) {
+        if (!fab.contains(e.target)) {
+            menu.classList.remove('open');
+            btn.classList.remove('open');
+        }
+    });
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderNav);
