@@ -610,6 +610,81 @@
       width: auto;
     }
 
+    .vehicle-filter-toggle {
+      margin-top: 10px;
+    }
+
+    .toggle-option {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid #cfe9f8;
+      background: #f4fbff;
+      color: #1565c0;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .toggle-option:hover {
+      background: #e8f6ff;
+      border-color: #9fd7f5;
+    }
+
+    .toggle-option-input {
+      position: absolute;
+      opacity: 0;
+      width: 1px;
+      height: 1px;
+      pointer-events: none;
+    }
+
+    .toggle-option-control {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      border-radius: 999px;
+      background: #d5e7f3;
+      transition: background 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .toggle-option-control::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: white;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s ease;
+    }
+
+    .toggle-option-input:checked + .toggle-option-control {
+      background: #42a5f5;
+    }
+
+    .toggle-option-input:checked + .toggle-option-control::after {
+      transform: translateX(20px);
+    }
+
+    .toggle-option-text {
+      line-height: 1.2;
+      font-size: 0.95em;
+    }
+
+    .toggle-option-help {
+      margin-top: 6px;
+      margin-left: 4px;
+      color: var(--color-text-muted);
+      font-size: 0.82em;
+    }
+
     .modal-footer {
       display: flex;
       gap: 10px;
@@ -857,10 +932,13 @@
                 onchange="updateCarWarning('create_car_id', 'createCarWarning'); checkCreatePassengerCount();">
                 <option value="">-- เลือกรถ --</option>
               </select>
-              <div class="checkbox-group" style="margin-top:8px;">
-                <input type="checkbox" id="create_show_all_vehicles" onchange="toggleShowAllVehicles()">
-                <label for="create_show_all_vehicles"
-                  style="margin:0;font-weight:500;">รวมรถสนับสนุนและรถยกเลิกใช้</label>
+              <div class="vehicle-filter-toggle">
+                <label class="toggle-option" for="create_show_all_vehicles">
+                  <input class="toggle-option-input" type="checkbox" id="create_show_all_vehicles" onchange="toggleShowAllVehicles()">
+                  <span class="toggle-option-control"></span>
+                  <span class="toggle-option-text">แสดงรถเพิ่มเติม</span>
+                </label>
+                <div class="toggle-option-help">รวมรถสนับสนุนและรถที่ยกเลิกใช้งาน</div>
               </div>
               <div id="createCarWarning"
                 style="display:none; margin-top:8px; padding:8px; background:#fff3cd; color:#856404; border-radius:var(--radius-md); font-size:0.9em; font-weight:600;">
@@ -956,10 +1034,13 @@
                 onchange="updateCarWarning('edit_car_id', 'editCarWarning'); if(typeof checkEditPassengerCount === 'function') checkEditPassengerCount();">
                 <option value="">-- เลือกรถ --</option>
               </select>
-              <div class="checkbox-group" style="margin-top:8px;">
-                <input type="checkbox" id="edit_show_all_vehicles" onchange="toggleShowAllVehicles()">
-                <label for="edit_show_all_vehicles"
-                  style="margin:0;font-weight:500;">รวมรถสนับสนุนและรถยกเลิกใช้</label>
+              <div class="vehicle-filter-toggle">
+                <label class="toggle-option" for="edit_show_all_vehicles">
+                  <input class="toggle-option-input" type="checkbox" id="edit_show_all_vehicles" onchange="toggleShowAllVehicles()">
+                  <span class="toggle-option-control"></span>
+                  <span class="toggle-option-text">แสดงรถเพิ่มเติม</span>
+                </label>
+                <div class="toggle-option-help">รวมรถสนับสนุนและรถที่ยกเลิกใช้งาน</div>
               </div>
               <div id="editCarWarning"
                 style="display:none; margin-top:8px; padding:8px; background:#fff3cd; color:#856404; border-radius:var(--radius-md); font-size:0.9em; font-weight:600;">
