@@ -879,7 +879,7 @@
           <div class="form-section-title">📝 ข้อมูลการใช้งาน</div>
           <div class="form-group">
             <label>ผู้ขอใช้รถ <span class="required">*</span></label>
-            <input type="text" id="create_requested_by" required placeholder="ชื่อผู้ขอใช้รถ">
+            <input type="text" id="create_requested_by" list="requesterSuggestions" required placeholder="ชื่อผู้ขอใช้รถ">
           </div>
           <div class="form-group">
             <label>จำนวนผู้โดยสาร <span class="required">*</span></label>
@@ -978,7 +978,7 @@
           <div class="form-section-title">📝 ข้อมูลการใช้งาน</div>
           <div class="form-group">
             <label>ผู้ขอใช้รถ <span class="required">*</span></label>
-            <input type="text" id="edit_requested_by" required placeholder="ชื่อผู้ขอใช้รถ">
+            <input type="text" id="edit_requested_by" list="requesterSuggestions" required placeholder="ชื่อผู้ขอใช้รถ">
           </div>
           <div class="form-group">
             <label>จำนวนผู้โดยสาร <span class="required">*</span></label>
@@ -1010,6 +1010,8 @@
       </form>
     </div>
   </div>
+
+  <datalist id="requesterSuggestions"></datalist>
 
   <!-- Conflict Confirmation Modal -->
   <div id="conflictModal" class="modal-overlay" onclick="if(event.target === this) closeConflictModal()">
@@ -1056,11 +1058,138 @@
     var selectedWeekdays = [];
     var pendingCreateData = null;
     var pendingCreateDates = null;
+    var requesterSuggestions = [];
+
+    var QUEUE_FORM_MEMORY_KEY = 'ppk_queue_form_memory_v1';
+    var REQUESTER_HISTORY_KEY = 'ppk_queue_requester_history_v1';
 
     // Edit queue variables
     var editingQueueId = null;
     var editingQueueData = null;
     var pendingEditData = null;
+
+    function loadJsonStorage(key, fallback) {
+      try {
+        var text = localStorage.getItem(key);
+        if (!text) return fallback;
+        var value = JSON.parse(text);
+        return value || fallback;
+      } catch (e) {
+        return fallback;
+      }
+    }
+
+    function saveJsonStorage(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch (e) {
+        // Ignore storage quota issues
+      }
+    }
+
+    function getFormMemory() {
+      return loadJsonStorage(QUEUE_FORM_MEMORY_KEY, {});
+    }
+
+    function saveFormMemory(memoryPatch) {
+      var current = getFormMemory();
+      Object.keys(memoryPatch).forEach(function (k) {
+        current[k] = memoryPatch[k];
+      });
+      saveJsonStorage(QUEUE_FORM_MEMORY_KEY, current);
+    }
+
+    function fillInputIfEmpty(id, value) {
+      var el = document.getElementById(id);
+      if (!el || !value) return;
+      if (!el.value || !el.value.trim()) {
+        el.value = value;
+      }
+    }
+
+    function applySavedFormMemory() {
+      var memory = getFormMemory();
+      fillInputIfEmpty('create_requested_by', memory.requested_by || '');
+      fillInputIfEmpty('create_destination', memory.destination || '');
+      fillInputIfEmpty('create_mission', memory.mission || '');
+      fillInputIfEmpty('create_notes', memory.notes || '');
+    }
+
+    function persistCreateDraftFields() {
+      saveFormMemory({
+        requested_by: (document.getElementById('create_requested_by') || {}).value || '',
+        destination: (document.getElementById('create_destination') || {}).value || '',
+        mission: (document.getElementById('create_mission') || {}).value || '',
+        notes: (document.getElementById('create_notes') || {}).value || ''
+      });
+    }
+
+    function bindPersistentInputs() {
+      ['create_requested_by', 'create_destination', 'create_mission', 'create_notes'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('input', persistCreateDraftFields);
+        el.addEventListener('change', persistCreateDraftFields);
+      });
+    }
+
+    function buildUserDisplayName(user) {
+      if (!user) return '';
+      if (user.display_name && user.display_name.trim()) return user.display_name.trim();
+      var first = (user.first_name || '').trim();
+      var last = (user.last_name || '').trim();
+      var title = (user.title || '').trim();
+      var full = [title, first, last].filter(Boolean).join(' ').trim();
+      if (full) return full;
+      if (user.username && user.username.trim()) return user.username.trim();
+      return '';
+    }
+
+    function updateRequesterSuggestions(names) {
+      var merged = requesterSuggestions.concat(names || []);
+      var seen = {};
+      requesterSuggestions = merged.filter(function (name) {
+        var n = (name || '').trim();
+        if (!n) return false;
+        if (seen[n]) return false;
+        seen[n] = true;
+        return true;
+      }).slice(0, 300);
+
+      var datalist = document.getElementById('requesterSuggestions');
+      if (!datalist) return;
+      datalist.innerHTML = '';
+      requesterSuggestions.forEach(function (name) {
+        var opt = document.createElement('option');
+        opt.value = name;
+        datalist.appendChild(opt);
+      });
+    }
+
+    function addRequesterHistory(name) {
+      var n = (name || '').trim();
+      if (!n) return;
+      var history = loadJsonStorage(REQUESTER_HISTORY_KEY, []);
+      history = [n].concat(history.filter(function (item) { return item !== n; })).slice(0, 100);
+      saveJsonStorage(REQUESTER_HISTORY_KEY, history);
+      updateRequesterSuggestions(history);
+    }
+
+    async function loadRequesterSuggestions() {
+      var history = loadJsonStorage(REQUESTER_HISTORY_KEY, []);
+      updateRequesterSuggestions(history);
+
+      try {
+        var result = await apiCall('getUsers', {});
+        var users = (result && result.success && result.data)
+          ? (result.data.users || (Array.isArray(result.data) ? result.data : []))
+          : [];
+        var names = users.map(buildUserDisplayName).filter(Boolean);
+        updateRequesterSuggestions(names);
+      } catch (e) {
+        // Non-admin users may not have access to /api/admin/users
+      }
+    }
 
     var thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
       'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
@@ -1157,6 +1286,10 @@
         console.warn('Error setting form defaults:', e);
       }
 
+      bindPersistentInputs();
+      applySavedFormMemory();
+      loadRequesterSuggestions();
+
       loadQueueManagement();
     });
 
@@ -1224,12 +1357,14 @@
     }
 
     function includeVehicleInQueueList(vehicle) {
-      if (vehicle.active === false || vehicle.status === 'maintenance') return false;
+      var category = vehicle.vehicle_category || 'primary';
+      var status = vehicle.status || 'active';
+      if (vehicle.active === false || status === 'maintenance') return false;
       if (showSupportAndUnavailableVehicles) {
-        return vehicle.status === 'inactive' ||
-          (vehicle.status === 'active' && (vehicle.vehicle_category === 'primary' || vehicle.vehicle_category === 'support'));
+        return status === 'inactive' ||
+          (status === 'active' && (category === 'primary' || category === 'support'));
       }
-      return vehicle.vehicle_category === 'primary' && vehicle.status === 'active';
+      return category === 'primary' && status === 'active';
     }
 
     function populateCarSelects() {
@@ -1300,7 +1435,7 @@
       }
       var cat = opt.getAttribute('data-vehicle-category');
       var st = opt.getAttribute('data-status');
-      if (st === 'unavailable') {
+      if (st === 'inactive') {
         div.style.display = 'block';
         div.textContent = '⚠️ คุณกำลังเลือกรถที่ยกเลิกการใช้งาน กรุณาตรวจสอบความจำเป็นก่อนบันทึก';
       } else if (cat === 'support') {
@@ -1315,8 +1450,8 @@
     async function loadVehicles() {
       try {
         var result = await apiCall('getVehicles', {});
-        if (result.success && result.data && result.data.vehicles) {
-          vehicles = result.data.vehicles || [];
+        if (result && result.success && result.data) {
+          vehicles = result.data.vehicles || (Array.isArray(result.data) ? result.data : []);
           vehiclesMap = {};
           vehicles.forEach(function (v) {
             vehiclesMap[v.id] = v;
@@ -1336,8 +1471,9 @@
     async function loadDrivers() {
       try {
         var result = await apiCall('getDrivers', { status: 'active' });
-        if (result.success && result.data && result.data.drivers) {
-          drivers = result.data.drivers || [];
+        if (result && result.success && result.data) {
+          drivers = result.data.drivers || (Array.isArray(result.data) ? result.data : []);
+          driversMap = {};
           drivers.forEach(function (d) {
             driversMap[d.id] = d;
           });
@@ -1345,6 +1481,7 @@
           // Populate create select
           var createSelect = document.getElementById('create_driver_id');
           if (!createSelect) return;
+          createSelect.innerHTML = '<option value="">-- เลือกคนขับ --</option>';
           drivers.forEach(function (driver) {
             var option = document.createElement('option');
             option.value = driver.id;
@@ -1354,6 +1491,8 @@
 
           // Populate edit select
           var editSelect = document.getElementById('edit_driver_id');
+          if (!editSelect) return;
+          editSelect.innerHTML = '<option value="">-- เลือกคนขับ --</option>';
           drivers.forEach(function (driver) {
             var option = document.createElement('option');
             option.value = driver.id;
@@ -1616,6 +1755,7 @@
       document.getElementById('create_time_start').value = timeStr;
       document.getElementById('createProgressContainer').style.display = 'none';
       document.getElementById('createPassengerWarning').style.display = 'none';
+      applySavedFormMemory();
     }
 
     function setDateType(type) {
@@ -1793,6 +1933,14 @@
         allow_flexible: false,
         emergency_override: false
       };
+
+      saveFormMemory({
+        requested_by: requested_by,
+        destination: destination,
+        mission: mission,
+        notes: formData.notes
+      });
+      addRequesterHistory(requested_by);
 
       var allConflicts = [];
       var allPassengerWarnings = [];
@@ -2076,7 +2224,7 @@
           document.getElementById('edit_mission').value = editingQueueData.mission || '';
           document.getElementById('edit_destination').value = editingQueueData.destination || '';
           document.getElementById('edit_requested_by').value = editingQueueData.requested_by || '';
-          document.getElementById('edit_passenger_count').value = editingQueueData.passenger_count || '';
+          document.getElementById('edit_passenger_count').value = editingQueueData.passengers || editingQueueData.passenger_count || '';
           document.getElementById('edit_notes').value = editingQueueData.notes || '';
 
           setTimeout(function () {
@@ -2161,6 +2309,14 @@
         passengers: parseInt(passenger_count) || 0,
         notes: document.getElementById('edit_notes').value.trim() || ''
       };
+
+      saveFormMemory({
+        requested_by: requested_by,
+        destination: destination,
+        mission: mission,
+        notes: formData.notes
+      });
+      addRequesterHistory(requested_by);
 
       var conflictCheck = await checkQueueConflicts(formData);
 
