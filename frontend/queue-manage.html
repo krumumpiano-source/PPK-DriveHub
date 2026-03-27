@@ -614,42 +614,82 @@
       margin-top: 10px;
     }
 
-    .toggle-chip {
+    .toggle-option {
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      padding: 10px 14px;
+      padding: 8px 12px;
+      min-height: 44px;
       border-radius: 999px;
-      border: 1px solid #9dd9f8;
-      background: #eef9ff;
-      color: #0b63b3;
+      border: 1px solid #cfe9f8;
+      background: #f4fbff;
+      color: #1565c0;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s ease;
       user-select: none;
-      line-height: 1.1;
     }
 
-    .toggle-chip:hover {
-      background: #e3f4ff;
-      border-color: #73c7f3;
+    .toggle-option:hover {
+      background: #e8f6ff;
+      border-color: #9fd7f5;
     }
 
-    .toggle-chip-input {
-      width: 18px !important;
-      height: 18px !important;
-      margin: 0;
-      accent-color: #1e88e5;
+    .toggle-option-input {
+      display: none !important;
+    }
+
+    .form-group .toggle-option-input {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      border: 0 !important;
+      box-shadow: none !important;
+      appearance: none !important;
+      -webkit-appearance: none !important;
+      -moz-appearance: none !important;
+    }
+
+    .toggle-option-control {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      border-radius: 999px;
+      background: #d5e7f3;
+      transition: background 0.2s ease;
       flex-shrink: 0;
-      cursor: pointer;
     }
 
-    .toggle-chip-label {
+    .toggle-option-control::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: white;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s ease;
+    }
+
+    .toggle-option-input:checked + .toggle-option-control {
+      background: #42a5f5;
+    }
+
+    .toggle-option-input:checked + .toggle-option-control::after {
+      transform: translateX(20px);
+    }
+
+    .toggle-option-text {
+      line-height: 1.2;
       font-size: 0.95em;
       white-space: nowrap;
     }
 
-    .toggle-chip-help {
+    .toggle-option-help {
       margin-top: 6px;
       margin-left: 4px;
       color: var(--color-text-muted);
@@ -904,11 +944,12 @@
                 <option value="">-- เลือกรถ --</option>
               </select>
               <div class="vehicle-filter-toggle">
-                <label class="toggle-chip" for="create_show_all_vehicles">
-                  <input class="toggle-chip-input" type="checkbox" id="create_show_all_vehicles" onchange="toggleShowAllVehicles()">
-                  <span class="toggle-chip-label">แสดงรถเพิ่มเติม</span>
+                <label class="toggle-option" for="create_show_all_vehicles">
+                  <input class="toggle-option-input" type="checkbox" id="create_show_all_vehicles" onchange="toggleShowAllVehicles()">
+                  <span class="toggle-option-control"></span>
+                  <span class="toggle-option-text">แสดงรถเพิ่มเติม</span>
                 </label>
-                <div class="toggle-chip-help">รวมรถสนับสนุนและรถที่ยกเลิกใช้งาน</div>
+                <div class="toggle-option-help">รวมรถสนับสนุนและรถที่ยกเลิกใช้งาน</div>
               </div>
               <div id="createCarWarning"
                 style="display:none; margin-top:8px; padding:8px; background:#fff3cd; color:#856404; border-radius:var(--radius-md); font-size:0.9em; font-weight:600;">
@@ -1005,11 +1046,12 @@
                 <option value="">-- เลือกรถ --</option>
               </select>
               <div class="vehicle-filter-toggle">
-                <label class="toggle-chip" for="edit_show_all_vehicles">
-                  <input class="toggle-chip-input" type="checkbox" id="edit_show_all_vehicles" onchange="toggleShowAllVehicles()">
-                  <span class="toggle-chip-label">แสดงรถเพิ่มเติม</span>
+                <label class="toggle-option" for="edit_show_all_vehicles">
+                  <input class="toggle-option-input" type="checkbox" id="edit_show_all_vehicles" onchange="toggleShowAllVehicles()">
+                  <span class="toggle-option-control"></span>
+                  <span class="toggle-option-text">แสดงรถเพิ่มเติม</span>
                 </label>
-                <div class="toggle-chip-help">รวมรถสนับสนุนและรถที่ยกเลิกใช้งาน</div>
+                <div class="toggle-option-help">รวมรถสนับสนุนและรถที่ยกเลิกใช้งาน</div>
               </div>
               <div id="editCarWarning"
                 style="display:none; margin-top:8px; padding:8px; background:#fff3cd; color:#856404; border-radius:var(--radius-md); font-size:0.9em; font-weight:600;">
