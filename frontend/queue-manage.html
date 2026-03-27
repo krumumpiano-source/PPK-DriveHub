@@ -1048,7 +1048,12 @@
     </div>
   </div>
   <script>
+    var queues = [];
+    var vehicles = [];
+    var drivers = [];
+    var vehiclesMap = {};
     var driversMap = {};
+    var currentUser = null;
     var showSupportAndUnavailableVehicles = false;
     var currentDate = new Date();
     var currentYear = currentDate.getFullYear();
