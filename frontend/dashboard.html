@@ -446,8 +446,8 @@
 
             try {
               var vehiclesResult = await apiCall('getVehicles', {});
-              if (vehiclesResult && vehiclesResult.success && Array.isArray(vehiclesResult.data)) {
-                vehicles = vehiclesResult.data;
+              if (vehiclesResult && vehiclesResult.success && vehiclesResult.data) {
+                vehicles = vehiclesResult.data.vehicles || (Array.isArray(vehiclesResult.data) ? vehiclesResult.data : []);
                 vehicles.forEach(function (v) {
                   vehiclesMap[v.id] = v;
                 });
@@ -476,7 +476,7 @@
 
             // Compute availability from loaded data
             var todayQueues = queues.filter(function (q) {
-              return q.departure_date === today && q.status !== 'cancelled';
+              return (q.date || q.departure_date) === today && q.status !== 'cancelled' && q.status !== 'completed';
             });
             var busyCarIds = {};
             var busyDriverIds = {};
@@ -551,21 +551,24 @@
 
           function isQueueCurrent(queue, dateStr) {
             if (dateStr !== todayStr) return false;
-            if (queue.status !== 'active' && queue.status !== 'running') return false;
-            if (!queue.departure_time) return false;
+            if (queue.status === 'cancelled' || queue.status === 'completed') return false;
+            var startTime = queue.time_start || queue.departure_time;
+            var endTime = queue.time_end || queue.return_time;
+            if (!startTime) return false;
 
-            var queueStart = parseTimeToMinutes(queue.departure_time);
-            var queueEnd = queue.return_time ? parseTimeToMinutes(queue.return_time) : (queueStart + 8 * 60);
+            var queueStart = parseTimeToMinutes(startTime);
+            var queueEnd = endTime ? parseTimeToMinutes(endTime) : (queueStart + 8 * 60);
 
             return currentTimeMinutes >= queueStart && currentTimeMinutes <= queueEnd;
           }
 
           function isQueueUpcoming(queue, dateStr) {
             if (dateStr !== todayStr) return false;
-            if (queue.status !== 'pending') return false;
-            if (!queue.departure_time) return false;
+            if (queue.status === 'cancelled' || queue.status === 'completed') return false;
+            var startTime = queue.time_start || queue.departure_time;
+            if (!startTime) return false;
 
-            var queueStart = parseTimeToMinutes(queue.departure_time);
+            var queueStart = parseTimeToMinutes(startTime);
             // Upcoming: starts within next 2 hours
             return queueStart > currentTimeMinutes && queueStart <= currentTimeMinutes + 120;
           }
@@ -575,7 +578,7 @@
             var dateObj = new Date(currentYear, currentMonth, day);
             dateObj.setHours(0, 0, 0, 0);
             var isToday = dateStr === todayStr;
-            var dayQueues = queues.filter(function (q) { return q.departure_date === dateStr; });
+            var dayQueues = queues.filter(function (q) { return (q.date || q.departure_date) === dateStr; });
 
             // Determine status
             var statusClass = '';
@@ -614,7 +617,7 @@
               var vehicle = vehiclesMap[queue.car_id];
               var driver = driversMap[queue.driver_id];
               var plate = vehicle ? vehicle.license_plate : (queue.car_id ? queue.car_id.substring(0, 8) : '-');
-              var driverName = driver ? (driver.full_name || driver.first_name + ' ' + driver.last_name) : (queue.driver_id ? queue.driver_id.substring(0, 8) : '-');
+              var driverName = driver ? (driver.name || driver.full_name || '-') : (queue.driver_name || (queue.driver_id ? queue.driver_id.substring(0, 8) : '-'));
               var destination = queue.destination || queue.mission || '-';
 
               html += '<div class="queue-item">';
@@ -664,7 +667,7 @@
           if (availableDrivers && availableDrivers.length > 0) {
             availableDrivers.forEach(function (driver) {
               driversHtml += '<div class="availability-item">';
-              driversHtml += '<strong>' + (driver.full_name || driver.first_name + ' ' + driver.last_name) + '</strong>';
+              driversHtml += '<strong>' + (driver.name || driver.full_name || '-') + '</strong>';
               if (driver.phone) {
                 driversHtml += '<span>' + driver.phone + '</span>';
               }
