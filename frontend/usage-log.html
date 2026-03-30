@@ -351,13 +351,14 @@
                 <th>วันที่</th>
                 <th>รถ</th>
                 <th>คนขับ</th>
-                <th>เวลาเริ่ม</th>
-                <th>เวลาสิ้นสุด</th>
-                <th>ระยะทาง (กม.)</th>
-                <th>ชั่วโมง</th>
-                <th>ปลายทาง</th>
+                <th>เวลาออก</th>
+                <th>เวลากลับ</th>
+                <th>จุดหมายปลายทาง</th>
                 <th>ผู้ขอใช้รถ</th>
-                <th>คุณภาพข้อมูล</th>
+                <th>ไมล์ก่อนออก</th>
+                <th>ไมล์กลับ</th>
+                <th>ระยะทาง (กม.)</th>
+                <th>สถานะ</th>
               </tr>
             </thead>
             <tbody id="recordsTableBody">
@@ -374,6 +375,7 @@
   </div>
   <script>
     var records = [];
+    var trips = [];
     var vehicles = [];
     var drivers = [];
     var vehiclesMap = {};
@@ -506,6 +508,7 @@
 
         if (result.success && result.data) {
           records = Array.isArray(result.data) ? result.data : (result.data.records || []);
+          trips = pairTrips(records);
           displayStats();
           displayRecords();
         } else {
@@ -520,25 +523,89 @@
       }
     }
 
+    function pairTrips(records) {
+      var usable = records.filter(function(r) {
+        return (r.record_type === 'departure' || r.record_type === 'return') && r.data_quality !== 'gap_record';
+      });
+      var byCar = {};
+      usable.forEach(function(r) {
+        if (!byCar[r.car_id]) byCar[r.car_id] = [];
+        byCar[r.car_id].push(r);
+      });
+      var result = [];
+      Object.keys(byCar).forEach(function(carId) {
+        var carRecs = byCar[carId].sort(function(a, b) { return a.datetime.localeCompare(b.datetime); });
+        var curDep = null;
+        carRecs.forEach(function(rec) {
+          if (rec.record_type === 'departure') {
+            if (curDep) result.push(buildTrip(curDep, null));
+            curDep = rec;
+          } else if (rec.record_type === 'return') {
+            if (curDep) {
+              result.push(buildTrip(curDep, rec));
+              curDep = null;
+            } else {
+              result.push(buildTrip(null, rec));
+            }
+          }
+        });
+        if (curDep) result.push(buildTrip(curDep, null));
+      });
+      result.sort(function(a, b) { return (b.sort_key || '').localeCompare(a.sort_key || ''); });
+      return result;
+    }
+
+    function buildTrip(dep, ret) {
+      var dist = null;
+      if (dep && ret && ret.mileage && dep.mileage) {
+        dist = ret.mileage - dep.mileage;
+        if (dist < 0) dist = null;
+      }
+      var depVehicle = dep ? vehiclesMap[dep.car_id] : null;
+      var retVehicle = ret ? vehiclesMap[ret.car_id] : null;
+      var vehicle = depVehicle || retVehicle;
+      var lp = (dep && dep.license_plate) || (ret && ret.license_plate) || (vehicle ? vehicle.license_plate : '');
+      var br = (dep && dep.brand) || (ret && ret.brand) || (vehicle ? vehicle.brand : '');
+      var status = (dep && ret) ? 'complete' : (dep ? 'no_return' : 'no_departure');
+      return {
+        car_id: dep ? dep.car_id : ret.car_id,
+        driver_id: dep ? dep.driver_id : ret.driver_id,
+        license_plate: lp || '',
+        brand: br || '',
+        driver_name: (dep && dep.driver_name) || (ret && ret.driver_name) || '',
+        date: dep ? dep.datetime.substring(0, 10) : ret.datetime.substring(0, 10),
+        departure_time: dep ? dep.datetime.substring(11, 16) : null,
+        return_time: ret ? ret.datetime.substring(11, 16) : null,
+        destination: (dep && dep.location) || (ret && ret.location) || '',
+        requester_name: (dep && dep.requester_name) || (ret && ret.requester_name) || '',
+        mileage_start: dep ? dep.mileage : null,
+        mileage_end: ret ? ret.mileage : null,
+        distance: dist,
+        data_quality: dep ? dep.data_quality : ret.data_quality,
+        sort_key: dep ? dep.datetime : ret.datetime,
+        status: status
+      };
+    }
+
     function displayStats() {
-      var totalRecords = records.length;
+      var totalTrips = trips.length;
       var totalDistance = 0;
-      var totalHours = 0;
       var totalCars = new Set();
       var totalDrivers = new Set();
+      var completeTrips = 0;
 
-      records.forEach(function (record) {
-        if (record.distance) totalDistance += parseFloat(record.distance) || 0;
-        if (record.hours) totalHours += parseFloat(record.hours) || 0;
-        if (record.car_id) totalCars.add(record.car_id);
-        if (record.driver_id) totalDrivers.add(record.driver_id);
+      trips.forEach(function(trip) {
+        if (trip.distance && trip.distance > 0) totalDistance += trip.distance;
+        if (trip.car_id) totalCars.add(trip.car_id);
+        if (trip.driver_id) totalDrivers.add(trip.driver_id);
+        if (trip.status === 'complete') completeTrips++;
       });
 
       var html = '';
       html += '<div class="stat-card">';
-      html += '<h3>📝 จำนวนรายการ</h3>';
-      html += '<div class="value">' + totalRecords + '</div>';
-      html += '<div class="unit">รายการ</div>';
+      html += '<h3>📝 จำนวนเที่ยว</h3>';
+      html += '<div class="value">' + totalTrips + '</div>';
+      html += '<div class="unit">เที่ยว</div>';
       html += '</div>';
 
       html += '<div class="stat-card">';
@@ -548,9 +615,9 @@
       html += '</div>';
 
       html += '<div class="stat-card">';
-      html += '<h3>⏱️ ชั่วโมงรวม</h3>';
-      html += '<div class="value">' + totalHours.toFixed(1) + '</div>';
-      html += '<div class="unit">ชั่วโมง</div>';
+      html += '<h3>✅ เที่ยวสมบูรณ์</h3>';
+      html += '<div class="value">' + completeTrips + '</div>';
+      html += '<div class="unit">จาก ' + totalTrips + ' เที่ยว</div>';
       html += '</div>';
 
       html += '<div class="stat-card">';
@@ -572,91 +639,49 @@
     function displayRecords() {
       var html = '';
 
-      if (records.length === 0) {
+      if (trips.length === 0) {
         html = '<tr><td colspan="11" class="empty-state"><div class="empty-state-icon">📝</div><p>ไม่พบข้อมูล</p></td></tr>';
       } else {
         var viewType = document.getElementById('viewType').value;
-        var sortedRecords = records.slice();
+        var sorted = trips.slice();
 
-        // Sort based on view type
         if (viewType === 'by_car') {
-          sortedRecords.sort(function (a, b) {
-            var carA = vehiclesMap[a.car_id] ? vehiclesMap[a.car_id].license_plate : '';
-            var carB = vehiclesMap[b.car_id] ? vehiclesMap[b.car_id].license_plate : '';
-            if (carA !== carB) return carA.localeCompare(carB);
-            return (b.date || '').localeCompare(a.date || '');
+          sorted.sort(function(a, b) {
+            if (a.license_plate !== b.license_plate) return a.license_plate.localeCompare(b.license_plate);
+            return (b.sort_key || '').localeCompare(a.sort_key || '');
           });
         } else if (viewType === 'by_driver') {
-          sortedRecords.sort(function (a, b) {
-            var driverA = driversMap[a.driver_id] ? (driversMap[a.driver_id].full_name || driversMap[a.driver_id].first_name + ' ' + driversMap[a.driver_id].last_name) : '';
-            var driverB = driversMap[b.driver_id] ? (driversMap[b.driver_id].full_name || driversMap[b.driver_id].first_name + ' ' + driversMap[b.driver_id].last_name) : '';
-            if (driverA !== driverB) return driverA.localeCompare(driverB);
-            return (b.date || '').localeCompare(a.date || '');
+          sorted.sort(function(a, b) {
+            if ((a.driver_name || '') !== (b.driver_name || '')) return (a.driver_name || '').localeCompare(b.driver_name || '');
+            return (b.sort_key || '').localeCompare(a.sort_key || '');
           });
         } else if (viewType === 'by_date') {
-          sortedRecords.sort(function (a, b) {
-            return (b.date || '').localeCompare(a.date || '');
-          });
-        } else {
-          // Default: sort by datetime descending
-          sortedRecords.sort(function (a, b) {
-            // Use datetime field if available, otherwise combine date + time_start
-            var datetimeA = a.datetime || ((a.date || '') + ' ' + (a.time_start || ''));
-            var datetimeB = b.datetime || ((b.date || '') + ' ' + (b.time_start || ''));
-            return datetimeB.localeCompare(datetimeA);
-          });
+          sorted.sort(function(a, b) { return (b.date || '').localeCompare(a.date || ''); });
         }
+        // else already sorted by sort_key desc from pairTrips
 
-        sortedRecords.forEach(function (record) {
-          var vehicle = vehiclesMap[record.car_id];
-          var vehicleName = record.license_plate
-            ? (record.license_plate + ' ' + (record.brand || ''))
-            : (vehicle ? (vehicle.license_plate + ' ' + (vehicle.brand || '') + ' ' + (vehicle.model || '')) : record.car_id);
-
-          var driver = driversMap[record.driver_id];
-          var driverName = record.driver_name
-            || (driver ? (driver.name || driver.full_name || (driver.first_name + ' ' + driver.last_name)) : record.driver_id);
-
-          var recordDate = record.date;
-          if (!recordDate && record.datetime) {
-            recordDate = record.datetime.split(' ')[0];
-          }
-
-          var qualityBadge = '';
-          var q = record.data_quality || 'normal';
-          var qMap = {
-            'normal': ['badge-normal', '✅ ปกติ'],
-            'auto_departure': ['badge-auto', '🤖 สร้างอัตโนมัติ (ออก)'],
-            'auto_return': ['badge-auto', '🤖 สร้างอัตโนมัติ (กลับ)'],
-            'auto_unresolved': ['badge-error', '🔴 แก้ไขไม่ได้'],
-            'gap_record': ['badge-warning', '⚫ ช่องว่างข้อมูล'],
-            'late_return': ['badge-warning', '⚠️ กลับล่าช้า'],
-            'departure_only': ['badge-warning', '🟡 ออกอย่างเดียว']
-          };
-          var qInfo = qMap[q] || ['badge-normal', q];
-          qualityBadge = '<span class="badge ' + qInfo[0] + '" title="' + (record.auto_notes || '') + '">' + qInfo[1] + '</span>';
-
-          // Extract time from datetime field
-          var timeStart = record.time_start || '';
-          var timeEnd = record.time_end || '';
-          if (!timeStart && record.record_type === 'departure' && record.datetime) {
-            timeStart = record.datetime.substring(11, 16) || '-';
-          }
-          if (!timeEnd && record.record_type === 'return' && record.datetime) {
-            timeEnd = record.datetime.substring(11, 16) || '-';
+        sorted.forEach(function(trip) {
+          var statusBadge = '';
+          if (trip.status === 'complete') {
+            statusBadge = '<span class="badge badge-success">✅ สมบูรณ์</span>';
+          } else if (trip.status === 'no_return') {
+            statusBadge = '<span class="badge badge-warning">🟡 ยังไม่กลับ</span>';
+          } else if (trip.status === 'no_departure') {
+            statusBadge = '<span class="badge badge-info">🔵 ไม่มีบันทึกออก</span>';
           }
 
           html += '<tr>';
-          html += '<td>' + formatDateThai(recordDate) + '</td>';
-          html += '<td>' + vehicleName + '</td>';
-          html += '<td>' + driverName + '</td>';
-          html += '<td>' + (timeStart || '-') + '</td>';
-          html += '<td>' + (timeEnd || '-') + '</td>';
-          html += '<td>' + (record.distance ? parseFloat(record.distance).toLocaleString() : (record.mileage ? parseFloat(record.mileage).toLocaleString() : '-')) + '</td>';
-          html += '<td>' + (record.hours ? parseFloat(record.hours).toFixed(1) : '-') + '</td>';
-          html += '<td>' + (record.destination || record.location || '-') + '</td>';
-          html += '<td>' + (record.requester || record.requester_name || '-') + '</td>';
-          html += '<td>' + qualityBadge + '</td>';
+          html += '<td>' + formatDateThai(trip.date) + '</td>';
+          html += '<td>' + (trip.license_plate + ' ' + (trip.brand || '')).trim() + '</td>';
+          html += '<td>' + (trip.driver_name || '-') + '</td>';
+          html += '<td>' + (trip.departure_time || '-') + '</td>';
+          html += '<td>' + (trip.return_time || '-') + '</td>';
+          html += '<td>' + (trip.destination || '-') + '</td>';
+          html += '<td>' + (trip.requester_name || '-') + '</td>';
+          html += '<td style="text-align:right">' + (trip.mileage_start != null ? Number(trip.mileage_start).toLocaleString() : '-') + '</td>';
+          html += '<td style="text-align:right">' + (trip.mileage_end != null ? Number(trip.mileage_end).toLocaleString() : '-') + '</td>';
+          html += '<td style="text-align:right">' + (trip.distance != null && trip.distance >= 0 ? Number(trip.distance).toLocaleString() : '-') + '</td>';
+          html += '<td>' + statusBadge + '</td>';
           html += '</tr>';
         });
       }
