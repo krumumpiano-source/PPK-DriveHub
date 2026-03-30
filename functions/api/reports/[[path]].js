@@ -233,6 +233,189 @@ export async function onRequest(context) {
     return success({ tax_expiring: tax, insurance_expiring: insurance });
   }
 
+  // ========== Driver Achievement Scores ==========
+  // Formula: score = Σ(completed) / Σ(expected) × 100 — per month, weighted by workload
+  if (path === '/api/reports/driver-scores' && method === 'GET') {
+    try { requirePermission(user, 'reports', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+
+    const month = url.searchParams.get('month') || new Date().toISOString().substr(0, 7);
+    const monthStart = month + '-01';
+    const monthEnd = month + '-31 23:59:59';
+
+    const drivers = await dbAll(env.DB,
+      "SELECT id, name, status FROM drivers ORDER BY name", []);
+
+    const scores = [];
+    for (const driver of drivers) {
+      // Dimension 1: Usage records (departure + return)
+      const usageTotal = await dbFirst(env.DB,
+        `SELECT COUNT(*) AS cnt FROM usage_records
+         WHERE driver_id = ? AND record_type IN ('departure','return')
+         AND datetime >= ? AND datetime <= ?`,
+        [driver.id, monthStart, monthEnd]);
+      const usageGood = await dbFirst(env.DB,
+        `SELECT COUNT(*) AS cnt FROM usage_records
+         WHERE driver_id = ? AND record_type IN ('departure','return')
+         AND datetime >= ? AND datetime <= ?
+         AND data_quality = 'normal'`,
+        [driver.id, monthStart, monthEnd]);
+
+      // Dimension 2: Daily checks (expected = distinct driving days)
+      const drivingDays = await dbFirst(env.DB,
+        `SELECT COUNT(DISTINCT DATE(datetime)) AS cnt FROM usage_records
+         WHERE driver_id = ? AND record_type = 'departure'
+         AND datetime >= ? AND datetime <= ? AND data_quality = 'normal'`,
+        [driver.id, monthStart, monthEnd]);
+      const checksCompleted = await dbFirst(env.DB,
+        `SELECT COUNT(*) AS cnt FROM check_log
+         WHERE inspector LIKE ? AND created_at >= ? AND created_at <= ?`,
+        ['%' + driver.name.split(' ')[0] + '%', monthStart, monthEnd]);
+
+      // Dimension 3: Fuel records completeness
+      const fuelTotal = await dbFirst(env.DB,
+        `SELECT COUNT(*) AS cnt FROM fuel_log
+         WHERE driver_id = ? AND date >= ? AND date <= ?`,
+        [driver.id, monthStart, month + '-31']);
+      const fuelGood = await dbFirst(env.DB,
+        `SELECT COUNT(*) AS cnt FROM fuel_log
+         WHERE driver_id = ? AND date >= ? AND date <= ?
+         AND mileage_before IS NOT NULL`,
+        [driver.id, monthStart, month + '-31']);
+
+      // Dimension 4: Repair reports (expected = checks with issues)
+      const issueChecks = await dbFirst(env.DB,
+        `SELECT COUNT(*) AS cnt FROM check_log
+         WHERE inspector LIKE ? AND created_at >= ? AND created_at <= ?
+         AND overall_status IN ('warning','critical')`,
+        ['%' + driver.name.split(' ')[0] + '%', monthStart, monthEnd]);
+      const repairsFiled = await dbFirst(env.DB,
+        `SELECT COUNT(*) AS cnt FROM repair_log
+         WHERE reporter_name LIKE ? AND date_reported >= ? AND date_reported <= ?`,
+        ['%' + driver.name.split(' ')[0] + '%', monthStart, month + '-31']);
+
+      // Calculate score
+      let totalExpected = 0;
+      let totalCompleted = 0;
+      const dimensions = [];
+
+      if ((usageTotal?.cnt || 0) > 0) {
+        totalExpected += usageTotal.cnt;
+        totalCompleted += usageGood?.cnt || 0;
+        dimensions.push({ name: 'usage', expected: usageTotal.cnt, completed: usageGood?.cnt || 0 });
+      }
+      if ((drivingDays?.cnt || 0) > 0) {
+        totalExpected += drivingDays.cnt;
+        totalCompleted += Math.min(checksCompleted?.cnt || 0, drivingDays.cnt);
+        dimensions.push({ name: 'daily_check', expected: drivingDays.cnt, completed: Math.min(checksCompleted?.cnt || 0, drivingDays.cnt) });
+      }
+      if ((fuelTotal?.cnt || 0) > 0) {
+        totalExpected += fuelTotal.cnt;
+        totalCompleted += fuelGood?.cnt || 0;
+        dimensions.push({ name: 'fuel', expected: fuelTotal.cnt, completed: fuelGood?.cnt || 0 });
+      }
+      if ((issueChecks?.cnt || 0) > 0) {
+        totalExpected += issueChecks.cnt;
+        totalCompleted += Math.min(repairsFiled?.cnt || 0, issueChecks.cnt);
+        dimensions.push({ name: 'repair', expected: issueChecks.cnt, completed: Math.min(repairsFiled?.cnt || 0, issueChecks.cnt) });
+      }
+
+      const score = totalExpected > 0 ? Math.round((totalCompleted / totalExpected) * 100) : 100;
+
+      scores.push({
+        driver_id: driver.id,
+        driver_name: driver.name,
+        driver_status: driver.status,
+        score,
+        total_expected: totalExpected,
+        total_completed: totalCompleted,
+        dimensions,
+        month
+      });
+    }
+
+    return success(scores);
+  }
+
+  // ========== Data Quality Report ==========
+  if (path === '/api/reports/data-quality' && method === 'GET') {
+    try { requirePermission(user, 'reports', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+
+    const dateFrom = url.searchParams.get('date_from');
+    const dateTo = url.searchParams.get('date_to');
+    const where = [];
+    const params = [];
+    if (dateFrom) { where.push('ur.datetime >= ?'); params.push(dateFrom); }
+    if (dateTo) { where.push('ur.datetime <= ?'); params.push(dateTo + ' 23:59:59'); }
+
+    // Overview counts
+    const overview = await dbFirst(env.DB,
+      `SELECT
+       COUNT(*) AS total_records,
+       SUM(CASE WHEN data_quality = 'normal' THEN 1 ELSE 0 END) AS normal,
+       SUM(CASE WHEN data_quality = 'auto_departure' THEN 1 ELSE 0 END) AS auto_departure,
+       SUM(CASE WHEN data_quality = 'auto_return' THEN 1 ELSE 0 END) AS auto_return,
+       SUM(CASE WHEN data_quality = 'auto_unresolved' THEN 1 ELSE 0 END) AS auto_unresolved,
+       SUM(CASE WHEN data_quality = 'gap_record' THEN 1 ELSE 0 END) AS gap_record,
+       SUM(CASE WHEN data_quality = 'late_return' THEN 1 ELSE 0 END) AS late_return,
+       SUM(CASE WHEN data_quality = 'departure_only' THEN 1 ELSE 0 END) AS departure_only,
+       SUM(CASE WHEN is_historical = 1 THEN 1 ELSE 0 END) AS historical
+       FROM usage_records ur
+       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}`,
+      params
+    );
+
+    // Per-vehicle gap analysis
+    const vehicleGaps = await dbAll(env.DB,
+      `SELECT c.license_plate, c.brand,
+       COUNT(*) AS gap_count,
+       GROUP_CONCAT(ur.auto_notes, ' | ') AS gap_details
+       FROM usage_records ur
+       LEFT JOIN cars c ON ur.car_id = c.id
+       WHERE ur.data_quality = 'gap_record'
+       ${where.length ? 'AND ' + where.join(' AND ') : ''}
+       GROUP BY ur.car_id
+       ORDER BY gap_count DESC`,
+      params
+    );
+
+    // Per-driver missing record stats
+    const driverStats = await dbAll(env.DB,
+      `SELECT d.name AS driver_name,
+       SUM(CASE WHEN ur.data_quality = 'auto_departure' THEN 1 ELSE 0 END) AS missed_departures,
+       SUM(CASE WHEN ur.data_quality = 'auto_return' THEN 1 ELSE 0 END) AS missed_returns,
+       SUM(CASE WHEN ur.data_quality = 'late_return' THEN 1 ELSE 0 END) AS late_returns,
+       SUM(CASE WHEN ur.data_quality = 'gap_record' THEN 1 ELSE 0 END) AS gaps,
+       COUNT(*) AS total_issues
+       FROM usage_records ur
+       LEFT JOIN drivers d ON ur.driver_id = d.id
+       WHERE ur.data_quality != 'normal'
+       ${where.length ? 'AND ' + where.join(' AND ') : ''}
+       GROUP BY ur.driver_id
+       ORDER BY total_issues DESC`,
+      params
+    );
+
+    // Gap cost estimation
+    const defaultRate = await dbFirst(env.DB,
+      "SELECT value FROM system_settings WHERE key = 'default_fuel_consumption_rate'", []);
+    const fuelRate = parseFloat(defaultRate?.value || '8'); // km/liter
+
+    // Get average fuel price from fuel_log
+    const avgPrice = await dbFirst(env.DB,
+      `SELECT AVG(price_per_liter) AS avg_price FROM fuel_log
+       WHERE price_per_liter IS NOT NULL AND price_per_liter > 0`, []);
+
+    return success({
+      overview,
+      vehicle_gaps: vehicleGaps,
+      driver_stats: driverStats,
+      estimation: {
+        fuel_consumption_rate: fuelRate,
+        avg_fuel_price: Math.round((avgPrice?.avg_price || 0) * 100) / 100
+      }
+    });
+  }
+
   return error('Not Found', 404);
   } catch (e) {
     console.error('API Error:', e);

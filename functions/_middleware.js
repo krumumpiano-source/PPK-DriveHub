@@ -1,4 +1,4 @@
-import { error, dbFirst } from './_helpers.js';
+﻿import { error, dbFirst, dbRun, dbAll } from './_helpers.js';
 
 const PUBLIC_PATHS = [
   '/api/auth/login',
@@ -11,6 +11,13 @@ const PUBLIC_PATHS = [
   '/api/fuel/record',           // QR เติมน้ำมัน
   '/api/vehicles/qr-info',      // QR โหลดข้อมูลรถ (ไม่ต้อง login)
 ];
+
+// Rate-limited paths: max attempts per window
+const RATE_LIMITS = {
+  '/api/auth/login': { max: 5, windowMs: 15 * 60 * 1000 },           // 5 per 15 min
+  '/api/auth/forgot-password': { max: 3, windowMs: 15 * 60 * 1000 }, // 3 per 15 min
+  '/api/auth/register': { max: 5, windowMs: 60 * 60 * 1000 },        // 5 per hour
+};
 
 const ALLOWED_ORIGINS = [
   'https://ppk-drivehub.pages.dev',
@@ -44,12 +51,24 @@ export async function onRequest(context) {
     return new Response(null, { status: 204, headers: corsHeaders(request) });
   }
 
-  // Static files — pass through with CSP
+  // Static files — pass through with security headers
   if (!url.pathname.startsWith('/api/')) {
     const response = await next();
     const headers = new Headers(response.headers);
     headers.set('Content-Security-Policy', CSP);
+    addSecurityHeaders(headers);
     return new Response(response.body, { status: response.status, headers });
+  }
+
+  // Rate limiting for sensitive endpoints
+  if (request.method === 'POST' && RATE_LIMITS[url.pathname]) {
+    const rl = RATE_LIMITS[url.pathname];
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const key = `rl:${url.pathname}:${ip}`;
+    const blocked = await checkRateLimit(env.DB, key, rl.max, rl.windowMs);
+    if (blocked) {
+      return addCors(error('คำขอมากเกินไป กรุณารอสักครู่แล้วลองใหม่', 429), request);
+    }
   }
 
   // Check if path is public
@@ -129,5 +148,58 @@ function addCors(response, request) {
   for (const [key, value] of Object.entries(cors)) {
     headers.set(key, value);
   }
+  addSecurityHeaders(headers);
   return new Response(response.body, { status: response.status, headers });
+}
+
+function addSecurityHeaders(headers) {
+  headers.set('X-Content-Type-Options', 'nosniff');
+  headers.set('X-Frame-Options', 'DENY');
+  headers.set('X-XSS-Protection', '1; mode=block');
+  headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  headers.set('Permissions-Policy', 'camera=(self), microphone=()');
+}
+
+async function checkRateLimit(db, key, max, windowMs) {
+  try {
+    const row = await dbFirst(db,
+      'SELECT attempts, first_attempt_at, blocked_until FROM rate_limits WHERE key = ?', [key]
+    );
+
+    const nowMs = Date.now();
+
+    if (row?.blocked_until) {
+      const blockedUntil = new Date(row.blocked_until).getTime();
+      if (nowMs < blockedUntil) return true;
+      // Block expired — reset
+      await dbRun(db, 'DELETE FROM rate_limits WHERE key = ?', [key]);
+    }
+
+    if (!row || (nowMs - new Date(row.first_attempt_at).getTime() > windowMs)) {
+      // New window or expired window
+      await dbRun(db,
+        `INSERT OR REPLACE INTO rate_limits (key, attempts, first_attempt_at, blocked_until)
+         VALUES (?, 1, ?, NULL)`,
+        [key, new Date(nowMs).toISOString()]
+      );
+      return false;
+    }
+
+    const newAttempts = row.attempts + 1;
+    if (newAttempts > max) {
+      // Block
+      const blockedUntil = new Date(nowMs + windowMs).toISOString();
+      await dbRun(db,
+        'UPDATE rate_limits SET attempts = ?, blocked_until = ? WHERE key = ?',
+        [newAttempts, blockedUntil, key]
+      );
+      return true;
+    }
+
+    // Increment
+    await dbRun(db, 'UPDATE rate_limits SET attempts = ? WHERE key = ?', [newAttempts, key]);
+    return false;
+  } catch {
+    return false; // Rate limit failure should not block the request
+  }
 }

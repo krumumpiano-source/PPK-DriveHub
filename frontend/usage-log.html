@@ -302,6 +302,19 @@
           </select>
         </div>
         <div class="filter-group">
+          <label>คุณภาพข้อมูล</label>
+          <select id="filterQuality">
+            <option value="">ทั้งหมด</option>
+            <option value="normal">ปกติ</option>
+            <option value="auto_departure">สร้างอัตโนมัติ (ออก)</option>
+            <option value="auto_return">สร้างอัตโนมัติ (กลับ)</option>
+            <option value="gap_record">ช่องว่างข้อมูล</option>
+            <option value="late_return">กลับล่าช้า</option>
+            <option value="departure_only">ออกอย่างเดียว</option>
+            <option value="auto_unresolved">แก้ไขไม่ได้</option>
+          </select>
+        </div>
+        <div class="filter-group">
           <label>ประเภทการแสดงผล</label>
           <select id="viewType">
             <option value="all">ทั้งหมด</option>
@@ -341,7 +354,7 @@
                 <th>ชั่วโมง</th>
                 <th>ปลายทาง</th>
                 <th>ผู้ขอใช้รถ</th>
-                <th>สถานะ</th>
+                <th>คุณภาพข้อมูล</th>
               </tr>
             </thead>
             <tbody id="recordsTableBody">
@@ -475,15 +488,17 @@
         }
         if (filterCar) filters.car_id = filterCar;
         if (filterDriver) filters.driver_id = filterDriver;
+        var filterQuality = document.getElementById('filterQuality').value;
+        if (filterQuality) filters.data_quality = filterQuality;
 
-        var result = await apiCall('getUsageRecords', { filters: filters });
+        var result = await apiCall('getUsageRecords', filters);
 
-        if (result.success && result.data && result.data.records) {
-          records = result.data.records || [];
+        if (result.success && result.data) {
+          records = Array.isArray(result.data) ? result.data : (result.data.records || []);
           displayStats();
           displayRecords();
         } else {
-          document.getElementById('recordsTableBody').innerHTML = '<tr><td colspan="10" class="empty-state"><div class="empty-state-icon">📝</div><p>ไม่พบข้อมูล</p></td></tr>';
+          document.getElementById('recordsTableBody').innerHTML = '<tr><td colspan="11" class="empty-state"><div class="empty-state-icon">📝</div><p>ไม่พบข้อมูล</p></td></tr>';
           document.getElementById('recordsContainer').style.display = 'block';
         }
       } catch (error) {
@@ -547,7 +562,7 @@
       var html = '';
 
       if (records.length === 0) {
-        html = '<tr><td colspan="10" class="empty-state"><div class="empty-state-icon">📝</div><p>ไม่พบข้อมูล</p></td></tr>';
+        html = '<tr><td colspan="11" class="empty-state"><div class="empty-state-icon">📝</div><p>ไม่พบข้อมูล</p></td></tr>';
       } else {
         var viewType = document.getElementById('viewType').value;
         var sortedRecords = records.slice();
@@ -593,24 +608,41 @@
             recordDate = record.datetime.split(' ')[0];
           }
 
-          var statusBadge = '';
-          if (record.is_auto_recovery || record.auto_generated === true || record.auto_generated === 'TRUE') {
-            statusBadge = '<span class="badge badge-auto" title="' + (record.display_auto_tooltip || 'ระบบบันทึกแทนอัตโนมัติ') + '">⚙️ AUTO</span>';
-          } else {
-            statusBadge = '<span class="badge badge-normal">ปกติ</span>';
+          var qualityBadge = '';
+          var q = record.data_quality || 'normal';
+          var qMap = {
+            'normal': ['badge-normal', '✅ ปกติ'],
+            'auto_departure': ['badge-auto', '🤖 สร้างอัตโนมัติ (ออก)'],
+            'auto_return': ['badge-auto', '🤖 สร้างอัตโนมัติ (กลับ)'],
+            'auto_unresolved': ['badge-error', '🔴 แก้ไขไม่ได้'],
+            'gap_record': ['badge-warning', '⚫ ช่องว่างข้อมูล'],
+            'late_return': ['badge-warning', '⚠️ กลับล่าช้า'],
+            'departure_only': ['badge-warning', '🟡 ออกอย่างเดียว']
+          };
+          var qInfo = qMap[q] || ['badge-normal', q];
+          qualityBadge = '<span class="badge ' + qInfo[0] + '" title="' + (record.auto_notes || '') + '">' + qInfo[1] + '</span>';
+
+          // Extract time from datetime field
+          var timeStart = record.time_start || '';
+          var timeEnd = record.time_end || '';
+          if (!timeStart && record.record_type === 'departure' && record.datetime) {
+            timeStart = record.datetime.substring(11, 16) || '-';
+          }
+          if (!timeEnd && record.record_type === 'return' && record.datetime) {
+            timeEnd = record.datetime.substring(11, 16) || '-';
           }
 
           html += '<tr>';
           html += '<td>' + formatDateThai(recordDate) + '</td>';
           html += '<td>' + vehicleName + '</td>';
           html += '<td>' + driverName + '</td>';
-          html += '<td>' + (record.time_start || '-') + '</td>';
-          html += '<td>' + (record.time_end || '-') + '</td>';
-          html += '<td>' + (record.distance ? parseFloat(record.distance).toLocaleString() : '-') + '</td>';
+          html += '<td>' + (timeStart || '-') + '</td>';
+          html += '<td>' + (timeEnd || '-') + '</td>';
+          html += '<td>' + (record.distance ? parseFloat(record.distance).toLocaleString() : (record.mileage ? parseFloat(record.mileage).toLocaleString() : '-')) + '</td>';
           html += '<td>' + (record.hours ? parseFloat(record.hours).toFixed(1) : '-') + '</td>';
-          html += '<td>' + (record.destination || '-') + '</td>';
-          html += '<td>' + (record.requester || '-') + '</td>';
-          html += '<td>' + statusBadge + '</td>';
+          html += '<td>' + (record.destination || record.location || '-') + '</td>';
+          html += '<td>' + (record.requester || record.requester_name || '-') + '</td>';
+          html += '<td>' + qualityBadge + '</td>';
           html += '</tr>';
         });
       }

@@ -150,13 +150,13 @@ export async function uploadToR2(env, base64Data, fileName, folder, mimeType = '
   return `/api/files/${key}`;
 }
 
-export async function writeAuditLog(db, userId, username, action, module, entityId, details) {
+export async function writeAuditLog(db, userId, username, action, module, entityId, details, ipAddress) {
   try {
     await dbRun(db,
-      `INSERT INTO audit_log (id, user_id, username, action, module, entity_id, details, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO audit_log (id, user_id, username, action, module, entity_id, details, ip_address, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [generateUUID(), userId || null, username || null, action, module || null, entityId || null,
-       details ? JSON.stringify(details) : null, now()]
+       details ? JSON.stringify(details) : null, ipAddress || null, now()]
     );
   } catch {
     // Audit log failures should not crash the main request

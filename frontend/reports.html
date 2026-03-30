@@ -208,6 +208,8 @@
         <button class="tab" onclick="switchTab('drivers', this)">👤 คนขับ</button>
         <button class="tab" onclick="switchTab('fuel', this)">⛽ เชื้อเพลิง</button>
         <button class="tab" onclick="switchTab('repairs', this)">🔧 ซ่อมบำรุง</button>
+        <button class="tab" onclick="switchTab('quality', this)">📊 คุณภาพข้อมูล</button>
+        <button class="tab" onclick="switchTab('scores', this)">⭐ คะแนนคนขับ</button>
         <button class="tab" onclick="switchTab('alerts', this)">⚠️ แจ้งเตือน</button>
       </div>
 
@@ -225,6 +227,10 @@
           <select id="filterCar" onchange="loadReport()">
             <option value="">ทั้งหมด</option>
           </select>
+        </div>
+        <div class="filter-group" id="fg-month" style="display:none">
+          <label>เดือน</label>
+          <input type="month" id="filterMonth" onchange="loadReport()">
         </div>
       </div>
 
@@ -254,6 +260,7 @@
       lastMonth.setMonth(lastMonth.getMonth() - 1);
       document.getElementById('dateFrom').value = fmtDate(lastMonth);
       document.getElementById('dateTo').value = fmtDate(today);
+      document.getElementById('filterMonth').value = today.getFullYear() + '-' + pad(today.getMonth() + 1);
 
       updateFilterVisibility();
       loadCarFilter();
@@ -312,11 +319,13 @@
     }
 
     function updateFilterVisibility() {
-      var showDate = ['fuel', 'repairs'].includes(currentTab);
+      var showDate = ['fuel', 'repairs', 'quality'].includes(currentTab);
       var showCar = currentTab === 'fuel';
+      var showMonth = currentTab === 'scores';
       document.getElementById('fg-date-from').style.display = showDate ? '' : 'none';
       document.getElementById('fg-date-to').style.display = showDate ? '' : 'none';
       document.getElementById('fg-car').style.display = showCar ? '' : 'none';
+      document.getElementById('fg-month').style.display = showMonth ? '' : 'none';
     }
 
     function switchTab(tab, el) {
@@ -358,6 +367,8 @@
           case 'drivers':  html = await renderDrivers();  break;
           case 'fuel':     html = await renderFuel(dateFrom, dateTo, carId); break;
           case 'repairs':  html = await renderRepairs(dateFrom, dateTo); break;
+          case 'quality':  html = await renderQuality(dateFrom, dateTo); break;
+          case 'scores':   html = await renderScores(); break;
           case 'alerts':   html = await renderAlerts(); break;
           default:         html = await renderOverview();
         }
@@ -600,6 +611,114 @@
     }
     function exportReport() {
       alert('ฟีเจอร์ส่งออกรายงาน CSV จะเพิ่มในเวอร์ชันถัดไป');
+    }
+
+    async function renderQuality(dateFrom, dateTo) {
+      var params = buildQuery({ date_from: dateFrom || undefined, date_to: dateTo || undefined });
+      var r = await API.get('/api/reports/data-quality' + params);
+      var payload = (r && r.data) ? r.data : (r || {});
+      var ov = payload.overview || {};
+      var vehicleGaps = payload.vehicle_gaps || [];
+      var driverStats = payload.driver_stats || [];
+      var est = payload.estimation || {};
+
+      var html = '<div class="stats-grid">';
+      html += statCard('📝 ทั้งหมด', fmtNum(ov.total_records || 0), 'รายการ', '');
+      html += statCard('✅ ปกติ', fmtNum(ov.normal || 0), 'รายการ', '');
+      html += statCard('🤖 สร้างอัตโนมัติ', fmtNum((ov.auto_departure || 0) + (ov.auto_return || 0)), 'รายการ', 'ออก ' + fmtNum(ov.auto_departure || 0) + ' | กลับ ' + fmtNum(ov.auto_return || 0));
+      html += statCard('⚫ ช่องว่างข้อมูล', fmtNum(ov.gap_record || 0), 'รายการ', '');
+      html += statCard('⚠️ อื่นๆ', fmtNum((ov.late_return || 0) + (ov.departure_only || 0) + (ov.auto_unresolved || 0)), 'รายการ', 'ล่าช้า ' + fmtNum(ov.late_return || 0) + ' | ออกอย่างเดียว ' + fmtNum(ov.departure_only || 0));
+      html += statCard('📚 ย้อนหลัง', fmtNum(ov.historical || 0), 'รายการ', 'นำเข้าจาก Google Forms');
+      html += '</div>';
+
+      // Vehicle gap table
+      if (vehicleGaps.length > 0) {
+        html += '<div class="report-section">';
+        html += '<div class="report-section-title">⚫ ช่องว่างข้อมูลรายคัน</div>';
+        html += '<div style="overflow-x:auto"><table class="report-table">';
+        html += '<thead><tr><th>ทะเบียนรถ</th><th>ยี่ห้อ</th><th>จำนวนช่องว่าง</th><th>รายละเอียด</th></tr></thead><tbody>';
+        vehicleGaps.forEach(function (v) {
+          html += '<tr>';
+          html += '<td><strong>' + htmlEsc(v.license_plate || '-') + '</strong></td>';
+          html += '<td>' + htmlEsc(v.brand || '-') + '</td>';
+          html += '<td>' + fmtNum(v.gap_count || 0) + '</td>';
+          html += '<td style="max-width:400px;word-wrap:break-word;font-size:0.85em">' + htmlEsc(v.gap_details || '-') + '</td>';
+          html += '</tr>';
+        });
+        html += '</tbody></table></div></div>';
+      }
+
+      // Driver issue stats
+      if (driverStats.length > 0) {
+        html += '<div class="report-section">';
+        html += '<div class="report-section-title">👤 สรุปปัญหาคุณภาพรายคนขับ</div>';
+        html += '<div style="overflow-x:auto"><table class="report-table">';
+        html += '<thead><tr><th>คนขับ</th><th>ขาดบันทึกออก</th><th>ขาดบันทึกกลับ</th><th>กลับล่าช้า</th><th>ช่องว่าง</th><th>รวมปัญหา</th></tr></thead><tbody>';
+        driverStats.forEach(function (d) {
+          html += '<tr>';
+          html += '<td><strong>' + htmlEsc(d.driver_name || 'ไม่ระบุ') + '</strong></td>';
+          html += '<td>' + fmtNum(d.missed_departures || 0) + '</td>';
+          html += '<td>' + fmtNum(d.missed_returns || 0) + '</td>';
+          html += '<td>' + fmtNum(d.late_returns || 0) + '</td>';
+          html += '<td>' + fmtNum(d.gaps || 0) + '</td>';
+          html += '<td>' + fmtNum(d.total_issues || 0) + '</td>';
+          html += '</tr>';
+        });
+        html += '</tbody></table></div></div>';
+      }
+
+      if (est.fuel_consumption_rate) {
+        html += '<div class="kpi-note">💡 อัตราสิ้นเปลืองเฉลี่ยตั้งต้น: ' + est.fuel_consumption_rate + ' กม./ลิตร | ราคาน้ำมันเฉลี่ย: ' + fmtMoney(est.avg_fuel_price || 0) + ' บาท/ลิตร</div>';
+      }
+
+      return html;
+    }
+
+    async function renderScores() {
+      var month = document.getElementById('filterMonth').value;
+      if (!month) {
+        var d = new Date();
+        month = d.getFullYear() + '-' + pad(d.getMonth() + 1);
+        document.getElementById('filterMonth').value = month;
+      }
+      var r = await API.get('/api/reports/driver-scores?month=' + encodeURIComponent(month));
+      var scores = (r && r.data) ? r.data : (r || []);
+
+      if (!Array.isArray(scores) || scores.length === 0) {
+        return emptyState('⭐', 'ไม่พบข้อมูลคะแนน');
+      }
+
+      var html = '<div class="report-section">';
+      html += '<div class="report-section-title">⭐ คะแนนความรับผิดชอบคนขับ ประจำเดือน ' + month + '</div>';
+      html += '<div style="overflow-x:auto"><table class="report-table">';
+      html += '<thead><tr><th>ชื่อ</th><th>คะแนน</th><th>บันทึกการใช้งาน</th><th>ตรวจสภาพรถ</th><th>บันทึกน้ำมัน</th><th>แจ้งซ่อม</th><th>สถานะ</th></tr></thead><tbody>';
+      scores.forEach(function (s) {
+        var scoreClass = s.score >= 80 ? 'score-excellent' : s.score >= 60 ? 'score-good' : s.score >= 40 ? 'score-normal' : 'score-poor';
+        var dims = {};
+        (s.dimensions || []).forEach(function (dim) { dims[dim.name] = dim; });
+
+        function dimCell(name) {
+          var d = dims[name];
+          if (!d) return '<td>-</td>';
+          var pct = d.expected > 0 ? Math.round(d.completed / d.expected * 100) : 100;
+          var cls = pct >= 80 ? 'score-excellent' : pct >= 60 ? 'score-good' : pct >= 40 ? 'score-normal' : 'score-poor';
+          return '<td><span class="score-badge ' + cls + '">' + d.completed + '/' + d.expected + ' (' + pct + '%)</span></td>';
+        }
+
+        html += '<tr>';
+        html += '<td><strong>' + htmlEsc(s.driver_name || '-') + '</strong></td>';
+        html += '<td><span class="score-badge ' + scoreClass + '" style="font-size:1.1em;font-weight:700">' + s.score + '</span></td>';
+        html += dimCell('usage');
+        html += dimCell('daily_check');
+        html += dimCell('fuel');
+        html += dimCell('repair');
+        html += '<td>' + statusBadge(s.driver_status) + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table></div>';
+      html += '<div class="kpi-note">⭐ คะแนน = จำนวนที่ทำได้ / จำนวนที่คาดหวัง × 100 | 80+ ดีมาก | 60–79 ดี | 40–59 ปกติ | ต่ำกว่า 40 ควรพัฒนา — ใช้เพื่อการพัฒนา ไม่ใช่การลงโทษ</div>';
+      html += '</div>';
+      return html;
     }
   </script>
 

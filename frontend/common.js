@@ -335,9 +335,26 @@ function renderImpersonationBanner() {
 
     var banner = document.createElement('div');
     banner.className = 'impersonate-banner';
-    banner.innerHTML =
-        '<div class="imp-text">👁️ กำลังดูมุมมองของ <strong>' + name + '</strong> <span class="imp-badge">' + role + '</span></div>' +
-        '<button class="imp-stop-btn" onclick="stopImpersonateMode()">⬅️ กลับเป็นแอดมิน</button>';
+
+    var impText = document.createElement('div');
+    impText.className = 'imp-text';
+    impText.textContent = '👁️ กำลังดูมุมมองของ ';
+    var strong = document.createElement('strong');
+    strong.textContent = name;
+    impText.appendChild(strong);
+    var badge = document.createElement('span');
+    badge.className = 'imp-badge';
+    badge.textContent = role;
+    impText.appendChild(document.createTextNode(' '));
+    impText.appendChild(badge);
+
+    var stopBtn = document.createElement('button');
+    stopBtn.className = 'imp-stop-btn';
+    stopBtn.textContent = '⬅️ กลับเป็นแอดมิน';
+    stopBtn.onclick = stopImpersonateMode;
+
+    banner.appendChild(impText);
+    banner.appendChild(stopBtn);
 
     // Insert banner at top of main-area (after topbar)
     var mainArea = document.querySelector('.main-area');
