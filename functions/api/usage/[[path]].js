@@ -282,6 +282,187 @@ export async function onRequest(context) {
     return success(row);
   }
 
+  // --- POST /api/usage/batch-heal ---
+  // Scans ALL records per car chronologically, creates missing departure/return
+  if (path === '/api/usage/batch-heal' && method === 'POST') {
+    try { requirePermission(user, 'admin', 'manage'); } catch { return error('ต้องเป็นผู้ดูแลระบบ', 403); }
+
+    const gapSetting = await dbFirst(env.DB,
+      "SELECT value FROM system_settings WHERE key = 'gap_minimum_km'", []);
+    const gapMinKm = parseInt(gapSetting?.value || '50');
+    const ts = now();
+
+    // Get all cars
+    const cars = await dbAll(env.DB, 'SELECT id, license_plate FROM cars', []);
+    const summary = { cars_scanned: 0, auto_returns_created: 0, auto_departures_created: 0, gaps_detected: 0, departure_only_resolved: 0, total_healed: 0 };
+    const details = [];
+
+    for (const car of cars) {
+      summary.cars_scanned++;
+
+      // Get all departure/return records for this car, ordered chronologically
+      const records = await dbAll(env.DB,
+        `SELECT id, car_id, driver_id, record_type, datetime, mileage, queue_id, data_quality
+         FROM usage_records
+         WHERE car_id = ? AND record_type IN ('departure','return')
+         ORDER BY datetime ASC, record_type ASC`,
+        [car.id]
+      );
+
+      if (records.length < 2) {
+        // Single record — check if departure_only
+        if (records.length === 1 && records[0].record_type === 'departure' && records[0].data_quality === 'departure_only') {
+          // Create auto_return with same mileage
+          const autoId = generateUUID();
+          await dbRun(env.DB,
+            `INSERT INTO usage_records (id, car_id, driver_id, record_type, datetime, mileage, location, notes, queue_id, data_quality, auto_notes, is_historical, created_at)
+             VALUES (?, ?, ?, 'return', ?, ?, '', '', ?, 'auto_return', ?, 1, ?)`,
+            [autoId, car.id, records[0].driver_id,
+             records[0].datetime.replace(/\d{2}:\d{2}/, '17:00'),
+             records[0].mileage,
+             records[0].queue_id,
+             'Batch heal: สร้างอัตโนมัติ — ออกเดินทางแต่ไม่มีบันทึกกลับ ' + records[0].datetime.substring(0, 10),
+             ts]
+          );
+          await dbRun(env.DB, "UPDATE usage_records SET data_quality = 'normal' WHERE id = ?", [records[0].id]);
+          summary.auto_returns_created++;
+          summary.departure_only_resolved++;
+          summary.total_healed++;
+          details.push({ car: car.license_plate, type: 'auto_return', date: records[0].datetime.substring(0, 10) });
+        }
+        continue;
+      }
+
+      // Walk through records sequentially
+      for (let i = 0; i < records.length - 1; i++) {
+        const curr = records[i];
+        const next = records[i + 1];
+
+        // Case 1: Two consecutive departures → missing return between them
+        if (curr.record_type === 'departure' && next.record_type === 'departure') {
+          // Check if auto_return already exists between them
+          const existing = await dbFirst(env.DB,
+            `SELECT id FROM usage_records
+             WHERE car_id = ? AND record_type = 'return' AND data_quality IN ('auto_return','normal')
+             AND datetime >= ? AND datetime <= ?`,
+            [car.id, curr.datetime, next.datetime]
+          );
+          if (!existing) {
+            const autoId = generateUUID();
+            const autoMileage = next.mileage || curr.mileage || null;
+            await dbRun(env.DB,
+              `INSERT INTO usage_records (id, car_id, driver_id, record_type, datetime, mileage, location, notes, queue_id, data_quality, auto_notes, is_historical, created_at)
+               VALUES (?, ?, ?, 'return', ?, ?, '', '', ?, 'auto_return', ?, 1, ?)`,
+              [autoId, car.id, curr.driver_id,
+               next.datetime,
+               autoMileage,
+               curr.queue_id,
+               'Batch heal: ออก ' + curr.datetime.substring(0, 10) + ' แต่ไม่มีบันทึกกลับ → สร้างอัตโนมัติ',
+               ts]
+            );
+            // If it was marked departure_only, change to normal
+            if (curr.data_quality === 'departure_only') {
+              await dbRun(env.DB, "UPDATE usage_records SET data_quality = 'normal' WHERE id = ?", [curr.id]);
+              summary.departure_only_resolved++;
+            }
+            summary.auto_returns_created++;
+            summary.total_healed++;
+            details.push({ car: car.license_plate, type: 'auto_return', date: curr.datetime.substring(0, 10) });
+
+            // Gap detection
+            if (autoMileage && curr.mileage && (autoMileage - curr.mileage) > gapMinKm) {
+              const gap = autoMileage - curr.mileage;
+              const existingGap = await dbFirst(env.DB,
+                `SELECT id FROM usage_records
+                 WHERE car_id = ? AND data_quality = 'gap_record'
+                 AND datetime >= ? AND datetime <= ?`,
+                [car.id, curr.datetime, next.datetime]
+              );
+              if (!existingGap) {
+                const gapId = generateUUID();
+                await dbRun(env.DB,
+                  `INSERT INTO usage_records (id, car_id, driver_id, record_type, datetime, mileage, location, notes, data_quality, auto_notes, is_historical, created_at)
+                   VALUES (?, ?, ?, 'departure', ?, NULL, '', '', 'gap_record', ?, 1, ?)`,
+                  [gapId, car.id, curr.driver_id, curr.datetime,
+                   'Batch heal: ช่องว่าง ' + gap + ' กม. (' + curr.datetime.substring(0, 10) + ' → ' + next.datetime.substring(0, 10) + ')',
+                   ts]
+                );
+                summary.gaps_detected++;
+                summary.total_healed++;
+              }
+            }
+          }
+        }
+
+        // Case 2: Two consecutive returns → missing departure between them
+        if (curr.record_type === 'return' && next.record_type === 'return') {
+          const existing = await dbFirst(env.DB,
+            `SELECT id FROM usage_records
+             WHERE car_id = ? AND record_type = 'departure' AND data_quality IN ('auto_departure','normal')
+             AND datetime >= ? AND datetime <= ?`,
+            [car.id, curr.datetime, next.datetime]
+          );
+          if (!existing) {
+            const autoId = generateUUID();
+            const autoMileage = curr.mileage || null;
+            await dbRun(env.DB,
+              `INSERT INTO usage_records (id, car_id, driver_id, record_type, datetime, mileage, location, notes, queue_id, data_quality, auto_notes, is_historical, created_at)
+               VALUES (?, ?, ?, 'departure', ?, ?, '', '', ?, 'auto_departure', ?, 1, ?)`,
+              [autoId, car.id, next.driver_id,
+               curr.datetime,
+               autoMileage,
+               next.queue_id,
+               'Batch heal: กลับ ' + next.datetime.substring(0, 10) + ' แต่ไม่มีบันทึกออก → สร้างอัตโนมัติ',
+               ts]
+            );
+            summary.auto_departures_created++;
+            summary.total_healed++;
+            details.push({ car: car.license_plate, type: 'auto_departure', date: next.datetime.substring(0, 10) });
+          }
+        }
+      }
+
+      // Handle the last record — if it's a departure_only
+      const lastRec = records[records.length - 1];
+      if (lastRec.record_type === 'departure' && lastRec.data_quality === 'departure_only') {
+        const existingReturn = await dbFirst(env.DB,
+          `SELECT id FROM usage_records
+           WHERE car_id = ? AND record_type = 'return'
+           AND datetime >= ? AND data_quality IN ('auto_return','normal')`,
+          [car.id, lastRec.datetime]
+        );
+        if (!existingReturn) {
+          const autoId = generateUUID();
+          await dbRun(env.DB,
+            `INSERT INTO usage_records (id, car_id, driver_id, record_type, datetime, mileage, location, notes, queue_id, data_quality, auto_notes, is_historical, created_at)
+             VALUES (?, ?, ?, 'return', ?, ?, '', '', ?, 'auto_return', ?, 1, ?)`,
+            [autoId, car.id, lastRec.driver_id,
+             lastRec.datetime.replace(/\d{2}:\d{2}/, '17:00'),
+             lastRec.mileage,
+             lastRec.queue_id,
+             'Batch heal: ออก ' + lastRec.datetime.substring(0, 10) + ' แต่ไม่มีบันทึกกลับ → สร้างอัตโนมัติ',
+             ts]
+          );
+          await dbRun(env.DB, "UPDATE usage_records SET data_quality = 'normal' WHERE id = ?", [lastRec.id]);
+          summary.auto_returns_created++;
+          summary.departure_only_resolved++;
+          summary.total_healed++;
+          details.push({ car: car.license_plate, type: 'auto_return (last)', date: lastRec.datetime.substring(0, 10) });
+        }
+      }
+    }
+
+    // Notify admins
+    if (summary.total_healed > 0) {
+      await notifyAllAdmins(env.DB, 'data_quality',
+        'Batch Auto-Heal เสร็จสิ้น',
+        'สแกน ' + summary.cars_scanned + ' คัน — สร้างอัตโนมัติ: กลับ ' + summary.auto_returns_created + ' | ออก ' + summary.auto_departures_created + ' | ช่องว่าง ' + summary.gaps_detected + ' | แก้ departure_only ' + summary.departure_only_resolved
+      );
+    }
+
+    return success({ summary, details: details.slice(0, 100) });
+  }
+
   return error('Not Found', 404);
   } catch (e) {
     console.error('API Error:', e);

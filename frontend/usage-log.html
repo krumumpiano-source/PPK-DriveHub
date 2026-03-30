@@ -333,6 +333,9 @@
         <button class="btn btn-secondary" onclick="loadRecords()">
           🔃 รีเฟรช
         </button>
+        <button class="btn btn-primary" id="btnBatchHeal" onclick="runBatchHeal()" style="display:none">
+          🩹 สแกนและเติมเต็มข้อมูลที่ขาด
+        </button>
       </div>
 
       <div id="statsContainer" style="display: none;">
@@ -378,6 +381,14 @@
 
     document.addEventListener('DOMContentLoaded', function () {
       var isAuthenticated = requireAuth();
+
+      // Show batch heal button for admins
+      try {
+        var user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (user.role === 'admin' || user.role === 'superadmin') {
+          document.getElementById('btnBatchHeal').style.display = '';
+        }
+      } catch(e) {}
       if (!isAuthenticated) {
         console.warn('Not authenticated, but showing page anyway');
         return; // แสดงหน้าได้แต่ไม่โหลดข้อมูล
@@ -665,6 +676,25 @@
       setTimeout(function () {
         alert.remove();
       }, 5000);
+    }
+
+    async function runBatchHeal() {
+      if (!confirm('ต้องการสแกนข้อมูลทั้งหมดและเติมเต็มบันทึกที่ขาดหายอัตโนมัติหรือไม่?')) return;
+      var btn = document.getElementById('btnBatchHeal');
+      btn.disabled = true;
+      btn.textContent = '⚙️ กำลังสแกน...';
+      try {
+        var result = await API.post('/api/usage/batch-heal', {});
+        var s = (result && result.data) ? result.data.summary : {};
+        var msg = 'สแกนเสร็จ! สร้างอัตโนมัติ: บันทึกกลับ ' + (s.auto_returns_created || 0) + ' | บันทึกออก ' + (s.auto_departures_created || 0) + ' | ช่องว่าง ' + (s.gaps_detected || 0) + ' | แก้ departure_only ' + (s.departure_only_resolved || 0);
+        showAlert(msg, 'success');
+        loadRecords();
+      } catch (e) {
+        showAlert('สแกนไม่สำเร็จ: ' + (e.message || ''), 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🩹 สแกนและเติมเต็มข้อมูลที่ขาด';
+      }
     }
   </script>
 </body>
