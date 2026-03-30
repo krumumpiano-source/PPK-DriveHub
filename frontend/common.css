@@ -20,6 +20,8 @@
   --color-text-muted: #6b7280;
   --color-text-light: #9ca3af;
 
+  --gradient-primary: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+
   --color-bg-light: #f8fafc;
   --color-bg-lighter: #f1f5f9;
   --color-bg-gray: #e5e7eb;
