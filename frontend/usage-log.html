@@ -429,13 +429,13 @@
         if (result.success && result.data && result.data.vehicles) {
           vehicles = result.data.vehicles || [];
           vehicles.forEach(function (v) {
-            vehiclesMap[v.car_id] = v;
+            vehiclesMap[v.id || v.car_id] = v;
           });
 
           var select = document.getElementById('filterCar');
           vehicles.forEach(function (vehicle) {
             var option = document.createElement('option');
-            option.value = vehicle.car_id;
+            option.value = vehicle.id || vehicle.car_id;
             option.textContent = vehicle.license_plate + ' - ' + (vehicle.brand || '') + ' ' + (vehicle.model || '');
             select.appendChild(option);
           });
@@ -451,13 +451,13 @@
         if (result.success && result.data && result.data.drivers) {
           drivers = result.data.drivers || [];
           drivers.forEach(function (d) {
-            driversMap[d.driver_id] = d;
+            driversMap[d.id || d.driver_id] = d;
           });
 
           var select = document.getElementById('filterDriver');
           drivers.forEach(function (driver) {
             var option = document.createElement('option');
-            option.value = driver.driver_id;
+            option.value = driver.id || driver.driver_id;
             option.textContent = driver.full_name || (driver.first_name + ' ' + driver.last_name);
             select.appendChild(option);
           });
@@ -598,10 +598,13 @@
 
         sortedRecords.forEach(function (record) {
           var vehicle = vehiclesMap[record.car_id];
-          var vehicleName = vehicle ? (vehicle.license_plate + ' ' + (vehicle.brand || '') + ' ' + (vehicle.model || '')) : record.car_id;
+          var vehicleName = record.license_plate
+            ? (record.license_plate + ' ' + (record.brand || ''))
+            : (vehicle ? (vehicle.license_plate + ' ' + (vehicle.brand || '') + ' ' + (vehicle.model || '')) : record.car_id);
 
           var driver = driversMap[record.driver_id];
-          var driverName = driver ? (driver.full_name || driver.first_name + ' ' + driver.last_name) : record.driver_id;
+          var driverName = record.driver_name
+            || (driver ? (driver.name || driver.full_name || (driver.first_name + ' ' + driver.last_name)) : record.driver_id);
 
           var recordDate = record.date;
           if (!recordDate && record.datetime) {
