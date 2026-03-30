@@ -538,24 +538,40 @@
         var curDep = null;
         carRecs.forEach(function(rec) {
           if (rec.record_type === 'departure') {
-            if (curDep) result.push(buildTrip(curDep, null));
+            if (curDep) {
+              // departure ซ้อน departure = คนขับลืมสแกนกลับ
+              // ใช้ไมล์ของ departure ใหม่เป็นไมล์กลับ (เพราะรถต้องกลับก่อนถึงออกใหม่ได้)
+              var inferredReturn = {
+                car_id: rec.car_id,
+                driver_id: curDep.driver_id,
+                record_type: 'return',
+                datetime: rec.datetime,
+                mileage: rec.mileage,
+                location: curDep.location,
+                requester_name: curDep.requester_name,
+                license_plate: rec.license_plate,
+                brand: rec.brand,
+                driver_name: curDep.driver_name
+              };
+              result.push(buildTrip(curDep, inferredReturn, 'inferred'));
+            }
             curDep = rec;
           } else if (rec.record_type === 'return') {
             if (curDep) {
-              result.push(buildTrip(curDep, rec));
+              result.push(buildTrip(curDep, rec, 'complete'));
               curDep = null;
             } else {
-              result.push(buildTrip(null, rec));
+              result.push(buildTrip(null, rec, 'no_departure'));
             }
           }
         });
-        if (curDep) result.push(buildTrip(curDep, null));
+        if (curDep) result.push(buildTrip(curDep, null, 'no_return'));
       });
       result.sort(function(a, b) { return (b.sort_key || '').localeCompare(a.sort_key || ''); });
       return result;
     }
 
-    function buildTrip(dep, ret) {
+    function buildTrip(dep, ret, status) {
       var dist = null;
       if (dep && ret && ret.mileage && dep.mileage) {
         dist = ret.mileage - dep.mileage;
@@ -566,7 +582,6 @@
       var vehicle = depVehicle || retVehicle;
       var lp = (dep && dep.license_plate) || (ret && ret.license_plate) || (vehicle ? vehicle.license_plate : '');
       var br = (dep && dep.brand) || (ret && ret.brand) || (vehicle ? vehicle.brand : '');
-      var status = (dep && ret) ? 'complete' : (dep ? 'no_return' : 'no_departure');
       return {
         car_id: dep ? dep.car_id : ret.car_id,
         driver_id: dep ? dep.driver_id : ret.driver_id,
@@ -575,7 +590,7 @@
         driver_name: (dep && dep.driver_name) || (ret && ret.driver_name) || '',
         date: dep ? dep.datetime.substring(0, 10) : ret.datetime.substring(0, 10),
         departure_time: dep ? dep.datetime.substring(11, 16) : null,
-        return_time: ret ? ret.datetime.substring(11, 16) : null,
+        return_time: (ret && status !== 'inferred') ? ret.datetime.substring(11, 16) : null,
         destination: (dep && dep.location) || (ret && ret.location) || '',
         requester_name: (dep && dep.requester_name) || (ret && ret.requester_name) || '',
         mileage_start: dep ? dep.mileage : null,
@@ -598,7 +613,7 @@
         if (trip.distance && trip.distance > 0) totalDistance += trip.distance;
         if (trip.car_id) totalCars.add(trip.car_id);
         if (trip.driver_id) totalDrivers.add(trip.driver_id);
-        if (trip.status === 'complete') completeTrips++;
+        if (trip.status === 'complete' || trip.status === 'inferred') completeTrips++;
       });
 
       var html = '';
@@ -664,6 +679,8 @@
           var statusBadge = '';
           if (trip.status === 'complete') {
             statusBadge = '<span class="badge badge-success">✅ สมบูรณ์</span>';
+          } else if (trip.status === 'inferred') {
+            statusBadge = '<span class="badge badge-info" title="ลืมบันทึกกลับ — ระบบคำนวณระยะทางจากเลขไมล์เที่ยวถัดไป">🔵 ลืมสแกนกลับ</span>';
           } else if (trip.status === 'no_return') {
             statusBadge = '<span class="badge badge-warning">🟡 ยังไม่กลับ</span>';
           } else if (trip.status === 'no_departure') {
