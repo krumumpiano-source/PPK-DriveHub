@@ -203,32 +203,26 @@
       <div id="alertContainer"></div>
 
       <div class="tabs">
-        <button class="tab active" onclick="switchTab('overview')">📈 ภาพรวม</button>
-        <button class="tab" onclick="switchTab('drivers')">👤 การทำงานพนักงานขับรถ</button>
-        <button class="tab" onclick="switchTab('vehicles')">🚗 การใช้งานรถ</button>
-        <button class="tab" onclick="switchTab('statistics')">📊 สถิติ</button>
-        <button class="tab" onclick="switchTab('risk')">⚠️ ประเมินความเสี่ยง</button>
-        <button class="tab" onclick="switchTab('fuel')">⛽ อัตราสิ้นเปลืองพลังงาน</button>
+        <button class="tab active" onclick="switchTab('overview', this)">📈 ภาพรวม</button>
+        <button class="tab" onclick="switchTab('vehicles', this)">🚗 การใช้งานรถ</button>
+        <button class="tab" onclick="switchTab('drivers', this)">👤 คนขับ</button>
+        <button class="tab" onclick="switchTab('fuel', this)">⛽ เชื้อเพลิง</button>
+        <button class="tab" onclick="switchTab('repairs', this)">🔧 ซ่อมบำรุง</button>
+        <button class="tab" onclick="switchTab('alerts', this)">⚠️ แจ้งเตือน</button>
       </div>
 
       <div class="filters">
-        <div class="filter-group">
+        <div class="filter-group" id="fg-date-from">
           <label>วันที่เริ่มต้น</label>
           <input type="date" id="dateFrom" onchange="loadReport()">
         </div>
-        <div class="filter-group">
+        <div class="filter-group" id="fg-date-to">
           <label>วันที่สิ้นสุด</label>
           <input type="date" id="dateTo" onchange="loadReport()">
         </div>
-        <div class="filter-group">
+        <div class="filter-group" id="fg-car" style="display:none">
           <label>รถ</label>
           <select id="filterCar" onchange="loadReport()">
-            <option value="">ทั้งหมด</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label>คนขับ</label>
-          <select id="filterDriver" onchange="loadReport()">
             <option value="">ทั้งหมด</option>
           </select>
         </div>
@@ -251,455 +245,361 @@
   </div>
   <script>
     var currentTab = 'overview';
-    var vehicles = [];
-    var drivers = [];
-    var reportData = null;
 
     document.addEventListener('DOMContentLoaded', function () {
-      var isAuthenticated = requireAuth();
-      if (!isAuthenticated) {
-        console.warn('Not authenticated, but showing page anyway');
-        return; // แสดงหน้าได้แต่ไม่โหลดข้อมูล
-      }
-
-      var currentUser = getCurrentUser();
-      if (currentUser && !hasModulePermission('reports', 'view') && currentUser.role !== 'admin') {
-        console.warn('No permission, but showing page anyway');
-        // ไม่ redirect — ให้แสดงหน้าได้
-      }
+      requireAuth();
 
       var today = new Date();
       var lastMonth = new Date(today);
-      lastMonth.setDate(lastMonth.getDate() - 30);
+      lastMonth.setMonth(lastMonth.getMonth() - 1);
+      document.getElementById('dateFrom').value = fmtDate(lastMonth);
+      document.getElementById('dateTo').value = fmtDate(today);
 
-      document.getElementById('dateFrom').value = formatDate(lastMonth);
-      document.getElementById('dateTo').value = formatDate(today);
-
-      loadVehicles();
-      loadDrivers();
+      updateFilterVisibility();
+      loadCarFilter();
       loadReport();
     });
 
-    function formatDate(date) {
-      var year = date.getFullYear();
-      var month = String(date.getMonth() + 1).padStart(2, '0');
-      var day = String(date.getDate()).padStart(2, '0');
-      return year + '-' + month + '-' + day;
+    function fmtDate(d) {
+      return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
     }
-
-    function switchTab(tab) {
-      currentTab = tab;
-      document.querySelectorAll('.tab').forEach(function (t) {
-        t.classList.remove('active');
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function fmtNum(n) { return Number(n || 0).toLocaleString('th-TH'); }
+    function fmtMoney(n) { return Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function fmtDateTH(s) {
+      if (!s) return '-';
+      var d = new Date(s);
+      if (isNaN(d)) return String(s);
+      return d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    function daysUntil(dateStr) {
+      return Math.ceil((new Date(dateStr) - Date.now()) / 86400000);
+    }
+    function htmlEsc(s) {
+      return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function buildQuery(params) {
+      var parts = [];
+      Object.keys(params).forEach(function (k) {
+        if (params[k] !== undefined && params[k] !== null && params[k] !== '') {
+          parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(params[k]));
+        }
       });
-      event.target.classList.add('active');
-      displayReport();
+      return parts.length ? '?' + parts.join('&') : '';
+    }
+    function emptyState(icon, msg) {
+      return '<div class="empty-state"><div class="empty-state-icon">' + icon + '</div><p>' + htmlEsc(msg) + '</p></div>';
+    }
+    function statCard(title, value, unit, sub) {
+      return '<div class="stat-card"><h3>' + title + '</h3><div class="value">' + value + '</div><div class="unit">' + unit + '</div>' +
+        (sub ? '<div style="font-size:0.8em;opacity:0.8;margin-top:6px">' + sub + '</div>' : '') + '</div>';
+    }
+    function statusBadge(status) {
+      var map = {
+        'active': ['score-excellent', 'ใช้งาน'],
+        'inactive': ['score-poor', 'ไม่ใช้งาน'],
+        'maintenance': ['score-normal', 'ซ่อมบำรุง'],
+        'completed': ['score-excellent', 'เสร็จแล้ว'],
+        'in_progress': ['score-good', 'กำลังซ่อม'],
+        'reported': ['score-normal', 'แจ้งซ่อม'],
+        'cancelled': ['score-poor', 'ยกเลิก'],
+        'scheduled': ['score-good', 'นัดหมาย'],
+        'ongoing': ['score-good', 'กำลังไป'],
+        'leave': ['score-normal', 'ลา']
+      };
+      var s = map[status] || ['score-normal', status || '-'];
+      return '<span class="score-badge ' + s[0] + '">' + s[1] + '</span>';
     }
 
-    async function loadVehicles() {
-      try {
-        var result = await apiCall('getVehicles', {});
-        if (result.success && result.data && result.data.vehicles) {
-          vehicles = result.data.vehicles || [];
-          var select = document.getElementById('filterCar');
-          vehicles.forEach(function (vehicle) {
-            var option = document.createElement('option');
-            option.value = vehicle.car_id;
-            option.textContent = vehicle.license_plate + ' - ' + (vehicle.brand || '') + ' ' + (vehicle.model || '');
-            select.appendChild(option);
-          });
-        }
-      } catch (error) {
-        console.error('Error loading vehicles:', error);
-      }
+    function updateFilterVisibility() {
+      var showDate = ['fuel', 'repairs'].includes(currentTab);
+      var showCar = currentTab === 'fuel';
+      document.getElementById('fg-date-from').style.display = showDate ? '' : 'none';
+      document.getElementById('fg-date-to').style.display = showDate ? '' : 'none';
+      document.getElementById('fg-car').style.display = showCar ? '' : 'none';
     }
 
-    async function loadDrivers() {
+    function switchTab(tab, el) {
+      currentTab = tab;
+      document.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('active'); });
+      el.classList.add('active');
+      updateFilterVisibility();
+      loadReport();
+    }
+
+    async function loadCarFilter() {
       try {
-        var result = await apiCall('getDrivers', { status: 'active' });
-        if (result.success && result.data && result.data.drivers) {
-          drivers = result.data.drivers || [];
-          var select = document.getElementById('filterDriver');
-          drivers.forEach(function (driver) {
-            var option = document.createElement('option');
-            option.value = driver.driver_id;
-            option.textContent = driver.full_name || (driver.first_name + ' ' + driver.last_name);
-            select.appendChild(option);
-          });
-        }
-      } catch (error) {
-        console.error('Error loading drivers:', error);
-      }
+        var r = await apiCall('getVehicles', {});
+        var list = (r && r.data) ? (r.data.vehicles || r.data) : [];
+        var sel = document.getElementById('filterCar');
+        list.forEach(function (v) {
+          var o = document.createElement('option');
+          o.value = v.id || v.car_id || '';
+          o.textContent = (v.license_plate || '') + (v.brand ? ' - ' + v.brand : '') + (v.model ? ' ' + v.model : '');
+          sel.appendChild(o);
+        });
+      } catch (e) { /* ignore */ }
     }
 
     async function loadReport() {
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('reportContent').style.display = 'none';
+      document.getElementById('reportContent').innerHTML = '';
+
+      var dateFrom = document.getElementById('dateFrom').value;
+      var dateTo = document.getElementById('dateTo').value;
+      var carId = document.getElementById('filterCar').value;
+
       try {
-        document.getElementById('loading').style.display = 'block';
-        document.getElementById('reportContent').style.display = 'none';
-
-        var filters = {
-          date_from: document.getElementById('dateFrom').value,
-          date_to: document.getElementById('dateTo').value
-        };
-
-        var filterCar = document.getElementById('filterCar').value;
-        var filterDriver = document.getElementById('filterDriver').value;
-        if (filterCar) filters.car_id = filterCar;
-        if (filterDriver) filters.driver_id = filterDriver;
-
-        var result = await apiCall('getDashboard', {});
-
-        if (result.success && result.data) {
-          reportData = result.data;
-          displayReport();
-        } else {
-          document.getElementById('reportContent').innerHTML = '<div class="empty-state"><div class="empty-state-icon">📊</div><p>ไม่พบข้อมูลรายงาน</p></div>';
-          document.getElementById('reportContent').style.display = 'block';
+        var html = '';
+        switch (currentTab) {
+          case 'overview': html = await renderOverview(); break;
+          case 'vehicles': html = await renderVehicles(); break;
+          case 'drivers':  html = await renderDrivers();  break;
+          case 'fuel':     html = await renderFuel(dateFrom, dateTo, carId); break;
+          case 'repairs':  html = await renderRepairs(dateFrom, dateTo); break;
+          case 'alerts':   html = await renderAlerts(); break;
+          default:         html = await renderOverview();
         }
-      } catch (error) {
-        console.error('Error loading report:', error);
-        showAlert('โหลดรายงานไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'error');
+        document.getElementById('reportContent').innerHTML = html;
+        document.getElementById('reportContent').style.display = 'block';
+      } catch (e) {
+        console.error(e);
+        document.getElementById('reportContent').innerHTML = emptyState('⚠️', 'โหลดข้อมูลไม่สำเร็จ: ' + (e.message || ''));
+        document.getElementById('reportContent').style.display = 'block';
       } finally {
         document.getElementById('loading').style.display = 'none';
       }
     }
 
-    function displayReport() {
-      if (!reportData) {
-        document.getElementById('reportContent').innerHTML = '<div class="empty-state"><div class="empty-state-icon">📊</div><p>ไม่พบข้อมูลรายงาน</p></div>';
-        document.getElementById('reportContent').style.display = 'block';
-        return;
+    async function renderOverview() {
+      var r = await apiCall('getDashboard', {});
+      var d = (r && r.data) ? r.data : (r || {});
+      var v = d.vehicles || {};
+      var dr = d.drivers || {};
+      var qt = d.queue_today || {};
+      var fm = d.fuel_month || {};
+      var ra = d.repairs_active || {};
+      var alerts = d.alerts_unresolved || 0;
+
+      var html = '<div class="stats-grid">';
+      html += statCard('🚗 รถทั้งหมด', fmtNum(v.total || 0), 'คัน',
+        'ใช้งาน ' + (v.active || 0) + ' | ซ่อมบำรุง ' + (v.in_maintenance || 0) + ' | ไม่ใช้งาน ' + (v.inactive || 0));
+      html += statCard('👤 คนขับทั้งหมด', fmtNum(dr.total || 0), 'คน',
+        'ปกติ ' + (dr.active || 0) + ' | แจ้งเหนื่อย ' + (dr.fatigued || 0));
+      html += statCard('📅 คิววันนี้', fmtNum(qt.total || 0), 'รายการ',
+        'รอ ' + (qt.scheduled || 0) + ' | กำลังไป ' + (qt.ongoing || 0) + ' | เสร็จ ' + (qt.completed || 0));
+      html += statCard('⛽ น้ำมันเดือนนี้', fmtNum(fm.total_liters || 0), 'ลิตร',
+        'ค่าใช้จ่าย ' + fmtMoney(fm.total_amount || 0) + ' บาท (' + fmtNum(fm.count || 0) + ' ครั้ง)');
+      html += statCard('🔧 ซ่อมบำรุงค้างอยู่', fmtNum(ra.total || 0), 'รายการ',
+        'แจ้งซ่อม ' + (ra.reported || 0) + ' | กำลังซ่อม ' + (ra.in_progress || 0));
+      html += statCard('⚠️ แจ้งเตือนที่ยังไม่แก้ไข', fmtNum(alerts), 'รายการ', 'จากการตรวจสภาพรถประจำวัน');
+      html += '</div>';
+      if (d.generated_at) {
+        html += '<div class="kpi-note">อัปเดตล่าสุด: ' + fmtDateTH(d.generated_at) + '</div>';
       }
+      return html;
+    }
+
+    async function renderVehicles() {
+      var r = await API.get('/api/reports/vehicles');
+      var rows = (r && r.data) ? r.data : (r || []);
+      if (!Array.isArray(rows) || rows.length === 0) {
+        return emptyState('🚗', 'ไม่พบข้อมูลรถ');
+      }
+      var html = '<div class="report-section">';
+      html += '<div class="report-section-title">🚗 สรุปการใช้งานรถรายคัน</div>';
+      html += '<div style="overflow-x:auto"><table class="report-table">';
+      html += '<thead><tr><th>ทะเบียน</th><th>ยี่ห้อ/รุ่น</th><th>เลขไมล์ปัจจุบัน</th><th>จำนวนเที่ยว</th><th>น้ำมันรวม (ลิตร)</th><th>ค่าน้ำมันรวม (บาท)</th><th>จำนวนซ่อม</th><th>ค่าซ่อมรวม (บาท)</th><th>สถานะ</th></tr></thead><tbody>';
+      rows.forEach(function (v) {
+        html += '<tr>';
+        html += '<td><strong>' + htmlEsc(v.license_plate || '-') + '</strong></td>';
+        html += '<td>' + htmlEsc((v.brand || '') + ' ' + (v.model || '') + (v.year ? ' (' + v.year + ')' : '')) + '</td>';
+        html += '<td>' + fmtNum(v.current_mileage || 0) + ' กม.</td>';
+        html += '<td>' + fmtNum(v.trip_count || 0) + '</td>';
+        html += '<td>' + fmtNum(v.total_fuel_liters || 0) + '</td>';
+        html += '<td>' + fmtMoney(v.total_fuel_cost || 0) + '</td>';
+        html += '<td>' + fmtNum(v.repair_count || 0) + '</td>';
+        html += '<td>' + fmtMoney(v.total_repair_cost || 0) + '</td>';
+        html += '<td>' + statusBadge(v.status) + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table></div></div>';
+      return html;
+    }
+
+    async function renderDrivers() {
+      var r = await API.get('/api/reports/drivers');
+      var rows = (r && r.data) ? r.data : (r || []);
+      if (!Array.isArray(rows) || rows.length === 0) {
+        return emptyState('👤', 'ไม่พบข้อมูลคนขับ');
+      }
+      var html = '<div class="report-section">';
+      html += '<div class="report-section-title">👤 สรุปการทำงานคนขับ</div>';
+      html += '<div style="overflow-x:auto"><table class="report-table">';
+      html += '<thead><tr><th>ชื่อ</th><th>เลขใบขับขี่</th><th>วันหมดอายุ</th><th>จำนวนเที่ยว</th><th>แจ้งเหนื่อย</th><th>Discipline Score</th><th>สถานะ</th></tr></thead><tbody>';
+      rows.forEach(function (d) {
+        var licExpiry = d.license_expiry || '';
+        var daysLeft = licExpiry ? daysUntil(licExpiry) : 999;
+        var expiryClass = daysLeft < 0 ? 'score-poor' : (daysLeft < 30 ? 'score-normal' : '');
+        var score = (d.discipline_score !== undefined && d.discipline_score !== null) ? d.discipline_score : null;
+        var scoreClass = score !== null ? (score >= 80 ? 'score-excellent' : score >= 60 ? 'score-good' : score >= 40 ? 'score-normal' : 'score-poor') : '';
+        html += '<tr>';
+        html += '<td><strong>' + htmlEsc(d.name || '-') + '</strong></td>';
+        html += '<td>' + htmlEsc(d.license_number || '-') + '</td>';
+        html += '<td>' + (licExpiry ? '<span class="score-badge ' + expiryClass + '">' + fmtDateTH(licExpiry) + '</span>' : '-') + '</td>';
+        html += '<td>' + fmtNum(d.trip_count || 0) + '</td>';
+        html += '<td>' + fmtNum(d.fatigue_reports || 0) + '</td>';
+        html += '<td>' + (score !== null ? '<span class="score-badge ' + scoreClass + '">' + score + '</span>' : '-') + '</td>';
+        html += '<td>' + statusBadge(d.status) + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table></div>';
+      html += '<div class="kpi-note">⭐ Discipline Score: 80+ ดีมาก | 60–79 ดี | 40–59 ปกติ | ต่ำกว่า 40 ควรพัฒนา — ใช้เพื่อการพัฒนา ไม่ใช่การลงโทษ</div>';
+      html += '</div>';
+      return html;
+    }
+
+    async function renderFuel(dateFrom, dateTo, carId) {
+      var params = buildQuery({ date_from: dateFrom, date_to: dateTo, car_id: carId || undefined });
+      var r = await API.get('/api/reports/fuel' + params);
+      var payload = (r && r.data) ? r.data : (r || {});
+      var records = payload.records || [];
+      var summary = payload.summary || {};
+
+      var html = '<div class="stats-grid">';
+      html += statCard('📋 จำนวนครั้ง', fmtNum(summary.count || 0), 'ครั้ง', '');
+      html += statCard('⛽ รวมน้ำมัน', fmtNum(summary.total_liters || 0), 'ลิตร', '');
+      html += statCard('💰 ค่าน้ำมันรวม', fmtMoney(summary.total_amount || 0), 'บาท', '');
+      html += statCard('📉 อัตราสิ้นเปลืองเฉลี่ย', Number(summary.avg_consumption || 0).toFixed(2), 'กม./ลิตร', '');
+      html += '</div>';
+
+      if (records.length === 0) {
+        html += emptyState('⛽', 'ไม่พบข้อมูลในช่วงเวลาที่เลือก');
+        return html;
+      }
+      html += '<div class="report-section">';
+      html += '<div class="report-section-title">⛽ รายการเติมน้ำมัน</div>';
+      html += '<div style="overflow-x:auto"><table class="report-table">';
+      html += '<thead><tr><th>วันที่</th><th>ทะเบียนรถ</th><th>คนขับ</th><th>ประเภท</th><th>ลิตร</th><th>ราคา/ลิตร</th><th>รวม (บาท)</th><th>ปั๊ม</th><th>อัตราสิ้นเปลือง</th></tr></thead><tbody>';
+      records.forEach(function (rec) {
+        html += '<tr>';
+        html += '<td>' + fmtDateTH(rec.date) + '</td>';
+        html += '<td>' + htmlEsc(rec.license_plate || rec.car_id || '-') + '</td>';
+        html += '<td>' + htmlEsc(rec.driver_name || '-') + '</td>';
+        html += '<td>' + htmlEsc(rec.fuel_type || '-') + '</td>';
+        html += '<td>' + fmtNum(rec.liters || 0) + '</td>';
+        html += '<td>' + fmtMoney(rec.price_per_liter || 0) + '</td>';
+        html += '<td>' + fmtMoney(rec.amount || 0) + '</td>';
+        html += '<td>' + htmlEsc(rec.gas_station_name || '-') + '</td>';
+        html += '<td>' + (rec.fuel_consumption_rate ? Number(rec.fuel_consumption_rate).toFixed(2) + ' กม./ล.' : '-') + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table></div></div>';
+      return html;
+    }
+
+    async function renderRepairs(dateFrom, dateTo) {
+      var params = buildQuery({ date_from: dateFrom, date_to: dateTo });
+      var r = await API.get('/api/reports/repairs' + params);
+      var payload = (r && r.data) ? r.data : (r || {});
+      var records = payload.records || [];
+      var summary = payload.summary || {};
+
+      var html = '<div class="stats-grid">';
+      html += statCard('🔧 รายการซ่อมทั้งหมด', fmtNum(summary.total || 0), 'รายการ', '');
+      html += statCard('💰 ค่าซ่อมรวม', fmtMoney(summary.total_cost || 0), 'บาท', '');
+      html += statCard('✅ ซ่อมเสร็จแล้ว', fmtNum(summary.completed || 0), 'รายการ', '');
+      html += statCard('⏳ กำลังดำเนินการ', fmtNum(summary.active || 0), 'รายการ', '');
+      html += '</div>';
+
+      if (records.length === 0) {
+        html += emptyState('🔧', 'ไม่พบข้อมูลในช่วงเวลาที่เลือก');
+        return html;
+      }
+      html += '<div class="report-section">';
+      html += '<div class="report-section-title">🔧 รายการซ่อมบำรุง</div>';
+      html += '<div style="overflow-x:auto"><table class="report-table">';
+      html += '<thead><tr><th>วันที่แจ้ง</th><th>ทะเบียนรถ</th><th>ประเภทปัญหา</th><th>อู่/ผู้ซ่อม</th><th>ค่าใช้จ่าย (บาท)</th><th>สถานะ</th></tr></thead><tbody>';
+      records.forEach(function (rec) {
+        html += '<tr>';
+        html += '<td>' + fmtDateTH(rec.date_reported) + '</td>';
+        html += '<td>' + htmlEsc(rec.license_plate || rec.car_id || '-') + '</td>';
+        html += '<td>' + htmlEsc(rec.problem_type || rec.description || '-') + '</td>';
+        html += '<td>' + htmlEsc(rec.garage || '-') + '</td>';
+        html += '<td>' + fmtMoney(rec.cost || 0) + '</td>';
+        html += '<td>' + statusBadge(rec.status) + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table></div></div>';
+      return html;
+    }
+
+    async function renderAlerts() {
+      var [expiryR, maintR] = await Promise.all([
+        API.get('/api/reports/expiry?days=90'),
+        API.get('/api/reports/maintenance')
+      ]);
+      var expiry = (expiryR && expiryR.data) ? expiryR.data : (expiryR || {});
+      var taxList = expiry.tax_expiring || [];
+      var insuranceList = expiry.insurance_expiring || [];
+      var maintList = (maintR && maintR.data) ? maintR.data : (maintR || []);
+      var overdueList = Array.isArray(maintList) ? maintList.filter(function (m) { return m.maintenance_status !== 'ok'; }) : [];
 
       var html = '';
 
-      switch (currentTab) {
-        case 'overview':
-          html = displayOverview();
-          break;
-        case 'drivers':
-          html = displayDriversReport();
-          break;
-        case 'vehicles':
-          html = displayVehiclesReport();
-          break;
-        case 'statistics':
-          html = displayStatistics();
-          break;
-        case 'risk':
-          html = displayRiskAnalysis();
-          break;
-        case 'fuel':
-          html = displayFuelConsumption();
-          break;
-        default:
-          html = displayOverview();
-      }
-
-      document.getElementById('reportContent').innerHTML = html;
-      document.getElementById('reportContent').style.display = 'block';
-    }
-
-    function displayOverview() {
-      var html = '<div class="stats-grid">';
-
-      // Overall stats
-      if (reportData.driver_performance) {
-        var dp = reportData.driver_performance;
-        html += '<div class="stat-card">';
-        html += '<h3>👤 พนักงานขับรถ</h3>';
-        html += '<div class="value">' + (dp.total_drivers || 0) + '</div>';
-        html += '<div class="unit">คน</div>';
-        html += '</div>';
-
-        html += '<div class="stat-card">';
-        html += '<h3>📊 ระยะทางรวม</h3>';
-        html += '<div class="value">' + (dp.total_distance ? dp.total_distance.toLocaleString() : 0) + '</div>';
-        html += '<div class="unit">กิโลเมตร</div>';
-        html += '</div>';
-
-        html += '<div class="stat-card">';
-        html += '<h3>⏱️ ชั่วโมงรวม</h3>';
-        html += '<div class="value">' + (dp.total_hours ? dp.total_hours.toFixed(1) : 0) + '</div>';
-        html += '<div class="unit">ชั่วโมง</div>';
-        html += '</div>';
-      }
-
-      if (reportData.fuel_stats) {
-        var fs = reportData.fuel_stats;
-        html += '<div class="stat-card">';
-        html += '<h3>⛽ น้ำมันรวม</h3>';
-        html += '<div class="value">' + (fs.total_liters ? fs.total_liters.toLocaleString() : 0) + '</div>';
-        html += '<div class="unit">ลิตร</div>';
-        html += '</div>';
-
-        html += '<div class="stat-card">';
-        html += '<h3>💰 ค่าน้ำมันรวม</h3>';
-        html += '<div class="value">' + (fs.total_cost ? fs.total_cost.toLocaleString() : 0) + '</div>';
-        html += '<div class="unit">บาท</div>';
-        html += '</div>';
-      }
-
-      html += '</div>';
-
-      html += '<div class="kpi-note">';
-      html += '<strong>หมายเหตุ:</strong> คะแนนประสิทธิภาพใช้เพื่อการพัฒนา ไม่ใช่การลงโทษ';
-      html += '</div>';
-
-      return html;
-    }
-
-    function displayDriversReport() {
-      var html = '<div class="report-section">';
-      html += '<div class="report-section-title">👤 การทำงานของพนักงานขับรถรายคน</div>';
-
-      if (reportData.driver_performance && reportData.driver_performance.by_driver) {
-        var byDriver = reportData.driver_performance.by_driver;
-        var driverIds = Object.keys(byDriver);
-
-        if (driverIds.length > 0) {
-          html += '<table class="report-table">';
-          html += '<thead><tr>';
-          html += '<th>ชื่อ</th>';
-          html += '<th>จำนวนรอบ</th>';
-          html += '<th>ระยะทาง (กม.)</th>';
-          html += '<th>ชั่วโมง</th>';
-          html += '<th>คะแนน</th>';
-          html += '</tr></thead><tbody>';
-
-          driverIds.forEach(function (driverId) {
-            var stats = byDriver[driverId];
-            var driver = drivers.find(function (d) { return d.driver_id === driverId; });
-            var driverName = driver ? (driver.full_name || driver.first_name + ' ' + driver.last_name) : driverId;
-
-            var score = stats.score || 0;
-            var scoreClass = score >= 80 ? 'score-excellent' : (score >= 60 ? 'score-good' : (score >= 40 ? 'score-normal' : 'score-poor'));
-            var scoreText = score >= 80 ? 'ดีมาก' : (score >= 60 ? 'ดี' : (score >= 40 ? 'ปกติ' : 'ควรพัฒนา'));
-
-            html += '<tr>';
-            html += '<td>' + driverName + '</td>';
-            html += '<td>' + (stats.trips || 0) + '</td>';
-            html += '<td>' + (stats.distance ? stats.distance.toLocaleString() : 0) + '</td>';
-            html += '<td>' + (stats.hours ? stats.hours.toFixed(1) : 0) + '</td>';
-            html += '<td><span class="score-badge ' + scoreClass + '">' + score + ' (' + scoreText + ')</span></td>';
-            html += '</tr>';
-          });
-
-          html += '</tbody></table>';
-        } else {
-          html += '<div class="empty-state"><div class="empty-state-icon">👤</div><p>ไม่พบข้อมูล</p></div>';
-        }
+      // Tax
+      html += '<div class="report-section">';
+      html += '<div class="report-section-title">📄 ภาษีรถยนต์ที่ใกล้หมดอายุ (ภายใน 90 วัน)</div>';
+      if (taxList.length === 0) {
+        html += '<div class="empty-state" style="padding:30px"><div class="empty-state-icon" style="font-size:2em">✅</div><p>ไม่มีภาษีที่ใกล้หมดอายุ</p></div>';
       } else {
-        html += '<div class="empty-state"><div class="empty-state-icon">👤</div><p>ไม่พบข้อมูล</p></div>';
+        html += '<div style="overflow-x:auto"><table class="report-table"><thead><tr><th>ทะเบียนรถ</th><th>ยี่ห้อ</th><th>วันหมดอายุ</th><th>เหลืออีก</th></tr></thead><tbody>';
+        taxList.forEach(function (t) {
+          var days = daysUntil(t.expiry_date);
+          var cls = days < 30 ? 'score-poor' : 'score-normal';
+          html += '<tr><td><strong>' + htmlEsc(t.license_plate || '-') + '</strong></td><td>' + htmlEsc(t.brand || '-') + '</td><td>' + fmtDateTH(t.expiry_date) + '</td><td><span class="score-badge ' + cls + '">' + days + ' วัน</span></td></tr>';
+        });
+        html += '</tbody></table></div>';
       }
-
-      html += '</div>';
-      html += '<div class="kpi-note">';
-      html += '<strong>หมายเหตุ:</strong> คะแนนประสิทธิภาพใช้เพื่อการพัฒนา ไม่ใช่การลงโทษ';
       html += '</div>';
 
-      return html;
-    }
-
-    function displayVehiclesReport() {
-      var html = '<div class="report-section">';
-      html += '<div class="report-section-title">🚗 การใช้งานรถรายคัน</div>';
-
-      if (reportData.vehicle_usage && reportData.vehicle_usage.by_vehicle) {
-        var byVehicle = reportData.vehicle_usage.by_vehicle;
-        var vehicleIds = Object.keys(byVehicle);
-
-        if (vehicleIds.length > 0) {
-          html += '<table class="report-table">';
-          html += '<thead><tr>';
-          html += '<th>รถ</th>';
-          html += '<th>จำนวนรอบ</th>';
-          html += '<th>ระยะทาง (กม.)</th>';
-          html += '<th>ชั่วโมง</th>';
-          html += '<th>คะแนน</th>';
-          html += '</tr></thead><tbody>';
-
-          vehicleIds.forEach(function (carId) {
-            var stats = byVehicle[carId];
-            var vehicle = vehicles.find(function (v) { return v.car_id === carId; });
-            var vehicleName = vehicle ? (vehicle.license_plate + ' ' + vehicle.brand + ' ' + vehicle.model) : carId;
-
-            var score = stats.score || 0;
-            var scoreClass = score >= 80 ? 'score-excellent' : (score >= 60 ? 'score-good' : (score >= 40 ? 'score-normal' : 'score-poor'));
-            var scoreText = score >= 80 ? 'ดีมาก' : (score >= 60 ? 'ดี' : (score >= 40 ? 'ปกติ' : 'ควรพัฒนา'));
-
-            html += '<tr>';
-            html += '<td>' + vehicleName + '</td>';
-            html += '<td>' + (stats.trips || 0) + '</td>';
-            html += '<td>' + (stats.distance ? stats.distance.toLocaleString() : 0) + '</td>';
-            html += '<td>' + (stats.hours ? stats.hours.toFixed(1) : 0) + '</td>';
-            html += '<td><span class="score-badge ' + scoreClass + '">' + score + ' (' + scoreText + ')</span></td>';
-            html += '</tr>';
-          });
-
-          html += '</tbody></table>';
-        } else {
-          html += '<div class="empty-state"><div class="empty-state-icon">🚗</div><p>ไม่พบข้อมูล</p></div>';
-        }
+      // Insurance
+      html += '<div class="report-section">';
+      html += '<div class="report-section-title">🛡️ ประกันภัยที่ใกล้หมดอายุ (ภายใน 90 วัน)</div>';
+      if (insuranceList.length === 0) {
+        html += '<div class="empty-state" style="padding:30px"><div class="empty-state-icon" style="font-size:2em">✅</div><p>ไม่มีประกันที่ใกล้หมดอายุ</p></div>';
       } else {
-        html += '<div class="empty-state"><div class="empty-state-icon">🚗</div><p>ไม่พบข้อมูล</p></div>';
+        html += '<div style="overflow-x:auto"><table class="report-table"><thead><tr><th>ทะเบียนรถ</th><th>ยี่ห้อ</th><th>ประเภทประกัน</th><th>วันหมดอายุ</th><th>เหลืออีก</th></tr></thead><tbody>';
+        insuranceList.forEach(function (ins) {
+          var days = daysUntil(ins.expiry_date);
+          var cls = days < 30 ? 'score-poor' : 'score-normal';
+          html += '<tr><td><strong>' + htmlEsc(ins.license_plate || '-') + '</strong></td><td>' + htmlEsc(ins.brand || '-') + '</td><td>' + htmlEsc(ins.insurance_type || '-') + '</td><td>' + fmtDateTH(ins.expiry_date) + '</td><td><span class="score-badge ' + cls + '">' + days + ' วัน</span></td></tr>';
+        });
+        html += '</tbody></table></div>';
       }
-
-      html += '</div>';
-      html += '<div class="kpi-note">';
-      html += '<strong>หมายเหตุ:</strong> คะแนนประสิทธิภาพใช้เพื่อการพัฒนา ไม่ใช่การลงโทษ';
       html += '</div>';
 
-      return html;
-    }
-
-    function displayStatistics() {
-      var html = '<div class="report-section">';
-      html += '<div class="report-section-title">📊 สถิติ</div>';
-
-      html += '<div class="stats-grid">';
-
-      if (reportData.repair_stats) {
-        var rs = reportData.repair_stats;
-        html += '<div class="stat-card">';
-        html += '<h3>🔧 จำนวนครั้งซ่อม</h3>';
-        html += '<div class="value">' + (rs.total_repairs || 0) + '</div>';
-        html += '<div class="unit">ครั้ง</div>';
-        html += '</div>';
-
-        html += '<div class="stat-card">';
-        html += '<h3>💰 ค่าซ่อมรวม</h3>';
-        html += '<div class="value">' + (rs.total_cost ? rs.total_cost.toLocaleString() : 0) + '</div>';
-        html += '<div class="unit">บาท</div>';
-        html += '</div>';
-      }
-
-      if (reportData.fuel_consumption) {
-        var fc = reportData.fuel_consumption;
-        html += '<div class="stat-card">';
-        html += '<h3>⛽ อัตราสิ้นเปลืองเฉลี่ย</h3>';
-        html += '<div class="value">' + (fc.average_consumption ? fc.average_consumption.toFixed(2) : 0) + '</div>';
-        html += '<div class="unit">กม./ลิตร</div>';
-        html += '</div>';
-      }
-
-      html += '</div>';
-      html += '</div>';
-
-      return html;
-    }
-
-    function displayRiskAnalysis() {
-      var html = '<div class="report-section">';
-      html += '<div class="report-section-title">⚠️ ประเมินความเสี่ยงความคุ้มทุน</div>';
-
-      if (reportData.risk_analysis) {
-        var ra = reportData.risk_analysis;
-        html += '<div class="stats-grid">';
-
-        html += '<div class="stat-card">';
-        html += '<h3>🚨 ความเสี่ยงสูง</h3>';
-        html += '<div class="value">' + (ra.high_risk_count || 0) + '</div>';
-        html += '<div class="unit">รายการ</div>';
-        html += '</div>';
-
-        html += '<div class="stat-card">';
-        html += '<h3>💰 ค่าใช้จ่ายรวม</h3>';
-        html += '<div class="value">' + (ra.total_cost ? ra.total_cost.toLocaleString() : 0) + '</div>';
-        html += '<div class="unit">บาท</div>';
-        html += '</div>';
-
-        html += '</div>';
+      // Maintenance
+      html += '<div class="report-section">';
+      html += '<div class="report-section-title">🔧 รายการบำรุงรักษาที่ใกล้ถึงกำหนด / เลยกำหนด</div>';
+      if (overdueList.length === 0) {
+        html += '<div class="empty-state" style="padding:30px"><div class="empty-state-icon" style="font-size:2em">✅</div><p>ไม่มีรายการบำรุงรักษาที่ต้องดูแล</p></div>';
       } else {
-        html += '<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>ไม่พบข้อมูลการประเมินความเสี่ยง</p></div>';
+        html += '<div style="overflow-x:auto"><table class="report-table"><thead><tr><th>ทะเบียนรถ</th><th>รายการ</th><th>สถานะ</th><th>กม.ถัดไป</th><th>วันถัดไป</th></tr></thead><tbody>';
+        overdueList.forEach(function (m) {
+          var cls = m.maintenance_status === 'overdue' ? 'score-poor' : 'score-normal';
+          var statusTH = m.maintenance_status === 'overdue' ? 'เลยกำหนด' : 'ใกล้ถึงกำหนด';
+          html += '<tr><td><strong>' + htmlEsc(m.license_plate || '-') + '</strong></td><td>' + htmlEsc(m.item_name || m.item_key || '-') + '</td><td><span class="score-badge ' + cls + '">' + statusTH + '</span></td><td>' + (m.next_km ? fmtNum(m.next_km) + ' กม.' : '-') + '</td><td>' + fmtDateTH(m.next_date) + '</td></tr>';
+        });
+        html += '</tbody></table></div>';
       }
-
       html += '</div>';
 
       return html;
     }
-
-    function displayFuelConsumption() {
-      var html = '<div class="report-section">';
-      html += '<div class="report-section-title">⛽ อัตราสิ้นเปลืองพลังงาน</div>';
-
-      if (reportData.fuel_consumption) {
-        var fc = reportData.fuel_consumption;
-
-        html += '<div class="stats-grid">';
-        html += '<div class="stat-card">';
-        html += '<h3>⛽ อัตราสิ้นเปลืองเฉลี่ย</h3>';
-        html += '<div class="value">' + (fc.average_consumption ? fc.average_consumption.toFixed(2) : 0) + '</div>';
-        html += '<div class="unit">กม./ลิตร</div>';
-        html += '</div>';
-
-        html += '<div class="stat-card">';
-        html += '<h3>💰 ค่าน้ำมันเฉลี่ยต่อกม.</h3>';
-        html += '<div class="value">' + (fc.average_cost_per_km ? fc.average_cost_per_km.toFixed(2) : 0) + '</div>';
-        html += '<div class="unit">บาท/กม.</div>';
-        html += '</div>';
-        html += '</div>';
-      } else {
-        html += '<div class="empty-state"><div class="empty-state-icon">⛽</div><p>ไม่พบข้อมูลอัตราสิ้นเปลือง</p></div>';
-      }
-
-      html += '</div>';
-
-      return html;
-    }
-
     function exportReport() {
-      // Simple export to CSV (can be enhanced to Word/PDF later)
-      if (!reportData) {
-        alert('ยังไม่มีข้อมูลในรายการนี้ จึงส่งออกรายงานไม่ได้');
-        return;
-      }
-
-      var csv = '';
-      var dateFrom = document.getElementById('dateFrom').value;
-      var dateTo = document.getElementById('dateTo').value;
-
-      csv += 'รายงาน PPK DriveHub\n';
-      csv += 'ช่วงเวลา: ' + dateFrom + ' ถึง ' + dateTo + '\n\n';
-
-      if (currentTab === 'drivers' && reportData.driver_performance && reportData.driver_performance.by_driver) {
-        csv += 'การทำงานของพนักงานขับรถรายคน\n';
-        csv += 'ชื่อ,จำนวนรอบ,ระยะทาง(กม.),ชั่วโมง,คะแนน\n';
-        Object.keys(reportData.driver_performance.by_driver).forEach(function (driverId) {
-          var stats = reportData.driver_performance.by_driver[driverId];
-          var driver = drivers.find(function (d) { return d.driver_id === driverId; });
-          var driverName = driver ? (driver.full_name || driver.first_name + ' ' + driver.last_name) : driverId;
-          csv += driverName + ',' + (stats.trips || 0) + ',' + (stats.distance || 0) + ',' + (stats.hours || 0) + ',' + (stats.score || 0) + '\n';
-        });
-      } else if (currentTab === 'vehicles' && reportData.vehicle_usage && reportData.vehicle_usage.by_vehicle) {
-        csv += 'การใช้งานรถรายคัน\n';
-        csv += 'รถ,จำนวนรอบ,ระยะทาง(กม.),ชั่วโมง,คะแนน\n';
-        Object.keys(reportData.vehicle_usage.by_vehicle).forEach(function (carId) {
-          var stats = reportData.vehicle_usage.by_vehicle[carId];
-          var vehicle = vehicles.find(function (v) { return v.car_id === carId; });
-          var vehicleName = vehicle ? (vehicle.license_plate + ' ' + vehicle.brand + ' ' + vehicle.model) : carId;
-          csv += vehicleName + ',' + (stats.trips || 0) + ',' + (stats.distance || 0) + ',' + (stats.hours || 0) + ',' + (stats.score || 0) + '\n';
-        });
-      }
-
-      var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-      var link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'report_' + currentTab + '_' + dateFrom + '_' + dateTo + '.csv';
-      link.click();
-    }
-
-    function showAlert(message, type) {
-      var container = document.getElementById('alertContainer');
-      var alert = document.createElement('div');
-      alert.className = 'alert alert-' + type;
-      alert.textContent = message;
-      container.innerHTML = '';
-      container.appendChild(alert);
-
-      setTimeout(function () {
-        alert.remove();
-      }, 5000);
+      alert('ฟีเจอร์ส่งออกรายงาน CSV จะเพิ่มในเวอร์ชันถัดไป');
     }
   </script>
 
