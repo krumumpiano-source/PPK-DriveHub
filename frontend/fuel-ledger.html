@@ -205,7 +205,10 @@
                 <th>ผู้เบิก</th>
                 <th>ประเภท</th>
                 <th>ลิตร</th>
-                <th>จำนวนเงิน (บาท)</th>
+                <th>บาท/ลิตร</th>
+                <th>จำนวนเงิน</th>
+                <th>ไมล์ก่อน</th>
+                <th>ไมล์หลัง</th>
                 <th>สถานีบริการ</th>
               </tr>
             </thead>
@@ -519,6 +522,9 @@
       html = '';
       (d.records || []).forEach(function (r, i) {
         var dateDisplay = typeof formatDateThai === 'function' ? formatDateThai(r.date) : r.date;
+        var ppl = r.price_per_liter ? r.price_per_liter.toFixed(2) : '-';
+        var mBefore = r.mileage_before ? r.mileage_before.toLocaleString() : '-';
+        var mAfter = r.mileage_after ? r.mileage_after.toLocaleString() : '-';
         html += '<tr>' +
           '<td class="num">' + (i + 1) + '</td>' +
           '<td>' + dateDisplay + '</td>' +
@@ -527,15 +533,19 @@
           '<td>' + (r.driver_name || '-') + '</td>' +
           '<td>' + (r.fuel_type || '-') + '</td>' +
           '<td class="num">' + (r.liters || 0).toFixed(2) + '</td>' +
+          '<td class="num">' + ppl + '</td>' +
           '<td class="num">' + (r.amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td>' +
+          '<td class="num">' + mBefore + '</td>' +
+          '<td class="num">' + mAfter + '</td>' +
           '<td>' + (r.gas_station_name || '-') + '</td></tr>';
       });
-      document.getElementById('monthlyRecordsBody').innerHTML = html || '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--color-text-muted);">ไม่มีข้อมูล</td></tr>';
+      document.getElementById('monthlyRecordsBody').innerHTML = html || '<tr><td colspan="12" style="text-align:center;padding:20px;color:var(--color-text-muted);">ไม่มีข้อมูล</td></tr>';
       document.getElementById('monthlyRecordsFoot').innerHTML =
         '<tr><td colspan="6" style="text-align:center;font-weight:700;">รวม</td>' +
         '<td class="num">' + (d.grand_total.total_liters || 0).toFixed(2) + '</td>' +
+        '<td></td>' +
         '<td class="num">' + (d.grand_total.total_amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td>' +
-        '<td></td></tr>';
+        '<td colspan="3"></td></tr>';
     }
 
     /* ═══ Tab 4: รายงานขอซื้อ ═══ */
@@ -682,23 +692,32 @@
       var monthMap = {};
       (d.monthly || []).forEach(function(m) { monthMap[m.month] = m; });
       var startYear = fy - 543 - 1;
-      var totalL = 0, totalA = 0;
+      var totalL = 0, totalA = 0, totalC = 0;
 
-      html += '<table class="gov"><thead><tr><th rowspan="2">เดือน</th><th colspan="2">รับ (จัดซื้อ)</th><th colspan="2">จ่าย (เบิกใช้)</th><th rowspan="2">หมายเหตุ</th></tr>' +
-        '<tr><th>จำนวน (ลิตร)</th><th>จำนวนเงิน (บาท)</th><th>จำนวน (ลิตร)</th><th>จำนวนเงิน (บาท)</th></tr></thead><tbody>';
+      html += '<table class="gov"><thead><tr><th>เดือน</th><th>จำนวนครั้ง</th><th>จำนวน (ลิตร)</th><th>จำนวนเงิน (บาท)</th><th>หมายเหตุ</th></tr></thead><tbody>';
       for (var i = 0; i < 12; i++) {
         var mo = fyMonthOrder[i];
         var ceY = mo >= 10 ? startYear : startYear + 1;
         var key = ceY + '-' + String(mo).padStart(2, '0');
-        var row = monthMap[key] || { total_liters: 0, total_amount: 0 };
-        totalL += row.total_liters; totalA += row.total_amount;
+        var row = monthMap[key] || { count: 0, total_liters: 0, total_amount: 0 };
+        totalC += (row.count||0); totalL += row.total_liters; totalA += row.total_amount;
         html += '<tr><td style="text-align:center">' + thaiMonths[i] + ' ' + (ceY+543) + '</td>' +
-          '<td class="r">' + row.total_liters.toFixed(2) + '</td><td class="r">' + row.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td>' +
-          '<td class="r">' + row.total_liters.toFixed(2) + '</td><td class="r">' + row.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td><td></td></tr>';
+          '<td class="r">' + (row.count||0) + '</td>' +
+          '<td class="r">' + row.total_liters.toFixed(2) + '</td>' +
+          '<td class="r">' + row.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td><td></td></tr>';
       }
       html += '</tbody><tfoot><tr><td style="text-align:center"><b>รวมทั้งปี</b></td>' +
-        '<td class="r">' + totalL.toFixed(2) + '</td><td class="r">' + totalA.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td>' +
-        '<td class="r">' + totalL.toFixed(2) + '</td><td class="r">' + totalA.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td><td></td></tr></tfoot></table>';
+        '<td class="r">' + totalC + '</td>' +
+        '<td class="r">' + totalL.toFixed(2) + '</td>' +
+        '<td class="r">' + totalA.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td><td></td></tr></tfoot></table>';
+
+      // By vehicle summary
+      html += '<p class="section-title">สรุปตามรถยนต์</p>' +
+        '<table class="gov"><thead><tr><th>ทะเบียนรถ</th><th>ยี่ห้อ</th><th>ครั้ง</th><th>ลิตร</th><th>จำนวนเงิน (บาท)</th></tr></thead><tbody>';
+      (d.by_vehicle || []).forEach(function(v) {
+        html += '<tr><td>' + (v.license_plate||'-') + '</td><td>' + (v.brand||'-') + '</td><td class="r">' + v.count + '</td><td class="r">' + v.total_liters.toFixed(2) + '</td><td class="r">' + v.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td></tr>';
+      });
+      html += '</tbody></table>';
 
       html += sig3('ผู้จัดทำ', 'ผู้ตรวจสอบ', 'ผู้อำนวยการโรงเรียน');
       govOpen('ทะเบียนควบคุมน้ำมัน ปี ' + fy, html);
@@ -733,11 +752,13 @@
       });
       html += '</tbody><tfoot><tr><td colspan="2"><b>รวม</b></td><td class="r">' + d.grand_total.count + '</td><td class="r">' + d.grand_total.total_liters.toFixed(2) + '</td><td class="r">' + d.grand_total.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td><td class="r">100.0%</td></tr></tfoot></table>';
 
+      html += '<p style="margin-top:12pt;font-size:16pt;">รวมค่าน้ำมันเชื้อเพลิงทั้งปี <b>' + d.grand_total.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</b> บาท (<b>' + numberToThaiWords(d.grand_total.total_amount) + '</b>)</p>';
+
       html += sig3('ผู้จัดทำ', 'ผู้ตรวจสอบ', 'ผู้อำนวยการโรงเรียน');
       govOpen('สรุปน้ำมันประจำปี ' + fy, html);
     }
 
-    /* ──── Tab 3: สรุปรายเดือน → บันทึกข้อความ ──── */
+    /* ──── Tab 3: สรุปรายเดือน — รายละเอียดทุกรายการ + เลขไมล์ ──── */
     function printMonthlyDoc() {
       if (!monthlyData) { alert('กรุณาโหลดข้อมูลเดือนก่อน'); return; }
       var d = monthlyData;
@@ -746,39 +767,68 @@
       var yr = parseInt(ym.substr(0,4));
       var monthName = thaiMonthNames[mo] + ' พ.ศ. ' + (yr+543);
 
-      var html = memoHeader('สรุปค่าใช้จ่ายน้ำมันเชื้อเพลิง ประจำเดือน' + monthName);
+      var html = '<h2>รายงานสรุปการใช้น้ำมันเชื้อเพลิง</h2>' +
+        '<p class="subtitle">โรงเรียนพะเยาพิทยาคม</p>' +
+        '<p class="period">ประจำเดือน' + monthName + '</p>';
 
-      html += '<p class="indent" style="margin-top:10pt;">ตามที่โรงเรียนพะเยาพิทยาคมได้จัดซื้อน้ำมันเชื้อเพลิงสำหรับรถราชการ ประจำเดือน' + monthName + ' นั้น บัดนี้ได้สรุปค่าใช้จ่ายเรียบร้อยแล้ว ดังรายละเอียดต่อไปนี้</p>';
+      // Full detail records table with mileage
+      html += '<p class="section-title">1. รายละเอียดการเติมน้ำมัน</p>' +
+        '<table class="gov" style="font-size:12pt;"><thead><tr>' +
+        '<th>ลำดับ</th><th>วันที่</th><th>เลขที่เอกสาร</th><th>ทะเบียนรถ</th><th>ผู้เบิก</th>' +
+        '<th>ประเภท</th><th>ลิตร</th><th>บาท/ลิตร</th><th>จำนวนเงิน</th>' +
+        '<th>ไมล์ก่อน</th><th>ไมล์หลัง</th><th>สถานีบริการ</th>' +
+        '</tr></thead><tbody>';
+      (d.records || []).forEach(function(r, i) {
+        var thMo = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+        var dd = r.date ? r.date.substr(8,2) : '';
+        var mm = r.date ? parseInt(r.date.substr(5,2)) : 0;
+        var yy = r.date ? (parseInt(r.date.substr(0,4))+543) : '';
+        var dateStr = dd + ' ' + thMo[mm] + ' ' + yy;
+        var ppl = r.price_per_liter ? r.price_per_liter.toFixed(2) : '-';
+        var mB = r.mileage_before ? r.mileage_before.toLocaleString() : '-';
+        var mA = r.mileage_after ? r.mileage_after.toLocaleString() : '-';
+        html += '<tr>' +
+          '<td class="r">' + (i+1) + '</td>' +
+          '<td>' + dateStr + '</td>' +
+          '<td>' + (r.document_number||'-') + '</td>' +
+          '<td>' + (r.license_plate||'-') + '</td>' +
+          '<td>' + (r.driver_name||'-') + '</td>' +
+          '<td>' + (r.fuel_type||'-') + '</td>' +
+          '<td class="r">' + (r.liters||0).toFixed(2) + '</td>' +
+          '<td class="r">' + ppl + '</td>' +
+          '<td class="r">' + (r.amount||0).toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td>' +
+          '<td class="r">' + mB + '</td>' +
+          '<td class="r">' + mA + '</td>' +
+          '<td>' + (r.gas_station_name||'-') + '</td></tr>';
+      });
+      html += '</tbody><tfoot><tr><td colspan="6" style="text-align:center"><b>รวม</b></td>' +
+        '<td class="r">' + d.grand_total.total_liters.toFixed(2) + '</td><td></td>' +
+        '<td class="r">' + d.grand_total.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td>' +
+        '<td colspan="3"></td></tr></tfoot></table>';
 
-      // Table 1: by vehicle
-      html += '<p class="section-title">1. รายละเอียดค่าน้ำมันแยกตามรถ</p>' +
+      // Summary by vehicle
+      html += '<p class="section-title">2. สรุปแยกตามรถ</p>' +
         '<table class="gov"><thead><tr><th>ลำดับ</th><th>ทะเบียนรถ</th><th>ยี่ห้อ</th><th>จำนวนครั้ง</th><th>จำนวน (ลิตร)</th><th>จำนวนเงิน (บาท)</th></tr></thead><tbody>';
       (d.by_vehicle || []).forEach(function(v, i) {
         html += '<tr><td class="r">' + (i+1) + '</td><td>' + (v.license_plate||'-') + '</td><td>' + (v.brand||'-') + '</td><td class="r">' + v.count + '</td><td class="r">' + v.total_liters.toFixed(2) + '</td><td class="r">' + v.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td></tr>';
       });
-      html += '</tbody><tfoot><tr><td colspan="3" style="text-align:center"><b>รวม</b></td><td class="r">' + d.grand_total.count + '</td><td class="r">' + d.grand_total.total_liters.toFixed(2) + '</td><td class="r">' + d.grand_total.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td></tr></tfoot></table>';
+      html += '</tbody></table>';
 
-      // Table 2: by fuel type
-      html += '<p class="section-title">2. แยกตามประเภทน้ำมัน</p>' +
+      // Summary by fuel type
+      html += '<p class="section-title">3. สรุปแยกตามประเภทน้ำมัน</p>' +
         '<table class="gov"><thead><tr><th>ประเภทน้ำมัน</th><th>จำนวนครั้ง</th><th>จำนวน (ลิตร)</th><th>จำนวนเงิน (บาท)</th></tr></thead><tbody>';
       (d.by_fuel_type || []).forEach(function(ft) {
         html += '<tr><td>' + (ft.fuel_type||'-') + '</td><td class="r">' + ft.count + '</td><td class="r">' + ft.total_liters.toFixed(2) + '</td><td class="r">' + ft.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td></tr>';
       });
-      html += '</tbody><tfoot><tr><td><b>รวม</b></td><td class="r">' + d.grand_total.count + '</td><td class="r">' + d.grand_total.total_liters.toFixed(2) + '</td><td class="r">' + d.grand_total.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td></tr></tfoot></table>';
+      html += '</tbody></table>';
 
-      html += '<p class="indent" style="margin-top:10pt;">รวมจำนวนเงินทั้งสิ้น <b>' + d.grand_total.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</b> บาท (<b>' + numberToThaiWords(d.grand_total.total_amount) + '</b>)</p>';
-      html += '<p class="indent">จึงเรียนมาเพื่อโปรดทราบ</p>';
+      html += '<p style="margin-top:12pt;font-size:16pt;">รวมจำนวนเงินทั้งสิ้น <b>' + d.grand_total.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</b> บาท (<b>' + numberToThaiWords(d.grand_total.total_amount) + '</b>)</p>';
 
-      html += '<div class="sig-row">' +
-        '<div class="sig-box"><div class="sig-dot"></div><div class="sig-lbl">ผู้จัดทำ</div><div class="sig-sub">(เจ้าหน้าที่พัสดุ)</div><div class="sig-sub">(.........................................)</div></div>' +
-        '<div class="sig-box"><div class="sig-dot"></div><div class="sig-lbl">ผู้ตรวจสอบ</div><div class="sig-sub">(หัวหน้าเจ้าหน้าที่)</div><div class="sig-sub">(.........................................)</div></div>' +
-        '<div class="sig-box"><div style="margin-bottom:6pt;text-align:left;font-size:14pt;">☐ ทราบ</div><div class="sig-dot"></div><div class="sig-lbl">ผู้อำนวยการโรงเรียน</div><div class="sig-sub">(.........................................)</div></div>' +
-        '</div>';
-
+      html += sig3('ผู้จัดทำ', 'ผู้ตรวจสอบ', 'ผู้อำนวยการโรงเรียน');
       govOpen('สรุปค่าน้ำมัน ' + monthName, html);
     }
 
-    /* ──── Tab 4: รายงานขอซื้อ → บันทึกข้อความ ──── */
+    /* ──── Tab 4: รายงานขอซื้อ — รายละเอียดทุกรายการ ──── */
     function printPurchaseDoc() {
       if (!monthlyData) { alert('กรุณาโหลดข้อมูลเดือนก่อน'); return; }
       var d = monthlyData;
@@ -787,21 +837,58 @@
       var yr = parseInt(ym.substr(0,4));
       var monthName = thaiMonthNames[mo] + ' พ.ศ. ' + (yr+543);
 
-      var html = memoHeader('ขอซื้อน้ำมันเชื้อเพลิง ประจำเดือน' + monthName);
+      var html = '<h2>รายงานขอซื้อน้ำมันเชื้อเพลิง</h2>' +
+        '<p class="subtitle">โรงเรียนพะเยาพิทยาคม</p>' +
+        '<p class="period">ประจำเดือน' + monthName + '</p>' +
+        '<p style="margin-top:6pt;">โดยวิธีเฉพาะเจาะจง ตาม พ.ร.บ.การจัดซื้อจัดจ้างฯ พ.ศ. 2560 มาตรา 56(2)(ข)</p>';
 
-      html += '<p class="indent" style="margin-top:10pt;">ด้วยโรงเรียนพะเยาพิทยาคม มีความจำเป็นต้องจัดซื้อน้ำมันเชื้อเพลิงเพื่อใช้ในราชการ ประจำเดือน' + monthName + ' โดยวิธีเฉพาะเจาะจง ตามพระราชบัญญัติการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. 2560 มาตรา 56 วรรคหนึ่ง (2)(ข) ดังรายละเอียดต่อไปนี้</p>';
-
+      // Detailed records
+      html += '<p class="section-title">รายละเอียดการจัดซื้อ</p>' +
+        '<table class="gov" style="font-size:12pt;"><thead><tr>' +
+        '<th>ลำดับ</th><th>วันที่</th><th>เลขที่เอกสาร</th><th>ทะเบียนรถ</th><th>ผู้เบิก</th>' +
+        '<th>ประเภท</th><th>ลิตร</th><th>บาท/ลิตร</th><th>จำนวนเงิน</th>' +
+        '<th>ไมล์ก่อน</th><th>ไมล์หลัง</th><th>สถานีบริการ</th>' +
+        '</tr></thead><tbody>';
       var totalA = 0, totalL = 0;
-      html += '<table class="gov" style="margin:12pt 0;"><thead><tr><th>ลำดับ</th><th>รายการ</th><th>จำนวน (ลิตร)</th><th>ราคารวม (บาท)</th><th>หมายเหตุ</th></tr></thead><tbody>';
-      (d.by_fuel_type || []).forEach(function(ft, i) {
-        totalA += ft.total_amount; totalL += ft.total_liters;
-        html += '<tr><td class="r">' + (i+1) + '</td><td>น้ำมัน' + (ft.fuel_type||'-') + '</td><td class="r">' + ft.total_liters.toFixed(2) + '</td><td class="r">' + ft.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td><td>สำหรับรถราชการ ' + (d.by_vehicle||[]).length + ' คัน</td></tr>';
+      (d.records || []).forEach(function(r, i) {
+        var thMo = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+        var dd = r.date ? r.date.substr(8,2) : '';
+        var mm = r.date ? parseInt(r.date.substr(5,2)) : 0;
+        var yy = r.date ? (parseInt(r.date.substr(0,4))+543) : '';
+        var dateStr = dd + ' ' + thMo[mm] + ' ' + yy;
+        var ppl = r.price_per_liter ? r.price_per_liter.toFixed(2) : '-';
+        var mB = r.mileage_before ? r.mileage_before.toLocaleString() : '-';
+        var mA = r.mileage_after ? r.mileage_after.toLocaleString() : '-';
+        totalA += (r.amount||0); totalL += (r.liters||0);
+        html += '<tr>' +
+          '<td class="r">' + (i+1) + '</td>' +
+          '<td>' + dateStr + '</td>' +
+          '<td>' + (r.document_number||'-') + '</td>' +
+          '<td>' + (r.license_plate||'-') + '</td>' +
+          '<td>' + (r.driver_name||'-') + '</td>' +
+          '<td>' + (r.fuel_type||'-') + '</td>' +
+          '<td class="r">' + (r.liters||0).toFixed(2) + '</td>' +
+          '<td class="r">' + ppl + '</td>' +
+          '<td class="r">' + (r.amount||0).toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td>' +
+          '<td class="r">' + mB + '</td>' +
+          '<td class="r">' + mA + '</td>' +
+          '<td>' + (r.gas_station_name||'-') + '</td></tr>';
       });
-      html += '</tbody><tfoot><tr><td colspan="2" style="text-align:center"><b>รวม</b></td><td class="r">' + totalL.toFixed(2) + '</td><td class="r">' + totalA.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td><td></td></tr></tfoot></table>';
+      html += '</tbody><tfoot><tr><td colspan="6" style="text-align:center"><b>รวม</b></td>' +
+        '<td class="r">' + totalL.toFixed(2) + '</td><td></td>' +
+        '<td class="r">' + totalA.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td>' +
+        '<td colspan="3"></td></tr></tfoot></table>';
 
-      html += '<p class="indent">รวมจำนวนเงินทั้งสิ้น <b>' + totalA.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</b> บาท (<b>' + numberToThaiWords(totalA) + '</b>)</p>';
-      html += '<p class="indent">โดยใช้เงิน <b>งบดำเนินงาน</b></p>';
-      html += '<p class="indent">จึงเรียนมาเพื่อโปรดพิจารณาอนุมัติ</p>';
+      // Summary by fuel type
+      html += '<p class="section-title">สรุปตามประเภทน้ำมัน</p>' +
+        '<table class="gov"><thead><tr><th>ประเภทน้ำมัน</th><th>จำนวนครั้ง</th><th>จำนวน (ลิตร)</th><th>จำนวนเงิน (บาท)</th></tr></thead><tbody>';
+      (d.by_fuel_type || []).forEach(function(ft) {
+        html += '<tr><td>น้ำมัน' + (ft.fuel_type||'-') + '</td><td class="r">' + ft.count + '</td><td class="r">' + ft.total_liters.toFixed(2) + '</td><td class="r">' + ft.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td></tr>';
+      });
+      html += '</tbody></table>';
+
+      html += '<p style="margin-top:12pt;font-size:16pt;">รวมจำนวนเงินทั้งสิ้น <b>' + totalA.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</b> บาท (<b>' + numberToThaiWords(totalA) + '</b>)</p>' +
+        '<p>แหล่งงบประมาณ: <b>งบดำเนินงาน</b></p>';
 
       html += '<div class="sig-row2">' +
         '<div class="sig-box2"><div class="sig-dot"></div><div class="sig-lbl">ผู้ขอซื้อ/เจ้าหน้าที่พัสดุ</div><div class="sig-sub">(.........................................)</div><div class="sig-sub">ตำแหน่ง ................................</div></div>' +

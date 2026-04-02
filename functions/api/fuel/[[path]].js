@@ -658,7 +658,8 @@ export async function onRequest(context) {
 
     // All records
     const records = await dbAll(env.DB,
-      `SELECT fl.date, fl.document_number, fl.fuel_type, fl.liters, fl.amount,
+      `SELECT fl.date, fl.time, fl.document_number, fl.fuel_type, fl.liters, fl.price_per_liter, fl.amount,
+        fl.mileage_before, fl.mileage_after,
         fl.gas_station_name, fl.purpose, fl.purpose_detail,
         c.license_plate, c.brand,
         COALESCE(d.name, fl.driver_name_manual) AS driver_name
