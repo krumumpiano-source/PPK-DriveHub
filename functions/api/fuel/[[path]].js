@@ -575,12 +575,15 @@ export async function onRequest(context) {
        GROUP BY fl.fuel_type
        ORDER BY total_amount DESC`, [dateFrom, dateTo]);
 
-    // By vehicle
+    // By vehicle (with avg consumption = total_km / total_liters)
     const byVehicle = await dbAll(env.DB,
       `SELECT c.license_plate, c.brand,
         COUNT(*) AS count,
         COALESCE(SUM(fl.liters), 0) AS total_liters,
-        COALESCE(SUM(fl.amount), 0) AS total_amount
+        COALESCE(SUM(fl.amount), 0) AS total_amount,
+        CASE WHEN SUM(fl.liters) > 0 AND MAX(fl.mileage_before) > 0 AND MIN(fl.mileage_before) > 0
+          THEN ROUND(CAST(MAX(fl.mileage_before) - MIN(fl.mileage_before) AS REAL) / SUM(fl.liters), 2)
+          ELSE NULL END AS avg_km_per_liter
        FROM fuel_log fl
        LEFT JOIN cars c ON fl.car_id = c.id
        WHERE fl.date >= ? AND fl.date <= ? AND fl.deleted_at IS NULL
@@ -608,18 +611,28 @@ export async function onRequest(context) {
   }
 
   // --- GET /api/fuel/monthly-summary ---
-  // สรุปค่าใช้จ่ายน้ำมันประจำเดือน (รายละเอียดแยกรถ + แยกประเภท)
+  // สรุปค่าใช้จ่ายน้ำมัน — รองรับทั้ง year_month และ date_from/date_to
   if (path === '/api/fuel/monthly-summary' && method === 'GET') {
     try { requirePermission(user, 'fuel', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
 
-    const yearMonth = url.searchParams.get('year_month'); // e.g. 2026-03
-    if (!yearMonth || !/^\d{4}-\d{2}$/.test(yearMonth)) return error('กรุณาระบุ year_month (เช่น 2026-03)');
+    let dateFrom, dateTo, yearMonth;
+    const pFrom = url.searchParams.get('date_from');
+    const pTo = url.searchParams.get('date_to');
+    yearMonth = url.searchParams.get('year_month'); // e.g. 2026-03
 
-    const dateFrom = yearMonth + '-01';
-    const y = parseInt(yearMonth.substr(0, 4));
-    const m = parseInt(yearMonth.substr(5, 2));
-    const lastDay = new Date(y, m, 0).getDate();
-    const dateTo = yearMonth + '-' + String(lastDay).padStart(2, '0');
+    if (pFrom && pTo && /^\d{4}-\d{2}-\d{2}$/.test(pFrom) && /^\d{4}-\d{2}-\d{2}$/.test(pTo)) {
+      dateFrom = pFrom;
+      dateTo = pTo;
+      yearMonth = yearMonth || pFrom.substr(0, 7);
+    } else if (yearMonth && /^\d{4}-\d{2}$/.test(yearMonth)) {
+      dateFrom = yearMonth + '-01';
+      const y = parseInt(yearMonth.substr(0, 4));
+      const m = parseInt(yearMonth.substr(5, 2));
+      const lastDay = new Date(y, m, 0).getDate();
+      dateTo = yearMonth + '-' + String(lastDay).padStart(2, '0');
+    } else {
+      return error('กรุณาระบุ year_month (เช่น 2026-03) หรือ date_from + date_to');
+    }
 
     // By vehicle + fuel type
     const byVehicleFuel = await dbAll(env.DB,
@@ -633,12 +646,15 @@ export async function onRequest(context) {
        GROUP BY fl.car_id, fl.fuel_type
        ORDER BY c.license_plate, fl.fuel_type`, [dateFrom, dateTo]);
 
-    // By vehicle only
+    // By vehicle only (with avg consumption)
     const byVehicle = await dbAll(env.DB,
       `SELECT c.license_plate, c.brand,
         COUNT(*) AS count,
         COALESCE(SUM(fl.liters), 0) AS total_liters,
-        COALESCE(SUM(fl.amount), 0) AS total_amount
+        COALESCE(SUM(fl.amount), 0) AS total_amount,
+        CASE WHEN SUM(fl.liters) > 0 AND MAX(fl.mileage_before) > 0 AND MIN(fl.mileage_before) > 0
+          THEN ROUND(CAST(MAX(fl.mileage_before) - MIN(fl.mileage_before) AS REAL) / SUM(fl.liters), 2)
+          ELSE NULL END AS avg_km_per_liter
        FROM fuel_log fl
        LEFT JOIN cars c ON fl.car_id = c.id
        WHERE fl.date >= ? AND fl.date <= ? AND fl.deleted_at IS NULL
@@ -659,7 +675,7 @@ export async function onRequest(context) {
     // All records
     const records = await dbAll(env.DB,
       `SELECT fl.date, fl.time, fl.document_number, fl.fuel_type, fl.liters, fl.price_per_liter, fl.amount,
-        fl.mileage_before, fl.mileage_after,
+        fl.mileage_before, fl.mileage_after, fl.fuel_consumption_rate,
         fl.gas_station_name, fl.purpose, fl.purpose_detail,
         c.license_plate, c.brand,
         COALESCE(d.name, fl.driver_name_manual) AS driver_name

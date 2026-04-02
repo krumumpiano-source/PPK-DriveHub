@@ -58,10 +58,27 @@
       <div class="filter-row no-print">
         <label>ปีงบประมาณ พ.ศ.:</label>
         <select id="fySelect"></select>
-        <label style="margin-left:12px;">เดือน:</label>
-        <input type="month" id="monthSelect" style="padding:8px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:14px;">
+
+        <label style="margin-left:16px;">ช่วงรายงาน:</label>
+        <select id="reportMode" onchange="toggleReportMode()" style="padding:8px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:14px;">
+          <option value="month">รายเดือน</option>
+          <option value="range">ช่วงวัน</option>
+          <option value="all">ทั้งปีงบประมาณ</option>
+        </select>
+
+        <span id="monthPicker">
+          <select id="monthSelectM" style="padding:8px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:14px;"></select>
+          <select id="monthSelectY" style="padding:8px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:14px;"></select>
+        </span>
+
+        <span id="rangePicker" style="display:none;">
+          <input type="date" id="dateFrom" style="padding:8px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:14px;">
+          <span> — </span>
+          <input type="date" id="dateTo" style="padding:8px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:14px;">
+        </span>
+
         <button class="btn-print" onclick="loadAll()">🔍 โหลดข้อมูล</button>
-        <button class="btn-print" onclick="printActiveTab()" style="background:#555;">🖨️ พิมพ์เอกสารราชการ</button>
+        <button class="btn-print" onclick="printActiveTab()" style="background:#555;">🖨️ พิมพ์เอกสาร</button>
       </div>
 
       <!-- Tabs -->
@@ -142,6 +159,7 @@
                 <th>จำนวน (ลิตร)</th>
                 <th>จำนวนเงิน (บาท)</th>
                 <th>สัดส่วน (%)</th>
+                <th>กม./ลิตร</th>
               </tr>
             </thead>
             <tbody id="vehicleBody"></tbody>
@@ -170,6 +188,7 @@
                 <th>จำนวนครั้ง</th>
                 <th>จำนวน (ลิตร)</th>
                 <th>จำนวนเงิน (บาท)</th>
+                <th>กม./ลิตร</th>
               </tr>
             </thead>
             <tbody id="monthlyVehicleBody"></tbody>
@@ -207,8 +226,7 @@
                 <th>ลิตร</th>
                 <th>บาท/ลิตร</th>
                 <th>จำนวนเงิน</th>
-                <th>ไมล์ก่อน</th>
-                <th>ไมล์หลัง</th>
+                <th>เลขไมล์</th>
                 <th>สถานีบริการ</th>
               </tr>
             </thead>
@@ -302,11 +320,11 @@
       var isAuth = requireAuth();
       if (!isAuth) return;
       buildFYSelect();
-      // Set default month to current
-      var now = new Date();
-      document.getElementById('monthSelect').value = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+      buildMonthSelect();
       loadAll();
     });
+
+    var TH_MONTH_NAMES = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
 
     function buildFYSelect() {
       var sel = document.getElementById('fySelect');
@@ -317,6 +335,53 @@
         opt.value = y;
         opt.textContent = y;
         sel.appendChild(opt);
+      }
+    }
+
+    function buildMonthSelect() {
+      var selM = document.getElementById('monthSelectM');
+      var selY = document.getElementById('monthSelectY');
+      var now = new Date();
+      // Month dropdown (Thai)
+      for (var m = 1; m <= 12; m++) {
+        var opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = TH_MONTH_NAMES[m];
+        if (m === now.getMonth() + 1) opt.selected = true;
+        selM.appendChild(opt);
+      }
+      // Year dropdown (พ.ศ.)
+      var ceBE = now.getFullYear() + 543;
+      for (var y = ceBE; y >= ceBE - 5; y--) {
+        var opt = document.createElement('option');
+        opt.value = y - 543; // store CE
+        opt.textContent = 'พ.ศ. ' + y;
+        selY.appendChild(opt);
+      }
+    }
+
+    function toggleReportMode() {
+      var mode = document.getElementById('reportMode').value;
+      document.getElementById('monthPicker').style.display = mode === 'month' ? '' : 'none';
+      document.getElementById('rangePicker').style.display = mode === 'range' ? '' : 'none';
+    }
+    window.toggleReportMode = toggleReportMode;
+
+    function getMonthlyParams() {
+      var mode = document.getElementById('reportMode').value;
+      if (mode === 'range') {
+        var df = document.getElementById('dateFrom').value;
+        var dt = document.getElementById('dateTo').value;
+        if (!df || !dt) { alert('กรุณาเลือกวันที่เริ่มต้นและสิ้นสุด'); return null; }
+        return { date_from: df, date_to: dt };
+      } else if (mode === 'all') {
+        var fy = parseInt(document.getElementById('fySelect').value);
+        var ceStart = fy - 543 - 1;
+        return { date_from: ceStart + '-10-01', date_to: (ceStart + 1) + '-09-30' };
+      } else {
+        var m = document.getElementById('monthSelectM').value;
+        var y = document.getElementById('monthSelectY').value;
+        return { year_month: y + '-' + String(m).padStart(2, '0') };
       }
     }
 
@@ -435,13 +500,15 @@
       html = '';
       (d.by_vehicle || []).forEach(function (v) {
         var pct = grandAmount > 0 ? (v.total_amount / grandAmount * 100) : 0;
+        var kpl = v.avg_km_per_liter ? v.avg_km_per_liter.toFixed(2) : '-';
         html += '<tr>' +
           '<td>' + (v.license_plate || '-') + '</td>' +
           '<td>' + (v.brand || '-') + '</td>' +
           '<td class="num">' + v.count + '</td>' +
           '<td class="num">' + v.total_liters.toFixed(2) + '</td>' +
           '<td class="num">' + v.total_amount.toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td>' +
-          '<td class="num">' + pct.toFixed(1) + '%</td></tr>';
+          '<td class="num">' + pct.toFixed(1) + '%</td>' +
+          '<td class="num">' + kpl + '</td></tr>';
       });
       document.getElementById('vehicleBody').innerHTML = html;
       document.getElementById('vehicleFoot').innerHTML =
@@ -449,34 +516,40 @@
         '<td class="num">' + (d.grand_total.count || 0) + '</td>' +
         '<td class="num">' + (d.grand_total.total_liters || 0).toFixed(2) + '</td>' +
         '<td class="num">' + (d.grand_total.total_amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td>' +
-        '<td class="num">100.0%</td></tr>';
+        '<td class="num">100.0%</td>' +
+        '<td></td></tr>';
     }
 
     /* ═══ Tab 3: สรุปค่าใช้จ่ายประจำเดือน ═══ */
     var thaiMonthNames = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
 
     function loadMonthlySummary() {
-      var ym = document.getElementById('monthSelect').value;
-      if (!ym) return;
-      document.getElementById('monthlyVehicleBody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;">⏳ กำลังโหลด...</td></tr>';
+      var params = getMonthlyParams();
+      if (!params) return;
+      document.getElementById('monthlyVehicleBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;">⏳ กำลังโหลด...</td></tr>';
 
-      apiCall('getFuelMonthlySummary', { year_month: ym }).then(function (res) {
+      apiCall('getFuelMonthlySummary', params).then(function (res) {
         if (!res.success) { alert(res.message || 'โหลดไม่สำเร็จ'); return; }
         monthlyData = res.data;
         renderMonthly();
         renderPurchase();
       }).catch(function (err) {
-        document.getElementById('monthlyVehicleBody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--color-danger-dark);">❌ ' + (err.message || 'โหลดไม่สำเร็จ') + '</td></tr>';
+        document.getElementById('monthlyVehicleBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--color-danger-dark);">❌ ' + (err.message || 'โหลดไม่สำเร็จ') + '</td></tr>';
       });
     }
 
     function renderMonthly() {
       var d = monthlyData;
-      var ym = d.year_month;
-      var mo = parseInt(ym.substr(5, 2));
-      var yr = parseInt(ym.substr(0, 4));
-      var monthName = thaiMonthNames[mo] + ' ' + (yr + 543);
-      document.getElementById('monthlyPeriod').textContent = 'ประจำเดือน ' + monthName;
+      var periodLabel = '';
+      if (d.date_from && d.date_to) {
+        periodLabel = formatDateThai(d.date_from) + ' — ' + formatDateThai(d.date_to);
+      } else {
+        var ym = d.year_month;
+        var mo = parseInt(ym.substr(5, 2));
+        var yr = parseInt(ym.substr(0, 4));
+        periodLabel = 'ประจำเดือน ' + thaiMonthNames[mo] + ' ' + (yr + 543);
+      }
+      document.getElementById('monthlyPeriod').textContent = periodLabel;
 
       // Summary cards
       document.getElementById('monthlySummary').innerHTML =
@@ -487,20 +560,23 @@
       // By vehicle
       var html = '';
       (d.by_vehicle || []).forEach(function (v, i) {
+        var kpl = v.avg_km_per_liter ? v.avg_km_per_liter.toFixed(2) : '-';
         html += '<tr>' +
           '<td class="num">' + (i + 1) + '</td>' +
           '<td>' + (v.license_plate || '-') + '</td>' +
           '<td>' + (v.brand || '-') + '</td>' +
           '<td class="num">' + v.count + '</td>' +
           '<td class="num">' + v.total_liters.toFixed(2) + '</td>' +
-          '<td class="num">' + v.total_amount.toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td></tr>';
+          '<td class="num">' + v.total_amount.toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td>' +
+          '<td class="num">' + kpl + '</td></tr>';
       });
-      document.getElementById('monthlyVehicleBody').innerHTML = html || '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--color-text-muted);">ไม่มีข้อมูล</td></tr>';
+      document.getElementById('monthlyVehicleBody').innerHTML = html || '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--color-text-muted);">ไม่มีข้อมูล</td></tr>';
       document.getElementById('monthlyVehicleFoot').innerHTML =
         '<tr><td colspan="3" style="text-align:center;font-weight:700;">รวม</td>' +
         '<td class="num">' + (d.grand_total.count || 0) + '</td>' +
         '<td class="num">' + (d.grand_total.total_liters || 0).toFixed(2) + '</td>' +
-        '<td class="num">' + (d.grand_total.total_amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td></tr>';
+        '<td class="num">' + (d.grand_total.total_amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td>' +
+        '<td></td></tr>';
 
       // By fuel type
       html = '';
@@ -523,8 +599,7 @@
       (d.records || []).forEach(function (r, i) {
         var dateDisplay = typeof formatDateThai === 'function' ? formatDateThai(r.date) : r.date;
         var ppl = r.price_per_liter ? r.price_per_liter.toFixed(2) : '-';
-        var mBefore = r.mileage_before ? r.mileage_before.toLocaleString() : '-';
-        var mAfter = r.mileage_after ? r.mileage_after.toLocaleString() : '-';
+        var mileage = r.mileage_before ? r.mileage_before.toLocaleString() : 'ผู้เบิกไม่บันทึกเลขไมล์';
         html += '<tr>' +
           '<td class="num">' + (i + 1) + '</td>' +
           '<td>' + dateDisplay + '</td>' +
@@ -535,17 +610,16 @@
           '<td class="num">' + (r.liters || 0).toFixed(2) + '</td>' +
           '<td class="num">' + ppl + '</td>' +
           '<td class="num">' + (r.amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td>' +
-          '<td class="num">' + mBefore + '</td>' +
-          '<td class="num">' + mAfter + '</td>' +
+          '<td class="num" style="font-size:11px;color:#999;">' + mileage + '</td>' +
           '<td>' + (r.gas_station_name || '-') + '</td></tr>';
       });
-      document.getElementById('monthlyRecordsBody').innerHTML = html || '<tr><td colspan="12" style="text-align:center;padding:20px;color:var(--color-text-muted);">ไม่มีข้อมูล</td></tr>';
+      document.getElementById('monthlyRecordsBody').innerHTML = html || '<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--color-text-muted);">ไม่มีข้อมูล</td></tr>';
       document.getElementById('monthlyRecordsFoot').innerHTML =
         '<tr><td colspan="6" style="text-align:center;font-weight:700;">รวม</td>' +
         '<td class="num">' + (d.grand_total.total_liters || 0).toFixed(2) + '</td>' +
         '<td></td>' +
         '<td class="num">' + (d.grand_total.total_amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td>' +
-        '<td colspan="3"></td></tr>';
+        '<td colspan="2"></td></tr>';
     }
 
     /* ═══ Tab 4: รายงานขอซื้อ ═══ */
@@ -584,12 +658,17 @@
 
     function renderPurchase() {
       var d = monthlyData;
-      var ym = d.year_month;
-      var mo = parseInt(ym.substr(5, 2));
-      var yr = parseInt(ym.substr(0, 4));
-      var monthName = thaiMonthNames[mo] + ' พ.ศ. ' + (yr + 543);
+      var monthName = '';
+      if (d.date_from && d.date_to) {
+        monthName = formatDateThai(d.date_from) + ' — ' + formatDateThai(d.date_to);
+      } else {
+        var ym = d.year_month;
+        var mo = parseInt(ym.substr(5, 2));
+        var yr = parseInt(ym.substr(0, 4));
+        monthName = thaiMonthNames[mo] + ' พ.ศ. ' + (yr + 543);
+      }
       document.getElementById('purchaseMonthName').textContent = monthName;
-      document.getElementById('purchaseDocDate').textContent = 'วันที่ ............... เดือน ' + thaiMonthNames[mo] + ' พ.ศ. ' + (yr + 543);
+      document.getElementById('purchaseDocDate').textContent = monthName;
 
       // Items: by fuel type
       var html = '';
@@ -713,9 +792,10 @@
 
       // By vehicle summary
       html += '<p class="section-title">สรุปตามรถยนต์</p>' +
-        '<table class="gov"><thead><tr><th>ทะเบียนรถ</th><th>ยี่ห้อ</th><th>ครั้ง</th><th>ลิตร</th><th>จำนวนเงิน (บาท)</th></tr></thead><tbody>';
+        '<table class="gov"><thead><tr><th>ทะเบียนรถ</th><th>ยี่ห้อ</th><th>ครั้ง</th><th>ลิตร</th><th>จำนวนเงิน (บาท)</th><th>กม./ลิตร</th></tr></thead><tbody>';
       (d.by_vehicle || []).forEach(function(v) {
-        html += '<tr><td>' + (v.license_plate||'-') + '</td><td>' + (v.brand||'-') + '</td><td class="r">' + v.count + '</td><td class="r">' + v.total_liters.toFixed(2) + '</td><td class="r">' + v.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td></tr>';
+        var kpl = v.avg_km_per_liter ? v.avg_km_per_liter.toFixed(2) : '-';
+        html += '<tr><td>' + (v.license_plate||'-') + '</td><td>' + (v.brand||'-') + '</td><td class="r">' + v.count + '</td><td class="r">' + v.total_liters.toFixed(2) + '</td><td class="r">' + v.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td><td class="r">' + kpl + '</td></tr>';
       });
       html += '</tbody></table>';
 
@@ -745,12 +825,13 @@
 
       // By vehicle
       html += '<p class="section-title">2. สรุปตามรถยนต์</p>' +
-        '<table class="gov"><thead><tr><th>ทะเบียนรถ</th><th>ยี่ห้อ/รุ่น</th><th>จำนวนครั้ง</th><th>จำนวน (ลิตร)</th><th>จำนวนเงิน (บาท)</th><th>สัดส่วน (%)</th></tr></thead><tbody>';
+        '<table class="gov"><thead><tr><th>ทะเบียนรถ</th><th>ยี่ห้อ/รุ่น</th><th>จำนวนครั้ง</th><th>จำนวน (ลิตร)</th><th>จำนวนเงิน (บาท)</th><th>สัดส่วน (%)</th><th>กม./ลิตร</th></tr></thead><tbody>';
       (d.by_vehicle || []).forEach(function(v) {
         var pct = gAmt > 0 ? (v.total_amount / gAmt * 100) : 0;
-        html += '<tr><td>' + (v.license_plate||'-') + '</td><td>' + (v.brand||'-') + '</td><td class="r">' + v.count + '</td><td class="r">' + v.total_liters.toFixed(2) + '</td><td class="r">' + v.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td><td class="r">' + pct.toFixed(1) + '%</td></tr>';
+        var kpl = v.avg_km_per_liter ? v.avg_km_per_liter.toFixed(2) : '-';
+        html += '<tr><td>' + (v.license_plate||'-') + '</td><td>' + (v.brand||'-') + '</td><td class="r">' + v.count + '</td><td class="r">' + v.total_liters.toFixed(2) + '</td><td class="r">' + v.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td><td class="r">' + pct.toFixed(1) + '%</td><td class="r">' + kpl + '</td></tr>';
       });
-      html += '</tbody><tfoot><tr><td colspan="2"><b>รวม</b></td><td class="r">' + d.grand_total.count + '</td><td class="r">' + d.grand_total.total_liters.toFixed(2) + '</td><td class="r">' + d.grand_total.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td><td class="r">100.0%</td></tr></tfoot></table>';
+      html += '</tbody><tfoot><tr><td colspan="2"><b>รวม</b></td><td class="r">' + d.grand_total.count + '</td><td class="r">' + d.grand_total.total_liters.toFixed(2) + '</td><td class="r">' + d.grand_total.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td><td class="r">100.0%</td><td></td></tr></tfoot></table>';;
 
       html += '<p style="margin-top:12pt;font-size:16pt;">รวมค่าน้ำมันเชื้อเพลิงทั้งปี <b>' + d.grand_total.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</b> บาท (<b>' + numberToThaiWords(d.grand_total.total_amount) + '</b>)</p>';
 
@@ -762,21 +843,26 @@
     function printMonthlyDoc() {
       if (!monthlyData) { alert('กรุณาโหลดข้อมูลเดือนก่อน'); return; }
       var d = monthlyData;
-      var ym = d.year_month;
-      var mo = parseInt(ym.substr(5,2));
-      var yr = parseInt(ym.substr(0,4));
-      var monthName = thaiMonthNames[mo] + ' พ.ศ. ' + (yr+543);
+      var periodLabel = '';
+      if (d.date_from && d.date_to) {
+        periodLabel = formatDateThai(d.date_from) + ' — ' + formatDateThai(d.date_to);
+      } else {
+        var ym = d.year_month;
+        var mo = parseInt(ym.substr(5,2));
+        var yr = parseInt(ym.substr(0,4));
+        periodLabel = 'ประจำเดือน' + thaiMonthNames[mo] + ' พ.ศ. ' + (yr+543);
+      }
 
       var html = '<h2>รายงานสรุปการใช้น้ำมันเชื้อเพลิง</h2>' +
         '<p class="subtitle">โรงเรียนพะเยาพิทยาคม</p>' +
-        '<p class="period">ประจำเดือน' + monthName + '</p>';
+        '<p class="period">' + periodLabel + '</p>';
 
       // Full detail records table with mileage
       html += '<p class="section-title">1. รายละเอียดการเติมน้ำมัน</p>' +
         '<table class="gov" style="font-size:12pt;"><thead><tr>' +
         '<th>ลำดับ</th><th>วันที่</th><th>เลขที่เอกสาร</th><th>ทะเบียนรถ</th><th>ผู้เบิก</th>' +
         '<th>ประเภท</th><th>ลิตร</th><th>บาท/ลิตร</th><th>จำนวนเงิน</th>' +
-        '<th>ไมล์ก่อน</th><th>ไมล์หลัง</th><th>สถานีบริการ</th>' +
+        '<th>เลขไมล์</th><th>สถานีบริการ</th>' +
         '</tr></thead><tbody>';
       (d.records || []).forEach(function(r, i) {
         var thMo = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
@@ -785,8 +871,7 @@
         var yy = r.date ? (parseInt(r.date.substr(0,4))+543) : '';
         var dateStr = dd + ' ' + thMo[mm] + ' ' + yy;
         var ppl = r.price_per_liter ? r.price_per_liter.toFixed(2) : '-';
-        var mB = r.mileage_before ? r.mileage_before.toLocaleString() : '-';
-        var mA = r.mileage_after ? r.mileage_after.toLocaleString() : '-';
+        var mileage = r.mileage_before ? r.mileage_before.toLocaleString() : 'ผู้เบิกไม่บันทึกเลขไมล์';
         html += '<tr>' +
           '<td class="r">' + (i+1) + '</td>' +
           '<td>' + dateStr + '</td>' +
@@ -797,20 +882,20 @@
           '<td class="r">' + (r.liters||0).toFixed(2) + '</td>' +
           '<td class="r">' + ppl + '</td>' +
           '<td class="r">' + (r.amount||0).toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td>' +
-          '<td class="r">' + mB + '</td>' +
-          '<td class="r">' + mA + '</td>' +
+          '<td class="r" style="font-size:11pt;">' + mileage + '</td>' +
           '<td>' + (r.gas_station_name||'-') + '</td></tr>';
       });
       html += '</tbody><tfoot><tr><td colspan="6" style="text-align:center"><b>รวม</b></td>' +
         '<td class="r">' + d.grand_total.total_liters.toFixed(2) + '</td><td></td>' +
         '<td class="r">' + d.grand_total.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td>' +
-        '<td colspan="3"></td></tr></tfoot></table>';
+        '<td colspan="2"></td></tr></tfoot></table>';
 
       // Summary by vehicle
       html += '<p class="section-title">2. สรุปแยกตามรถ</p>' +
-        '<table class="gov"><thead><tr><th>ลำดับ</th><th>ทะเบียนรถ</th><th>ยี่ห้อ</th><th>จำนวนครั้ง</th><th>จำนวน (ลิตร)</th><th>จำนวนเงิน (บาท)</th></tr></thead><tbody>';
+        '<table class="gov"><thead><tr><th>ลำดับ</th><th>ทะเบียนรถ</th><th>ยี่ห้อ</th><th>จำนวนครั้ง</th><th>จำนวน (ลิตร)</th><th>จำนวนเงิน (บาท)</th><th>กม./ลิตร</th></tr></thead><tbody>';
       (d.by_vehicle || []).forEach(function(v, i) {
-        html += '<tr><td class="r">' + (i+1) + '</td><td>' + (v.license_plate||'-') + '</td><td>' + (v.brand||'-') + '</td><td class="r">' + v.count + '</td><td class="r">' + v.total_liters.toFixed(2) + '</td><td class="r">' + v.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td></tr>';
+        var kpl = v.avg_km_per_liter ? v.avg_km_per_liter.toFixed(2) : '-';
+        html += '<tr><td class="r">' + (i+1) + '</td><td>' + (v.license_plate||'-') + '</td><td>' + (v.brand||'-') + '</td><td class="r">' + v.count + '</td><td class="r">' + v.total_liters.toFixed(2) + '</td><td class="r">' + v.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td><td class="r">' + kpl + '</td></tr>';
       });
       html += '</tbody></table>';
 
@@ -825,21 +910,26 @@
       html += '<p style="margin-top:12pt;font-size:16pt;">รวมจำนวนเงินทั้งสิ้น <b>' + d.grand_total.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</b> บาท (<b>' + numberToThaiWords(d.grand_total.total_amount) + '</b>)</p>';
 
       html += sig3('ผู้จัดทำ', 'ผู้ตรวจสอบ', 'ผู้อำนวยการโรงเรียน');
-      govOpen('สรุปค่าน้ำมัน ' + monthName, html);
+      govOpen('สรุปค่าน้ำมัน ' + periodLabel, html);
     }
 
     /* ──── Tab 4: รายงานขอซื้อ — รายละเอียดทุกรายการ ──── */
     function printPurchaseDoc() {
       if (!monthlyData) { alert('กรุณาโหลดข้อมูลเดือนก่อน'); return; }
       var d = monthlyData;
-      var ym = d.year_month;
-      var mo = parseInt(ym.substr(5,2));
-      var yr = parseInt(ym.substr(0,4));
-      var monthName = thaiMonthNames[mo] + ' พ.ศ. ' + (yr+543);
+      var periodLabel = '';
+      if (d.date_from && d.date_to) {
+        periodLabel = formatDateThai(d.date_from) + ' — ' + formatDateThai(d.date_to);
+      } else {
+        var ym = d.year_month;
+        var mo = parseInt(ym.substr(5,2));
+        var yr = parseInt(ym.substr(0,4));
+        periodLabel = 'ประจำเดือน' + thaiMonthNames[mo] + ' พ.ศ. ' + (yr+543);
+      }
 
       var html = '<h2>รายงานขอซื้อน้ำมันเชื้อเพลิง</h2>' +
         '<p class="subtitle">โรงเรียนพะเยาพิทยาคม</p>' +
-        '<p class="period">ประจำเดือน' + monthName + '</p>' +
+        '<p class="period">' + periodLabel + '</p>' +
         '<p style="margin-top:6pt;">โดยวิธีเฉพาะเจาะจง ตาม พ.ร.บ.การจัดซื้อจัดจ้างฯ พ.ศ. 2560 มาตรา 56(2)(ข)</p>';
 
       // Detailed records
@@ -847,7 +937,7 @@
         '<table class="gov" style="font-size:12pt;"><thead><tr>' +
         '<th>ลำดับ</th><th>วันที่</th><th>เลขที่เอกสาร</th><th>ทะเบียนรถ</th><th>ผู้เบิก</th>' +
         '<th>ประเภท</th><th>ลิตร</th><th>บาท/ลิตร</th><th>จำนวนเงิน</th>' +
-        '<th>ไมล์ก่อน</th><th>ไมล์หลัง</th><th>สถานีบริการ</th>' +
+        '<th>เลขไมล์</th><th>สถานีบริการ</th>' +
         '</tr></thead><tbody>';
       var totalA = 0, totalL = 0;
       (d.records || []).forEach(function(r, i) {
@@ -857,8 +947,7 @@
         var yy = r.date ? (parseInt(r.date.substr(0,4))+543) : '';
         var dateStr = dd + ' ' + thMo[mm] + ' ' + yy;
         var ppl = r.price_per_liter ? r.price_per_liter.toFixed(2) : '-';
-        var mB = r.mileage_before ? r.mileage_before.toLocaleString() : '-';
-        var mA = r.mileage_after ? r.mileage_after.toLocaleString() : '-';
+        var mileage = r.mileage_before ? r.mileage_before.toLocaleString() : 'ผู้เบิกไม่บันทึกเลขไมล์';
         totalA += (r.amount||0); totalL += (r.liters||0);
         html += '<tr>' +
           '<td class="r">' + (i+1) + '</td>' +
@@ -870,14 +959,13 @@
           '<td class="r">' + (r.liters||0).toFixed(2) + '</td>' +
           '<td class="r">' + ppl + '</td>' +
           '<td class="r">' + (r.amount||0).toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td>' +
-          '<td class="r">' + mB + '</td>' +
-          '<td class="r">' + mA + '</td>' +
+          '<td class="r" style="font-size:11pt;">' + mileage + '</td>' +
           '<td>' + (r.gas_station_name||'-') + '</td></tr>';
       });
       html += '</tbody><tfoot><tr><td colspan="6" style="text-align:center"><b>รวม</b></td>' +
         '<td class="r">' + totalL.toFixed(2) + '</td><td></td>' +
         '<td class="r">' + totalA.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td>' +
-        '<td colspan="3"></td></tr></tfoot></table>';
+        '<td colspan="2"></td></tr></tfoot></table>';
 
       // Summary by fuel type
       html += '<p class="section-title">สรุปตามประเภทน้ำมัน</p>' +
@@ -895,7 +983,7 @@
         '<div class="sig-box2"><div style="margin-bottom:6pt;text-align:left;font-size:14pt;"><span style="margin-right:20pt;">☐ อนุมัติ</span><span>☐ ไม่อนุมัติ</span></div><div class="sig-dot"></div><div class="sig-lbl">ผู้อำนวยการโรงเรียนพะเยาพิทยาคม</div><div class="sig-sub">(.........................................)</div></div>' +
         '</div>';
 
-      govOpen('รายงานขอซื้อน้ำมัน ' + monthName, html);
+      govOpen('รายงานขอซื้อน้ำมัน ' + periodLabel, html);
     }
   </script>
 

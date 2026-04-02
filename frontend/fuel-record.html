@@ -781,7 +781,7 @@
           '<tr><td>ประเภทน้ำมัน <b>' + (r.fuel_type||'-') + '</b></td><td>วัตถุประสงค์ <b>' + purpose + '</b></td></tr>' +
           '<tr><td>จำนวน <b>' + (r.liters||0).toFixed(2) + '</b> ลิตร</td><td>ราคาต่อลิตร <b>' + ppl.toFixed(2) + '</b> บาท</td></tr>' +
           '<tr><td>จำนวนเงินรวม <b>' + (r.amount||0).toLocaleString('th-TH',{minimumFractionDigits:2}) + '</b> บาท</td><td>สถานีบริการ <b>' + (r.gas_station_name||'-') + '</b></td></tr>' +
-          '<tr><td>เลขไมล์ก่อน <b>' + (r.mileage_before ? Number(r.mileage_before).toLocaleString() : '-') + '</b> กม.</td><td>เลขไมล์หลัง <b>' + (r.mileage_after ? Number(r.mileage_after).toLocaleString() : '-') + '</b> กม.</td></tr>' +
+          '<tr><td colspan="2">เลขไมล์ขณะเติม <b>' + (r.mileage_before ? Number(r.mileage_before).toLocaleString() : '-') + '</b> กม.</td></tr>' +
           '</table>' +
           '<div class="sig-row">' +
           '<div class="sig-box"><div class="sig-dot"></div><div class="sig-lbl">ผู้สั่งจ่าย</div><div class="sig-name">(.........................................)</div><div class="sig-pos">ตำแหน่ง ................................</div></div>' +
