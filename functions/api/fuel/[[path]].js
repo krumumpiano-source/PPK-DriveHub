@@ -542,6 +542,71 @@ export async function onRequest(context) {
     return success({ message: 'บันทึกผลตรวจสอบเรียบร้อย' });
   }
 
+  // --- GET /api/fuel/ledger ---
+  // ทะเบียนควบคุมการจัดซื้อน้ำมัน + รายงานสรุปประจำปี
+  if (path === '/api/fuel/ledger' && method === 'GET') {
+    try { requirePermission(user, 'fuel', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+
+    // fiscal_year_be = ปีงบประมาณ พ.ศ. (เช่น 2568 = ต.ค. 2567 - ก.ย. 2568 = Oct 2024 - Sep 2025)
+    const fyBE = parseInt(url.searchParams.get('fiscal_year_be')) || (new Date().getFullYear() + 543 + (new Date().getMonth() >= 9 ? 1 : 0));
+    const fyStartCE = fyBE - 543 - 1; // CE year of October start
+    const dateFrom = `${fyStartCE}-10-01`;
+    const dateTo = `${fyStartCE + 1}-09-30`;
+
+    // Monthly breakdown
+    const monthly = await dbAll(env.DB,
+      `SELECT strftime('%Y-%m', fl.date) AS month,
+        COUNT(*) AS count,
+        COALESCE(SUM(fl.liters), 0) AS total_liters,
+        COALESCE(SUM(fl.amount), 0) AS total_amount
+       FROM fuel_log fl
+       WHERE fl.date >= ? AND fl.date <= ? AND fl.deleted_at IS NULL
+       GROUP BY strftime('%Y-%m', fl.date)
+       ORDER BY month`, [dateFrom, dateTo]);
+
+    // By fuel type
+    const byFuelType = await dbAll(env.DB,
+      `SELECT fl.fuel_type,
+        COUNT(*) AS count,
+        COALESCE(SUM(fl.liters), 0) AS total_liters,
+        COALESCE(SUM(fl.amount), 0) AS total_amount
+       FROM fuel_log fl
+       WHERE fl.date >= ? AND fl.date <= ? AND fl.deleted_at IS NULL
+       GROUP BY fl.fuel_type
+       ORDER BY total_amount DESC`, [dateFrom, dateTo]);
+
+    // By vehicle
+    const byVehicle = await dbAll(env.DB,
+      `SELECT c.license_plate, c.brand,
+        COUNT(*) AS count,
+        COALESCE(SUM(fl.liters), 0) AS total_liters,
+        COALESCE(SUM(fl.amount), 0) AS total_amount
+       FROM fuel_log fl
+       LEFT JOIN cars c ON fl.car_id = c.id
+       WHERE fl.date >= ? AND fl.date <= ? AND fl.deleted_at IS NULL
+       GROUP BY fl.car_id
+       ORDER BY total_amount DESC`, [dateFrom, dateTo]);
+
+    // Grand total
+    const grand = await dbFirst(env.DB,
+      `SELECT COUNT(*) AS count,
+        COALESCE(SUM(liters), 0) AS total_liters,
+        COALESCE(SUM(amount), 0) AS total_amount
+       FROM fuel_log
+       WHERE date >= ? AND date <= ? AND deleted_at IS NULL`,
+      [dateFrom, dateTo]);
+
+    return success({
+      fiscal_year_be: fyBE,
+      date_from: dateFrom,
+      date_to: dateTo,
+      monthly,
+      by_fuel_type: byFuelType,
+      by_vehicle: byVehicle,
+      grand_total: grand
+    });
+  }
+
   return error('Not Found', 404);
   } catch (e) {
     console.error('API Error:', e);

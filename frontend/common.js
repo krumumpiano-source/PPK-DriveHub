@@ -170,6 +170,7 @@ function renderNavigation() {
     if (hasModulePermission('fuel', 'view') || hasPermission(['admin'])) {
         nav += _sidebarItem('fuel-record.html', 'fuel-record', '⛽', 'บันทึกเติมน้ำมัน');
         nav += _sidebarItem('fuel-reconcile.html', 'fuel-reconcile', '📄', 'เปรียบเทียบบิลน้ำมัน');
+        nav += _sidebarItem('fuel-ledger.html', 'fuel-ledger', '📒', 'ทะเบียนควบคุมน้ำมัน');
     }
     if (hasModulePermission('repair', 'view') || hasPermission(['admin'])) {
         nav += _sidebarItem('repair.html', 'repair', '🔧', 'บันทึกการซ่อม');

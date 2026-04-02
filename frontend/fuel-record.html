@@ -310,10 +310,11 @@
               <th style="padding: 10px 8px; text-align: right; border-bottom: 2px solid var(--color-border);">ลิตร</th>
               <th style="padding: 10px 8px; text-align: right; border-bottom: 2px solid var(--color-border);">บาท</th>
               <th style="padding: 10px 8px; text-align: right; border-bottom: 2px solid var(--color-border);">ไมล์</th>
+              <th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid var(--color-border); width: 50px;">พิมพ์</th>
             </tr>
           </thead>
           <tbody id="histBody">
-            <tr><td colspan="7" style="text-align: center; padding: 30px; color: var(--color-text-muted);">กดปุ่ม 🔍 ค้นหา เพื่อโหลดข้อมูล</td></tr>
+            <tr><td colspan="8" style="text-align: center; padding: 30px; color: var(--color-text-muted);">กดปุ่ม 🔍 ค้นหา เพื่อโหลดข้อมูล</td></tr>
           </tbody>
         </table>
       </div>
@@ -687,7 +688,7 @@
       if (car) params.car_id = car;
 
       var body = document.getElementById('histBody');
-      body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--color-text-muted);">⏳ กำลังโหลด...</td></tr>';
+      body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--color-text-muted);">⏳ กำลังโหลด...</td></tr>';
 
       apiCall('getFuelLog', params).then(function (res) {
         var records = [];
@@ -697,14 +698,14 @@
         }
         renderHistory(records);
       }).catch(function () {
-        body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--color-danger-dark);">❌ โหลดข้อมูลไม่สำเร็จ</td></tr>';
+        body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--color-danger-dark);">❌ โหลดข้อมูลไม่สำเร็จ</td></tr>';
       });
     }
 
     function renderHistory(records) {
       var body = document.getElementById('histBody');
       if (!records || records.length === 0) {
-        body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--color-text-muted);">ไม่มีข้อมูลในช่วงที่เลือก</td></tr>';
+        body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--color-text-muted);">ไม่มีข้อมูลในช่วงที่เลือก</td></tr>';
         document.getElementById('histSummary').innerHTML = '';
         document.getElementById('histCount').textContent = '';
         return;
@@ -736,12 +737,60 @@
           '<td style="padding:8px;">' + (r.fuel_type || '-') + '</td>' +
           '<td style="padding:8px;text-align:right;">' + (r.liters || 0).toFixed(2) + '</td>' +
           '<td style="padding:8px;text-align:right;">' + (r.amount || 0).toLocaleString('th-TH', {minimumFractionDigits:2}) + '</td>' +
-          '<td style="padding:8px;text-align:right;">' + (typeof mileage === 'number' ? mileage.toLocaleString() : mileage) + '</td></tr>';
+          '<td style="padding:8px;text-align:right;">' + (typeof mileage === 'number' ? mileage.toLocaleString() : mileage) + '</td>' +
+          '<td style="padding:8px;text-align:center;"><button onclick="printDispatchOrder(' + JSON.stringify(JSON.stringify(r)) + ')" style="background:none;border:none;cursor:pointer;font-size:16px;" title="พิมพ์ใบสั่งจ่าย">🖨️</button></td></tr>';
       });
       body.innerHTML = html;
       document.getElementById('histCount').textContent = 'แสดง ' + records.length + ' รายการ';
     }
     window.loadFuelHistory = loadFuelHistory;
+
+    function printDispatchOrder(recordJson) {
+      var r = JSON.parse(recordJson);
+      var driverDisplay = r.driver_name || r.driver_name_manual || '-';
+      var dateDisplay = typeof formatDateThai === 'function' ? formatDateThai(r.date) : r.date;
+      var purposeMap = { daily: 'ราชการประจำวัน', travel: 'เดินทางไปราชการ', event: 'จัดกิจกรรม/งาน', maintenance: 'ซ่อมบำรุง', other: 'อื่นๆ' };
+      var purposeText = purposeMap[r.purpose] || r.purpose || '-';
+      if (r.purpose === 'other' && r.purpose_detail) purposeText = r.purpose_detail;
+      var pricePerLiter = r.price_per_liter || (r.liters > 0 ? (r.amount / r.liters) : 0);
+
+      function renderCopy(title) {
+        return '<div style="border:2px solid #000;padding:20px 30px;margin-bottom:20px;page-break-inside:avoid;">' +
+          '<div style="text-align:right;font-size:11px;font-style:italic;margin-bottom:4px;">' + title + '</div>' +
+          '<h2 style="text-align:center;margin:0 0 4px 0;font-size:18px;">ใบสั่งจ่ายน้ำมันเชื้อเพลิง</h2>' +
+          '<p style="text-align:center;margin:0 0 12px 0;font-size:14px;">โรงเรียนพะเยาพิทยาคม</p>' +
+          '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+            '<tr><td style="padding:4px 8px;width:50%;">เลขที่เอกสาร: <b>' + (r.document_number || '-') + '</b></td>' +
+            '<td style="padding:4px 8px;">วันที่: <b>' + dateDisplay + '</b></td></tr>' +
+            '<tr><td style="padding:4px 8px;">ทะเบียนรถ: <b>' + (r.license_plate || '-') + ' ' + (r.brand || '') + '</b></td>' +
+            '<td style="padding:4px 8px;">ผู้เบิก: <b>' + driverDisplay + '</b></td></tr>' +
+            '<tr><td style="padding:4px 8px;">ประเภทน้ำมัน: <b>' + (r.fuel_type || '-') + '</b></td>' +
+            '<td style="padding:4px 8px;">วัตถุประสงค์: <b>' + purposeText + '</b></td></tr>' +
+            '<tr><td style="padding:4px 8px;">จำนวน: <b>' + (r.liters || 0).toFixed(2) + ' ลิตร</b></td>' +
+            '<td style="padding:4px 8px;">ราคาต่อลิตร: <b>' + pricePerLiter.toFixed(2) + ' บาท</b></td></tr>' +
+            '<tr><td style="padding:4px 8px;">จำนวนเงินรวม: <b>' + (r.amount || 0).toLocaleString('th-TH', {minimumFractionDigits:2}) + ' บาท</b></td>' +
+            '<td style="padding:4px 8px;">สถานีบริการ: <b>' + (r.gas_station_name || '-') + '</b></td></tr>' +
+            '<tr><td style="padding:4px 8px;">เลขไมล์ก่อน: <b>' + (r.mileage_before || '-').toLocaleString() + '</b> กม.</td>' +
+            '<td style="padding:4px 8px;">เลขไมล์หลัง: <b>' + (r.mileage_after || '-').toLocaleString() + '</b> กม.</td></tr>' +
+          '</table>' +
+          '<div style="display:flex;justify-content:space-around;margin-top:30px;text-align:center;font-size:13px;">' +
+            '<div style="width:28%;"><div style="border-bottom:1px dotted #000;height:40px;"></div><div style="margin-top:4px;">ผู้สั่งจ่าย</div><div style="font-size:11px;color:#666;">(.........................................)</div><div style="font-size:11px;color:#666;">ตำแหน่ง ................................</div></div>' +
+            '<div style="width:28%;"><div style="border-bottom:1px dotted #000;height:40px;"></div><div style="margin-top:4px;">ผู้จ่าย</div><div style="font-size:11px;color:#666;">(.........................................)</div><div style="font-size:11px;color:#666;">ตำแหน่ง ................................</div></div>' +
+            '<div style="width:28%;"><div style="border-bottom:1px dotted #000;height:40px;"></div><div style="margin-top:4px;">ผู้รับ</div><div style="font-size:11px;color:#666;">(.........................................)</div><div style="font-size:11px;color:#666;">ตำแหน่ง ................................</div></div>' +
+          '</div>' +
+        '</div>';
+      }
+
+      var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ใบสั่งจ่ายน้ำมัน ' + (r.document_number || '') + '</title>' +
+        '<style>@page{size:A4;margin:15mm;}body{font-family:"TH Sarabun New",Sarabun,"Noto Sans Thai",sans-serif;margin:0;padding:0;}</style></head><body>' +
+        renderCopy('ต้นฉบับ') + renderCopy('สำเนา') +
+        '<script>window.print();<\/script></body></html>';
+
+      var w = window.open('', '_blank', 'width=800,height=600');
+      w.document.write(html);
+      w.document.close();
+    }
+    window.printDispatchOrder = printDispatchOrder;
   </script>
 
 </body>
