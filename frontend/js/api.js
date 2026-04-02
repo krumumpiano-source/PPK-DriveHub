@@ -145,6 +145,10 @@ const ACTION_MAP = {
   'createFuelRequest':   (d) => API.post('/api/fuel/requests', d),
   'approveFuelRequest':  (d) => API.put(`/api/fuel/requests/${d.id}/approve`, d),
   'rejectFuelRequest':   (d) => API.put(`/api/fuel/requests/${d.id}/reject`, d),
+  'getFuelInvoices':     (d) => API.get('/api/fuel/invoices' + _q(d)),
+  'createFuelInvoice':   (d) => API.post('/api/fuel/invoices', d),
+  'getFuelInvoiceReconcile': (d) => API.get(`/api/fuel/invoices/${d.id}/reconcile`),
+  'resolveFuelInvoice':  (d) => API.put(`/api/fuel/invoices/${d.id}/resolve`, d),
 
   // Repair
   'getRepairs':          (d) => API.get('/api/repair' + _q(d)),

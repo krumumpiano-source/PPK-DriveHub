@@ -228,6 +228,20 @@
             <option value="">ทั้งหมด</option>
           </select>
         </div>
+        <div class="filter-group" id="fg-driver" style="display:none">
+          <label>ผู้เบิก/คนขับ</label>
+          <select id="filterDriver" onchange="loadReport()">
+            <option value="">ทั้งหมด</option>
+          </select>
+        </div>
+        <div class="filter-group" id="fg-expense" style="display:none">
+          <label>ประเภทเบิก</label>
+          <select id="filterExpense" onchange="loadReport()">
+            <option value="">ทั้งหมด</option>
+            <option value="procurement">ใบสั่งจ่ายน้ำมัน</option>
+            <option value="official_travel">งบไปราชการ</option>
+          </select>
+        </div>
         <div class="filter-group" id="fg-month" style="display:none">
           <label>เดือน</label>
           <input type="month" id="filterMonth" onchange="loadReport()">
@@ -240,6 +254,9 @@
         </button>
         <button class="btn btn-primary" onclick="exportReport()">
           💾 ส่งออกรายงาน
+        </button>
+        <button class="btn btn-secondary" id="btnPrint" onclick="printFuelReport()" style="display:none">
+          🖨️ พิมพ์รายงาน
         </button>
       </div>
 
@@ -264,6 +281,7 @@
 
       updateFilterVisibility();
       loadCarFilter();
+      loadDriverFilter();
       loadReport();
     });
 
@@ -321,11 +339,16 @@
     function updateFilterVisibility() {
       var showDate = ['fuel', 'repairs', 'quality'].includes(currentTab);
       var showCar = currentTab === 'fuel';
+      var showDriver = currentTab === 'fuel';
+      var showExpense = currentTab === 'fuel';
       var showMonth = currentTab === 'scores';
       document.getElementById('fg-date-from').style.display = showDate ? '' : 'none';
       document.getElementById('fg-date-to').style.display = showDate ? '' : 'none';
       document.getElementById('fg-car').style.display = showCar ? '' : 'none';
+      document.getElementById('fg-driver').style.display = showDriver ? '' : 'none';
+      document.getElementById('fg-expense').style.display = showExpense ? '' : 'none';
       document.getElementById('fg-month').style.display = showMonth ? '' : 'none';
+      document.getElementById('btnPrint').style.display = (currentTab === 'fuel') ? '' : 'none';
     }
 
     function switchTab(tab, el) {
@@ -350,6 +373,20 @@
       } catch (e) { /* ignore */ }
     }
 
+    async function loadDriverFilter() {
+      try {
+        var r = await apiCall('getDrivers', {});
+        var list = (r && r.data) ? (r.data.drivers || r.data) : [];
+        var sel = document.getElementById('filterDriver');
+        list.forEach(function (d) {
+          var o = document.createElement('option');
+          o.value = d.id || d.driver_id || '';
+          o.textContent = d.name || '';
+          sel.appendChild(o);
+        });
+      } catch (e) { /* ignore */ }
+    }
+
     async function loadReport() {
       document.getElementById('loading').style.display = 'block';
       document.getElementById('reportContent').style.display = 'none';
@@ -358,6 +395,8 @@
       var dateFrom = document.getElementById('dateFrom').value;
       var dateTo = document.getElementById('dateTo').value;
       var carId = document.getElementById('filterCar').value;
+      var driverId = document.getElementById('filterDriver').value;
+      var expenseType = document.getElementById('filterExpense').value;
 
       try {
         var html = '';
@@ -365,7 +404,7 @@
           case 'overview': html = await renderOverview(); break;
           case 'vehicles': html = await renderVehicles(); break;
           case 'drivers':  html = await renderDrivers();  break;
-          case 'fuel':     html = await renderFuel(dateFrom, dateTo, carId); break;
+          case 'fuel':     html = await renderFuel(dateFrom, dateTo, carId, driverId, expenseType); break;
           case 'repairs':  html = await renderRepairs(dateFrom, dateTo); break;
           case 'quality':  html = await renderQuality(dateFrom, dateTo); break;
           case 'scores':   html = await renderScores(); break;
@@ -471,42 +510,115 @@
       return html;
     }
 
-    async function renderFuel(dateFrom, dateTo, carId) {
-      var params = buildQuery({ date_from: dateFrom, date_to: dateTo, car_id: carId || undefined });
+    var _lastFuelPayload = null;
+    var _expenseLabels = { procurement: '\u0e43\u0e1a\u0e2a\u0e31\u0e48\u0e07\u0e08\u0e48\u0e32\u0e22\u0e19\u0e49\u0e33\u0e21\u0e31\u0e19', official_travel: '\u0e07\u0e1a\u0e44\u0e1b\u0e23\u0e32\u0e0a\u0e01\u0e32\u0e23' };
+    var _purposeLabels = { school_passenger: '\u0e20\u0e32\u0e23\u0e01\u0e34\u0e08\u0e42\u0e14\u0e22\u0e2a\u0e32\u0e23\u0e02\u0e2d\u0e07\u0e42\u0e23\u0e07\u0e40\u0e23\u0e35\u0e22\u0e19', official_document: '\u0e23\u0e31\u0e1a\u0e2a\u0e48\u0e07\u0e40\u0e2d\u0e01\u0e2a\u0e32\u0e23\u0e17\u0e32\u0e07\u0e23\u0e32\u0e0a\u0e01\u0e32\u0e23', other: '\u0e2d\u0e37\u0e48\u0e19\u0e46' };
+
+    async function renderFuel(dateFrom, dateTo, carId, driverId, expenseType) {
+      var params = buildQuery({ date_from: dateFrom, date_to: dateTo, car_id: carId || undefined, driver_id: driverId || undefined, expense_type: expenseType || undefined });
       var r = await API.get('/api/reports/fuel' + params);
       var payload = (r && r.data) ? r.data : (r || {});
       var records = payload.records || [];
       var summary = payload.summary || {};
+      var bySource = payload.by_source || [];
+      var byVehicle = payload.by_vehicle || [];
+      var byDriver = payload.by_driver || [];
+      _lastFuelPayload = payload;
 
+      // Stat cards
       var html = '<div class="stats-grid">';
-      html += statCard('📋 จำนวนครั้ง', fmtNum(summary.count || 0), 'ครั้ง', '');
-      html += statCard('⛽ รวมน้ำมัน', fmtNum(summary.total_liters || 0), 'ลิตร', '');
-      html += statCard('💰 ค่าน้ำมันรวม', fmtMoney(summary.total_amount || 0), 'บาท', '');
-      html += statCard('📉 อัตราสิ้นเปลืองเฉลี่ย', Number(summary.avg_consumption || 0).toFixed(2), 'กม./ลิตร', '');
+      html += statCard('\u{1f4cb} \u0e08\u0e33\u0e19\u0e27\u0e19\u0e04\u0e23\u0e31\u0e49\u0e07', fmtNum(summary.count || 0), '\u0e04\u0e23\u0e31\u0e49\u0e07', '');
+      html += statCard('\u26fd \u0e23\u0e27\u0e21\u0e19\u0e49\u0e33\u0e21\u0e31\u0e19', fmtNum(summary.total_liters || 0), '\u0e25\u0e34\u0e15\u0e23', '');
+      html += statCard('\u{1f4b0} \u0e04\u0e48\u0e32\u0e19\u0e49\u0e33\u0e21\u0e31\u0e19\u0e23\u0e27\u0e21', fmtMoney(summary.total_amount || 0), '\u0e1a\u0e32\u0e17', '');
+      html += statCard('\u{1f4c9} \u0e2d\u0e31\u0e15\u0e23\u0e32\u0e2a\u0e34\u0e49\u0e19\u0e40\u0e1b\u0e25\u0e37\u0e2d\u0e07\u0e40\u0e09\u0e25\u0e35\u0e48\u0e22', Number(summary.avg_consumption || 0).toFixed(2), '\u0e01\u0e21./\u0e25\u0e34\u0e15\u0e23', '');
       html += '</div>';
 
+      // By source breakdown
+      if (bySource.length > 0) {
+        html += '<div class="stats-grid" style="margin-top:12px">';
+        bySource.forEach(function (s) {
+          var label = _expenseLabels[s.expense_type] || s.expense_type || '\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38';
+          var icon = s.expense_type === 'procurement' ? '\u{1f4dd}' : '\u{1f697}';
+          html += statCard(icon + ' ' + label, fmtNum(s.count || 0), '\u0e04\u0e23\u0e31\u0e49\u0e07', fmtNum(s.total_liters || 0) + ' \u0e25\u0e34\u0e15\u0e23 / ' + fmtMoney(s.total_amount || 0) + ' \u0e1a\u0e32\u0e17');
+        });
+        if (summary.anomaly_count > 0) {
+          html += statCard('\u26a0\ufe0f \u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e1c\u0e34\u0e14\u0e1b\u0e01\u0e15\u0e34', fmtNum(summary.anomaly_count), '\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23', '\u0e04\u0e27\u0e23\u0e15\u0e23\u0e27\u0e08\u0e2a\u0e2d\u0e1a');
+        }
+        html += '</div>';
+      }
+
       if (records.length === 0) {
-        html += emptyState('⛽', 'ไม่พบข้อมูลในช่วงเวลาที่เลือก');
+        html += emptyState('\u26fd', '\u0e44\u0e21\u0e48\u0e1e\u0e1a\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e43\u0e19\u0e0a\u0e48\u0e27\u0e07\u0e40\u0e27\u0e25\u0e32\u0e17\u0e35\u0e48\u0e40\u0e25\u0e37\u0e2d\u0e01');
         return html;
       }
+
+      // Records table
       html += '<div class="report-section">';
-      html += '<div class="report-section-title">⛽ รายการเติมน้ำมัน</div>';
+      html += '<div class="report-section-title">\u26fd \u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e40\u0e15\u0e34\u0e21\u0e19\u0e49\u0e33\u0e21\u0e31\u0e19</div>';
       html += '<div style="overflow-x:auto"><table class="report-table">';
-      html += '<thead><tr><th>วันที่</th><th>ทะเบียนรถ</th><th>คนขับ</th><th>ประเภท</th><th>ลิตร</th><th>ราคา/ลิตร</th><th>รวม (บาท)</th><th>ปั๊ม</th><th>อัตราสิ้นเปลือง</th></tr></thead><tbody>';
+      html += '<thead><tr><th>\u0e40\u0e25\u0e02\u0e17\u0e35\u0e48</th><th>\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48</th><th>\u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u0e23\u0e16</th><th>\u0e1c\u0e39\u0e49\u0e40\u0e1a\u0e34\u0e01</th><th>\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e40\u0e1a\u0e34\u0e01</th><th>\u0e27\u0e31\u0e15\u0e16\u0e38\u0e1b\u0e23\u0e30\u0e2a\u0e07\u0e04\u0e4c</th><th>\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e19\u0e49\u0e33\u0e21\u0e31\u0e19</th><th>\u0e25\u0e34\u0e15\u0e23</th><th>\u0e23\u0e32\u0e04\u0e32/\u0e25.</th><th>\u0e23\u0e27\u0e21 (\u0e1a\u0e32\u0e17)</th><th>\u0e1b\u0e31\u0e4a\u0e21</th><th>\u0e2d\u0e31\u0e15\u0e23\u0e32\u0e2a\u0e34\u0e49\u0e19\u0e40\u0e1b\u0e25\u0e37\u0e2d\u0e07</th></tr></thead><tbody>';
       records.forEach(function (rec) {
-        html += '<tr>';
+        var driverDisplay = rec.driver_name || rec.driver_name_manual || '-';
+        var purposeDisplay = _purposeLabels[rec.purpose] || rec.purpose || '-';
+        if (rec.purpose === 'other' && rec.purpose_detail) purposeDisplay += ': ' + rec.purpose_detail;
+        var rateDisplay = rec.fuel_consumption_rate ? Number(rec.fuel_consumption_rate).toFixed(2) + ' \u0e01\u0e21./\u0e25.' : '-';
+        if (rec.anomaly_flag) rateDisplay = '\u26a0\ufe0f ' + rateDisplay;
+        html += '<tr' + (rec.anomaly_flag ? ' style="background:rgba(255,193,7,0.1)"' : '') + '>';
+        html += '<td><strong>' + htmlEsc(rec.document_number || '-') + '</strong></td>';
         html += '<td>' + fmtDateTH(rec.date) + '</td>';
         html += '<td>' + htmlEsc(rec.license_plate || rec.car_id || '-') + '</td>';
-        html += '<td>' + htmlEsc(rec.driver_name || '-') + '</td>';
+        html += '<td>' + htmlEsc(driverDisplay) + '</td>';
+        html += '<td>' + htmlEsc(_expenseLabels[rec.expense_type] || rec.expense_type || '-') + '</td>';
+        html += '<td>' + htmlEsc(purposeDisplay) + '</td>';
         html += '<td>' + htmlEsc(rec.fuel_type || '-') + '</td>';
         html += '<td>' + fmtNum(rec.liters || 0) + '</td>';
         html += '<td>' + fmtMoney(rec.price_per_liter || 0) + '</td>';
         html += '<td>' + fmtMoney(rec.amount || 0) + '</td>';
         html += '<td>' + htmlEsc(rec.gas_station_name || '-') + '</td>';
-        html += '<td>' + (rec.fuel_consumption_rate ? Number(rec.fuel_consumption_rate).toFixed(2) + ' กม./ล.' : '-') + '</td>';
+        html += '<td>' + rateDisplay + '</td>';
         html += '</tr>';
       });
       html += '</tbody></table></div></div>';
+
+      // By vehicle stats
+      if (byVehicle.length > 0) {
+        html += '<div class="report-section">';
+        html += '<div class="report-section-title">\u{1f4ca} \u0e2a\u0e16\u0e34\u0e15\u0e34\u0e23\u0e32\u0e22\u0e04\u0e31\u0e19</div>';
+        html += '<div style="overflow-x:auto"><table class="report-table">';
+        html += '<thead><tr><th>\u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19</th><th>\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d</th><th>\u0e08\u0e33\u0e19\u0e27\u0e19\u0e04\u0e23\u0e31\u0e49\u0e07</th><th>\u0e23\u0e27\u0e21\u0e25\u0e34\u0e15\u0e23</th><th>\u0e23\u0e27\u0e21\u0e1a\u0e32\u0e17</th><th>\u0e2d\u0e31\u0e15\u0e23\u0e32\u0e2a\u0e34\u0e49\u0e19\u0e40\u0e1b\u0e25\u0e37\u0e2d\u0e07\u0e40\u0e09\u0e25\u0e35\u0e48\u0e22</th><th>\u26a0\ufe0f \u0e1c\u0e34\u0e14\u0e1b\u0e01\u0e15\u0e34</th></tr></thead><tbody>';
+        byVehicle.forEach(function (v) {
+          html += '<tr>';
+          html += '<td><strong>' + htmlEsc(v.license_plate || '-') + '</strong></td>';
+          html += '<td>' + htmlEsc(v.brand || '-') + '</td>';
+          html += '<td>' + fmtNum(v.count || 0) + '</td>';
+          html += '<td>' + fmtNum(v.total_liters || 0) + '</td>';
+          html += '<td>' + fmtMoney(v.total_amount || 0) + '</td>';
+          html += '<td>' + Number(v.avg_consumption || 0).toFixed(2) + ' \u0e01\u0e21./\u0e25.' + '</td>';
+          html += '<td>' + (v.anomaly_count > 0 ? '<span class="score-badge score-poor">' + v.anomaly_count + '</span>' : '0') + '</td>';
+          html += '</tr>';
+        });
+        html += '</tbody></table></div></div>';
+      }
+
+      // By driver stats
+      if (byDriver.length > 0) {
+        html += '<div class="report-section">';
+        html += '<div class="report-section-title">\u{1f464} \u0e2a\u0e16\u0e34\u0e15\u0e34\u0e23\u0e32\u0e22\u0e1c\u0e39\u0e49\u0e40\u0e1a\u0e34\u0e01</div>';
+        html += '<div style="overflow-x:auto"><table class="report-table">';
+        html += '<thead><tr><th>\u0e0a\u0e37\u0e48\u0e2d\u0e1c\u0e39\u0e49\u0e40\u0e1a\u0e34\u0e01</th><th>\u0e08\u0e33\u0e19\u0e27\u0e19\u0e04\u0e23\u0e31\u0e49\u0e07</th><th>\u0e23\u0e27\u0e21\u0e25\u0e34\u0e15\u0e23</th><th>\u0e23\u0e27\u0e21\u0e1a\u0e32\u0e17</th><th>\u0e2d\u0e31\u0e15\u0e23\u0e32\u0e2a\u0e34\u0e49\u0e19\u0e40\u0e1b\u0e25\u0e37\u0e2d\u0e07\u0e40\u0e09\u0e25\u0e35\u0e48\u0e22</th><th>\u26a0\ufe0f \u0e1c\u0e34\u0e14\u0e1b\u0e01\u0e15\u0e34</th></tr></thead><tbody>';
+        byDriver.forEach(function (d) {
+          html += '<tr>';
+          html += '<td><strong>' + htmlEsc(d.driver_name || '\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38') + '</strong></td>';
+          html += '<td>' + fmtNum(d.count || 0) + '</td>';
+          html += '<td>' + fmtNum(d.total_liters || 0) + '</td>';
+          html += '<td>' + fmtMoney(d.total_amount || 0) + '</td>';
+          html += '<td>' + Number(d.avg_consumption || 0).toFixed(2) + ' \u0e01\u0e21./\u0e25.' + '</td>';
+          html += '<td>' + (d.anomaly_count > 0 ? '<span class="score-badge score-poor">' + d.anomaly_count + '</span>' : '0') + '</td>';
+          html += '</tr>';
+        });
+        html += '</tbody></table></div></div>';
+      }
+
       return html;
     }
 
@@ -610,7 +722,130 @@
       return html;
     }
     function exportReport() {
-      alert('ฟีเจอร์ส่งออกรายงาน CSV จะเพิ่มในเวอร์ชันถัดไป');
+      if (currentTab !== 'fuel' || !_lastFuelPayload) {
+        alert('\u0e01\u0e23\u0e38\u0e13\u0e32\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e41\u0e17\u0e47\u0e1a\u0e40\u0e0a\u0e37\u0e49\u0e2d\u0e40\u0e1e\u0e25\u0e34\u0e07\u0e01\u0e48\u0e2d\u0e19\u0e2a\u0e48\u0e07\u0e2d\u0e2d\u0e01');
+        return;
+      }
+      var records = _lastFuelPayload.records || [];
+      if (records.length === 0) {
+        alert('\u0e44\u0e21\u0e48\u0e21\u0e35\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e43\u0e2b\u0e49\u0e2a\u0e48\u0e07\u0e2d\u0e2d\u0e01');
+        return;
+      }
+      var headers = ['\u0e40\u0e25\u0e02\u0e17\u0e35\u0e48','\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48','\u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u0e23\u0e16','\u0e1c\u0e39\u0e49\u0e40\u0e1a\u0e34\u0e01','\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e40\u0e1a\u0e34\u0e01','\u0e27\u0e31\u0e15\u0e16\u0e38\u0e1b\u0e23\u0e30\u0e2a\u0e07\u0e04\u0e4c','\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e19\u0e49\u0e33\u0e21\u0e31\u0e19','\u0e25\u0e34\u0e15\u0e23','\u0e23\u0e32\u0e04\u0e32/\u0e25\u0e34\u0e15\u0e23','\u0e23\u0e27\u0e21(\u0e1a\u0e32\u0e17)','\u0e40\u0e25\u0e02\u0e17\u0e35\u0e48\u0e43\u0e1a\u0e40\u0e2a\u0e23\u0e47\u0e08','\u0e1b\u0e31\u0e4a\u0e21\u0e19\u0e49\u0e33\u0e21\u0e31\u0e19','\u0e40\u0e25\u0e02\u0e44\u0e21\u0e25\u0e4c\u0e01\u0e48\u0e2d\u0e19','\u0e40\u0e25\u0e02\u0e44\u0e21\u0e25\u0e4c\u0e2b\u0e25\u0e31\u0e07','\u0e2d\u0e31\u0e15\u0e23\u0e32\u0e2a\u0e34\u0e49\u0e19\u0e40\u0e1b\u0e25\u0e37\u0e2d\u0e07','\u0e1c\u0e34\u0e14\u0e1b\u0e01\u0e15\u0e34'];
+      function csvVal(v) {
+        var s = String(v == null ? '' : v);
+        if (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) {
+          return '"' + s.replace(/"/g, '""') + '"';
+        }
+        return s;
+      }
+      var lines = [headers.map(csvVal).join(',')];
+      records.forEach(function (r) {
+        var driverDisplay = r.driver_name || r.driver_name_manual || '';
+        var purposeDisplay = _purposeLabels[r.purpose] || r.purpose || '';
+        if (r.purpose === 'other' && r.purpose_detail) purposeDisplay += ': ' + r.purpose_detail;
+        lines.push([
+          r.document_number || '',
+          r.date || '',
+          r.license_plate || r.car_id || '',
+          driverDisplay,
+          _expenseLabels[r.expense_type] || r.expense_type || '',
+          purposeDisplay,
+          r.fuel_type || '',
+          r.liters || 0,
+          r.price_per_liter || 0,
+          r.amount || 0,
+          r.receipt_number || '',
+          r.gas_station_name || '',
+          r.mileage_before || 0,
+          r.mileage_after || 0,
+          r.fuel_consumption_rate ? Number(r.fuel_consumption_rate).toFixed(2) : '',
+          r.anomaly_flag ? '\u0e43\u0e0a\u0e48' : ''
+        ].map(csvVal).join(','));
+      });
+      var csv = '\ufeff' + lines.join('\r\n');
+      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      var dateFrom = document.getElementById('dateFrom').value || 'all';
+      var dateTo = document.getElementById('dateTo').value || 'all';
+      a.href = url;
+      a.download = '\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19\u0e19\u0e49\u0e33\u0e21\u0e31\u0e19_' + dateFrom + '_' + dateTo + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function printFuelReport() {
+      if (!_lastFuelPayload) return;
+      var records = _lastFuelPayload.records || [];
+      var summary = _lastFuelPayload.summary || {};
+      var bySource = _lastFuelPayload.by_source || [];
+      var dateFrom = document.getElementById('dateFrom').value || '-';
+      var dateTo = document.getElementById('dateTo').value || '-';
+      var budgetYear = dateFrom ? (parseInt(dateFrom.substr(0, 4)) + 543) : (new Date().getFullYear() + 543);
+
+      var w = window.open('', '_blank');
+      var h = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19\u0e19\u0e49\u0e33\u0e21\u0e31\u0e19</title>';
+      h += '<style>body{font-family:"TH Sarabun New",Sarabun,"Noto Sans Thai",sans-serif;font-size:14pt;margin:20mm 15mm;color:#000}';
+      h += '.header{text-align:center;margin-bottom:20px}.header h2{margin:0;font-size:16pt}.header p{margin:4px 0;font-size:13pt}';
+      h += 'table{width:100%;border-collapse:collapse;font-size:11pt;margin-bottom:15px}th,td{border:1px solid #000;padding:4px 6px;text-align:center}';
+      h += 'th{background:#f0f0f0;font-weight:bold}.text-left{text-align:left}.text-right{text-align:right}';
+      h += '.summary{margin-top:15px;font-size:13pt}.signatures{margin-top:50px;display:flex;justify-content:space-between}';
+      h += '.sig-box{text-align:center;width:30%}.sig-line{border-top:1px solid #000;margin-top:50px;padding-top:5px}';
+      h += '.anomaly{color:red;font-weight:bold}@media print{body{margin:10mm}}</style></head><body>';
+      h += '<div class="header"><h2>\u0e42\u0e23\u0e07\u0e40\u0e23\u0e35\u0e22\u0e19\u0e1e\u0e30\u0e40\u0e22\u0e32\u0e1e\u0e34\u0e17\u0e22\u0e04\u0e21</h2>';
+      h += '<p>\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19\u0e01\u0e32\u0e23\u0e43\u0e0a\u0e49\u0e19\u0e49\u0e33\u0e21\u0e31\u0e19\u0e40\u0e0a\u0e37\u0e49\u0e2d\u0e40\u0e1e\u0e25\u0e34\u0e07 \u0e1b\u0e35\u0e07\u0e1a\u0e1b\u0e23\u0e30\u0e21\u0e32\u0e13 ' + budgetYear + '</p>';
+      h += '<p>\u0e0a\u0e48\u0e27\u0e07\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48 ' + dateFrom + ' \u0e16\u0e36\u0e07 ' + dateTo + '</p></div>';
+
+      h += '<table><thead><tr><th>\u0e25\u0e33\u0e14\u0e31\u0e1a</th><th>\u0e40\u0e25\u0e02\u0e17\u0e35\u0e48</th><th>\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48</th><th>\u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u0e23\u0e16</th><th>\u0e1c\u0e39\u0e49\u0e40\u0e1a\u0e34\u0e01</th><th>\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e40\u0e1a\u0e34\u0e01</th><th>\u0e27\u0e31\u0e15\u0e16\u0e38\u0e1b\u0e23\u0e30\u0e2a\u0e07\u0e04\u0e4c</th><th>\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e19\u0e49\u0e33\u0e21\u0e31\u0e19</th><th>\u0e25\u0e34\u0e15\u0e23</th><th>\u0e23\u0e32\u0e04\u0e32/\u0e25.</th><th>\u0e23\u0e27\u0e21(\u0e1a\u0e32\u0e17)</th><th>\u0e2d\u0e31\u0e15\u0e23\u0e32\u0e2a\u0e34\u0e49\u0e19\u0e40\u0e1b\u0e25\u0e37\u0e2d\u0e07</th></tr></thead><tbody>';
+      records.forEach(function (r, i) {
+        var driverDisplay = r.driver_name || r.driver_name_manual || '-';
+        var purposeDisplay = _purposeLabels[r.purpose] || r.purpose || '-';
+        if (r.purpose === 'other' && r.purpose_detail) purposeDisplay += ': ' + r.purpose_detail;
+        var rate = r.fuel_consumption_rate ? Number(r.fuel_consumption_rate).toFixed(2) : '-';
+        h += '<tr>';
+        h += '<td>' + (i + 1) + '</td>';
+        h += '<td>' + (r.document_number || '-') + '</td>';
+        h += '<td>' + (r.date || '-') + '</td>';
+        h += '<td>' + (r.license_plate || r.car_id || '-') + '</td>';
+        h += '<td class="text-left">' + driverDisplay + '</td>';
+        h += '<td>' + (_expenseLabels[r.expense_type] || '-') + '</td>';
+        h += '<td class="text-left">' + purposeDisplay + '</td>';
+        h += '<td>' + (r.fuel_type || '-') + '</td>';
+        h += '<td class="text-right">' + (r.liters || 0) + '</td>';
+        h += '<td class="text-right">' + (r.price_per_liter || 0) + '</td>';
+        h += '<td class="text-right">' + Number(r.amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td>';
+        h += '<td' + (r.anomaly_flag ? ' class="anomaly"' : '') + '>' + rate + '</td>';
+        h += '</tr>';
+      });
+      h += '</tbody></table>';
+
+      // Summary by expense type
+      h += '<div class="summary"><strong>\u0e2a\u0e23\u0e38\u0e1b\u0e22\u0e2d\u0e14\u0e23\u0e27\u0e21:</strong> ' + (summary.count || 0) + ' \u0e04\u0e23\u0e31\u0e49\u0e07 | ' + Number(summary.total_liters || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) + ' \u0e25\u0e34\u0e15\u0e23 | ' + Number(summary.total_amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) + ' \u0e1a\u0e32\u0e17';
+      if (bySource.length > 0) {
+        h += '<br>';
+        bySource.forEach(function (s) {
+          h += '&bull; ' + (_expenseLabels[s.expense_type] || s.expense_type) + ': ' + (s.count || 0) + ' \u0e04\u0e23\u0e31\u0e49\u0e07 / ' + Number(s.total_liters || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) + ' \u0e25\u0e34\u0e15\u0e23 / ' + Number(s.total_amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) + ' \u0e1a\u0e32\u0e17<br>';
+        });
+      }
+      if (summary.anomaly_count > 0) {
+        h += '<br><span class="anomaly">\u26a0\ufe0f \u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e1c\u0e34\u0e14\u0e1b\u0e01\u0e15\u0e34: ' + summary.anomaly_count + ' \u0e23\u0e32\u0e22\u0e01\u0e32\u0e23</span>';
+      }
+      h += '</div>';
+
+      // Signatures
+      h += '<div class="signatures">';
+      h += '<div class="sig-box"><div class="sig-line">\u0e25\u0e07\u0e0a\u0e37\u0e48\u0e2d............................................<br>\u0e1c\u0e39\u0e49\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19</div></div>';
+      h += '<div class="sig-box"><div class="sig-line">\u0e25\u0e07\u0e0a\u0e37\u0e48\u0e2d............................................<br>\u0e2b\u0e31\u0e27\u0e2b\u0e19\u0e49\u0e32\u0e07\u0e32\u0e19\u0e1e\u0e31\u0e2a\u0e14\u0e38</div></div>';
+      h += '<div class="sig-box"><div class="sig-line">\u0e25\u0e07\u0e0a\u0e37\u0e48\u0e2d............................................<br>\u0e1c\u0e39\u0e49\u0e2d\u0e33\u0e19\u0e27\u0e22\u0e01\u0e32\u0e23\u0e42\u0e23\u0e07\u0e40\u0e23\u0e35\u0e22\u0e19</div></div>';
+      h += '</div>';
+
+      h += '</body></html>';
+      w.document.write(h);
+      w.document.close();
+      setTimeout(function () { w.print(); }, 500);
     }
 
     async function renderQuality(dateFrom, dateTo) {

@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เปรียบเทียบบิลน้ำมัน - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'fuel-reconcile'; window.REQUIRE_AUTH = true;</script>
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="js/api.js"></script><script src="common.js"></script>
+  <style>
+    .header { background: var(--gradient-primary); color: white; padding: 30px; text-align: center; }
+    .header h1 { font-size: 1.8em; margin-bottom: 8px; }
+    .content { padding: 25px; }
+    .section { background: var(--color-bg-light); border-radius: var(--radius-xl); padding: 20px; margin-bottom: 25px; }
+    .section-title { font-size: 1.3em; font-weight: 700; color: var(--color-primary); margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid var(--color-primary); }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 6px; font-weight: 600; }
+    .form-group input, .form-group select { width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: var(--radius-md); font-size: 1em; font-family: inherit; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--color-primary); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .btn { padding: 10px 20px; border: none; border-radius: var(--radius-md); font-size: 1em; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.3s; }
+    .btn-primary { background: var(--gradient-primary); color: white; }
+    .btn-danger { background: var(--color-danger); color: white; }
+    .btn-secondary { background: #6c757d; color: white; }
+    .btn-success { background: #28a745; color: white; }
+    .btn:hover { opacity: 0.9; }
+    .items-table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+    .items-table th, .items-table td { border: 1px solid #ddd; padding: 8px 10px; text-align: center; }
+    .items-table th { background: var(--color-bg-light); font-weight: 700; }
+    .items-table input { width: 100%; border: 1px solid #ccc; border-radius: 4px; padding: 6px; font-size: 0.95em; }
+    .invoice-list { margin-top: 15px; }
+    .invoice-card { background: white; border: 1px solid #e9ecef; border-radius: var(--radius-md); padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .invoice-info { flex: 1; min-width: 200px; }
+    .invoice-info strong { display: block; font-size: 1.05em; margin-bottom: 4px; }
+    .invoice-info span { color: var(--color-text-muted); font-size: 0.9em; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.85em; font-weight: 600; }
+    .badge-pending { background: #fff3cd; color: #856404; }
+    .badge-matched { background: #d4edda; color: #155724; }
+    .badge-mismatched { background: #f8d7da; color: #721c24; }
+    .badge-resolved { background: #cce5ff; color: #004085; }
+    .compare-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+    .compare-table th, .compare-table td { border: 1px solid #ddd; padding: 8px 12px; text-align: right; }
+    .compare-table th { background: #f0f0f0; font-weight: 700; text-align: center; }
+    .compare-table .text-left { text-align: left; }
+    .diff-ok { color: #155724; }
+    .diff-bad { color: #721c24; font-weight: 700; }
+    .result-status { text-align: center; padding: 15px; font-size: 1.2em; font-weight: 700; border-radius: var(--radius-md); margin: 15px 0; }
+    .result-matched { background: #d4edda; color: #155724; }
+    .result-mismatched { background: #f8d7da; color: #721c24; }
+    .loading { text-align: center; padding: 40px; color: var(--color-text-muted); }
+    .resolve-section { margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: var(--radius-md); }
+    .resolve-section textarea { width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: var(--radius-md); font-family: inherit; font-size: 1em; min-height: 60px; }
+    @media (max-width: 768px) { .form-row { grid-template-columns: 1fr; } .invoice-card { flex-direction: column; align-items: stretch; } }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📄 เปรียบเทียบบิลน้ำมัน</h1>
+      <p>ตรวจสอบยอดใบเบิกจากปั๊มกับข้อมูลในระบบ</p>
+    </div>
+
+    <div id="navigation"></div>
+
+    <div class="content">
+      <div id="alertContainer"></div>
+
+      <!-- ฟอร์มกรอกข้อมูลใบเบิกจากปั๊ม -->
+      <div class="section">
+        <div class="section-title">📝 บันทึกใบเบิกจากปั๊มน้ำมัน</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>เลขที่ใบเบิก</label>
+            <input type="text" id="invoiceNumber" placeholder="เช่น INV-2569-04-001">
+          </div>
+          <div class="form-group">
+            <label>ชื่อปั๊มน้ำมัน</label>
+            <input type="text" id="stationName" placeholder="เช่น ปั๊ม ปตท. สาขาพะเยา">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>ช่วงวันที่เริ่มต้น</label>
+            <input type="date" id="invoiceDateFrom">
+          </div>
+          <div class="form-group">
+            <label>ช่วงวันที่สิ้นสุด</label>
+            <input type="date" id="invoiceDateTo">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>วันที่ออกใบเบิก</label>
+            <input type="date" id="invoiceDate">
+          </div>
+          <div class="form-group">
+            <label>แนบรูปใบเบิก (ถ้ามี)</label>
+            <input type="file" id="invoiceImage" accept="image/*" style="padding:8px;">
+          </div>
+        </div>
+
+        <div style="margin-top:15px;">
+          <label style="font-weight:700;margin-bottom:8px;display:block;">รายการน้ำมัน</label>
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>ประเภทน้ำมัน</th>
+                <th>จำนวนลิตร</th>
+                <th>ราคารวม (บาท)</th>
+                <th style="width:50px;"></th>
+              </tr>
+            </thead>
+            <tbody id="invoiceItems">
+              <tr>
+                <td><select class="item-fuel-type" style="width:100%;padding:6px;"><option value="">เลือก...</option></select></td>
+                <td><input type="number" class="item-liters" step="0.01" min="0" placeholder="0.00"></td>
+                <td><input type="number" class="item-amount" step="0.01" min="0" placeholder="0.00"></td>
+                <td><button type="button" class="btn btn-danger" style="padding:4px 10px;font-size:0.85em;" onclick="removeInvoiceItem(this)">✕</button></td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+            <button type="button" class="btn btn-secondary" onclick="addInvoiceItem()" style="padding:8px 16px;font-size:0.9em;">➕ เพิ่มแถว</button>
+            <div style="font-size:1.1em;font-weight:700;">ยอดรวม: <span id="invoiceTotal">0.00</span> บาท</div>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;text-align:right;">
+          <button type="button" class="btn btn-primary" onclick="saveInvoice()">💾 บันทึกใบเบิก</button>
+        </div>
+      </div>
+
+      <!-- รายการใบเบิกที่บันทึกไว้ -->
+      <div class="section">
+        <div class="section-title">📋 รายการใบเบิกที่บันทึกไว้</div>
+        <div id="invoiceListLoading" class="loading">กำลังโหลด...</div>
+        <div id="invoiceList" class="invoice-list" style="display:none;"></div>
+      </div>
+
+      <!-- ผลเปรียบเทียบ -->
+      <div class="section" id="compareSection" style="display:none;">
+        <div class="section-title">🔍 ผลการเปรียบเทียบ</div>
+        <div id="compareResult"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var _fuelTypes = [];
+
+    document.addEventListener('DOMContentLoaded', function () {
+      requireAuth();
+      loadFuelTypes();
+      loadInvoices();
+      document.getElementById('invoiceItems').addEventListener('input', calcTotal);
+    });
+
+    async function loadFuelTypes() {
+      try {
+        var r = await apiCall('getFuelTypes', {});
+        if (r && r.data && Array.isArray(r.data.fuel_types)) {
+          _fuelTypes = r.data.fuel_types;
+        }
+      } catch (e) { /* ignore */ }
+      if (_fuelTypes.length === 0) {
+        _fuelTypes = [
+          { id: 'fuelSave_gasohol91', name: '\u0e1f\u0e34\u0e27\u0e40\u0e0b\u0e1f \u0e41\u0e01\u0e4a\u0e2a\u0e42\u0e0b\u0e2e\u0e2d\u0e25\u0e4c 91' },
+          { id: 'vPower_gasohol95', name: '\u0e27\u0e35-\u0e40\u0e1e\u0e32\u0e27\u0e2d\u0e23\u0e4c\u0e41\u0e01\u0e4a\u0e2a\u0e42\u0e0b\u0e2e\u0e2d\u0e25\u0e4c 95' },
+          { id: 'vPower_diesel_b7', name: '\u0e27\u0e35-\u0e40\u0e1e\u0e32\u0e40\u0e27\u0e2d\u0e23\u0e4c \u0e14\u0e35\u0e40\u0e0b\u0e25 B7' },
+          { id: 'fuelSave_diesel_b7', name: '\u0e1f\u0e34\u0e27\u0e40\u0e0b\u0e1f\u0e14\u0e35\u0e40\u0e0b\u0e25 B7' },
+          { id: 'e20', name: 'E20' },
+          { id: 'fuelSave_diesel', name: '\u0e1f\u0e34\u0e27\u0e40\u0e0b\u0e1f\u0e14\u0e35\u0e40\u0e0b\u0e25' }
+        ];
+      }
+      // populate existing selects
+      document.querySelectorAll('.item-fuel-type').forEach(function (sel) { populateFuelSelect(sel); });
+    }
+
+    function populateFuelSelect(sel) {
+      var currentVal = sel.value;
+      sel.innerHTML = '<option value="">เลือก...</option>';
+      _fuelTypes.forEach(function (ft) {
+        var o = document.createElement('option');
+        o.value = ft.name;
+        o.textContent = ft.name;
+        sel.appendChild(o);
+      });
+      if (currentVal) sel.value = currentVal;
+    }
+
+    function addInvoiceItem() {
+      var tbody = document.getElementById('invoiceItems');
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td><select class="item-fuel-type" style="width:100%;padding:6px;"><option value="">เลือก...</option></select></td>'
+        + '<td><input type="number" class="item-liters" step="0.01" min="0" placeholder="0.00"></td>'
+        + '<td><input type="number" class="item-amount" step="0.01" min="0" placeholder="0.00"></td>'
+        + '<td><button type="button" class="btn btn-danger" style="padding:4px 10px;font-size:0.85em;" onclick="removeInvoiceItem(this)">\u2715</button></td>';
+      tbody.appendChild(tr);
+      populateFuelSelect(tr.querySelector('.item-fuel-type'));
+    }
+
+    function removeInvoiceItem(btn) {
+      var tbody = document.getElementById('invoiceItems');
+      if (tbody.rows.length <= 1) return;
+      btn.closest('tr').remove();
+      calcTotal();
+    }
+
+    function calcTotal() {
+      var total = 0;
+      document.querySelectorAll('.item-amount').forEach(function (inp) {
+        total += parseFloat(inp.value) || 0;
+      });
+      document.getElementById('invoiceTotal').textContent = total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function getInvoiceItems() {
+      var items = [];
+      document.querySelectorAll('#invoiceItems tr').forEach(function (tr) {
+        var fuelType = tr.querySelector('.item-fuel-type').value;
+        var liters = parseFloat(tr.querySelector('.item-liters').value) || 0;
+        var amount = parseFloat(tr.querySelector('.item-amount').value) || 0;
+        if (fuelType && (liters > 0 || amount > 0)) {
+          items.push({ fuel_type: fuelType, total_liters: liters, total_amount: amount });
+        }
+      });
+      return items;
+    }
+
+    async function saveInvoice() {
+      var invoiceNumber = document.getElementById('invoiceNumber').value.trim();
+      var stationName = document.getElementById('stationName').value.trim();
+      var dateFrom = document.getElementById('invoiceDateFrom').value;
+      var dateTo = document.getElementById('invoiceDateTo').value;
+      var invoiceDate = document.getElementById('invoiceDate').value;
+      var items = getInvoiceItems();
+
+      if (!invoiceNumber) return showAlert('\u0e01\u0e23\u0e38\u0e13\u0e32\u0e01\u0e23\u0e2d\u0e01\u0e40\u0e25\u0e02\u0e17\u0e35\u0e48\u0e43\u0e1a\u0e40\u0e1a\u0e34\u0e01', 'error');
+      if (!stationName) return showAlert('\u0e01\u0e23\u0e38\u0e13\u0e32\u0e01\u0e23\u0e2d\u0e01\u0e0a\u0e37\u0e48\u0e2d\u0e1b\u0e31\u0e4a\u0e21', 'error');
+      if (!dateFrom || !dateTo) return showAlert('\u0e01\u0e23\u0e38\u0e13\u0e32\u0e23\u0e30\u0e1a\u0e38\u0e0a\u0e48\u0e27\u0e07\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48', 'error');
+      if (!invoiceDate) return showAlert('\u0e01\u0e23\u0e38\u0e13\u0e32\u0e23\u0e30\u0e1a\u0e38\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48\u0e2d\u0e2d\u0e01\u0e43\u0e1a\u0e40\u0e1a\u0e34\u0e01', 'error');
+      if (items.length === 0) return showAlert('\u0e01\u0e23\u0e38\u0e13\u0e32\u0e40\u0e1e\u0e34\u0e48\u0e21\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e19\u0e49\u0e33\u0e21\u0e31\u0e19\u0e2d\u0e22\u0e48\u0e32\u0e07\u0e19\u0e49\u0e2d\u0e22 1 \u0e23\u0e32\u0e22\u0e01\u0e32\u0e23', 'error');
+
+      var totalAmount = 0;
+      items.forEach(function (it) { totalAmount += it.total_amount; });
+
+      var body = {
+        invoice_number: invoiceNumber,
+        station_name: stationName,
+        date_from: dateFrom,
+        date_to: dateTo,
+        invoice_date: invoiceDate,
+        total_amount: totalAmount,
+        items: items
+      };
+
+      // Handle image upload
+      var imageFile = document.getElementById('invoiceImage').files[0];
+      if (imageFile) {
+        var reader = new FileReader();
+        reader.onload = async function () {
+          body.invoice_image_base64 = reader.result;
+          await doSaveInvoice(body);
+        };
+        reader.readAsDataURL(imageFile);
+      } else {
+        await doSaveInvoice(body);
+      }
+    }
+
+    async function doSaveInvoice(body) {
+      try {
+        var r = await API.post('/api/fuel/invoices', body);
+        if (r && r.success) {
+          showAlert('\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e43\u0e1a\u0e40\u0e1a\u0e34\u0e01\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08', 'success');
+          clearForm();
+          loadInvoices();
+        } else {
+          showAlert((r && r.message) || '\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08', 'error');
+        }
+      } catch (e) {
+        showAlert('\u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14: ' + (e.message || ''), 'error');
+      }
+    }
+
+    function clearForm() {
+      document.getElementById('invoiceNumber').value = '';
+      document.getElementById('stationName').value = '';
+      document.getElementById('invoiceDateFrom').value = '';
+      document.getElementById('invoiceDateTo').value = '';
+      document.getElementById('invoiceDate').value = '';
+      document.getElementById('invoiceImage').value = '';
+      var tbody = document.getElementById('invoiceItems');
+      tbody.innerHTML = '';
+      addInvoiceItem();
+      document.getElementById('invoiceTotal').textContent = '0.00';
+    }
+
+    async function loadInvoices() {
+      var listEl = document.getElementById('invoiceList');
+      var loadingEl = document.getElementById('invoiceListLoading');
+      loadingEl.style.display = 'block';
+      listEl.style.display = 'none';
+
+      try {
+        var r = await API.get('/api/fuel/invoices');
+        var invoices = (r && r.data) ? (Array.isArray(r.data) ? r.data : (r.data.invoices || [])) : [];
+        if (invoices.length === 0) {
+          listEl.innerHTML = '<div style="text-align:center;padding:30px;color:var(--color-text-muted);">\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23</div>';
+        } else {
+          var html = '';
+          invoices.forEach(function (inv) {
+            var badgeClass = 'badge-' + (inv.status || 'pending');
+            var statusLabels = { pending: '\u0e23\u0e2d\u0e15\u0e23\u0e27\u0e08', matched: '\u0e15\u0e23\u0e07\u0e01\u0e31\u0e19', mismatched: '\u0e44\u0e21\u0e48\u0e15\u0e23\u0e07', resolved: '\u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e41\u0e25\u0e49\u0e27' };
+            html += '<div class="invoice-card">';
+            html += '<div class="invoice-info">';
+            html += '<strong>' + escHtml(inv.invoice_number || '-') + '</strong>';
+            html += '<span>' + escHtml(inv.station_name || '') + ' | ' + (inv.date_from || '') + ' \u2013 ' + (inv.date_to || '') + ' | \u0e22\u0e2d\u0e14\u0e23\u0e27\u0e21: ' + fmtMoney(inv.total_amount || 0) + ' \u0e1a\u0e32\u0e17</span>';
+            html += '</div>';
+            html += '<div style="display:flex;gap:8px;align-items:center;">';
+            html += '<span class="badge ' + badgeClass + '">' + (statusLabels[inv.status] || inv.status) + '</span>';
+            html += '<button class="btn btn-primary" style="padding:6px 14px;font-size:0.9em;" onclick="reconcile(\'' + escAttr(inv.id) + '\')">\u{1f50d} \u0e40\u0e1b\u0e23\u0e35\u0e22\u0e1a\u0e40\u0e17\u0e35\u0e22\u0e1a</button>';
+            html += '</div></div>';
+          });
+          listEl.innerHTML = html;
+        }
+      } catch (e) {
+        listEl.innerHTML = '<div style="text-align:center;padding:30px;color:var(--color-danger);">\u0e42\u0e2b\u0e25\u0e14\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08</div>';
+      }
+      loadingEl.style.display = 'none';
+      listEl.style.display = 'block';
+    }
+
+    var _currentReconcileId = null;
+
+    async function reconcile(invoiceId) {
+      var section = document.getElementById('compareSection');
+      var result = document.getElementById('compareResult');
+      section.style.display = 'block';
+      result.innerHTML = '<div class="loading">\u0e01\u0e33\u0e25\u0e31\u0e07\u0e40\u0e1b\u0e23\u0e35\u0e22\u0e1a\u0e40\u0e17\u0e35\u0e22\u0e1a...</div>';
+      section.scrollIntoView({ behavior: 'smooth' });
+      _currentReconcileId = invoiceId;
+
+      try {
+        var r = await API.get('/api/fuel/invoices/' + invoiceId + '/reconcile');
+        if (!r || !r.success) {
+          result.innerHTML = '<div style="color:var(--color-danger);">' + escHtml((r && r.message) || '\u0e44\u0e21\u0e48\u0e2a\u0e32\u0e21\u0e32\u0e23\u0e16\u0e40\u0e1b\u0e23\u0e35\u0e22\u0e1a\u0e40\u0e17\u0e35\u0e22\u0e1a\u0e44\u0e14\u0e49') + '</div>';
+          return;
+        }
+        var data = r.data || {};
+        var comparison = data.comparison || [];
+        var invoice = data.invoice || {};
+        var isMatched = data.status === 'matched';
+
+        var html = '<div class="result-status ' + (isMatched ? 'result-matched' : 'result-mismatched') + '">';
+        html += isMatched ? '\u2705 \u0e22\u0e2d\u0e14\u0e15\u0e23\u0e07\u0e01\u0e31\u0e19' : '\u274c \u0e22\u0e2d\u0e14\u0e44\u0e21\u0e48\u0e15\u0e23\u0e07\u0e01\u0e31\u0e19';
+        html += '</div>';
+
+        html += '<p style="margin-bottom:8px;">\u0e43\u0e1a\u0e40\u0e1a\u0e34\u0e01: <strong>' + escHtml(invoice.invoice_number || '') + '</strong> | \u0e1b\u0e31\u0e4a\u0e21: ' + escHtml(invoice.station_name || '') + ' | \u0e0a\u0e48\u0e27\u0e07: ' + (invoice.date_from || '') + ' \u2013 ' + (invoice.date_to || '') + '</p>';
+
+        html += '<table class="compare-table">';
+        html += '<thead><tr><th class="text-left">\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e19\u0e49\u0e33\u0e21\u0e31\u0e19</th><th>\u0e22\u0e2d\u0e14\u0e1b\u0e31\u0e4a\u0e21 (\u0e25\u0e34\u0e15\u0e23)</th><th>\u0e22\u0e2d\u0e14\u0e23\u0e30\u0e1a\u0e1a (\u0e25\u0e34\u0e15\u0e23)</th><th>\u0e2a\u0e48\u0e27\u0e19\u0e15\u0e48\u0e32\u0e07 (\u0e25\u0e34\u0e15\u0e23)</th><th>\u0e22\u0e2d\u0e14\u0e1b\u0e31\u0e4a\u0e21 (\u0e1a\u0e32\u0e17)</th><th>\u0e22\u0e2d\u0e14\u0e23\u0e30\u0e1a\u0e1a (\u0e1a\u0e32\u0e17)</th><th>\u0e2a\u0e48\u0e27\u0e19\u0e15\u0e48\u0e32\u0e07 (\u0e1a\u0e32\u0e17)</th></tr></thead><tbody>';
+        var totalInvLiters = 0, totalSysLiters = 0, totalInvAmount = 0, totalSysAmount = 0;
+        comparison.forEach(function (c) {
+          var diffLitersClass = Math.abs(c.diff_liters || 0) < 0.01 ? 'diff-ok' : 'diff-bad';
+          var diffAmountClass = Math.abs(c.diff_amount || 0) < 0.5 ? 'diff-ok' : 'diff-bad';
+          totalInvLiters += (c.invoice_liters || 0);
+          totalSysLiters += (c.system_liters || 0);
+          totalInvAmount += (c.invoice_amount || 0);
+          totalSysAmount += (c.system_amount || 0);
+          html += '<tr>';
+          html += '<td class="text-left">' + escHtml(c.fuel_type || '-') + '</td>';
+          html += '<td>' + fmtNum(c.invoice_liters || 0) + '</td>';
+          html += '<td>' + fmtNum(c.system_liters || 0) + '</td>';
+          html += '<td class="' + diffLitersClass + '">' + fmtNum(c.diff_liters || 0) + '</td>';
+          html += '<td>' + fmtMoney(c.invoice_amount || 0) + '</td>';
+          html += '<td>' + fmtMoney(c.system_amount || 0) + '</td>';
+          html += '<td class="' + diffAmountClass + '">' + fmtMoney(c.diff_amount || 0) + '</td>';
+          html += '</tr>';
+        });
+        // Total row
+        var totalDiffLiters = totalInvLiters - totalSysLiters;
+        var totalDiffAmount = totalInvAmount - totalSysAmount;
+        html += '<tr style="font-weight:700;background:#f0f0f0;">';
+        html += '<td class="text-left">\u0e23\u0e27\u0e21</td>';
+        html += '<td>' + fmtNum(totalInvLiters) + '</td>';
+        html += '<td>' + fmtNum(totalSysLiters) + '</td>';
+        html += '<td class="' + (Math.abs(totalDiffLiters) < 0.5 ? 'diff-ok' : 'diff-bad') + '">' + fmtNum(totalDiffLiters) + '</td>';
+        html += '<td>' + fmtMoney(totalInvAmount) + '</td>';
+        html += '<td>' + fmtMoney(totalSysAmount) + '</td>';
+        html += '<td class="' + (Math.abs(totalDiffAmount) < 1 ? 'diff-ok' : 'diff-bad') + '">' + fmtMoney(totalDiffAmount) + '</td>';
+        html += '</tr></tbody></table>';
+
+        // Detail records
+        if (data.detail_records && data.detail_records.length > 0) {
+          html += '<details style="margin-top:15px;"><summary style="cursor:pointer;font-weight:600;">\u{1f4c4} \u0e14\u0e39\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e43\u0e19\u0e23\u0e30\u0e1a\u0e1a (' + data.detail_records.length + ' \u0e23\u0e32\u0e22\u0e01\u0e32\u0e23)</summary>';
+          html += '<table class="compare-table" style="margin-top:8px;font-size:0.9em;">';
+          html += '<thead><tr><th>\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48</th><th>\u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19</th><th class="text-left">\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17</th><th>\u0e25\u0e34\u0e15\u0e23</th><th>\u0e23\u0e32\u0e04\u0e32/\u0e25.</th><th>\u0e23\u0e27\u0e21</th></tr></thead><tbody>';
+          data.detail_records.forEach(function (dr) {
+            html += '<tr>';
+            html += '<td>' + (dr.date || '-') + '</td>';
+            html += '<td>' + escHtml(dr.license_plate || dr.car_id || '-') + '</td>';
+            html += '<td class="text-left">' + escHtml(dr.fuel_type || '-') + '</td>';
+            html += '<td>' + fmtNum(dr.liters || 0) + '</td>';
+            html += '<td>' + fmtMoney(dr.price_per_liter || 0) + '</td>';
+            html += '<td>' + fmtMoney(dr.amount || 0) + '</td>';
+            html += '</tr>';
+          });
+          html += '</tbody></table></details>';
+        }
+
+        // Resolve section
+        if (invoice.status !== 'resolved') {
+          html += '<div class="resolve-section">';
+          html += '<label style="font-weight:700;margin-bottom:8px;display:block;">\u2705 \u0e22\u0e37\u0e19\u0e22\u0e31\u0e19/\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e1c\u0e25\u0e15\u0e23\u0e27\u0e08\u0e2a\u0e2d\u0e1a</label>';
+          html += '<textarea id="resolveNotes" placeholder="\u0e2b\u0e21\u0e32\u0e22\u0e40\u0e2b\u0e15\u0e38 (\u0e16\u0e49\u0e32\u0e21\u0e35)"></textarea>';
+          html += '<div style="margin-top:10px;text-align:right;">';
+          html += '<button class="btn btn-success" onclick="resolveInvoice()">\u2705 \u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e1c\u0e25\u0e15\u0e23\u0e27\u0e08\u0e2a\u0e2d\u0e1a</button>';
+          html += '</div></div>';
+        }
+
+        result.innerHTML = html;
+      } catch (e) {
+        result.innerHTML = '<div style="color:var(--color-danger);">\u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14: ' + escHtml(e.message || '') + '</div>';
+      }
+    }
+
+    async function resolveInvoice() {
+      if (!_currentReconcileId) return;
+      var notes = (document.getElementById('resolveNotes') || {}).value || '';
+      try {
+        var r = await API.put('/api/fuel/invoices/' + _currentReconcileId + '/resolve', { notes: notes });
+        if (r && r.success) {
+          showAlert('\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e1c\u0e25\u0e15\u0e23\u0e27\u0e08\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08', 'success');
+          loadInvoices();
+          document.getElementById('compareSection').style.display = 'none';
+        } else {
+          showAlert((r && r.message) || '\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08', 'error');
+        }
+      } catch (e) {
+        showAlert('\u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14: ' + (e.message || ''), 'error');
+      }
+    }
+
+    function fmtNum(n) { return Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function fmtMoney(n) { return Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function escHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+    function escAttr(s) { return String(s || '').replace(/'/g, "\\'"); }
+
+    function showAlert(message, type) {
+      var container = document.getElementById('alertContainer');
+      var el = document.createElement('div');
+      el.style.cssText = 'padding:12px 15px;border-radius:8px;margin-bottom:15px;font-weight:600;';
+      if (type === 'success') { el.style.background = '#d4edda'; el.style.color = '#155724'; }
+      else { el.style.background = '#f8d7da'; el.style.color = '#721c24'; }
+      el.textContent = message;
+      container.innerHTML = '';
+      container.appendChild(el);
+      setTimeout(function () { el.remove(); }, 5000);
+    }
+  </script>
+
+  <div style="background: var(--color-bg-light); padding: 20px; text-align: center; color: var(--color-text-muted); font-size: 0.9em; margin-top: 20px;">
+    <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+  </div>
+</body>
+
+</html>

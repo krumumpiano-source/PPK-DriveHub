@@ -428,6 +428,45 @@
 
       <!-- Form -->
       <form id="fuelForm" onsubmit="handleSubmit(event); return false;" style="display: none;">
+        <!-- ผู้เบิกน้ำมัน -->
+        <div class="form-group">
+          <label for="driverSelect">ผู้เบิกน้ำมัน <span class="required">*</span></label>
+          <select id="driverSelect">
+            <option value="">-- เลือกคนขับในระบบ --</option>
+          </select>
+          <div style="margin-top: 8px;">
+            <label style="display: inline; font-weight: normal; cursor: pointer; font-size: 0.95em;">
+              <input type="checkbox" id="useManualDriver" onchange="toggleDriverManual()"> พิมพ์ชื่อผู้เบิกเอง
+            </label>
+          </div>
+          <input type="text" id="driverNameManual" placeholder="ชื่อ-นามสกุล ผู้เบิก" style="display:none; margin-top: 8px;">
+        </div>
+
+        <!-- แหล่งเบิกจ่าย -->
+        <div class="form-group">
+          <label for="expenseType">แหล่งเบิกจ่าย <span class="required">*</span></label>
+          <select id="expenseType" required>
+            <option value="">-- เลือกแหล่งเบิกจ่าย --</option>
+            <option value="procurement">เบิกน้ำมันปกติด้วยใบสั่งจ่ายน้ำมัน</option>
+            <option value="official_travel">เติมน้ำมันระหว่างทางด้วยงบจากการเบิกไปราชการ</option>
+          </select>
+        </div>
+
+        <!-- วัตถุประสงค์ -->
+        <div class="form-group">
+          <label for="purpose">วัตถุประสงค์ <span class="required">*</span></label>
+          <select id="purpose" required onchange="togglePurposeDetail()">
+            <option value="">-- เลือกวัตถุประสงค์ --</option>
+            <option value="school_passenger">ภารกิจโดยสารของโรงเรียน</option>
+            <option value="official_document">รับส่งเอกสารทางราชการ</option>
+            <option value="other">อื่นๆ</option>
+          </select>
+        </div>
+        <div class="form-group" id="purposeDetailGroup" style="display:none">
+          <label for="purposeDetail">ระบุรายละเอียด <span class="required">*</span></label>
+          <input type="text" id="purposeDetail" placeholder="ระบุรายละเอียดวัตถุประสงค์...">
+        </div>
+
         <div class="form-group">
           <label for="fuel_type">ประเภทน้ำมัน <span class="required">*</span></label>
           <select id="fuel_type" name="fuel_type" required>
@@ -488,14 +527,14 @@
         </div>
 
         <div class="form-group">
-          <label>แนบรูปสลิป</label>
+          <label>แนบใบเสร็จ <span class="required">*</span></label>
           <div class="file-upload" onclick="document.getElementById('receiptFile').click()">
             <input type="file" id="receiptFile" accept="image/*" capture="environment"
               onchange="handleFileSelect(event)">
             <label for="receiptFile" class="file-upload-label">
-              📷 กดเพื่อถ่ายรูปหรือเลือกรูป
+              📷 กดเพื่อถ่ายรูปหรือเลือกรูปใบเสร็จ (บังคับแนบ)
             </label>
-            <div class="help-text" style="margin-top: 10px;">กดเพื่อเปิดกล้องหรือเลือกรูปจากแกลเลอรี</div>
+            <div class="help-text" style="margin-top: 10px; color: var(--color-danger-dark);">* บังคับแนบใบเสร็จตามระเบียบพัสดุ</div>
           </div>
           <div class="file-preview" id="filePreview"></div>
         </div>
@@ -534,6 +573,7 @@
       document.getElementById('loading').style.display = 'none';
       document.getElementById('fuelForm').style.display = 'block';
       loadFuelTypes();
+      loadDrivers();
       setDefaultDateTime();
 
       if (!carId) {
@@ -575,94 +615,71 @@
     }
 
     async function loadFuelTypes() {
+      var fallback = [
+        { id: 'fuelSave_gasohol91', name: '\u0E1F\u0E34\u0E27\u0E40\u0E0B\u0E1F \u0E41\u0E01\u0E4A\u0E2A\u0E42\u0E0B\u0E2E\u0E2D\u0E25\u0E4C 91' },
+        { id: 'vPower_gasohol95', name: '\u0E27\u0E35-\u0E40\u0E1E\u0E32\u0E27\u0E2D\u0E23\u0E4C\u0E41\u0E01\u0E4A\u0E2A\u0E42\u0E0B\u0E2E\u0E2D\u0E25\u0E4C 95' },
+        { id: 'vPower_diesel_b7', name: '\u0E27\u0E35-\u0E40\u0E1E\u0E32\u0E40\u0E27\u0E2D\u0E23\u0E4C \u0E14\u0E35\u0E40\u0E0B\u0E25 B7' },
+        { id: 'fuelSave_diesel_b7', name: '\u0E1F\u0E34\u0E27\u0E40\u0E0B\u0E1F\u0E14\u0E35\u0E40\u0E0B\u0E25 B7' },
+        { id: 'e20', name: 'E20' },
+        { id: 'fuelSave_diesel', name: '\u0E1F\u0E34\u0E27\u0E40\u0E0B\u0E1F\u0E14\u0E35\u0E40\u0E0B\u0E25' }
+      ];
       try {
         var result = await apiCall('getFuelTypes', {});
         var select = document.getElementById('fuel_type');
-        select.innerHTML = '<option value="">-- เลือกประเภทน้ำมัน --</option>';
-
-        if (result.success && result.data && result.data.fuel_types && result.data.fuel_types.length > 0) {
-          // กรองประเภทน้ำมันที่ไม่ต้องการ (LPG, NGV) และแสดงเฉพาะที่ขายในไทยทั่วไป
-          var excludedTypes = ['lpg', 'ngv', 'gas'];
-          result.data.fuel_types.forEach(function (type) {
-            var typeId = (type.id || type.key || '').toLowerCase();
-            var typeName = (type.name || '').toLowerCase();
-            // ข้ามประเภทแก๊ส (LPG/NGV) แต่เก็บแก๊สโซฮอล์ (E20, E85)
-            var isExcluded = excludedTypes.some(function (excluded) {
-              return typeId.indexOf(excluded) !== -1 || typeName.indexOf(excluded) !== -1;
-            });
-            // ถ้าเป็นแก๊สโซฮอล์ (gasohol) ให้เก็บไว้
-            if (typeName.indexOf('gasohol') !== -1 || typeName.indexOf('e20') !== -1 || typeName.indexOf('e85') !== -1) {
-              isExcluded = false;
-            }
-            if (!isExcluded) {
-              var option = document.createElement('option');
-              option.value = type.id || type.key;
-              option.textContent = type.name;
-              select.appendChild(option);
-            }
-          });
-          // ถ้าไม่มีข้อมูลจาก API ให้ใช้ fallback
-          if (select.options.length === 1) {
-            var fallback = [
-              { id: 'gasoline_91', name: 'เบนซิน 91' },
-              { id: 'gasoline_95', name: 'เบนซิน 95' },
-              { id: 'gasoline_e20', name: 'แก๊สโซฮอล์ E20' },
-              { id: 'gasoline_e85', name: 'แก๊สโซฮอล์ E85' },
-              { id: 'diesel', name: 'ดีเซล' },
-              { id: 'diesel_b7', name: 'ดีเซล B7' },
-              { id: 'diesel_b20', name: 'ดีเซล B20' },
-              { id: 'electric', name: 'ไฟฟ้า' }
-            ];
-            fallback.forEach(function (type) {
-              var opt = document.createElement('option');
-              opt.value = type.id;
-              opt.textContent = type.name;
-              select.appendChild(opt);
-            });
-          }
-        } else {
-          // ประเภทน้ำมันที่ขายในไทยทั่วไป (ไม่รวมแก๊ส LPG/NGV)
-          var fallback = [
-            { id: 'gasoline_91', name: 'เบนซิน 91' },
-            { id: 'gasoline_95', name: 'เบนซิน 95' },
-            { id: 'gasoline_e20', name: 'แก๊สโซฮอล์ E20' },
-            { id: 'gasoline_e85', name: 'แก๊สโซฮอล์ E85' },
-            { id: 'diesel', name: 'ดีเซล' },
-            { id: 'diesel_b7', name: 'ดีเซล B7' },
-            { id: 'diesel_b20', name: 'ดีเซล B20' },
-            { id: 'electric', name: 'ไฟฟ้า' }
-          ];
-          fallback.forEach(function (type) {
-            var opt = document.createElement('option');
-            opt.value = type.id;
-            opt.textContent = type.name;
-            select.appendChild(opt);
-          });
-        }
-      } catch (error) {
-        console.error('Error loading fuel types:', error);
+        select.innerHTML = '<option value="">-- \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E19\u0E49\u0E33\u0E21\u0E31\u0E19 --</option>';
+        var types = (result.success && result.data && result.data.fuel_types && result.data.fuel_types.length > 0)
+          ? result.data.fuel_types : fallback;
+        types.forEach(function (type) {
+          var option = document.createElement('option');
+          option.value = type.id || type.key;
+          option.textContent = type.name;
+          select.appendChild(option);
+        });
+      } catch (err) {
+        console.error('Error loading fuel types:', err);
         var select = document.getElementById('fuel_type');
-        if (select) {
-          select.innerHTML = '<option value="">-- เลือกประเภทน้ำมัน --</option>';
-          // ประเภทน้ำมันที่ขายในไทยทั่วไป (ไม่รวมแก๊ส LPG/NGV)
-          var fallback = [
-            { id: 'gasoline_91', name: 'เบนซิน 91' },
-            { id: 'gasoline_95', name: 'เบนซิน 95' },
-            { id: 'gasoline_e20', name: 'แก๊สโซฮอล์ E20' },
-            { id: 'gasoline_e85', name: 'แก๊สโซฮอล์ E85' },
-            { id: 'diesel', name: 'ดีเซล' },
-            { id: 'diesel_b7', name: 'ดีเซล B7' },
-            { id: 'diesel_b20', name: 'ดีเซล B20' },
-            { id: 'electric', name: 'ไฟฟ้า' }
-          ];
-          fallback.forEach(function (type) {
-            var opt = document.createElement('option');
-            opt.value = type.id;
-            opt.textContent = type.name;
-            select.appendChild(opt);
+        select.innerHTML = '<option value="">-- \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E19\u0E49\u0E33\u0E21\u0E31\u0E19 --</option>';
+        fallback.forEach(function (type) {
+          var opt = document.createElement('option');
+          opt.value = type.id;
+          opt.textContent = type.name;
+          select.appendChild(opt);
+        });
+      }
+    }
+
+    async function loadDrivers() {
+      try {
+        var result = await apiCall('getDrivers', {});
+        if (result.success) {
+          var drivers = result.data || [];
+          if (!Array.isArray(drivers)) drivers = drivers.drivers || [];
+          var select = document.getElementById('driverSelect');
+          drivers.forEach(function (d) {
+            if (d.status === 'active') {
+              var opt = document.createElement('option');
+              opt.value = d.id;
+              opt.textContent = d.name + (d.license_number ? ' (' + d.license_number + ')' : '');
+              select.appendChild(opt);
+            }
           });
         }
-      }
+      } catch (err) { console.error('loadDrivers error', err); }
+    }
+
+    function togglePurposeDetail() {
+      var purpose = document.getElementById('purpose').value;
+      var group = document.getElementById('purposeDetailGroup');
+      group.style.display = purpose === 'other' ? 'block' : 'none';
+      if (purpose !== 'other') document.getElementById('purposeDetail').value = '';
+    }
+
+    function toggleDriverManual() {
+      var useManual = document.getElementById('useManualDriver').checked;
+      document.getElementById('driverSelect').style.display = useManual ? 'none' : 'block';
+      document.getElementById('driverNameManual').style.display = useManual ? 'block' : 'none';
+      if (useManual) { document.getElementById('driverSelect').value = ''; }
+      else { document.getElementById('driverNameManual').value = ''; }
     }
 
     function setDefaultDateTime() {
@@ -749,9 +766,42 @@
       var totalAmount = parseFloat(document.getElementById('total_amount').value);
       var mileage = parseInt(document.getElementById('mileage').value);
       var fuelType = document.getElementById('fuel_type').value;
+      var expenseType = document.getElementById('expenseType').value;
+      var purpose = document.getElementById('purpose').value;
+      var purposeDetail = document.getElementById('purposeDetail').value.trim();
+
+      // Driver validation
+      var useManual = document.getElementById('useManualDriver').checked;
+      var driverId = useManual ? '' : document.getElementById('driverSelect').value;
+      var driverNameManual = useManual ? document.getElementById('driverNameManual').value.trim() : '';
+
+      if (!driverId && !driverNameManual) {
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">กรุณาระบุผู้เบิกน้ำมัน</div>';
+        return;
+      }
+
+      if (!expenseType) {
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">กรุณาเลือกแหล่งเบิกจ่าย</div>';
+        return;
+      }
+
+      if (!purpose) {
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">กรุณาเลือกวัตถุประสงค์</div>';
+        return;
+      }
+      if (purpose === 'other' && !purposeDetail) {
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">กรุณาระบุรายละเอียดวัตถุประสงค์</div>';
+        return;
+      }
 
       if (!liters || !pricePerLiter || !totalAmount || !mileage || !fuelType) {
         document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">กรุณากรอกข้อมูลให้ครบถ้วน (จำนวนลิตร, ราคาต่อลิตร, จำนวนเงินรวม, เลขไมล์, ประเภทน้ำมัน)</div>';
+        return;
+      }
+
+      // Receipt validation
+      if (!receiptFile) {
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">กรุณาแนบรูปใบเสร็จ (บังคับตามระเบียบพัสดุ)</div>';
         return;
       }
 
@@ -824,7 +874,11 @@
           date: dateStr,
           time: timeStr,
           car_id: carId,
-          driver_id: '', // QR form doesn't require driver
+          driver_id: driverId || null,
+          driver_name_manual: driverNameManual || null,
+          expense_type: expenseType,
+          purpose: purpose,
+          purpose_detail: purposeDetail || null,
           mileage_before: lastMileage,
           mileage_after: mileage,
           liters: liters,

@@ -193,9 +193,38 @@
         <label>แหล่งเบิกจ่าย <span class="required">*</span></label>
         <select id="expenseType" required>
           <option value="">-- เลือกแหล่งเบิกจ่าย --</option>
-          <option value="procurement">เบิกจ่ายน้ำมันจากงานพัสดุ</option>
-          <option value="official_travel">เบิกจ่ายน้ำมันจากงบไปราชการ</option>
+          <option value="procurement">เบิกน้ำมันปกติด้วยใบสั่งจ่ายน้ำมัน</option>
+          <option value="official_travel">เติมน้ำมันระหว่างทางด้วยงบจากการเบิกไปราชการ</option>
         </select>
+      </div>
+
+      <!-- 4.5 วัตถุประสงค์ -->
+      <div class="form-group">
+        <label>วัตถุประสงค์ <span class="required">*</span></label>
+        <select id="purpose" required onchange="togglePurposeDetail()">
+          <option value="">-- เลือกวัตถุประสงค์ --</option>
+          <option value="school_passenger">ภารกิจโดยสารของโรงเรียน</option>
+          <option value="official_document">รับส่งเอกสารทางราชการ</option>
+          <option value="other">อื่นๆ</option>
+        </select>
+      </div>
+      <div class="form-group" id="purposeDetailGroup" style="display:none">
+        <label>ระบุรายละเอียดวัตถุประสงค์ <span class="required">*</span></label>
+        <input type="text" id="purposeDetail" placeholder="ระบุรายละเอียด...">
+      </div>
+
+      <!-- 4.7 ผู้เบิกน้ำมัน -->
+      <div class="form-group">
+        <label>ผู้เบิกน้ำมัน <span class="required">*</span></label>
+        <select id="driverSelect" onchange="toggleDriverManual()">
+          <option value="">-- เลือกคนขับในระบบ --</option>
+        </select>
+        <div style="margin-top: 8px;">
+          <label style="display: inline; font-weight: normal; cursor: pointer;">
+            <input type="checkbox" id="useManualDriver" onchange="toggleDriverManual()"> พิมพ์ชื่อผู้เบิกเอง
+          </label>
+        </div>
+        <input type="text" id="driverNameManual" placeholder="ชื่อ-นามสกุล ผู้เบิก" style="display:none; margin-top: 8px;">
       </div>
 
       <!-- 5. ประเภทน้ำมัน -->
@@ -203,14 +232,6 @@
         <label>ประเภทน้ำมัน <span class="required">*</span></label>
         <select id="fuelType" required>
           <option value="">-- เลือกประเภทน้ำมัน --</option>
-          <option value="gasoline_91">เบนซิน 91</option>
-          <option value="gasoline_95">เบนซิน 95</option>
-          <option value="gasoline_e20">แก๊สโซฮอล์ E20</option>
-          <option value="gasoline_e85">แก๊สโซฮอล์ E85</option>
-          <option value="diesel">ดีเซล</option>
-          <option value="diesel_b7">ดีเซล B7</option>
-          <option value="diesel_b20">ดีเซล B20</option>
-          <option value="electric">ไฟฟ้า</option>
         </select>
       </div>
 
@@ -246,14 +267,15 @@
         <input type="number" id="mileageBefore" min="0" required placeholder="ไมล์">
       </div>
 
-      <!-- 10. แนบใบเสร็จรับเงิน (รูปภาพ) -->
+      <!-- 10. แนบใบเสร็จรับเงิน (รูปภาพ) — บังคับ -->
       <div class="form-group">
-        <label>แนบใบเสร็จรับเงิน (รูปภาพ)</label>
+        <label>แนบใบเสร็จรับเงิน <span class="required">*</span></label>
         <div class="file-upload" onclick="document.getElementById('receiptImage').click()">
           <input type="file" id="receiptImage" accept="image/*">
-          <div>📷 คลิกเพื่อเลือกรูปภาพใบเสร็จ (ถ้ามี)</div>
+          <div>📷 คลิกเพื่อเลือกรูปภาพใบเสร็จ (บังคับแนบ)</div>
           <div class="file-preview" id="receiptImagePreview"></div>
         </div>
+        <div class="help-text" style="color: var(--color-danger-dark);">* บังคับแนบใบเสร็จตามระเบียบพัสดุ</div>
       </div>
 
       <div class="btn-row">
@@ -284,6 +306,7 @@
 
       loadVehicles();
       loadFuelTypes();
+      loadDrivers();
       setDefaultDateTime();
       setupForm();
 
@@ -340,71 +363,76 @@
     function loadFuelTypes() {
       var select = document.getElementById('fuelType');
       var defaultOptions = [
-        { id: 'gasoline_91', name: 'เบนซิน 91' },
-        { id: 'gasoline_95', name: 'เบนซิน 95' },
-        { id: 'gasoline_e20', name: 'แก๊สโซฮอล์ E20' },
-        { id: 'gasoline_e85', name: 'แก๊สโซฮอล์ E85' },
-        { id: 'diesel', name: 'ดีเซล' },
-        { id: 'diesel_b7', name: 'ดีเซล B7' },
-        { id: 'diesel_b20', name: 'ดีเซล B20' },
-        { id: 'electric', name: 'ไฟฟ้า' }
+        { id: 'fuelSave_gasohol91', name: '\u0E1F\u0E34\u0E27\u0E40\u0E0B\u0E1F \u0E41\u0E01\u0E4A\u0E2A\u0E42\u0E0B\u0E2E\u0E2D\u0E25\u0E4C 91' },
+        { id: 'vPower_gasohol95', name: '\u0E27\u0E35-\u0E40\u0E1E\u0E32\u0E27\u0E2D\u0E23\u0E4C\u0E41\u0E01\u0E4A\u0E2A\u0E42\u0E0B\u0E2E\u0E2D\u0E25\u0E4C 95' },
+        { id: 'vPower_diesel_b7', name: '\u0E27\u0E35-\u0E40\u0E1E\u0E32\u0E40\u0E27\u0E2D\u0E23\u0E4C \u0E14\u0E35\u0E40\u0E0B\u0E25 B7' },
+        { id: 'fuelSave_diesel_b7', name: '\u0E1F\u0E34\u0E27\u0E40\u0E0B\u0E1F\u0E14\u0E35\u0E40\u0E0B\u0E25 B7' },
+        { id: 'e20', name: 'E20' },
+        { id: 'fuelSave_diesel', name: '\u0E1F\u0E34\u0E27\u0E40\u0E0B\u0E1F\u0E14\u0E35\u0E40\u0E0B\u0E25' }
       ];
 
-      // ตั้งค่า default options ก่อน (เพื่อให้มีให้เลือกทันที)
-      var hasDefaultOptions = select.options.length > 1;
-      if (!hasDefaultOptions) {
-        defaultOptions.forEach(function (type) {
-          var opt = document.createElement('option');
-          opt.value = type.id;
-          opt.textContent = type.name;
-          select.appendChild(opt);
-        });
-      }
+      // ใส่ default ก่อน
+      select.innerHTML = '<option value="">-- \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E19\u0E49\u0E33\u0E21\u0E31\u0E19 --</option>';
+      defaultOptions.forEach(function (type) {
+        var opt = document.createElement('option');
+        opt.value = type.id;
+        opt.textContent = type.name;
+        select.appendChild(opt);
+      });
 
-      // พยายามโหลดจาก API เพื่ออัปเดต (ถ้ามี)
+      // โหลดจาก API
       apiCall('getFuelTypes', {}).then(function (response) {
         if (response.success && response.data && response.data.fuel_types && response.data.fuel_types.length > 0) {
-          fuelTypes = response.data.fuel_types || [];
-          // ล้าง options เดิม (เก็บแค่ placeholder)
-          select.innerHTML = '<option value="">-- เลือกประเภทน้ำมัน --</option>';
-
-          // กรองประเภทน้ำมันที่ไม่ต้องการ (LPG, NGV) และแสดงเฉพาะที่ขายในไทยทั่วไป
-          var excludedTypes = ['lpg', 'ngv'];
-          var hasValidTypes = false;
+          fuelTypes = response.data.fuel_types;
+          select.innerHTML = '<option value="">-- \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E19\u0E49\u0E33\u0E21\u0E31\u0E19 --</option>';
           fuelTypes.forEach(function (type) {
-            var typeId = (type.id || type.key || '').toLowerCase();
-            var typeName = (type.name || '').toLowerCase();
-            // ข้ามประเภทแก๊ส (LPG/NGV) แต่เก็บแก๊สโซฮอล์ (E20, E85)
-            var isExcluded = excludedTypes.some(function (excluded) {
-              return typeId.indexOf(excluded) !== -1 || typeName.indexOf(excluded) !== -1;
-            });
-            // ถ้าเป็นแก๊สโซฮอล์ (gasohol) ให้เก็บไว้
-            if (typeName.indexOf('gasohol') !== -1 || typeName.indexOf('e20') !== -1 || typeName.indexOf('e85') !== -1) {
-              isExcluded = false;
-            }
-            if (!isExcluded) {
-              hasValidTypes = true;
-              var option = document.createElement('option');
-              option.value = type.id || type.key;
-              option.textContent = type.name + (type.price_per_liter ? ' (ประมาณ ' + type.price_per_liter + ' บาท/ลิตร)' : '');
-              select.appendChild(option);
+            var option = document.createElement('option');
+            option.value = type.id || type.key;
+            option.textContent = type.name;
+            select.appendChild(option);
+          });
+        }
+      }).catch(function (err) { console.error('getFuelTypes error', err); });
+    }
+
+    function loadDrivers() {
+      apiCall('getDrivers', {}).then(function (response) {
+        if (response.success) {
+          var drivers = response.data || [];
+          if (!Array.isArray(drivers)) drivers = drivers.drivers || [];
+          var select = document.getElementById('driverSelect');
+          drivers.forEach(function (d) {
+            if (d.status === 'active') {
+              var opt = document.createElement('option');
+              opt.value = d.id;
+              opt.textContent = d.name + (d.license_number ? ' (' + d.license_number + ')' : '');
+              select.appendChild(opt);
             }
           });
-
-          // ถ้าไม่มีข้อมูลที่ถูกต้องจาก API ให้ใช้ default options
-          if (!hasValidTypes || select.options.length === 1) {
-            defaultOptions.forEach(function (type) {
-              var opt = document.createElement('option');
-              opt.value = type.id;
-              opt.textContent = type.name;
-              select.appendChild(opt);
-            });
+          // Auto-select if currentUser has driver_id
+          if (currentUser && currentUser.driver_id) {
+            select.value = currentUser.driver_id;
           }
         }
-      }).catch(function (err) {
-        console.error('getFuelTypes error', err);
-        // ถ้า API error ก็ใช้ default options ที่มีอยู่แล้ว (ไม่ต้องทำอะไรเพราะมีอยู่แล้ว)
-      });
+      }).catch(function (err) { console.error('getDrivers error', err); });
+    }
+
+    function togglePurposeDetail() {
+      var purpose = document.getElementById('purpose').value;
+      var group = document.getElementById('purposeDetailGroup');
+      group.style.display = purpose === 'other' ? 'block' : 'none';
+      if (purpose !== 'other') document.getElementById('purposeDetail').value = '';
+    }
+
+    function toggleDriverManual() {
+      var useManual = document.getElementById('useManualDriver').checked;
+      document.getElementById('driverSelect').style.display = useManual ? 'none' : 'block';
+      document.getElementById('driverNameManual').style.display = useManual ? 'block' : 'none';
+      if (useManual) {
+        document.getElementById('driverSelect').value = '';
+      } else {
+        document.getElementById('driverNameManual').value = '';
+      }
     }
 
     function setupForm() {
@@ -477,21 +505,53 @@
     window.validateAmountCalculation = validateAmountCalculation;
 
     function submitFuelRecord() {
+      // Determine driver
+      var useManual = document.getElementById('useManualDriver').checked;
+      var driverId = useManual ? '' : document.getElementById('driverSelect').value;
+      var driverNameManual = useManual ? document.getElementById('driverNameManual').value.trim() : '';
+
+      if (!driverId && !driverNameManual) {
+        showAlert('กรุณาระบุผู้เบิกน้ำมัน (เลือกจากระบบ หรือ พิมพ์ชื่อ)', 'error');
+        return;
+      }
+
+      // Purpose validation
+      var purpose = document.getElementById('purpose').value;
+      var purposeDetail = document.getElementById('purposeDetail').value.trim();
+      if (!purpose) {
+        showAlert('กรุณาเลือกวัตถุประสงค์', 'error');
+        return;
+      }
+      if (purpose === 'other' && !purposeDetail) {
+        showAlert('กรุณาระบุรายละเอียดวัตถุประสงค์ (เมื่อเลือกอื่นๆ)', 'error');
+        return;
+      }
+
+      // Receipt validation
+      if (!receiptImageFile) {
+        showAlert('กรุณาแนบรูปใบเสร็จ (บังคับตามระเบียบพัสดุ)', 'error');
+        return;
+      }
+
       var formData = {
         date: document.getElementById('date').value,
         time: document.getElementById('time').value,
         car_id: document.getElementById('carId').value,
-        driver_id: currentUser.driver_id || currentUser.id,
+        driver_id: driverId || null,
+        driver_name_manual: driverNameManual || null,
         expense_type: document.getElementById('expenseType').value,
         fuel_type: document.getElementById('fuelType').value,
+        purpose: purpose,
+        purpose_detail: purposeDetail || null,
         mileage_before: parseInt(document.getElementById('mileageBefore').value, 10),
+        mileage_after: parseInt(document.getElementById('mileageBefore').value, 10),
         liters: parseFloat(document.getElementById('liters').value),
         price_per_liter: parseFloat(document.getElementById('pricePerLiter').value),
         amount: parseFloat(document.getElementById('amount').value)
       };
 
       if (!formData.date || !formData.time || !formData.car_id || !formData.expense_type || !formData.fuel_type ||
-        isNaN(formData.mileage_before) || formData.mileage_before < 0 ||
+        isNaN(formData.mileage_before) || formData.mileage_before <= 0 ||
         !formData.liters || formData.liters <= 0 ||
         !formData.price_per_liter || formData.price_per_liter <= 0 ||
         !formData.amount || formData.amount <= 0) {

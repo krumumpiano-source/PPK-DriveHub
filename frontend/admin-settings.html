@@ -350,6 +350,17 @@
               </div>
             </div>
 
+            <!-- ตั้งค่าประเภทน้ำมัน -->
+            <div class="settings-section">
+              <div class="section-title">⛽ ตั้งค่าประเภทน้ำมัน</div>
+              <div class="help-text" style="margin-bottom:15px;">รายการประเภทน้ำมันที่แสดงในหน้าบันทึกน้ำมัน สามารถเพิ่ม แก้ไข หรือลบได้</div>
+              <div id="fuelTypesList"></div>
+              <div style="margin-top:12px">
+                <input type="text" id="newFuelTypeName" placeholder="ชื่อประเภทน้ำมันใหม่" style="width:60%;padding:10px;border:2px solid #ddd;border-radius:8px;font-size:1em;font-family:inherit;">
+                <button type="button" class="btn btn-primary" onclick="addFuelType()" style="margin-left:8px;padding:10px 20px;">➕ เพิ่ม</button>
+              </div>
+            </div>
+
             <!-- ปุ่มบันทึก -->
             <div class="btn-row">
               <button type="button" class="btn btn-danger" onclick="resetToDefault()">
@@ -436,6 +447,7 @@
 
           renderMaintenanceItems();
           loadSettings();
+          loadFuelTypes();
         });
 
         function renderMaintenanceItems() {
@@ -627,6 +639,97 @@
           setTimeout(function () {
             alert.remove();
           }, 5000);
+        }
+
+        // ---- Fuel Types Management ----
+        var _fuelTypes = [];
+        var _defaultFuelTypes = [
+          { id: 'fuelSave_gasohol91', name: '\u0e1f\u0e34\u0e27\u0e40\u0e0b\u0e1f \u0e41\u0e01\u0e4a\u0e2a\u0e42\u0e0b\u0e2e\u0e2d\u0e25\u0e4c 91' },
+          { id: 'vPower_gasohol95', name: '\u0e27\u0e35-\u0e40\u0e1e\u0e32\u0e27\u0e2d\u0e23\u0e4c\u0e41\u0e01\u0e4a\u0e2a\u0e42\u0e0b\u0e2e\u0e2d\u0e25\u0e4c 95' },
+          { id: 'vPower_diesel_b7', name: '\u0e27\u0e35-\u0e40\u0e1e\u0e32\u0e40\u0e27\u0e2d\u0e23\u0e4c \u0e14\u0e35\u0e40\u0e0b\u0e25 B7' },
+          { id: 'fuelSave_diesel_b7', name: '\u0e1f\u0e34\u0e27\u0e40\u0e0b\u0e1f\u0e14\u0e35\u0e40\u0e0b\u0e25 B7' },
+          { id: 'e20', name: 'E20' },
+          { id: 'fuelSave_diesel', name: '\u0e1f\u0e34\u0e27\u0e40\u0e0b\u0e1f\u0e14\u0e35\u0e40\u0e0b\u0e25' }
+        ];
+
+        async function loadFuelTypes() {
+          try {
+            var r = await apiCall('getFuelTypes', {});
+            if (r && r.data && Array.isArray(r.data.fuel_types)) {
+              _fuelTypes = r.data.fuel_types;
+            } else {
+              _fuelTypes = _defaultFuelTypes.slice();
+            }
+          } catch (e) {
+            _fuelTypes = _defaultFuelTypes.slice();
+          }
+          renderFuelTypes();
+        }
+
+        function renderFuelTypes() {
+          var container = document.getElementById('fuelTypesList');
+          if (!container) return;
+          if (_fuelTypes.length === 0) {
+            container.innerHTML = '<div style="color:var(--color-text-muted);padding:10px;">\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23</div>';
+            return;
+          }
+          var html = '<div style="display:flex;flex-direction:column;gap:8px;">';
+          _fuelTypes.forEach(function (ft, idx) {
+            html += '<div style="display:flex;align-items:center;gap:8px;background:white;padding:10px 14px;border-radius:8px;border:1px solid #e9ecef;">';
+            html += '<span style="flex:1;font-weight:600;">' + (idx + 1) + '. ' + escHtml(ft.name) + '</span>';
+            html += '<button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:0.85em;" onclick="editFuelType(' + idx + ')">\u270f\ufe0f \u0e41\u0e01\u0e49\u0e44\u0e02</button>';
+            html += '<button type="button" class="btn btn-danger" style="padding:6px 12px;font-size:0.85em;" onclick="deleteFuelType(' + idx + ')">\u{1f5d1}\ufe0f \u0e25\u0e1a</button>';
+            html += '</div>';
+          });
+          html += '</div>';
+          container.innerHTML = html;
+        }
+
+        function escHtml(s) {
+          var d = document.createElement('div');
+          d.textContent = s;
+          return d.innerHTML;
+        }
+
+        async function saveFuelTypes() {
+          try {
+            await apiCall('updateSystemSetting', { key: 'fuel_types_list', value: JSON.stringify(_fuelTypes) });
+          } catch (e) {
+            showAlert('\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e19\u0e49\u0e33\u0e21\u0e31\u0e19\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08', 'error');
+          }
+        }
+
+        function addFuelType() {
+          var input = document.getElementById('newFuelTypeName');
+          var name = (input.value || '').trim();
+          if (!name) { showAlert('\u0e01\u0e23\u0e38\u0e13\u0e32\u0e23\u0e30\u0e1a\u0e38\u0e0a\u0e37\u0e48\u0e2d\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e19\u0e49\u0e33\u0e21\u0e31\u0e19', 'error'); return; }
+          var id = name.toLowerCase().replace(/[^a-z0-9\u0e00-\u0e7f]+/g, '_').replace(/^_|_$/g, '') || ('type_' + Date.now());
+          _fuelTypes.push({ id: id, name: name });
+          input.value = '';
+          renderFuelTypes();
+          saveFuelTypes();
+          showAlert('\u0e40\u0e1e\u0e34\u0e48\u0e21 "' + name + '" \u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08', 'success');
+        }
+
+        function editFuelType(idx) {
+          var ft = _fuelTypes[idx];
+          if (!ft) return;
+          var newName = prompt('\u0e41\u0e01\u0e49\u0e44\u0e02\u0e0a\u0e37\u0e48\u0e2d\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e19\u0e49\u0e33\u0e21\u0e31\u0e19:', ft.name);
+          if (newName === null || newName.trim() === '') return;
+          _fuelTypes[idx].name = newName.trim();
+          renderFuelTypes();
+          saveFuelTypes();
+          showAlert('\u0e41\u0e01\u0e49\u0e44\u0e02\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08', 'success');
+        }
+
+        function deleteFuelType(idx) {
+          var ft = _fuelTypes[idx];
+          if (!ft) return;
+          if (!confirm('\u0e25\u0e1a "' + ft.name + '" \u0e2d\u0e2d\u0e01\u0e08\u0e32\u0e01\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23?')) return;
+          _fuelTypes.splice(idx, 1);
+          renderFuelTypes();
+          saveFuelTypes();
+          showAlert('\u0e25\u0e1a\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08', 'success');
         }
       </script>
 

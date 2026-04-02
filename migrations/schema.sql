@@ -1,4 +1,4 @@
--- PPK DriveHub — Database Schema
+﻿-- PPK DriveHub — Database Schema
 -- Cloudflare D1 (SQLite)
 -- Migrated from Google Sheets (27 sheets → 27 tables)
 
@@ -291,8 +291,19 @@ CREATE TABLE IF NOT EXISTS fuel_log (
   created_by TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT,
+  deleted_at TEXT,                                -- soft delete timestamp
+  deleted_by TEXT,                                -- user id ที่ลบ
+  document_number TEXT,                           -- FUL-2569-04-001
+  anomaly_flag INTEGER DEFAULT 0,                 -- 0=ปกติ, 1=ผิดปกติ
+  purpose TEXT,                                   -- school_passenger/official_document/other
+  purpose_detail TEXT,                            -- required เมื่อ purpose = 'other'
+  driver_name_manual TEXT,                        -- ชื่อผู้เบิกที่พิมพ์เอง
   FOREIGN KEY (car_id) REFERENCES cars(id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_fuel_log_deleted ON fuel_log(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_fuel_log_document_number ON fuel_log(document_number);
+CREATE INDEX IF NOT EXISTS idx_fuel_log_date_car ON fuel_log(date, car_id);
 
 CREATE TABLE IF NOT EXISTS fuel_requests (
   id TEXT PRIMARY KEY,
@@ -306,6 +317,33 @@ CREATE TABLE IF NOT EXISTS fuel_requests (
   approved_at TEXT,
   created_at TEXT NOT NULL,
   FOREIGN KEY (car_id) REFERENCES cars(id)
+);
+
+CREATE TABLE IF NOT EXISTS fuel_station_invoices (
+  id TEXT PRIMARY KEY,
+  invoice_number TEXT,
+  station_name TEXT,
+  date_from TEXT,
+  date_to TEXT,
+  invoice_date TEXT,
+  total_amount REAL,
+  invoice_image TEXT,
+  status TEXT DEFAULT 'pending' CHECK(status IN ('pending','matched','mismatched','resolved')),
+  notes TEXT,
+  reconciled_by TEXT,
+  reconciled_at TEXT,
+  created_by TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS fuel_invoice_items (
+  id TEXT PRIMARY KEY,
+  invoice_id TEXT NOT NULL,
+  fuel_type TEXT,
+  total_liters REAL,
+  total_amount REAL,
+  FOREIGN KEY (invoice_id) REFERENCES fuel_station_invoices(id)
 );
 
 -- ============================================================

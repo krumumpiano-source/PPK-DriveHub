@@ -42,7 +42,7 @@ export async function onRequest(context) {
         `SELECT COUNT(*) AS count,
          COALESCE(SUM(liters), 0) AS total_liters,
          COALESCE(SUM(amount), 0) AS total_amount
-         FROM fuel_log WHERE date LIKE ?`, [monthStart + '%']),
+         FROM fuel_log WHERE date LIKE ? AND deleted_at IS NULL`, [monthStart + '%']),
       dbFirst(env.DB,
         `SELECT COUNT(*) AS total,
          SUM(CASE WHEN status = 'reported' THEN 1 ELSE 0 END) AS reported,
@@ -67,8 +67,8 @@ export async function onRequest(context) {
       `SELECT c.id, c.license_plate, c.brand, c.model, c.year, c.status,
        c.current_mileage, c.fuel_type,
        (SELECT COUNT(*) FROM queue q WHERE q.car_id = c.id AND q.status = 'completed') AS trip_count,
-       (SELECT COALESCE(SUM(fl.liters),0) FROM fuel_log fl WHERE fl.car_id = c.id) AS total_fuel_liters,
-       (SELECT COALESCE(SUM(fl.amount),0) FROM fuel_log fl WHERE fl.car_id = c.id) AS total_fuel_cost,
+       (SELECT COALESCE(SUM(fl.liters),0) FROM fuel_log fl WHERE fl.car_id = c.id AND fl.deleted_at IS NULL) AS total_fuel_liters,
+       (SELECT COALESCE(SUM(fl.amount),0) FROM fuel_log fl WHERE fl.car_id = c.id AND fl.deleted_at IS NULL) AS total_fuel_cost,
        (SELECT COUNT(*) FROM repair_log rl WHERE rl.car_id = c.id) AS repair_count,
        (SELECT COALESCE(SUM(rl.cost),0) FROM repair_log rl WHERE rl.car_id = c.id) AS total_repair_cost
        FROM cars c ORDER BY c.license_plate`, []
@@ -76,41 +76,93 @@ export async function onRequest(context) {
     return success(rows);
   }
 
-  // ========== Fuel Report ==========
+  // ========== Fuel Report (Enhanced) ==========
   if (path === '/api/reports/fuel' && method === 'GET') {
     try { requirePermission(user, 'reports', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const dateFrom = url.searchParams.get('date_from');
     const dateTo = url.searchParams.get('date_to');
     const carId = url.searchParams.get('car_id');
-    const where = [];
+    const driverId = url.searchParams.get('driver_id');
+    const expenseType = url.searchParams.get('expense_type');
+    const where = ['fl.deleted_at IS NULL'];
     const params = [];
     if (dateFrom) { where.push('fl.date >= ?'); params.push(dateFrom); }
     if (dateTo) { where.push('fl.date <= ?'); params.push(dateTo); }
     if (carId) { where.push('fl.car_id = ?'); params.push(carId); }
+    if (driverId) { where.push('fl.driver_id = ?'); params.push(driverId); }
+    if (expenseType) { where.push('fl.expense_type = ?'); params.push(expenseType); }
+    const whereClause = 'WHERE ' + where.join(' AND ');
+
     const rows = await dbAll(env.DB,
       `SELECT fl.id, fl.date, fl.car_id, c.license_plate, c.brand,
-       d.name AS driver_name, fl.liters, fl.price_per_liter, fl.amount,
+       COALESCE(d.name, fl.driver_name_manual) AS driver_name, fl.driver_id,
+       fl.liters, fl.price_per_liter, fl.amount,
        fl.fuel_type, fl.gas_station_name, fl.mileage_before, fl.mileage_after,
-       fl.fuel_consumption_rate, fl.expense_type
+       fl.fuel_consumption_rate, fl.expense_type, fl.document_number,
+       fl.purpose, fl.purpose_detail, fl.driver_name_manual, fl.anomaly_flag,
+       fl.receipt_number, fl.receipt_image
        FROM fuel_log fl
        LEFT JOIN cars c ON fl.car_id = c.id
        LEFT JOIN drivers d ON fl.driver_id = d.id
-       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+       ${whereClause}
        ORDER BY fl.date DESC LIMIT 1000`,
       params
     );
 
-    // Summary
+    // Summary (reuse same where params but without fl. prefix for subquery)
+    const summaryWhere = where.map(w => w.replace(/fl\./g, ''));
     const summary = await dbFirst(env.DB,
       `SELECT COUNT(*) AS count, COALESCE(SUM(liters),0) AS total_liters,
        COALESCE(SUM(amount),0) AS total_amount,
-       COALESCE(AVG(fuel_consumption_rate),0) AS avg_consumption
-       FROM fuel_log fl
-       ${where.length ? 'WHERE ' + where.map(w => w.replace('fl.','')).join(' AND ') : ''}`,
+       COALESCE(AVG(fuel_consumption_rate),0) AS avg_consumption,
+       COALESCE(SUM(anomaly_flag),0) AS anomaly_count
+       FROM fuel_log
+       WHERE ${summaryWhere.join(' AND ')}`,
       params
     );
 
-    return success({ records: rows, summary });
+    // Breakdown by expense_type (by_source)
+    const bySource = await dbAll(env.DB,
+      `SELECT expense_type, COUNT(*) AS count,
+       COALESCE(SUM(liters),0) AS total_liters,
+       COALESCE(SUM(amount),0) AS total_amount
+       FROM fuel_log fl ${whereClause}
+       GROUP BY expense_type`,
+      params
+    );
+
+    // Stats by vehicle (by_vehicle)
+    const byVehicle = await dbAll(env.DB,
+      `SELECT fl.car_id, c.license_plate, c.brand, COUNT(*) AS count,
+       COALESCE(SUM(fl.liters),0) AS total_liters,
+       COALESCE(SUM(fl.amount),0) AS total_amount,
+       COALESCE(AVG(fl.fuel_consumption_rate),0) AS avg_consumption,
+       COALESCE(SUM(fl.anomaly_flag),0) AS anomaly_count
+       FROM fuel_log fl
+       LEFT JOIN cars c ON fl.car_id = c.id
+       ${whereClause}
+       GROUP BY fl.car_id
+       ORDER BY total_amount DESC`,
+      params
+    );
+
+    // Stats by driver (by_driver)
+    const byDriver = await dbAll(env.DB,
+      `SELECT COALESCE(d.name, fl.driver_name_manual, 'ไม่ระบุ') AS driver_name,
+       fl.driver_id, COUNT(*) AS count,
+       COALESCE(SUM(fl.liters),0) AS total_liters,
+       COALESCE(SUM(fl.amount),0) AS total_amount,
+       COALESCE(AVG(fl.fuel_consumption_rate),0) AS avg_consumption,
+       COALESCE(SUM(fl.anomaly_flag),0) AS anomaly_count
+       FROM fuel_log fl
+       LEFT JOIN drivers d ON fl.driver_id = d.id
+       ${whereClause}
+       GROUP BY COALESCE(fl.driver_id, fl.driver_name_manual)
+       ORDER BY total_amount DESC`,
+      params
+    );
+
+    return success({ records: rows, summary, by_source: bySource, by_vehicle: byVehicle, by_driver: byDriver });
   }
 
   // ========== Usage Report ==========
