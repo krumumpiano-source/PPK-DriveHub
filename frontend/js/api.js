@@ -150,6 +150,7 @@ const ACTION_MAP = {
   'getFuelInvoiceReconcile': (d) => API.get(`/api/fuel/invoices/${d.id}/reconcile`),
   'resolveFuelInvoice':  (d) => API.put(`/api/fuel/invoices/${d.id}/resolve`, d),
   'getFuelLedger':        (d) => API.get('/api/fuel/ledger' + _q(d)),
+  'getFuelMonthlySummary': (d) => API.get('/api/fuel/monthly-summary' + _q(d)),
 
   // Repair
   'getRepairs':          (d) => API.get('/api/repair' + _q(d)),

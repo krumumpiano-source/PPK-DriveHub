@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 
 <head>
@@ -58,14 +58,18 @@
       <div class="filter-row no-print">
         <label>ปีงบประมาณ พ.ศ.:</label>
         <select id="fySelect"></select>
-        <button class="btn-print" onclick="loadLedger()">🔍 โหลดข้อมูล</button>
+        <label style="margin-left:12px;">เดือน:</label>
+        <input type="month" id="monthSelect" style="padding:8px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:14px;">
+        <button class="btn-print" onclick="loadAll()">🔍 โหลดข้อมูล</button>
         <button class="btn-print" onclick="window.print()" style="background:#555;">🖨️ พิมพ์</button>
       </div>
 
       <!-- Tabs -->
       <div class="tab-bar no-print">
-        <button class="tab-btn active" onclick="switchTab('ledger')">📋 ทะเบียนควบคุม</button>
-        <button class="tab-btn" onclick="switchTab('annual')">📊 สรุปประจำปี</button>
+        <button class="tab-btn active" data-tab="ledger" onclick="switchTab('ledger')">📋 ทะเบียนควบคุม</button>
+        <button class="tab-btn" data-tab="annual" onclick="switchTab('annual')">📊 สรุปประจำปี</button>
+        <button class="tab-btn" data-tab="monthly" onclick="switchTab('monthly')">📄 สรุปรายเดือน</button>
+        <button class="tab-btn" data-tab="purchase" onclick="switchTab('purchase')">📝 รายงานขอซื้อ</button>
       </div>
 
       <!-- Tab 1: ทะเบียนควบคุมการจัดซื้อน้ำมัน -->
@@ -146,17 +150,159 @@
         </div>
       </div>
 
+      <!-- Tab 3: สรุปค่าใช้จ่ายน้ำมันประจำเดือน -->
+      <div id="tabMonthly" class="tab-panel">
+        <div style="text-align:center;margin-bottom:16px;">
+          <h2 style="font-size:18px;margin:0;">สรุปค่าใช้จ่ายน้ำมันเชื้อเพลิงประจำเดือน</h2>
+          <p style="font-size:14px;color:var(--color-text-muted);margin:4px 0;">โรงเรียนพะเยาพิทยาคม</p>
+          <p id="monthlyPeriod" style="font-size:13px;color:var(--color-text-muted);"></p>
+        </div>
+        <div class="summary-cards" id="monthlySummary"></div>
+
+        <div class="card">
+          <h3>รายละเอียดค่าน้ำมันแยกตามรถ</h3>
+          <table class="ledger-table">
+            <thead>
+              <tr>
+                <th>ลำดับ</th>
+                <th>ทะเบียนรถ</th>
+                <th>ยี่ห้อ</th>
+                <th>จำนวนครั้ง</th>
+                <th>จำนวน (ลิตร)</th>
+                <th>จำนวนเงิน (บาท)</th>
+              </tr>
+            </thead>
+            <tbody id="monthlyVehicleBody"></tbody>
+            <tfoot id="monthlyVehicleFoot"></tfoot>
+          </table>
+        </div>
+
+        <div class="card">
+          <h3>แยกตามประเภทน้ำมัน</h3>
+          <table class="ledger-table">
+            <thead>
+              <tr>
+                <th>ประเภทน้ำมัน</th>
+                <th>จำนวนครั้ง</th>
+                <th>จำนวน (ลิตร)</th>
+                <th>จำนวนเงิน (บาท)</th>
+              </tr>
+            </thead>
+            <tbody id="monthlyFuelBody"></tbody>
+            <tfoot id="monthlyFuelFoot"></tfoot>
+          </table>
+        </div>
+
+        <div class="card">
+          <h3>รายการเติมน้ำมันทั้งหมด</h3>
+          <table class="ledger-table">
+            <thead>
+              <tr>
+                <th>ลำดับ</th>
+                <th>วันที่</th>
+                <th>เลขที่เอกสาร</th>
+                <th>ทะเบียนรถ</th>
+                <th>ผู้เบิก</th>
+                <th>ประเภท</th>
+                <th>ลิตร</th>
+                <th>จำนวนเงิน (บาท)</th>
+                <th>สถานีบริการ</th>
+              </tr>
+            </thead>
+            <tbody id="monthlyRecordsBody"></tbody>
+            <tfoot id="monthlyRecordsFoot"></tfoot>
+          </table>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;margin-top:40px;text-align:center;font-size:13px;">
+          <div style="width:30%;"><div style="border-bottom:1px dotted #000;height:40px;"></div><div style="margin-top:4px;">ผู้จัดทำ</div><div style="font-size:11px;color:#666;">(.........................................)</div></div>
+          <div style="width:30%;"><div style="border-bottom:1px dotted #000;height:40px;"></div><div style="margin-top:4px;">หัวหน้าเจ้าหน้าที่</div><div style="font-size:11px;color:#666;">(.........................................)</div></div>
+          <div style="width:30%;"><div style="border-bottom:1px dotted #000;height:40px;"></div><div style="margin-top:4px;">ผู้อำนวยการโรงเรียน</div><div style="font-size:11px;color:#666;">(.........................................)</div></div>
+        </div>
+      </div>
+
+      <!-- Tab 4: รายงานขอซื้อน้ำมัน -->
+      <div id="tabPurchase" class="tab-panel">
+        <div style="text-align:center;margin-bottom:16px;">
+          <h2 style="font-size:18px;margin:0;">รายงานขอซื้อน้ำมันเชื้อเพลิง</h2>
+          <p style="font-size:14px;color:var(--color-text-muted);margin:4px 0;">ตาม พ.ร.บ.การจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. 2560</p>
+          <p style="font-size:14px;color:var(--color-text-muted);">โรงเรียนพะเยาพิทยาคม</p>
+        </div>
+
+        <div class="card" style="border:2px solid #000;padding:24px 30px;">
+          <table style="width:100%;font-size:14px;border-collapse:collapse;">
+            <tr>
+              <td style="padding:6px 0;width:50%;"><b>เรื่อง</b> ขอซื้อน้ำมันเชื้อเพลิง</td>
+              <td style="padding:6px 0;text-align:right;" id="purchaseDocDate"></td>
+            </tr>
+            <tr>
+              <td colspan="2" style="padding:6px 0;"><b>เรียน</b> ผู้อำนวยการโรงเรียนพะเยาพิทยาคม</td>
+            </tr>
+          </table>
+
+          <div style="margin:16px 0;font-size:14px;line-height:2;">
+            <p style="text-indent:3em;">ด้วยโรงเรียนพะเยาพิทยาคม มีความจำเป็นต้องจัดซื้อน้ำมันเชื้อเพลิงเพื่อใช้ในราชการ
+            ประจำเดือน<span id="purchaseMonthName" style="font-weight:700;"></span>
+            โดยวิธีเฉพาะเจาะจง ตามพระราชบัญญัติการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. 2560
+            มาตรา 56 วรรคหนึ่ง (2)(ข) ดังรายละเอียดต่อไปนี้</p>
+          </div>
+
+          <table class="ledger-table" style="margin:16px 0;">
+            <thead>
+              <tr>
+                <th>ลำดับ</th>
+                <th>รายการ</th>
+                <th>จำนวน (ลิตร)</th>
+                <th>ราคารวม (บาท)</th>
+                <th>หมายเหตุ</th>
+              </tr>
+            </thead>
+            <tbody id="purchaseItemsBody"></tbody>
+            <tfoot id="purchaseItemsFoot"></tfoot>
+          </table>
+
+          <div style="font-size:14px;line-height:2;margin:16px 0;">
+            <p style="text-indent:3em;">รวมจำนวนเงินทั้งสิ้น <span id="purchaseAmountText" style="font-weight:700;"></span> บาท
+            (<span id="purchaseAmountWords" style="font-weight:700;"></span>)</p>
+            <p style="text-indent:3em;">โดยใช้เงิน<span id="purchaseBudgetSource" style="font-weight:700;"> งบดำเนินงาน</span></p>
+            <p style="text-indent:3em;">จึงเรียนมาเพื่อโปรดพิจารณาอนุมัติ</p>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;margin-top:40px;text-align:center;font-size:13px;">
+            <div style="width:40%;">
+              <div style="border-bottom:1px dotted #000;height:40px;"></div>
+              <div style="margin-top:4px;">ผู้ขอซื้อ/เจ้าหน้าที่พัสดุ</div>
+              <div style="font-size:11px;color:#666;">(.........................................)</div>
+              <div style="font-size:11px;color:#666;">ตำแหน่ง ................................</div>
+            </div>
+            <div style="width:40%;">
+              <div style="margin-bottom:8px;text-align:left;font-size:14px;">
+                <span style="margin-right:16px;">☐ อนุมัติ</span>
+                <span>☐ ไม่อนุมัติ</span>
+              </div>
+              <div style="border-bottom:1px dotted #000;height:40px;"></div>
+              <div style="margin-top:4px;">ผู้อำนวยการโรงเรียนพะเยาพิทยาคม</div>
+              <div style="font-size:11px;color:#666;">(.........................................)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
   <script>
     var ledgerData = null;
+    var monthlyData = null;
 
     document.addEventListener('DOMContentLoaded', function () {
       var isAuth = requireAuth();
       if (!isAuth) return;
       buildFYSelect();
-      loadLedger();
+      // Set default month to current
+      var now = new Date();
+      document.getElementById('monthSelect').value = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+      loadAll();
     });
 
     function buildFYSelect() {
@@ -171,18 +317,22 @@
       }
     }
 
+    var tabIds = { ledger: 'tabLedger', annual: 'tabAnnual', monthly: 'tabMonthly', purchase: 'tabPurchase' };
     function switchTab(tab) {
       document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
       document.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.remove('active'); });
-      if (tab === 'ledger') {
-        document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
-        document.getElementById('tabLedger').classList.add('active');
-      } else {
-        document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
-        document.getElementById('tabAnnual').classList.add('active');
-      }
+      var btn = document.querySelector('.tab-btn[data-tab="' + tab + '"]');
+      if (btn) btn.classList.add('active');
+      var panel = document.getElementById(tabIds[tab]);
+      if (panel) panel.classList.add('active');
     }
     window.switchTab = switchTab;
+
+    function loadAll() {
+      loadLedger();
+      loadMonthlySummary();
+    }
+    window.loadAll = loadAll;
 
     function loadLedger() {
       var fy = document.getElementById('fySelect').value;
@@ -297,6 +447,163 @@
         '<td class="num">' + (d.grand_total.total_liters || 0).toFixed(2) + '</td>' +
         '<td class="num">' + (d.grand_total.total_amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td>' +
         '<td class="num">100.0%</td></tr>';
+    }
+
+    /* ═══ Tab 3: สรุปค่าใช้จ่ายประจำเดือน ═══ */
+    var thaiMonthNames = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+
+    function loadMonthlySummary() {
+      var ym = document.getElementById('monthSelect').value;
+      if (!ym) return;
+      document.getElementById('monthlyVehicleBody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;">⏳ กำลังโหลด...</td></tr>';
+
+      apiCall('getFuelMonthlySummary', { year_month: ym }).then(function (res) {
+        if (!res.success) { alert(res.message || 'โหลดไม่สำเร็จ'); return; }
+        monthlyData = res.data;
+        renderMonthly();
+        renderPurchase();
+      }).catch(function (err) {
+        document.getElementById('monthlyVehicleBody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--color-danger-dark);">❌ ' + (err.message || 'โหลดไม่สำเร็จ') + '</td></tr>';
+      });
+    }
+
+    function renderMonthly() {
+      var d = monthlyData;
+      var ym = d.year_month;
+      var mo = parseInt(ym.substr(5, 2));
+      var yr = parseInt(ym.substr(0, 4));
+      var monthName = thaiMonthNames[mo] + ' ' + (yr + 543);
+      document.getElementById('monthlyPeriod').textContent = 'ประจำเดือน ' + monthName;
+
+      // Summary cards
+      document.getElementById('monthlySummary').innerHTML =
+        '<div class="summary-card"><div class="label">จำนวนครั้ง</div><div class="value" style="color:var(--color-primary);">' + (d.grand_total.count || 0) + '</div></div>' +
+        '<div class="summary-card"><div class="label">รวมลิตร</div><div class="value" style="color:#e65100;">' + (d.grand_total.total_liters || 0).toFixed(2) + '</div></div>' +
+        '<div class="summary-card"><div class="label">รวมบาท</div><div class="value" style="color:#2e7d32;">' + (d.grand_total.total_amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</div></div>';
+
+      // By vehicle
+      var html = '';
+      (d.by_vehicle || []).forEach(function (v, i) {
+        html += '<tr>' +
+          '<td class="num">' + (i + 1) + '</td>' +
+          '<td>' + (v.license_plate || '-') + '</td>' +
+          '<td>' + (v.brand || '-') + '</td>' +
+          '<td class="num">' + v.count + '</td>' +
+          '<td class="num">' + v.total_liters.toFixed(2) + '</td>' +
+          '<td class="num">' + v.total_amount.toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td></tr>';
+      });
+      document.getElementById('monthlyVehicleBody').innerHTML = html || '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--color-text-muted);">ไม่มีข้อมูล</td></tr>';
+      document.getElementById('monthlyVehicleFoot').innerHTML =
+        '<tr><td colspan="3" style="text-align:center;font-weight:700;">รวม</td>' +
+        '<td class="num">' + (d.grand_total.count || 0) + '</td>' +
+        '<td class="num">' + (d.grand_total.total_liters || 0).toFixed(2) + '</td>' +
+        '<td class="num">' + (d.grand_total.total_amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td></tr>';
+
+      // By fuel type
+      html = '';
+      (d.by_fuel_type || []).forEach(function (ft) {
+        html += '<tr>' +
+          '<td>' + (ft.fuel_type || '-') + '</td>' +
+          '<td class="num">' + ft.count + '</td>' +
+          '<td class="num">' + ft.total_liters.toFixed(2) + '</td>' +
+          '<td class="num">' + ft.total_amount.toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td></tr>';
+      });
+      document.getElementById('monthlyFuelBody').innerHTML = html || '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--color-text-muted);">ไม่มีข้อมูล</td></tr>';
+      document.getElementById('monthlyFuelFoot').innerHTML =
+        '<tr><td style="font-weight:700;">รวม</td>' +
+        '<td class="num">' + (d.grand_total.count || 0) + '</td>' +
+        '<td class="num">' + (d.grand_total.total_liters || 0).toFixed(2) + '</td>' +
+        '<td class="num">' + (d.grand_total.total_amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td></tr>';
+
+      // All records
+      html = '';
+      (d.records || []).forEach(function (r, i) {
+        var dateDisplay = typeof formatDateThai === 'function' ? formatDateThai(r.date) : r.date;
+        html += '<tr>' +
+          '<td class="num">' + (i + 1) + '</td>' +
+          '<td>' + dateDisplay + '</td>' +
+          '<td>' + (r.document_number || '-') + '</td>' +
+          '<td>' + (r.license_plate || '-') + '</td>' +
+          '<td>' + (r.driver_name || '-') + '</td>' +
+          '<td>' + (r.fuel_type || '-') + '</td>' +
+          '<td class="num">' + (r.liters || 0).toFixed(2) + '</td>' +
+          '<td class="num">' + (r.amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td>' +
+          '<td>' + (r.gas_station_name || '-') + '</td></tr>';
+      });
+      document.getElementById('monthlyRecordsBody').innerHTML = html || '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--color-text-muted);">ไม่มีข้อมูล</td></tr>';
+      document.getElementById('monthlyRecordsFoot').innerHTML =
+        '<tr><td colspan="6" style="text-align:center;font-weight:700;">รวม</td>' +
+        '<td class="num">' + (d.grand_total.total_liters || 0).toFixed(2) + '</td>' +
+        '<td class="num">' + (d.grand_total.total_amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td>' +
+        '<td></td></tr>';
+    }
+
+    /* ═══ Tab 4: รายงานขอซื้อ ═══ */
+    function numberToThaiWords(num) {
+      if (!num || num === 0) return 'ศูนย์บาทถ้วน';
+      var digits = ['', 'หนึ่ง', 'สอง', 'สาม', 'สี่', 'ห้า', 'หก', 'เจ็ด', 'แปด', 'เก้า'];
+      var positions = ['', 'สิบ', 'ร้อย', 'พัน', 'หมื่น', 'แสน', 'ล้าน'];
+      var baht = Math.floor(num);
+      var satang = Math.round((num - baht) * 100);
+      function toWords(n) {
+        if (n === 0) return '';
+        var s = String(n);
+        var result = '';
+        var len = s.length;
+        for (var i = 0; i < len; i++) {
+          var d = parseInt(s[i]);
+          var pos = len - i - 1;
+          if (d === 0) continue;
+          if (pos === 0 && d === 1 && len > 1) { result += 'เอ็ด'; }
+          else if (pos === 1 && d === 1) { result += 'สิบ'; }
+          else if (pos === 1 && d === 2) { result += 'ยี่สิบ'; }
+          else { result += digits[d] + positions[pos]; }
+        }
+        return result;
+      }
+      var result = '';
+      if (baht >= 1000000) {
+        result += toWords(Math.floor(baht / 1000000)) + 'ล้าน';
+        baht = baht % 1000000;
+      }
+      result += toWords(baht) + 'บาท';
+      if (satang > 0) { result += toWords(satang) + 'สตางค์'; }
+      else { result += 'ถ้วน'; }
+      return result;
+    }
+
+    function renderPurchase() {
+      var d = monthlyData;
+      var ym = d.year_month;
+      var mo = parseInt(ym.substr(5, 2));
+      var yr = parseInt(ym.substr(0, 4));
+      var monthName = thaiMonthNames[mo] + ' พ.ศ. ' + (yr + 543);
+      document.getElementById('purchaseMonthName').textContent = monthName;
+      document.getElementById('purchaseDocDate').textContent = 'วันที่ ............... เดือน ' + thaiMonthNames[mo] + ' พ.ศ. ' + (yr + 543);
+
+      // Items: by fuel type
+      var html = '';
+      var totalAmount = 0;
+      var totalLiters = 0;
+      (d.by_fuel_type || []).forEach(function (ft, i) {
+        totalAmount += ft.total_amount;
+        totalLiters += ft.total_liters;
+        html += '<tr>' +
+          '<td class="num">' + (i + 1) + '</td>' +
+          '<td>น้ำมัน' + (ft.fuel_type || '-') + '</td>' +
+          '<td class="num">' + ft.total_liters.toFixed(2) + '</td>' +
+          '<td class="num">' + ft.total_amount.toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td>' +
+          '<td>สำหรับรถราชการ ' + (d.by_vehicle || []).length + ' คัน</td></tr>';
+      });
+      document.getElementById('purchaseItemsBody').innerHTML = html || '<tr><td colspan="5" style="text-align:center;padding:20px;">ไม่มีข้อมูล</td></tr>';
+      document.getElementById('purchaseItemsFoot').innerHTML =
+        '<tr><td colspan="2" style="text-align:center;font-weight:700;">รวม</td>' +
+        '<td class="num">' + totalLiters.toFixed(2) + '</td>' +
+        '<td class="num">' + totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td>' +
+        '<td></td></tr>';
+
+      document.getElementById('purchaseAmountText').textContent = totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 });
+      document.getElementById('purchaseAmountWords').textContent = numberToThaiWords(totalAmount);
     }
   </script>
 

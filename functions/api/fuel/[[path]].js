@@ -607,6 +607,88 @@ export async function onRequest(context) {
     });
   }
 
+  // --- GET /api/fuel/monthly-summary ---
+  // สรุปค่าใช้จ่ายน้ำมันประจำเดือน (รายละเอียดแยกรถ + แยกประเภท)
+  if (path === '/api/fuel/monthly-summary' && method === 'GET') {
+    try { requirePermission(user, 'fuel', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+
+    const yearMonth = url.searchParams.get('year_month'); // e.g. 2026-03
+    if (!yearMonth || !/^\d{4}-\d{2}$/.test(yearMonth)) return error('กรุณาระบุ year_month (เช่น 2026-03)');
+
+    const dateFrom = yearMonth + '-01';
+    const y = parseInt(yearMonth.substr(0, 4));
+    const m = parseInt(yearMonth.substr(5, 2));
+    const lastDay = new Date(y, m, 0).getDate();
+    const dateTo = yearMonth + '-' + String(lastDay).padStart(2, '0');
+
+    // By vehicle + fuel type
+    const byVehicleFuel = await dbAll(env.DB,
+      `SELECT c.license_plate, c.brand, fl.fuel_type,
+        COUNT(*) AS count,
+        COALESCE(SUM(fl.liters), 0) AS total_liters,
+        COALESCE(SUM(fl.amount), 0) AS total_amount
+       FROM fuel_log fl
+       LEFT JOIN cars c ON fl.car_id = c.id
+       WHERE fl.date >= ? AND fl.date <= ? AND fl.deleted_at IS NULL
+       GROUP BY fl.car_id, fl.fuel_type
+       ORDER BY c.license_plate, fl.fuel_type`, [dateFrom, dateTo]);
+
+    // By vehicle only
+    const byVehicle = await dbAll(env.DB,
+      `SELECT c.license_plate, c.brand,
+        COUNT(*) AS count,
+        COALESCE(SUM(fl.liters), 0) AS total_liters,
+        COALESCE(SUM(fl.amount), 0) AS total_amount
+       FROM fuel_log fl
+       LEFT JOIN cars c ON fl.car_id = c.id
+       WHERE fl.date >= ? AND fl.date <= ? AND fl.deleted_at IS NULL
+       GROUP BY fl.car_id
+       ORDER BY c.license_plate`, [dateFrom, dateTo]);
+
+    // By fuel type only
+    const byFuelType = await dbAll(env.DB,
+      `SELECT fl.fuel_type,
+        COUNT(*) AS count,
+        COALESCE(SUM(fl.liters), 0) AS total_liters,
+        COALESCE(SUM(fl.amount), 0) AS total_amount
+       FROM fuel_log fl
+       WHERE fl.date >= ? AND fl.date <= ? AND fl.deleted_at IS NULL
+       GROUP BY fl.fuel_type
+       ORDER BY total_amount DESC`, [dateFrom, dateTo]);
+
+    // All records
+    const records = await dbAll(env.DB,
+      `SELECT fl.date, fl.document_number, fl.fuel_type, fl.liters, fl.amount,
+        fl.gas_station_name, fl.purpose, fl.purpose_detail,
+        c.license_plate, c.brand,
+        COALESCE(d.name, fl.driver_name_manual) AS driver_name
+       FROM fuel_log fl
+       LEFT JOIN cars c ON fl.car_id = c.id
+       LEFT JOIN drivers d ON fl.driver_id = d.id
+       WHERE fl.date >= ? AND fl.date <= ? AND fl.deleted_at IS NULL
+       ORDER BY fl.date, fl.time`, [dateFrom, dateTo]);
+
+    // Grand total
+    const grand = await dbFirst(env.DB,
+      `SELECT COUNT(*) AS count,
+        COALESCE(SUM(liters), 0) AS total_liters,
+        COALESCE(SUM(amount), 0) AS total_amount
+       FROM fuel_log
+       WHERE date >= ? AND date <= ? AND deleted_at IS NULL`,
+      [dateFrom, dateTo]);
+
+    return success({
+      year_month: yearMonth,
+      date_from: dateFrom,
+      date_to: dateTo,
+      by_vehicle_fuel: byVehicleFuel,
+      by_vehicle: byVehicle,
+      by_fuel_type: byFuelType,
+      records,
+      grand_total: grand
+    });
+  }
+
   return error('Not Found', 404);
   } catch (e) {
     console.error('API Error:', e);
