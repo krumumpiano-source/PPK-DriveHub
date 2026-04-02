@@ -135,7 +135,7 @@ const ACTION_MAP = {
   'updateQueueRules':    (d) => API.put('/api/queue/rules', d),
 
   // Fuel
-  'getFuelLog':          (d) => API.get('/api/fuel' + _q(d)),
+  'getFuelLog':          (d) => API.get('/api/fuel/log' + _q(d)),
   'getFuelItem':         (d) => API.get(`/api/fuel/${d.id}`),
   'createFuel':          (d) => API.post('/api/fuel', d),
   'updateFuel':          (d) => API.put(`/api/fuel/${d.id}`, d),
@@ -228,7 +228,7 @@ const ACTION_MAP = {
   'getAllUsers':         (d) => API.get('/api/admin/users' + _q(d)),
   'createDailyCheck':    (d) => API.post('/api/check/daily', d),
   'createFuelLog':       (d) => API.post('/api/fuel', d),
-  'getFuelLogs':         (d) => API.get('/api/fuel' + _q(d)),
+  'getFuelLogs':         (d) => API.get('/api/fuel/log' + _q(d)),
   'getRepairLogs':       (d) => API.get('/api/repair' + _q(d)),
   'getRepairLogById':    (d) => API.get(`/api/repair/${d.id}`),
   'updateRepairLog':     (d) => API.put(`/api/repair/${d.id}`, d),

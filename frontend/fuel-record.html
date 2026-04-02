@@ -283,6 +283,43 @@
         <button type="submit" class="btn btn-primary">บันทึกการเติมน้ำมัน</button>
       </div>
     </form>
+
+    <!-- ═══ ประวัติการเติมน้ำมัน ═══ -->
+    <div style="margin-top: 40px; border-top: 2px solid var(--color-border); padding-top: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+        <h2 style="margin: 0; font-size: 1.3em;">📋 ประวัติการเติมน้ำมัน</h2>
+        <a href="reports.html" class="btn btn-secondary" style="text-decoration: none; font-size: 14px; padding: 8px 16px;">📊 ดูรายงานฉบับเต็ม</a>
+      </div>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px;">
+        <input type="date" id="histDateFrom" style="flex: 1; min-width: 130px;">
+        <input type="date" id="histDateTo" style="flex: 1; min-width: 130px;">
+        <select id="histCarFilter" style="flex: 1; min-width: 130px;">
+          <option value="">ทุกคัน</option>
+        </select>
+        <button type="button" class="btn btn-primary" onclick="loadFuelHistory()" style="padding: 8px 18px; font-size: 14px;">🔍 ค้นหา</button>
+      </div>
+      <div id="histSummary" style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;"></div>
+      <div style="overflow-x: auto;">
+        <table id="histTable" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          <thead>
+            <tr style="background: var(--color-bg-lighter);">
+              <th style="padding: 10px 8px; text-align: left; border-bottom: 2px solid var(--color-border);">วันที่</th>
+              <th style="padding: 10px 8px; text-align: left; border-bottom: 2px solid var(--color-border);">ทะเบียน</th>
+              <th style="padding: 10px 8px; text-align: left; border-bottom: 2px solid var(--color-border);">ผู้เบิก</th>
+              <th style="padding: 10px 8px; text-align: left; border-bottom: 2px solid var(--color-border);">ประเภทน้ำมัน</th>
+              <th style="padding: 10px 8px; text-align: right; border-bottom: 2px solid var(--color-border);">ลิตร</th>
+              <th style="padding: 10px 8px; text-align: right; border-bottom: 2px solid var(--color-border);">บาท</th>
+              <th style="padding: 10px 8px; text-align: right; border-bottom: 2px solid var(--color-border);">ไมล์</th>
+            </tr>
+          </thead>
+          <tbody id="histBody">
+            <tr><td colspan="7" style="text-align: center; padding: 30px; color: var(--color-text-muted);">กดปุ่ม 🔍 ค้นหา เพื่อโหลดข้อมูล</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="histCount" style="text-align: right; font-size: 12px; color: var(--color-text-muted); margin-top: 8px;"></div>
+    </div>
+
     </div>
   </div>
 
@@ -356,6 +393,7 @@
               }
             }
           }
+          initHistory();
         }
       }).catch(function (err) { console.error('getVehicles error', err); });
     }
@@ -597,9 +635,11 @@
         .then(function (response) {
           if (response.success) {
             showAlert('บันทึกการเติมน้ำมันสำเร็จ', 'success');
-            setTimeout(function () {
-              window.location.href = 'dashboard.html';
-            }, 2000);
+            document.getElementById('fuelRecordForm').reset();
+            receiptImageFile = null;
+            document.getElementById('receiptImagePreview').textContent = '';
+            setDefaultDateTime();
+            loadFuelHistory();
           } else {
             showAlert(typeof getUserMessage !== 'undefined' ? getUserMessage(response.message) : (response.message || 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'), 'error');
           }
@@ -617,6 +657,91 @@
       container.innerHTML = '';
       container.appendChild(alert);
     }
+
+    /* ═══ ประวัติการเติมน้ำมัน ═══ */
+    function initHistory() {
+      var today = new Date();
+      var threeMonthsAgo = new Date(today);
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      document.getElementById('histDateTo').value = today.toISOString().split('T')[0];
+      document.getElementById('histDateFrom').value = threeMonthsAgo.toISOString().split('T')[0];
+      var sel = document.getElementById('histCarFilter');
+      vehicles.forEach(function (v) {
+        if (v.active !== false) {
+          var opt = document.createElement('option');
+          opt.value = v.car_id;
+          opt.textContent = v.license_plate;
+          sel.appendChild(opt);
+        }
+      });
+      loadFuelHistory();
+    }
+
+    function loadFuelHistory() {
+      var params = {};
+      var df = document.getElementById('histDateFrom').value;
+      var dt = document.getElementById('histDateTo').value;
+      var car = document.getElementById('histCarFilter').value;
+      if (df) params.date_from = df;
+      if (dt) params.date_to = dt;
+      if (car) params.car_id = car;
+
+      var body = document.getElementById('histBody');
+      body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--color-text-muted);">⏳ กำลังโหลด...</td></tr>';
+
+      apiCall('getFuelLog', params).then(function (res) {
+        var records = [];
+        if (res.success) {
+          records = res.data || [];
+          if (!Array.isArray(records)) records = records.records || records.data || [];
+        }
+        renderHistory(records);
+      }).catch(function () {
+        body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--color-danger-dark);">❌ โหลดข้อมูลไม่สำเร็จ</td></tr>';
+      });
+    }
+
+    function renderHistory(records) {
+      var body = document.getElementById('histBody');
+      if (!records || records.length === 0) {
+        body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--color-text-muted);">ไม่มีข้อมูลในช่วงที่เลือก</td></tr>';
+        document.getElementById('histSummary').innerHTML = '';
+        document.getElementById('histCount').textContent = '';
+        return;
+      }
+      var totalLiters = 0, totalAmount = 0;
+      records.forEach(function (r) {
+        totalLiters += (r.liters || 0);
+        totalAmount += (r.amount || 0);
+      });
+      document.getElementById('histSummary').innerHTML =
+        '<div style="flex:1;min-width:120px;background:var(--color-bg-lighter);padding:12px;border-radius:8px;text-align:center;">' +
+          '<div style="font-size:12px;color:var(--color-text-muted);">จำนวนครั้ง</div>' +
+          '<div style="font-size:1.4em;font-weight:700;color:var(--color-primary);">' + records.length + '</div></div>' +
+        '<div style="flex:1;min-width:120px;background:var(--color-bg-lighter);padding:12px;border-radius:8px;text-align:center;">' +
+          '<div style="font-size:12px;color:var(--color-text-muted);">รวมลิตร</div>' +
+          '<div style="font-size:1.4em;font-weight:700;color:#e65100;">' + totalLiters.toFixed(2) + '</div></div>' +
+        '<div style="flex:1;min-width:120px;background:var(--color-bg-lighter);padding:12px;border-radius:8px;text-align:center;">' +
+          '<div style="font-size:12px;color:var(--color-text-muted);">รวมบาท</div>' +
+          '<div style="font-size:1.4em;font-weight:700;color:#2e7d32;">' + totalAmount.toLocaleString('th-TH', {minimumFractionDigits:2}) + '</div></div>';
+      var html = '';
+      records.forEach(function (r) {
+        var driverDisplay = r.driver_name || r.driver_name_manual || '-';
+        var dateDisplay = typeof formatDateThai === 'function' ? formatDateThai(r.date) : r.date;
+        var mileage = r.mileage_after || r.mileage_before || '-';
+        html += '<tr style="border-bottom:1px solid var(--color-border);">' +
+          '<td style="padding:8px;">' + dateDisplay + '</td>' +
+          '<td style="padding:8px;">' + (r.license_plate || '-') + '</td>' +
+          '<td style="padding:8px;">' + driverDisplay + '</td>' +
+          '<td style="padding:8px;">' + (r.fuel_type || '-') + '</td>' +
+          '<td style="padding:8px;text-align:right;">' + (r.liters || 0).toFixed(2) + '</td>' +
+          '<td style="padding:8px;text-align:right;">' + (r.amount || 0).toLocaleString('th-TH', {minimumFractionDigits:2}) + '</td>' +
+          '<td style="padding:8px;text-align:right;">' + (typeof mileage === 'number' ? mileage.toLocaleString() : mileage) + '</td></tr>';
+      });
+      body.innerHTML = html;
+      document.getElementById('histCount').textContent = 'แสดง ' + records.length + ' รายการ';
+    }
+    window.loadFuelHistory = loadFuelHistory;
   </script>
 
 </body>
