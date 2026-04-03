@@ -213,7 +213,7 @@ img { max-width: 100%; height: auto; }
 .sidebar-nav { flex: 1; padding: 8px 0 16px; }
 
 .sidebar-section-title {
-  padding: 14px 16px 5px;
+  padding: 20px 16px 5px;
   font-size: 10px;
   font-weight: 700;
   color: #6366F1;
