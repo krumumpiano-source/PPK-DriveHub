@@ -34,7 +34,7 @@ export async function onRequest(context) {
   // --- GET /api/drivers/:id ---
   if (path.match(/^\/api\/drivers\/[^/]+$/) && method === 'GET') {
     try { requirePermission(user, 'drivers', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
-    const id = extractParam(path, 'drivers');
+    const id = extractParam(path, '/api/drivers/');
     const row = await dbFirst(env.DB, 'SELECT * FROM drivers WHERE id = ?', [id]);
     if (!row) return error('ไม่พบข้อมูลพนักงานขับรถ', 404);
     return success(row);
@@ -63,7 +63,7 @@ export async function onRequest(context) {
   // --- PUT /api/drivers/:id ---
   if (path.match(/^\/api\/drivers\/[^/]+$/) && method === 'PUT') {
     try { requirePermission(user, 'drivers', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
-    const id = extractParam(path, 'drivers');
+    const id = extractParam(path, '/api/drivers/');
     const body = await parseBody(request);
     const sets = [];
     const params = [];
@@ -83,7 +83,7 @@ export async function onRequest(context) {
   // --- DELETE /api/drivers/:id ---
   if (path.match(/^\/api\/drivers\/[^/]+$/) && method === 'DELETE') {
     try { requirePermission(user, 'drivers', 'delete'); } catch { return error('ไม่มีสิทธิ์', 403); }
-    const id = extractParam(path, 'drivers');
+    const id = extractParam(path, '/api/drivers/');
     await dbRun(env.DB, "UPDATE drivers SET status = 'inactive', deactivated_at = ? WHERE id = ?", [now(), id]);
     return success({ message: 'ลบพนักงานขับรถเรียบร้อย' });
   }

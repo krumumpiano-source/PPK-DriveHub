@@ -42,7 +42,7 @@ export async function onRequest(context) {
   // --- GET /api/queue/:id ---
   if (path.match(/^\/api\/queue\/[^/]+$/) && !path.includes('/freeze') && !path.includes('/cancel') && !path.includes('/complete') && method === 'GET') {
     try { requirePermission(user, 'queue', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
-    const id = extractParam(path, 'queue');
+    const id = extractParam(path, '/api/queue/');
     const row = await dbFirst(env.DB,
       `SELECT q.*, c.license_plate, c.brand, c.model,
        d.name AS driver_name, u.display_name AS requester_display_name
@@ -113,7 +113,7 @@ export async function onRequest(context) {
   // --- PUT /api/queue/:id ---
   if (path.match(/^\/api\/queue\/[^/]+$/) && method === 'PUT') {
     try { requirePermission(user, 'queue', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
-    const id = extractParam(path, 'queue');
+    const id = extractParam(path, '/api/queue/');
     const body = await parseBody(request);
     const sets = [];
     const params = [];
@@ -133,7 +133,7 @@ export async function onRequest(context) {
   // --- DELETE /api/queue/:id ---
   if (path.match(/^\/api\/queue\/[^/]+$/) && method === 'DELETE') {
     try { requirePermission(user, 'queue', 'delete'); } catch { return error('ไม่มีสิทธิ์', 403); }
-    const id = extractParam(path, 'queue');
+    const id = extractParam(path, '/api/queue/');
     await dbRun(env.DB, 'DELETE FROM queue WHERE id = ?', [id]);
     return success({ message: 'ลบคิวเรียบร้อย' });
   }

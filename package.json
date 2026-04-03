@@ -9,6 +9,13 @@
     "migrate": "npx wrangler d1 execute ppk-drivehub-db --remote --file=migrations/schema.sql",
     "seed": "npx wrangler d1 execute ppk-drivehub-db --remote --file=migrations/seed.sql",
     "migrate:local": "npx wrangler d1 execute ppk-drivehub-db --local --file=migrations/schema.sql",
-    "seed:local": "npx wrangler d1 execute ppk-drivehub-db --local --file=migrations/seed.sql"
+    "seed:local": "npx wrangler d1 execute ppk-drivehub-db --local --file=migrations/seed.sql",
+    "test": "npx playwright test",
+    "test:api": "npx playwright test --project=api-integration",
+    "test:e2e": "npx playwright test --project=e2e-chromium",
+    "test:report": "npx playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1"
   }
 }

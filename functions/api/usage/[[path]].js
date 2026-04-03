@@ -191,9 +191,9 @@ export async function onRequest(context) {
   }
 
   // --- GET /api/usage/:id ---
-  if (path.match(/^\/api\/usage\/[^/]+$/) && method === 'GET') {
+  if (path.match(/^\/api\/usage\/[^/]+$/) && !path.endsWith('/summary') && !path.endsWith('/batch-heal') && method === 'GET') {
     try { requirePermission(user, 'usage', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
-    const id = extractParam(path, 'usage');
+    const id = extractParam(path, '/api/usage/');
     const row = await dbFirst(env.DB,
       `SELECT ur.*, c.license_plate, c.brand, d.name AS driver_name
        FROM usage_records ur
@@ -239,7 +239,7 @@ export async function onRequest(context) {
   // --- PUT /api/usage/:id ---
   if (path.match(/^\/api\/usage\/[^/]+$/) && method === 'PUT') {
     try { requirePermission(user, 'usage', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
-    const id = extractParam(path, 'usage');
+    const id = extractParam(path, '/api/usage/');
     const body = await parseBody(request);
     const sets = [];
     const params = [];
@@ -256,7 +256,7 @@ export async function onRequest(context) {
   // --- DELETE /api/usage/:id ---
   if (path.match(/^\/api\/usage\/[^/]+$/) && method === 'DELETE') {
     try { requirePermission(user, 'usage', 'delete'); } catch { return error('ไม่มีสิทธิ์', 403); }
-    const id = extractParam(path, 'usage');
+    const id = extractParam(path, '/api/usage/');
     await dbRun(env.DB, 'DELETE FROM usage_records WHERE id = ?', [id]);
     return success({ message: 'ลบข้อมูลการใช้งานเรียบร้อย' });
   }
