@@ -107,6 +107,10 @@ export async function onRequest(context) {
     if (!req) return error('ไม่พบคำขอ', 404);
     if (req.status !== 'pending') return error('คำขอนี้ถูกดำเนินการแล้ว');
 
+    // Check if email already exists in users table
+    const existingUser = await dbFirst(env.DB, 'SELECT id FROM users WHERE email = ?', [req.email]);
+    if (existingUser) return error('อีเมลนี้มีบัญชีผู้ใช้ในระบบแล้ว กรุณาปฏิเสธคำขอนี้แทน', 409);
+
     // Create actual user account
     const salt = generateSalt();
     const { hashPassword: hp } = await import('../../_helpers.js');
