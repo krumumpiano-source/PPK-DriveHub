@@ -213,7 +213,7 @@ img { max-width: 100%; height: auto; }
 .sidebar-nav { flex: 1; padding: 8px 0 16px; }
 
 .sidebar-section-title {
-  padding: 20px 16px 5px;
+  padding: 20px 20px 5px;
   font-size: 10px;
   font-weight: 700;
   color: #6366F1;
@@ -237,7 +237,7 @@ img { max-width: 100%; height: auto; }
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 16px;
+  padding: 9px 16px 9px 20px;
   min-height: var(--touch-min);
   color: #A5B4FC;
   text-decoration: none;
