@@ -109,6 +109,8 @@ const ACTION_MAP = {
   'createVehicle':       (d) => API.post('/api/vehicles', d),
   'updateVehicle':       (d) => API.put(`/api/vehicles/${d.id}`, d),
   'deactivateVehicle':   (d) => API.put(`/api/vehicles/${d.id}/deactivate`, d),
+  'getInactiveVehicles': ()  => API.get('/api/vehicles/inactive'),
+  'reactivateVehicle':   (d) => API.put(`/api/vehicles/${d.id}/reactivate`, d),
 
   // Drivers
   'getDrivers':          (d) => API.get('/api/drivers' + _q(d)),

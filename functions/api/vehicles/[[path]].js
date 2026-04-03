@@ -104,6 +104,14 @@ export async function onRequest(context) {
     return success({ message: 'อัปเดตยานพาหนะเรียบร้อย' });
   }
 
+  if (path === '/api/vehicles/inactive' && method === 'GET') {
+    try { requirePermission(user, 'vehicles', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const vehicles = await dbAll(env.DB,
+      `SELECT id, license_plate, brand, model, color, year, vehicle_category, deactivated_reason, deactivated_at FROM cars WHERE status = 'inactive' ORDER BY deactivated_at DESC`
+    );
+    return success({ vehicles });
+  }
+
   if (path.match(/\/api\/vehicles\/[^/]+\/deactivate/) && method === 'PUT') {
     try { requirePermission(user, 'vehicles', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[3];
@@ -114,6 +122,19 @@ export async function onRequest(context) {
     );
     await writeAuditLog(env.DB, user.id, user.displayName, 'deactivate_vehicle', 'vehicles', id, null);
     return success({ message: 'ปิดการใช้งานยานพาหนะเรียบร้อย' });
+  }
+
+  if (path.match(/\/api\/vehicles\/[^/]+\/reactivate/) && method === 'PUT') {
+    try { requirePermission(user, 'vehicles', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const id = path.split('/')[3];
+    const car = await dbFirst(env.DB, "SELECT id, license_plate FROM cars WHERE id = ? AND status = 'inactive'", [id]);
+    if (!car) return error('ไม่พบยานพาหนะที่ถูกลบ', 404);
+    await dbRun(env.DB,
+      `UPDATE cars SET status = 'active', deactivated_reason = NULL, deactivated_at = NULL, updated_at = ? WHERE id = ?`,
+      [now(), id]
+    );
+    await writeAuditLog(env.DB, user.id, user.displayName, 'reactivate_vehicle', 'vehicles', id, { license_plate: car.license_plate });
+    return success({ message: 'กู้คืนยานพาหนะเรียบร้อย' });
   }
 
   if (path.match(/\/api\/vehicles\/[^/]+\/maintenance/) && method === 'GET') {

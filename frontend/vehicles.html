@@ -140,6 +140,16 @@
         <button class="btn btn-secondary" onclick="loadVehicles()">
           🔃 รีเฟรช
         </button>
+        <button class="btn btn-secondary" id="toggleInactiveBtn" onclick="toggleInactiveVehicles()" style="margin-left:auto;">
+          🗑️ รถที่ลบแล้ว
+        </button>
+      </div>
+
+      <div id="inactiveSection" style="display:none; margin-bottom:1.5rem;">
+        <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:var(--radius-lg,12px); padding:1rem 1.25rem;">
+          <h3 style="margin:0 0 0.75rem; color:#991b1b; font-size:1rem;">🗑️ รถที่ถูกลบ</h3>
+          <div id="inactiveVehiclesGrid" class="vehicles-grid"></div>
+        </div>
       </div>
 
       <div id="loading" class="loading">กำลังโหลดข้อมูล...</div>
@@ -972,6 +982,80 @@
         }
       } catch (error) {
         showAlert(handleError(error), 'error');
+      }
+    }
+
+    var inactiveSectionVisible = false;
+    async function toggleInactiveVehicles() {
+      var section = document.getElementById('inactiveSection');
+      if (inactiveSectionVisible) {
+        section.style.display = 'none';
+        inactiveSectionVisible = false;
+        document.getElementById('toggleInactiveBtn').textContent = '🗑️ รถที่ลบแล้ว';
+        return;
+      }
+      inactiveSectionVisible = true;
+      document.getElementById('toggleInactiveBtn').textContent = '🗑️ ซ่อนรถที่ลบแล้ว';
+      section.style.display = 'block';
+      await loadInactiveVehicles();
+    }
+
+    async function loadInactiveVehicles() {
+      var grid = document.getElementById('inactiveVehiclesGrid');
+      grid.innerHTML = '<p style="color:#666;">กำลังโหลด...</p>';
+      try {
+        var result = await apiCall('getInactiveVehicles');
+        if (result.success && result.data && result.data.vehicles && result.data.vehicles.length > 0) {
+          var html = '';
+          result.data.vehicles.forEach(function (v) {
+            var deactivatedDate = '';
+            if (v.deactivated_at) {
+              try { deactivatedDate = new Date(v.deactivated_at).toLocaleDateString('th-TH'); } catch(e) { deactivatedDate = v.deactivated_at; }
+            }
+            html += '<div class="vehicle-card" style="border-color:#fecaca;">';
+            html += '<div class="vehicle-card-header" style="background:#fef2f2;">';
+            html += '<div class="vehicle-license" style="color:#991b1b;">' + (v.license_plate || '-') + '</div>';
+            html += '<div class="vehicle-status" style="background:#fee2e2;color:#991b1b;">ถูกลบ</div>';
+            html += '</div>';
+            html += '<div class="vehicle-info">';
+            html += '<div class="vehicle-info-item"><span class="vehicle-info-label">ยี่ห้อ/รุ่น:</span><span class="vehicle-info-value">' + (v.brand || '') + ' ' + (v.model || '') + '</span></div>';
+            if (v.color) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">สี:</span><span class="vehicle-info-value">' + v.color + '</span></div>';
+            if (deactivatedDate) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">วันที่ลบ:</span><span class="vehicle-info-value">' + deactivatedDate + '</span></div>';
+            if (v.deactivated_reason) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">เหตุผล:</span><span class="vehicle-info-value">' + v.deactivated_reason + '</span></div>';
+            html += '</div>';
+            html += '<div class="vehicle-actions">';
+            html += '<button class="btn btn-primary" onclick="reactivateVehicle(\'' + v.id + '\', \'' + (v.license_plate || '').replace(/'/g, "\\'") + '\')">♻️ กู้คืน</button>';
+            html += '</div>';
+            html += '</div>';
+          });
+          grid.innerHTML = html;
+        } else {
+          grid.innerHTML = '<p style="color:#666; text-align:center; padding:1rem;">ไม่มีรถที่ถูกลบ</p>';
+        }
+      } catch (err) {
+        console.error('Error loading inactive vehicles:', err);
+        grid.innerHTML = '<p style="color:#c62828;">โหลดข้อมูลไม่สำเร็จ</p>';
+      }
+    }
+
+    async function reactivateVehicle(carId, plate) {
+      if (!hasModulePermission('vehicles', 'edit') && getCurrentUser().role !== 'admin') {
+        alert('คุณไม่มีสิทธิ์กู้คืนรถ');
+        return;
+      }
+      if (!confirm('กู้คืนรถ ' + plate + ' กลับเข้าระบบหรือไม่?')) return;
+      try {
+        var result = await apiCall('reactivateVehicle', { id: carId });
+        if (result.success) {
+          showAlert('กู้คืนรถ ' + plate + ' สำเร็จ', 'success');
+          loadVehicles();
+          loadInactiveVehicles();
+        } else {
+          showAlert(typeof getUserMessage !== 'undefined' ? getUserMessage(result.message) : (result.message || 'กู้คืนไม่สำเร็จ'), 'error');
+        }
+      } catch (err) {
+        console.error('Error reactivating vehicle:', err);
+        showAlert(handleError(err), 'error');
       }
     }
 

@@ -1,4 +1,4 @@
-// Admin: users, settings, requests
+﻿// Admin: users, settings, requests
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, hashPassword, generateSalt, requireAdmin,
@@ -106,10 +106,6 @@ export async function onRequest(context) {
     const req = await dbFirst(env.DB, 'SELECT * FROM user_requests WHERE id = ?', [id]);
     if (!req) return error('ไม่พบคำขอ', 404);
     if (req.status !== 'pending') return error('คำขอนี้ถูกดำเนินการแล้ว');
-
-    // Check if email already exists in users table
-    const existingUser = await dbFirst(env.DB, 'SELECT id FROM users WHERE email = ?', [req.email]);
-    if (existingUser) return error('อีเมลนี้มีบัญชีผู้ใช้ในระบบแล้ว กรุณาปฏิเสธคำขอนี้แทน', 409);
 
     // Create actual user account
     const salt = generateSalt();
