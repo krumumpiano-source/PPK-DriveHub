@@ -171,6 +171,74 @@ export async function onRequest(context) {
     return success({ message: 'ลบข้อมูลประกันภัยเรียบร้อย' });
   }
 
+  // ============================================================
+  // ตรอ. (ตรวจสภาพรถประจำปี) — inspection_records
+  // ============================================================
+
+  // --- GET /api/tax-insurance/inspections ---
+  if (path === '/api/tax-insurance/inspections' && method === 'GET') {
+    const carId = url.searchParams.get('car_id');
+    const where = carId ? 'WHERE ir.car_id = ?' : '';
+    const rows = await dbAll(env.DB,
+      `SELECT ir.*, c.license_plate, c.brand FROM inspection_records ir
+       LEFT JOIN cars c ON ir.car_id = c.id
+       ${where} ORDER BY ir.expiry_date DESC`,
+      carId ? [carId] : []
+    );
+    return success(rows);
+  }
+
+  // --- POST /api/tax-insurance/inspections ---
+  if (path === '/api/tax-insurance/inspections' && method === 'POST') {
+    const body = await parseBody(request);
+    if (!body?.car_id || !body?.inspection_date || !body?.expiry_date) return error('กรุณาระบุรถ วันตรวจ และวันหมดอายุ');
+    const id = generateUUID();
+    const ts = now();
+    await dbRun(env.DB,
+      `INSERT INTO inspection_records (id, car_id, inspection_date, expiry_date,
+        inspection_center, result, cost, certificate_image, notes, created_by, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, body.car_id, body.inspection_date, body.expiry_date,
+       body.inspection_center || '', body.result || 'passed',
+       body.cost || 0, body.certificate_image || '',
+       body.notes || '', user.id, ts]
+    );
+    const car = await dbFirst(env.DB, 'SELECT license_plate, brand FROM cars WHERE id = ?', [body.car_id]);
+    const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : body.car_id;
+    await writeAuditLog(env.DB, user.id, user.displayName, 'create_inspection', 'inspection', id, { car: carLabel });
+    const daysLeft = Math.floor((new Date(body.expiry_date) - Date.now()) / 86400000);
+    if (daysLeft <= 30) {
+      await sendTelegramMessage(env,
+        `🔍 <b>ตรอ. ใกล้หมดอายุ</b>\n🚗 ${carLabel}\n📅 หมดอายุ: ${body.expiry_date} (เหลือ ${daysLeft} วัน)`);
+    }
+    return success({ id, message: 'บันทึกข้อมูล ตรอ. เรียบร้อย' }, 201);
+  }
+
+  // --- PUT /api/tax-insurance/inspections/:id ---
+  if (path.match(/\/api\/tax-insurance\/inspections\/[^/]+/) && method === 'PUT') {
+    const id = path.split('/')[4];
+    const body = await parseBody(request);
+    const sets = [];
+    const params = [];
+    const fields = ['car_id','inspection_date','expiry_date','inspection_center',
+      'result','cost','certificate_image','notes'];
+    for (const f of fields) {
+      if (body[f] !== undefined) { sets.push(`${f} = ?`); params.push(body[f]); }
+    }
+    if (!sets.length) return error('ไม่มีข้อมูลที่จะอัปเดต');
+    params.push(id);
+    await dbRun(env.DB, `UPDATE inspection_records SET ${sets.join(', ')} WHERE id = ?`, params);
+    return success({ message: 'อัปเดตข้อมูล ตรอ. เรียบร้อย' });
+  }
+
+  // --- DELETE /api/tax-insurance/inspections/:id ---
+  if (path.match(/\/api\/tax-insurance\/inspections\/[^/]+/) && method === 'DELETE') {
+    const id = path.split('/')[4];
+    await dbRun(env.DB, 'DELETE FROM inspection_records WHERE id = ?', [id]);
+    await writeAuditLog(env.DB, user.id, user.displayName, 'delete_inspection', 'inspection', id, null);
+    return success({ message: 'ลบข้อมูล ตรอ. เรียบร้อย' });
+  }
+
   return error('Not Found', 404);
   } catch (e) {
     console.error('API Error:', e);

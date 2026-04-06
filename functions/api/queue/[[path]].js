@@ -243,6 +243,41 @@ export async function onRequest(context) {
     return success({ message: 'เริ่มดำเนินการคิว' });
   }
 
+  // --- POST /api/queue/:id/evaluate --- ผู้ขอใช้รถกรอกประเมินหลังเดินทาง
+  if (path.match(/\/api\/queue\/[^/]+\/evaluate/) && method === 'POST') {
+    const id = path.split('/')[3];
+    const q = await dbFirst(env.DB, 'SELECT * FROM queue WHERE id = ?', [id]);
+    if (!q) return error('ไม่พบคิว', 404);
+    if (q.status !== 'completed') return error('ประเมินได้เฉพาะคิวที่เสร็จสิ้นแล้ว');
+    // ตรวจสอบว่ายังไม่เคยประเมิน
+    const existing = await dbFirst(env.DB, 'SELECT id FROM trip_evaluations WHERE queue_id = ? AND evaluator_id = ?', [id, user.id]);
+    if (existing) return error('คุณได้ประเมินคิวนี้ไปแล้ว');
+    const body = await parseBody(request);
+    const evalId = generateUUID();
+    await dbRun(env.DB,
+      `INSERT INTO trip_evaluations (id, queue_id, evaluator_id,
+        driver_behavior_score, vehicle_condition_score, punctuality_score,
+        overall_score, problems, suggestions, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [evalId, id, user.id,
+       body?.driver_behavior_score || null, body?.vehicle_condition_score || null,
+       body?.punctuality_score || null, body?.overall_score || null,
+       body?.problems || '', body?.suggestions || '', now()]
+    );
+    return success({ id: evalId, message: 'ประเมินการเดินทางเรียบร้อย' }, 201);
+  }
+
+  // --- GET /api/queue/:id/evaluation --- ดูผลประเมิน
+  if (path.match(/\/api\/queue\/[^/]+\/evaluation/) && method === 'GET') {
+    const id = path.split('/')[3];
+    const rows = await dbAll(env.DB,
+      `SELECT te.*, u.display_name AS evaluator_name
+       FROM trip_evaluations te
+       LEFT JOIN users u ON te.evaluator_id = u.id
+       WHERE te.queue_id = ?`, [id]);
+    return success(rows);
+  }
+
   return error('Not Found', 404);
   } catch (e) {
     console.error('API Error:', e);
