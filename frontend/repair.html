@@ -1,10 +1,9 @@
 ﻿<!DOCTYPE html>
 <html lang="th">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>บันทึกซ่อมบำรุง - PPK DriveHub</title>
+  <title>ซ่อมบำรุง - PPK DriveHub</title>
   <script src="config.js"></script>
   <script>
     window.API_BASE_URL = CONFIG.API_BASE_URL;
@@ -17,1177 +16,820 @@
   <link rel="stylesheet" href="common.css">
   <script src="js/api.js"></script><script src="common.js"></script>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    .timeline{position:relative;padding-left:28px;margin:1rem 0}
+    .timeline::before{content:'';position:absolute;left:10px;top:0;bottom:0;width:2px;background:var(--color-border)}
+    .tl-step{position:relative;padding:8px 0 16px;opacity:.5}
+    .tl-step.active{opacity:1}
+    .tl-step.done{opacity:1}
+    .tl-step .tl-dot{position:absolute;left:-22px;top:10px;width:14px;height:14px;border-radius:50%;border:2px solid var(--color-border);background:#fff;z-index:1}
+    .tl-step.done .tl-dot{background:var(--color-success);border-color:var(--color-success)}
+    .tl-step.active .tl-dot{background:var(--color-primary);border-color:var(--color-primary);box-shadow:0 0 0 4px rgba(99,102,241,.2)}
+    .tl-step.rejected .tl-dot{background:var(--color-danger);border-color:var(--color-danger)}
+    .tl-label{font-weight:600;font-size:.88rem}
+    .tl-meta{font-size:.8rem;color:var(--color-text-light);margin-top:2px}
+    .tl-action{margin-top:6px}
+
+    .repair-card{background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:1rem;margin-bottom:.75rem;transition:box-shadow .15s}
+    .repair-card:hover{box-shadow:var(--shadow-md)}
+    .repair-card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;flex-wrap:wrap}
+    .repair-card-title{font-weight:600;font-size:.95rem}
+    .repair-card-body{margin-top:.75rem;font-size:.88rem;color:var(--color-text-light)}
+    .repair-card-body p{margin-bottom:4px}
+
+    .status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:.78rem;font-weight:500}
+    .status-requested{background:#fef3c7;color:#92400e}
+    .status-approved{background:#dbeafe;color:#1e40af}
+    .status-inspected{background:#e0e7ff;color:#3730a3}
+    .status-documented{background:#ede9fe;color:#5b21b6}
+    .status-repairing{background:#fce7f3;color:#9d174d}
+    .status-completed{background:#d1fae5;color:#065f46}
+    .status-rejected{background:#fee2e2;color:#991b1b}
+
+    .alert-card{border-left:4px solid var(--color-warning);background:#fffbeb;padding:.75rem 1rem;border-radius:var(--radius-md);margin-bottom:.5rem;font-size:.88rem}
+    .alert-card.critical{border-left-color:var(--color-danger);background:#fef2f2}
+    .alert-card.resolved{border-left-color:var(--color-success);background:#f0fdf4;opacity:.7}
+
+    .detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem;margin-top:.75rem}
+    .detail-item label{display:block;font-size:.78rem;color:var(--color-text-light);margin-bottom:2px}
+    .detail-item span{font-size:.88rem;font-weight:500}
+
+    .file-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+    .file-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:var(--color-bg-light);border-radius:16px;font-size:.78rem;color:var(--color-primary);cursor:pointer}
+    .file-chip:hover{background:var(--color-primary);color:#fff}
+
+    @media(max-width:600px){
+      .detail-grid{grid-template-columns:1fr}
     }
-
-    body { }
-
-    .container { }
-
-    .file-preview-item {
-      position: relative;
-      border-radius: var(--radius-md);
-      overflow: hidden;
-    }
-
-    .file-preview-item img {
-      width: 100%;
-      height: 150px;
-      object-fit: cover;
-    }
-
-    .file-preview-item .remove {
-      position: absolute;
-      top: 5px;
-      right: 5px;
-      background: var(--color-danger);
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 25px;
-      height: 25px;
-      cursor: pointer;
-      font-size: 0.9em;
-    }
-
-    .alert {
-      padding: 15px;
-      border-radius: var(--radius-md);
-      margin-bottom: 20px;
-    }
-
-    .alert-success {
-      background: #d4edda;
-      color: #155724;
-      border-left: 4px solid #2e7d32;
-    }
-
-    .alert-error {
-      background: var(--color-bg-danger);
-      color: var(--color-danger-dark);
-      border-left: 4px solid #c62828;
-    }
-
-    .loading {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--color-text-muted);
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--color-text-light);
-    }
-
-    .empty-state-icon {
-      font-size: 4em;
-      margin-bottom: 20px;
-    }
-
-    @media (max-width: 768px) {
-      .form-row {
-        grid-template-columns: 1fr;
-      }
-
-      .filters {
-        grid-template-columns: 1fr;
-      }
-
-      .repairs-table {
-        font-size: 0.9em;
-      }
-
-      .repairs-table th,
-      .repairs-table td {
-        padding: 10px;
-      }
-    }
-
-    /* ── Modal ── */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.6);
-      z-index: 2000;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      overflow-y: auto;
-    }
-    .modal-overlay.show { display: flex; }
-
-    .modal {
-      background: white;
-      border-radius: var(--radius-xl);
-      padding: 30px;
-      max-width: 900px;
-      width: 100%;
-      max-height: 90vh;
-      overflow-y: auto;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-      position: relative;
-      margin: auto;
-    }
-
-    .modal-header {
-      font-size: 1.3em;
-      font-weight: 700;
-      color: var(--color-primary);
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .modal-close {
-      background: none;
-      border: none;
-      font-size: 1.5em;
-      cursor: pointer;
-      color: var(--color-text-muted);
-      padding: 0;
-      width: 32px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-      transition: background 0.2s;
-    }
-    .modal-close:hover { background: var(--color-bg-lighter); color: var(--color-text); }
-
-    .form-section {
-      background: var(--color-bg-light);
-      border-radius: var(--radius-lg);
-      padding: 20px;
-      margin-bottom: 20px;
-    }
-    .form-section-title {
-      font-weight: 700;
-      font-size: 1em;
-      margin-bottom: 16px;
-      color: var(--color-text);
-    }
-    .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.9em; }
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-      font-size: 0.95em;
-      font-family: inherit;
-      box-sizing: border-box;
-    }
-    .form-group textarea { resize: vertical; min-height: 80px; }
-    .required { color: var(--color-danger); }
   </style>
 </head>
-
 <body>
   <div class="container">
     <div class="header">
-      <h1>🔧 บันทึกการซ่อมบำรุง (ซ่อมเสร็จแล้ว)</h1>
+      <h1>🔧 ซ่อมบำรุง</h1>
       <p>ระบบจัดการยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
     </div>
-
     <div id="navigation"></div>
-
     <div class="content">
       <div id="alertContainer"></div>
 
-      <div class="filters">
-        <div class="filter-group">
-          <label>รถ</label>
-          <select id="filterCar" onchange="loadRepairs()">
-            <option value="">ทั้งหมด</option>
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('workflow')">📋 แจ้งซ่อม/ติดตาม</button>
+        <button class="tab" onclick="switchTab('history')">📝 บันทึกซ่อมเสร็จ</button>
+        <button class="tab" onclick="switchTab('inspection')">🔍 ผลตรวจสภาพ</button>
+      </div>
+
+      <!-- ═══════ Tab 1: แจ้งซ่อม / ติดตามสถานะ ═══════ -->
+      <div id="tab-workflow" class="tab-content active">
+        <div class="actions-bar" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem">
+          <button class="btn btn-primary" onclick="openReportModal()">➕ แจ้งซ่อม</button>
+          <select id="wfFilterCar" onchange="loadWorkflow()" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem">
+            <option value="">รถทั้งหมด</option>
+          </select>
+          <select id="wfFilterStatus" onchange="loadWorkflow()" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem">
+            <option value="">ทุกสถานะ</option>
+            <option value="requested">รอพิจารณา</option>
+            <option value="approved">อนุมัติแล้ว</option>
+            <option value="inspected">ตรวจสภาพแล้ว</option>
+            <option value="documented">ทำบันทึกแล้ว</option>
+            <option value="repairing">กำลังซ่อม</option>
+            <option value="completed">ซ่อมเสร็จ</option>
+            <option value="rejected">ไม่อนุมัติ</option>
           </select>
         </div>
-        <div class="filter-group">
-          <label>สถานะ</label>
-          <select id="filterStatus" onchange="loadRepairs()">
-            <option value="completed" selected>ซ่อมเสร็จแล้ว</option>
-            <option value="">ทั้งหมด</option>
+        <div id="wfLoading" class="loading" style="display:none">กำลังโหลด...</div>
+        <div id="wfList"></div>
+      </div>
+
+      <!-- ═══════ Tab 2: บันทึกซ่อมเสร็จ/ย้อนหลัง ═══════ -->
+      <div id="tab-history" class="tab-content">
+        <div class="actions-bar" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem">
+          <button class="btn btn-primary" onclick="openAddCompletedModal()">➕ บันทึกซ่อมย้อนหลัง</button>
+          <select id="hFilterCar" onchange="loadHistory()" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem">
+            <option value="">รถทั้งหมด</option>
           </select>
+          <button class="btn btn-secondary" onclick="loadHistory()">🔃 รีเฟรช</button>
         </div>
-        <div class="filter-group">
-          <label>วันที่เริ่มต้น</label>
-          <input type="date" id="dateFrom" onchange="loadRepairs()">
-        </div>
-        <div class="filter-group">
-          <label>วันที่สิ้นสุด</label>
-          <input type="date" id="dateTo" onchange="loadRepairs()">
+        <div id="hLoading" class="loading" style="display:none">กำลังโหลด...</div>
+        <div id="hTableWrap" style="overflow-x:auto">
+          <table class="table">
+            <thead><tr>
+              <th>วันที่ซ่อมเสร็จ</th><th>รถ</th><th>เลขไมล์</th><th>อาการ/รายการ</th><th>อู่</th><th>ผู้นำไป</th><th>ค่าใช้จ่าย</th><th></th>
+            </tr></thead>
+            <tbody id="hBody"></tbody>
+          </table>
         </div>
       </div>
 
-      <div class="actions-bar">
-        <button class="btn btn-primary" id="addRepairBtn" onclick="openAddModal()">
-          ➕ บันทึกการซ่อมบำรุง (ซ่อมเสร็จแล้ว)
-        </button>
-        <button class="btn btn-warning" id="scheduleRepairBtn" onclick="openScheduleRepairModal()"
-          style="background: var(--color-warning); color: white; border: none;">
-          📅 ลงคิวซ่อม
-        </button>
-        <button class="btn btn-secondary" onclick="loadRepairs()">
-          🔃 รีเฟรช
-        </button>
-      </div>
-
-      <div id="loading" class="loading">กำลังโหลดข้อมูล...</div>
-      <div id="repairsContainer" style="display: none;">
-        <table class="repairs-table">
-          <thead>
-            <tr>
-              <th>วันที่ซ่อมเสร็จ</th>
-              <th>รถ</th>
-              <th>เลขไมล์</th>
-              <th>อาการเสีย</th>
-              <th>สถานที่ซ่อม</th>
-              <th>ผู้นำไปซ่อม</th>
-              <th>ราคา</th>
-              <th>จัดการ</th>
-            </tr>
-          </thead>
-          <tbody id="repairsTableBody">
-          </tbody>
-        </table>
+      <!-- ═══════ Tab 3: ผลตรวจสภาพรถ ═══════ -->
+      <div id="tab-inspection" class="tab-content">
+        <div class="actions-bar" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem">
+          <select id="insFilterCar" onchange="loadInspection()" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem">
+            <option value="">รถทั้งหมด</option>
+          </select>
+          <select id="insFilterStatus" onchange="loadInspection()" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem">
+            <option value="">ทุกสถานะ</option>
+            <option value="unresolved">ยังไม่แก้ไข</option>
+            <option value="resolved">แก้ไขแล้ว</option>
+          </select>
+          <button class="btn btn-secondary" onclick="loadInspection()">🔃 รีเฟรช</button>
+        </div>
+        <div id="insLoading" class="loading" style="display:none">กำลังโหลด...</div>
+        <div id="alertsList"></div>
+        <h3 style="margin:1.25rem 0 .75rem;font-size:.95rem">📋 ประวัติตรวจสภาพ</h3>
+        <div id="checkLogList"></div>
       </div>
     </div>
   </div>
 
-  <!-- Modal สำหรับเพิ่ม/แก้ไข -->
-  <div id="repairModal" class="modal-overlay">
+  <!-- ═══════ Modal: แจ้งซ่อม ═══════ -->
+  <div id="reportModal" class="modal-overlay">
     <div class="modal">
       <div class="modal-header">
-        <h2 id="modalTitle">เพิ่มบันทึกซ่อมใหม่</h2>
-        <button class="modal-close" onclick="closeModal()" title="ปิด">×</button>
+        <h2>🔧 แจ้งซ่อม</h2>
+        <button class="modal-close" onclick="closeReportModal()">×</button>
       </div>
       <div class="modal-body">
-        <form id="repairForm" onsubmit="handleSubmit(event); return false;">
-          <div class="form-section">
-            <div class="form-section-title">📋 บันทึกการซ่อมบำรุง (ซ่อมเสร็จแล้ว)</div>
-
-            <!-- 1. เลือกรถ -->
-            <div class="form-group">
-              <label>รถ <span class="required">*</span></label>
-              <select id="car_id" required>
-                <option value="">เลือกรถ</option>
-              </select>
-            </div>
-
-            <!-- 2. เลือกผู้นำไปซ่อม -->
-            <div class="form-group">
-              <label>ผู้นำไปซ่อม <span class="required">*</span></label>
-              <select id="taken_by" required>
-                <option value="">-- เลือกผู้นำไปซ่อม --</option>
-              </select>
-            </div>
-
-            <!-- 3. อาการเสียก่อนซ่อม -->
-            <div class="form-group">
-              <label>อาการเสียก่อนซ่อม <span class="required">*</span></label>
-              <textarea id="issue_description" required placeholder="อธิบายอาการเสียก่อนซ่อม"></textarea>
-            </div>
-
-            <!-- 4. วันที่และเวลาซ่อมเสร็จ -->
-            <div class="form-group datetime-group">
-              <div>
-                <label>วันที่ซ่อมเสร็จ <span class="required">*</span></label>
-                <input type="date" id="date_completed" required>
-              </div>
-              <div>
-                <label>เวลาซ่อมเสร็จ <span class="required">*</span></label>
-                <div style="display: flex; gap: 10px; align-items: flex-start;">
-                  <div style="flex: 1;">
-                    <input type="time" id="time_completed" required>
-                    <div class="help-text time-ampm-help" style="font-size: 0.85em; color: var(--color-text-muted); margin-top: 4px;">
-                      <strong>AM เช้า</strong> · <strong>PM บ่าย</strong>
-                    </div>
-                  </div>
-                  <button type="button" onclick="useCurrentTime('time_completed')" class="btn-use-current-time"
-                    style="padding: 12px 16px; background: var(--color-success); color: white; border: none; border-radius: var(--radius-md); font-size: 0.9em; font-weight: 600; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; touch-action: manipulation; align-self: flex-end;">
-                    ⏰ ใช้เวลาปัจจุบัน
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- 5. สถานที่ซ่อม -->
-            <div class="form-group">
-              <label>สถานที่ซ่อม <span class="required">*</span></label>
-              <input type="text" id="garage_name" required placeholder="ชื่ออู่/ศูนย์บริการ">
-            </div>
-
-            <!-- 6. รายการซ่อม -->
-            <div class="form-group">
-              <label>รายการซ่อม <span class="required">*</span></label>
-              <div class="help-box"
-                style="margin-bottom:10px; padding:12px; background:#fff8e1; border-left:4px solid var(--color-warning); border-radius:var(--radius-md); font-size:0.9em; color:#e65100;">
-                <strong>⚠️ เตือน:</strong> กรุณาพิมพ์รายการซ่อมให้ตรงกับคำที่แอดมินตั้งในเมนูแจ้งเตือน (ตั้งค่าระบบ →
-                รายการที่ต้องแจ้งเตือน) หรือใช้คำที่ระบบรู้จักด้านล่าง
-                เพื่อให้ระบบประมวลผลและแจ้งเตือนเมื่อครบระยะได้ถูกต้อง
-              </div>
-              <textarea id="repair_items" required
-                placeholder="เช่น เปลี่ยนน้ำมันเครื่อง, เปลี่ยนไส้กรองอากาศ"></textarea>
-              <small style="color: var(--color-text-muted); font-size: 0.85em;">คั่นด้วยจุลภาค (,) หรือขึ้นบรรทัดใหม่</small>
-              <div class="help-box"
-                style="margin-top:10px; padding:12px; background:#e8f4fd; border-radius:var(--radius-md); font-size:0.9em; color:#1565c0;">
-                <strong>คำที่ระบบรู้จัก (พิมพ์ให้ตรงหรือมีคำเหล่านี้ในรายการ):</strong><br>
-                น้ำมันเครื่อง · น้ำมันเกียร์ · น้ำมันเบรก · น้ำยาหล่อเย็น · ไส้กรองอากาศ · ไส้กรองแอร์ · ผ้าเบรก ·
-                จานเบรก · ยาง · โช้คอัพ · แบตเตอรี่ · ใบปัดน้ำฝน · หัวเทียน · สายพาน · ลูกหมาก · บูชยาง<br>
-                <span style="font-size:0.9em; color:#0d47a1;">(เมื่อบันทึกซ่อมเสร็จ
-                  ระบบจะอัปเดตประวัติการเปลี่ยนของรถคันนี้และนับครั้งถัดไปจากเลขไมล์ + วันที่ซ่อมเสร็จ
-                  ระยะที่ครบกำหนดตั้งในเมนูแอดมิน)</span>
-              </div>
-            </div>
-
-            <!-- 7. เลขไมล์ตอนเข้าซ่อม -->
-            <div class="form-group">
-              <label>เลขไมล์ตอนเข้าซ่อม <span class="required">*</span></label>
-              <input type="number" id="mileage_at_repair" min="0" required placeholder="0">
-              <small style="color: var(--color-text-muted); font-size: 0.85em;">ใช้สำหรับนับครั้งถัดไปที่ต้องแจ้งเตือน
-                (ร่วมกับรายการซ่อมด้านบน)</small>
-            </div>
-
-            <!-- 8. ราคาซ่อมรวม (บาท) -->
-            <div class="form-group">
-              <label>ราคาซ่อมรวม (บาท) <span class="required">*</span></label>
-              <input type="number" id="cost" min="0" step="0.01" required placeholder="0.00">
-            </div>
-
-            <!-- 9. หมายเหตุ -->
-            <div class="form-group">
-              <label>หมายเหตุ</label>
-              <textarea id="notes" placeholder="หมายเหตุเพิ่มเติม"></textarea>
-            </div>
+        <form id="reportForm" onsubmit="submitReport(event)">
+          <div class="form-group">
+            <label>รถ *</label>
+            <select id="rpt_car_id" required><option value="">เลือกรถ</option></select>
           </div>
-
-          <div class="form-section">
-            <div class="form-section-title">📎 เอกสาร</div>
-            <div class="form-group">
-              <label>แนบเอกสาร (ใบเสร็จ, รูปภาพ)</label>
-              <div class="file-upload" onclick="document.getElementById('documents').click()">
-                <input type="file" id="documents" multiple accept="image/*,.pdf"
-                  onchange="handleFileUpload('documents', 'documentsPreview')">
-                <p>📎 คลิกเพื่อเลือกไฟล์ (รูปภาพหรือ PDF)</p>
-              </div>
-              <div class="file-preview" id="documentsPreview"></div>
-            </div>
+          <div class="form-group">
+            <label>อาการ/ปัญหา *</label>
+            <textarea id="rpt_issue" rows="3" required placeholder="อธิบายอาการเสียหรือปัญหาที่พบ"></textarea>
           </div>
-
-          <div style="display: flex; gap: 10px; margin-top: 25px;">
-            <button type="button" class="btn btn-secondary" onclick="closeModal()" style="flex: 1;">
-              ยกเลิก
-            </button>
-            <button type="submit" class="btn btn-primary" id="submitBtn" style="flex: 1;">
-              💾 บันทึก
-            </button>
+          <div class="form-group">
+            <label>พนักงานขับรถที่แจ้ง</label>
+            <select id="rpt_driver"><option value="">-- เลือก (ถ้ามี) --</option></select>
           </div>
+          <div class="form-group">
+            <label>เลขไมล์ปัจจุบัน</label>
+            <input type="number" id="rpt_mileage" placeholder="กม.">
+          </div>
+          <div class="form-group">
+            <label>หมายเหตุ</label>
+            <textarea id="rpt_notes" rows="2" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary" id="rptSubmitBtn" style="width:100%">📩 ส่งแจ้งซ่อม</button>
         </form>
       </div>
     </div>
   </div>
 
-  <!-- Modal สำหรับลงคิวซ่อม -->
-  <div id="scheduleRepairModal" class="modal-overlay">
+  <!-- ═══════ Modal: Workflow Action (reusable) ═══════ -->
+  <div id="actionModal" class="modal-overlay">
     <div class="modal">
       <div class="modal-header">
-        <h2>📅 ลงคิวซ่อม</h2>
-        <button class="modal-close" onclick="closeScheduleRepairModal()" title="ปิด">×</button>
+        <h2 id="actTitle">ดำเนินการ</h2>
+        <button class="modal-close" onclick="closeActionModal()">×</button>
       </div>
       <div class="modal-body">
-        <form id="scheduleRepairForm" onsubmit="handleScheduleRepair(event); return false;">
-          <div class="form-section">
-            <div class="form-section-title">📋 ข้อมูลการลงคิวซ่อม</div>
-
-            <div class="form-group">
-              <label>รถ <span class="required">*</span></label>
-              <select id="schedule_car_id" required>
-                <option value="">เลือกรถ</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label>อาการเสีย <span class="required">*</span></label>
-              <textarea id="schedule_issue_description" required placeholder="อธิบายอาการเสีย"></textarea>
-            </div>
-
-            <div class="form-group datetime-group">
-              <div>
-                <label>วันที่เริ่มงดใช้ <span class="required">*</span></label>
-                <input type="date" id="schedule_start_date" required>
-              </div>
-              <div>
-                <label>เวลาที่เริ่มงดใช้</label>
-                <input type="time" id="schedule_start_time">
-              </div>
-            </div>
-
-            <div class="form-group datetime-group">
-              <div>
-                <label>วันที่คาดว่าจะกลับมาใช้</label>
-                <input type="date" id="schedule_expected_return_date">
-              </div>
-              <div>
-                <label>เวลาที่คาดว่าจะกลับมาใช้</label>
-                <input type="time" id="schedule_expected_return_time">
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label>ประเภทการซ่อม</label>
-              <select id="schedule_request_type">
-                <option value="planned">ปกติ</option>
-                <option value="urgent">ด่วน</option>
-                <option value="emergency">ฉุกเฉิน</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label>สถานที่ซ่อม</label>
-              <input type="text" id="schedule_garage_name" placeholder="ชื่ออู่/ศูนย์บริการ (ถ้าทราบ)">
-            </div>
-
-            <div class="form-group">
-              <label>หมายเหตุ</label>
-              <textarea id="schedule_notes" placeholder="หมายเหตุเพิ่มเติม"></textarea>
-            </div>
-          </div>
-
-          <div style="display: flex; gap: 10px; margin-top: 25px;">
-            <button type="button" class="btn btn-secondary" onclick="closeScheduleRepairModal()" style="flex: 1;">
-              ยกเลิก
-            </button>
-            <button type="submit" class="btn btn-warning" id="scheduleSubmitBtn"
-              style="flex: 1; background: var(--color-warning); color: white; border: none;">
-              📅 ลงคิวซ่อม
-            </button>
-          </div>
+        <form id="actionForm" onsubmit="submitAction(event)">
+          <div id="actFields"></div>
+          <button type="submit" class="btn btn-primary" id="actSubmitBtn" style="width:100%;margin-top:.75rem">✅ ยืนยัน</button>
         </form>
       </div>
     </div>
   </div>
-  <script>
-    var repairs = [];
-    var vehicles = [];
-    var drivers = [];
-    var editingRepairId = null;
-    var documentFiles = [];
 
-    // Wait for common.js to load
-    function waitForCommon() {
-      return new Promise(function (resolve) {
-        if (typeof apiCall !== 'undefined' && typeof getCurrentUser !== 'undefined') {
-          resolve();
-          return;
-        }
-
-        var checkCount = 0;
-        var checkInterval = setInterval(function () {
-          checkCount++;
-          if (typeof apiCall !== 'undefined' && typeof getCurrentUser !== 'undefined') {
-            clearInterval(checkInterval);
-            resolve();
-          } else if (checkCount > 50) {
-            clearInterval(checkInterval);
-            console.warn('common.js functions not loaded after 5 seconds');
-            resolve(); // Continue anyway
-          }
-        }, 100);
-      });
-    }
-
-    document.addEventListener('DOMContentLoaded', async function () {
-      await waitForCommon();
-
-      var isFileProtocol = window.location.protocol === 'file:';
-
-      // Check authentication (ไม่ redirect — ให้แสดงหน้าได้)
-      var isAuthenticated = false;
-      if (typeof requireAuth === 'function') {
-        isAuthenticated = requireAuth();
-        if (!isAuthenticated) {
-          console.warn('Not authenticated, but showing page anyway');
-        }
-      } else if (typeof checkAuth === 'function') {
-        isAuthenticated = checkAuth();
-        if (!isAuthenticated) {
-          console.warn('Not authenticated (checkAuth), but showing page anyway');
-        }
-      }
-
-      if (typeof hasModulePermission === 'undefined' || typeof getCurrentUser === 'undefined') {
-        console.warn('Required functions from common.js are not available');
-        // Still allow modal to open even if functions not ready
-        return;
-      }
-
-      // Check permission (ไม่ redirect — ให้แสดงหน้าได้)
-      var user = getCurrentUser();
-      if (user && !hasModulePermission('repair', 'view') && user.role !== 'admin') {
-        console.warn('No permission, but showing page anyway');
-        // ไม่ redirect — ให้แสดงหน้าได้
-      }
-
-      // ถ้ายังไม่ล็อกอิน ให้แสดงหน้าได้แต่ไม่โหลดข้อมูล
-      if (!isAuthenticated) {
-        return;
-      }
-
-      loadVehicles();
-      loadDrivers();
-      loadRepairs();
-
-      setTimeout(function () {
-        if (typeof initAllThaiDateTimePickers === 'function') {
-          initAllThaiDateTimePickers();
-        }
-      }, 500);
-
-      var addBtn = document.getElementById('addRepairBtn');
-      if (addBtn) {
-        addBtn.addEventListener('click', function (e) {
-          e.preventDefault();
-          if (typeof window.openAddModal === 'function') {
-            window.openAddModal();
-          } else {
-            alert('ระบบกำลังโหลด กรุณารอสักครู่แล้วกดอีกครั้ง');
-          }
-        });
-      }
-    });
-
-    async function loadVehicles() {
-      try {
-        var result = await apiCall('getVehicles', {});
-        if (result.success && result.data && result.data.vehicles) {
-          vehicles = result.data.vehicles || [];
-          var select = document.getElementById('filterCar');
-          var carSelect = document.getElementById('car_id');
-
-          if (select) {
-            select.innerHTML = '<option value="">ทั้งหมด</option>';
-          }
-          if (carSelect) {
-            carSelect.innerHTML = '<option value="">เลือกรถ</option>';
-          }
-
-          vehicles.forEach(function (vehicle) {
-            var option1 = document.createElement('option');
-            option1.value = vehicle.car_id;
-            option1.textContent = vehicle.license_plate + ' - ' + (vehicle.brand || '') + ' ' + (vehicle.model || '');
-            if (select) select.appendChild(option1);
-
-            var option2 = document.createElement('option');
-            option2.value = vehicle.car_id;
-            option2.textContent = vehicle.license_plate + ' - ' + (vehicle.brand || '') + ' ' + (vehicle.model || '');
-            if (carSelect) carSelect.appendChild(option2);
-          });
-        }
-      } catch (error) {
-        console.error('Error loading vehicles:', error);
-      }
-    }
-
-    async function loadDrivers() {
-      try {
-        var result = await apiCall('getDrivers', { status: 'active' });
-        if (result.success && result.data && result.data.drivers) {
-          drivers = result.data.drivers || [];
-          var takenBySelect = document.getElementById('taken_by');
-
-          if (takenBySelect) {
-            takenBySelect.innerHTML = '<option value="">-- เลือกผู้นำไปซ่อม --</option>';
-
-            drivers.forEach(function (driver) {
-              var option = document.createElement('option');
-              option.value = driver.driver_id;
-              option.textContent = (driver.title || '') + ' ' + (driver.first_name || '') + ' ' + (driver.last_name || '');
-              takenBySelect.appendChild(option);
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error loading drivers:', error);
-      }
-    }
-
-    function useCurrentTime(inputId) {
-      var now = new Date();
-      var hours = String(now.getHours()).padStart(2, '0');
-      var minutes = String(now.getMinutes()).padStart(2, '0');
-      var timeStr = hours + ':' + minutes;
-
-      var timeInput = document.getElementById(inputId);
-      if (timeInput) {
-        timeInput.value = timeStr;
-        if (timeInput._flatpickr) {
-          timeInput._flatpickr.setDate(timeStr, false);
-        }
-      }
-    }
-
-    async function loadRepairs() {
-      try {
-        document.getElementById('loading').style.display = 'block';
-        document.getElementById('repairsContainer').style.display = 'none';
-
-        var filters = {};
-        var filterCar = document.getElementById('filterCar').value;
-        var filterStatus = document.getElementById('filterStatus').value;
-        var dateFrom = document.getElementById('dateFrom').value;
-        var dateTo = document.getElementById('dateTo').value;
-
-        if (filterCar) filters.car_id = filterCar;
-        // Only show completed repairs by default, but allow filtering
-        if (filterStatus) {
-          filters.status = filterStatus;
-        } else {
-          // Default to completed only
-          filters.status = 'completed';
-        }
-        if (dateFrom) filters.date_from = dateFrom;
-        if (dateTo) filters.date_to = dateTo;
-
-        var result = await apiCall('getRepairs', filters);
-
-        if (result.success && result.data) {
-          repairs = Array.isArray(result.data) ? result.data : [];
-          displayRepairs(repairs);
-        } else {
-          repairs = [];
-          document.getElementById('repairsTableBody').innerHTML = '<tr><td colspan="9" class="empty-state"><div class="empty-state-icon">🔧</div><p>ไม่พบข้อมูลการซ่อม</p></td></tr>';
-          document.getElementById('repairsContainer').style.display = 'block';
-        }
-      } catch (error) {
-        console.error('Error loading repairs:', error);
-        showAlert('โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'error');
-      } finally {
-        document.getElementById('loading').style.display = 'none';
-      }
-    }
-
-    function displayRepairs(repairsList) {
-      var html = '';
-
-      if (repairsList.length === 0) {
-        html = '<tr><td colspan="8" class="empty-state"><div class="empty-state-icon">🔧</div><p>ไม่พบข้อมูลการซ่อม</p></td></tr>';
-      } else {
-        repairsList.forEach(function (repair) {
-          var vehicle = vehicles.find(function (v) { return v.car_id === repair.car_id; });
-          var vehicleName = vehicle ? (vehicle.license_plate + ' ' + vehicle.brand + ' ' + vehicle.model) : repair.car_id;
-
-          // Use date_completed if available, otherwise use date_reported
-          var completedDate = repair.date_completed || repair.date_reported || '';
-
-          html += '<tr>';
-          html += '<td>' + formatDateThai(completedDate) + '</td>';
-          html += '<td>' + vehicleName + '</td>';
-          html += '<td>' + (repair.mileage_at_repair ? repair.mileage_at_repair.toLocaleString() : '-') + ' กม.</td>';
-          html += '<td>' + (repair.issue_description || '-') + '</td>';
-          html += '<td>' + (repair.garage_name || '-') + '</td>';
-          html += '<td>' + (repair.taken_by || '-') + '</td>';
-          html += '<td>' + (repair.cost ? repair.cost.toLocaleString() + ' บาท' : '-') + '</td>';
-          html += '<td>';
-          if (hasModulePermission('repair', 'edit') || getCurrentUser().role === 'admin') {
-            html += '<button class="btn btn-primary" style="padding:5px 12px;font-size:0.85em;" onclick="editRepair(\'' + repair.id + '\')" title="แก้ไข">✏️ แก้ไข</button>';
-          }
-          html += '</td>';
-          html += '</tr>';
-        });
-      }
-
-      document.getElementById('repairsTableBody').innerHTML = html;
-      document.getElementById('repairsContainer').style.display = 'block';
-    }
-
-    // Make sure function is in global scope
-    window.openAddModal = function openAddModal() {
-      try {
-        var modal = document.getElementById('repairModal');
-        if (!modal) {
-          console.error('Modal element not found');
-          alert('เปิดฟอร์มไม่ได้ กรุณารีเฟรชหน้าแล้วลองอีกครั้ง');
-          return;
-        }
-
-        editingRepairId = null;
-        var modalTitle = document.getElementById('modalTitle');
-        if (modalTitle) {
-          modalTitle.textContent = 'บันทึกการซ่อมบำรุง (ซ่อมเสร็จแล้ว)';
-        }
-
-        var repairForm = document.getElementById('repairForm');
-        if (repairForm) {
-          repairForm.reset();
-        }
-
-        documentFiles = [];
-        var documentsPreview = document.getElementById('documentsPreview');
-        if (documentsPreview) {
-          documentsPreview.innerHTML = '';
-        }
-
-        var now = new Date();
-        var dateStr = formatDate(now);
-        var hours = String(now.getHours()).padStart(2, '0');
-        var minutes = String(now.getMinutes()).padStart(2, '0');
-        var timeStr = hours + ':' + minutes;
-
-        var dateCompleted = document.getElementById('date_completed');
-        var timeCompleted = document.getElementById('time_completed');
-        if (dateCompleted) dateCompleted.value = dateStr;
-        if (timeCompleted) timeCompleted.value = timeStr;
-
-        modal.classList.add('show');
-
-        setTimeout(function () {
-          if (typeof initAllThaiDateTimePickers === 'function') {
-            initAllThaiDateTimePickers();
-          }
-        }, 100);
-      } catch (error) {
-        console.error('Error opening add modal:', error);
-        alert(handleError(error));
-      }
-    };
-
-    async function editRepair(repairId) {
-      if (!hasModulePermission('repair', 'edit') && getCurrentUser().role !== 'admin') {
-        alert('คุณไม่มีสิทธิ์แก้ไขบันทึกซ่อม กรุณาติดต่อผู้ดูแลระบบ');
-        return;
-      }
-
-      var repair = repairs.find(function (r) { return r.id === repairId; });
-      if (!repair) {
-        // Try to load repair details from backend
-        try {
-          var result = await apiCall('getRepair', { id: repairId });
-          if (result.success && result.data) {
-            repair = result.data;
-          } else {
-            alert('ไม่พบข้อมูลรายการซ่อมนี้');
-            return;
-          }
-        } catch (error) {
-          alert('โหลดข้อมูลการซ่อมไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
-          return;
-        }
-      }
-
-      editingRepairId = repair.id;
-      document.getElementById('modalTitle').textContent = 'แก้ไขบันทึกการซ่อมบำรุง';
-
-      // Populate form
-      document.getElementById('car_id').value = repair.car_id || '';
-      document.getElementById('mileage_at_repair').value = repair.mileage_at_repair || '';
-      document.getElementById('cost').value = repair.cost || '';
-      document.getElementById('garage_name').value = repair.garage_name || '';
-
-      var takenBySelect = document.getElementById('taken_by');
-      if (takenBySelect) {
-        // Try to find driver by ID first, then by name
-        var driver = drivers.find(function (d) { return d.driver_id === repair.taken_by; });
-        if (driver) {
-          takenBySelect.value = driver.driver_id;
-        } else {
-          // If not found, try to match by name or set as text
-          takenBySelect.value = repair.taken_by || '';
-        }
-      }
-
-      document.getElementById('repair_items').value = Array.isArray(repair.repair_items) ? repair.repair_items.join(', ') : (repair.repair_items || '');
-      document.getElementById('issue_description').value = repair.issue_description || '';
-      document.getElementById('notes').value = repair.notes || '';
-
-      // Parse date_completed (preferred) or date_reported (could be date or datetime)
-      var completedDate = repair.date_completed || repair.date_reported || '';
-      var dateCompleted = document.getElementById('date_completed');
-      var timeCompleted = document.getElementById('time_completed');
-      if (completedDate) {
-        var dateParts = completedDate.split(' ');
-        if (dateParts.length >= 1 && dateCompleted) {
-          dateCompleted.value = dateParts[0];
-        }
-        if (dateParts.length >= 2 && timeCompleted) {
-          timeCompleted.value = dateParts[1].substring(0, 5); // HH:MM
-        }
-      }
-
-      documentFiles = [];
-      if (repair.documents && Array.isArray(repair.documents) && repair.documents.length > 0) {
-        // Documents are stored as URLs, we'll display them but can't edit them
-        repair.documents.forEach(function (url) {
-          documentFiles.push({
-            name: url.split('/').pop() || 'เอกสาร',
-            url: url,
-            isExisting: true
-          });
-        });
-        displayDocuments('documentsPreview', documentFiles);
-      } else {
-        document.getElementById('documentsPreview').innerHTML = '';
-      }
-
-      document.getElementById('repairModal').classList.add('show');
-
-      setTimeout(function () {
-        if (typeof initAllThaiDateTimePickers === 'function') {
-          initAllThaiDateTimePickers();
-        }
-      }, 100);
-    }
-
-    function closeModal() {
-      document.getElementById('repairModal').classList.remove('show');
-
-      var repairForm = document.getElementById('repairForm');
-      if (repairForm) {
-        repairForm.reset();
-      }
-
-      documentFiles = [];
-      var documentsPreview = document.getElementById('documentsPreview');
-      if (documentsPreview) {
-        documentsPreview.innerHTML = '';
-      }
-    }
-
-    function handleFileUpload(inputId, previewId) {
-      var input = document.getElementById(inputId);
-      var files = input.files;
-
-      for (var i = 0; i < files.length; i++) {
-        var file = files[i];
-        var reader = new FileReader();
-        reader.onload = function (e) {
-          documentFiles.push({
-            name: file.name,
-            data: e.target.result.split(',')[1],
-            mime: file.type
-          });
-          displayDocuments(previewId, documentFiles);
-        };
-        reader.readAsDataURL(file);
-      }
-    }
-
-    function displayDocuments(previewId, files) {
-      var html = '';
-      files.forEach(function (file, index) {
-        html += '<div class="file-preview-item">';
-        if (file.isExisting && file.url) {
-          // Existing document from server
-          if (file.url.toLowerCase().endsWith('.pdf') || file.name.toLowerCase().endsWith('.pdf')) {
-            html += '<div style="width:100%;height:150px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-md);flex-direction:column;gap:8px;">';
-            html += '<span style="font-size:2em;">📄</span>';
-            html += '<span style="font-size:0.85em;word-break:break-word;text-align:center;padding:0 8px;">' + file.name + '</span>';
-            html += '<a href="' + file.url + '" target="_blank" style="font-size:0.8em;color:var(--color-primary);text-decoration:none;">เปิดดู</a>';
-            html += '</div>';
-          } else {
-            html += '<img src="' + file.url + '" alt="Preview" style="width:100%;height:150px;object-fit:cover;">';
-          }
-          html += '<button type="button" class="remove" onclick="removeDocument(' + index + ')" title="ลบ">×</button>';
-        } else if (file.name.toLowerCase().endsWith('.pdf')) {
-          html += '<div style="width:100%;height:150px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-md);">📄 ' + file.name + '</div>';
-          html += '<button type="button" class="remove" onclick="removeDocument(' + index + ')" title="ลบ">×</button>';
-        } else {
-          html += '<img src="data:' + file.mime + ';base64,' + file.data + '" alt="Preview">';
-          html += '<button type="button" class="remove" onclick="removeDocument(' + index + ')" title="ลบ">×</button>';
-        }
-        html += '</div>';
-      });
-      document.getElementById(previewId).innerHTML = html;
-    }
-
-    function removeDocument(index) {
-      documentFiles.splice(index, 1);
-      displayDocuments('documentsPreview', documentFiles);
-    }
-
-    async function handleSubmit(event) {
-      event.preventDefault();
-
-      var isFileProtocol = window.location.protocol === 'file:';
-
-      if (typeof getCurrentUser === 'undefined' || typeof hasModulePermission === 'undefined') {
-        if (isFileProtocol) {
-          alert('ขณะนี้เปิดไฟล์จากเครื่องตัวเอง จึงบันทึกข้อมูลจริงไม่ได้\nกรุณาเปิดผ่านเว็บของโรงเรียนหรือลิงก์ที่ได้รับจากผู้ดูแลระบบ');
-        } else {
-          alert('ระบบกำลังโหลด กรุณารอสักครู่แล้วลองอีกครั้ง');
-        }
-        return;
-      }
-
-      var user = getCurrentUser();
-      if (!isFileProtocol && !user) {
-        alert('กรุณาล็อกอินก่อนจึงจะบันทึกหรือแก้ไขได้');
-        // ไม่ redirect — ให้ผู้ใช้ไปล็อกอินเอง
-        return;
-      }
-
-      if (editingRepairId) {
-        // Editing
-        if (!hasModulePermission('repair', 'edit') && user.role !== 'admin') {
-          alert('คุณไม่มีสิทธิ์แก้ไขบันทึกซ่อม กรุณาติดต่อผู้ดูแลระบบ');
-          return;
-        }
-      } else {
-        // Creating
-        if (!hasModulePermission('repair', 'create') && user.role !== 'admin') {
-          alert('คุณไม่มีสิทธิ์เพิ่มบันทึกซ่อม กรุณาติดต่อผู้ดูแลระบบ');
-          return;
-        }
-      }
-
-      var submitBtn = document.getElementById('submitBtn');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'กำลังบันทึก...';
-
-      try {
-        // Combine date + time for date_completed (required - ซ่อมเสร็จแล้ว)
-        var dateCompleted = document.getElementById('date_completed').value;
-        var timeCompleted = document.getElementById('time_completed').value;
-        var dateCompletedFull = dateCompleted + (timeCompleted ? ' ' + timeCompleted + ':00' : '');
-
-        var takenByValue = document.getElementById('taken_by').value;
-        // If it's a driver_id, get the driver name; otherwise use the value as-is
-        var driver = drivers.find(function (d) { return d.driver_id === takenByValue; });
-        var takenByName = driver ? ((driver.title || '') + ' ' + (driver.first_name || '') + ' ' + (driver.last_name || '')).trim() : takenByValue;
-
-        var repairData = {
-          car_id: document.getElementById('car_id').value,
-          date_reported: dateCompletedFull, // Use completed date as reported date for backward compatibility
-          date_completed: dateCompletedFull, // Primary field for completed date
-          mileage_at_repair: parseInt(document.getElementById('mileage_at_repair').value) || 0,
-          garage_name: document.getElementById('garage_name').value.trim(),
-          taken_by: takenByName || takenByValue,
-          repair_items: document.getElementById('repair_items').value.trim().split(/[,\n]/).map(function (item) { return item.trim(); }).filter(function (item) { return item; }),
-          issue_description: document.getElementById('issue_description').value.trim(),
-          cost: parseFloat(document.getElementById('cost').value) || 0,
-          notes: document.getElementById('notes').value.trim(),
-          status: 'completed' // Always completed when creating new record
-        };
-
-        // This will unlock the vehicle after repair is completed
-        try {
-          var scheduledRepairsResult = await apiCall('getScheduledRepairs', {
-            car_id: repairData.car_id,
-            status: 'pending'
-          });
-
-          var scheduledList = scheduledRepairsResult.success && Array.isArray(scheduledRepairsResult.data) ? scheduledRepairsResult.data : [];
-          if (scheduledList.length > 0) {
-            // Link to the first pending scheduled repair
-            repairData.scheduled_repair_id = scheduledList[0].id;
-          }
-        } catch (schedError) {
-          console.warn('Could not check scheduled repairs:', schedError);
-        }
-
-        // Only upload new files (not existing ones)
-        var newFiles = documentFiles.filter(function (file) { return !file.isExisting; });
-        if (newFiles.length > 0) {
-          repairData.documents_base64 = newFiles.map(function (file) {
-            return {
-              name: file.name,
-              data: file.data,
-              mime: file.mime
-            };
-          });
-        }
-
-        var result;
-        if (editingRepairId) {
-          repairData.id = editingRepairId;
-          result = await apiCall('updateRepair', repairData);
-        } else {
-          result = await apiCall('createRepair', repairData);
-        }
-
-        if (result.success) {
-          showAlert(editingRepairId ? 'แก้ไขบันทึกการซ่อมบำรุงสำเร็จ' : 'บันทึกการซ่อมบำรุงสำเร็จ', 'success');
-          closeModal();
-          loadRepairs();
-        } else {
-          showAlert(typeof getUserMessage !== 'undefined' ? getUserMessage(result.message) : (result.message || 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'), 'error');
-        }
-      } catch (error) {
-        console.error('Error saving repair:', error);
-        showAlert(handleError(error), 'error');
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = '💾 บันทึก';
-      }
-    }
-
-
-    function formatDate(date) {
-      if (!date) return '';
-      var d = new Date(date);
-      var year = d.getFullYear();
-      var month = String(d.getMonth() + 1).padStart(2, '0');
-      var day = String(d.getDate()).padStart(2, '0');
-      return year + '-' + month + '-' + day;
-    }
-
-    function formatDateThai(dateStr) {
-      if (!dateStr) return '-';
-      try {
-        var date = new Date(dateStr + 'T00:00:00');
-        var thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
-          'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-        var day = date.getDate();
-        var month = thaiMonths[date.getMonth()];
-        var year = date.getFullYear() + 543;
-        return day + ' ' + month + ' ' + year;
-      } catch (e) {
-        return dateStr;
-      }
-    }
-
-    function showAlert(message, type) {
-      var container = document.getElementById('alertContainer');
-      var alert = document.createElement('div');
-      alert.className = 'alert alert-' + type;
-      alert.textContent = message;
-      container.innerHTML = '';
-      container.appendChild(alert);
-
-      setTimeout(function () {
-        alert.remove();
-      }, 5000);
-    }
-
-    // Schedule Repair Functions
-    function openScheduleRepairModal() {
-      try {
-        var modal = document.getElementById('scheduleRepairModal');
-        if (!modal) {
-          alert('เปิดฟอร์มไม่ได้ กรุณารีเฟรชหน้าแล้วลองอีกครั้ง');
-          return;
-        }
-
-        var form = document.getElementById('scheduleRepairForm');
-        if (form) {
-          form.reset();
-        }
-
-        var today = formatDate(new Date());
-        var startDate = document.getElementById('schedule_start_date');
-        if (startDate) {
-          startDate.value = today;
-        }
-
-        // Populate car dropdown if not already populated
-        var scheduleCarSelect = document.getElementById('schedule_car_id');
-        if (scheduleCarSelect && scheduleCarSelect.options.length <= 1) {
-          scheduleCarSelect.innerHTML = '<option value="">เลือกรถ</option>';
-          vehicles.forEach(function (vehicle) {
-            var option = document.createElement('option');
-            option.value = vehicle.car_id;
-            option.textContent = vehicle.license_plate + ' - ' + (vehicle.brand || '') + ' ' + (vehicle.model || '');
-            scheduleCarSelect.appendChild(option);
-          });
-        }
-
-        modal.classList.add('show');
-
-        setTimeout(function () {
-          if (typeof initAllThaiDateTimePickers === 'function') {
-            initAllThaiDateTimePickers();
-          }
-        }, 100);
-      } catch (error) {
-        console.error('Error opening schedule repair modal:', error);
-        alert(handleError(error));
-      }
-    }
-
-    function closeScheduleRepairModal() {
-      var modal = document.getElementById('scheduleRepairModal');
-      if (modal) {
-        modal.classList.remove('show');
-      }
-
-      var form = document.getElementById('scheduleRepairForm');
-      if (form) {
-        form.reset();
-      }
-    }
-
-    async function handleScheduleRepair(event) {
-      event.preventDefault();
-
-      var isFileProtocol = window.location.protocol === 'file:';
-
-      if (!isFileProtocol) {
-        if (typeof getCurrentUser === 'undefined' || typeof hasModulePermission === 'undefined') {
-          alert('ระบบกำลังโหลด กรุณารอสักครู่แล้วลองอีกครั้ง');
-          return;
-        }
-
-        var user = getCurrentUser();
-        if (!user) {
-          alert('กรุณาล็อกอินก่อนจึงจะบันทึกหรือแก้ไขได้');
-          // ไม่ redirect — ให้ผู้ใช้ไปล็อกอินเอง
-          return;
-        }
-
-        if (!hasModulePermission('repair', 'create') && user.role !== 'admin') {
-          alert('คุณไม่มีสิทธิ์ลงคิวซ่อม กรุณาติดต่อผู้ดูแลระบบ');
-          return;
-        }
-      }
-
-      var submitBtn = document.getElementById('scheduleSubmitBtn');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'กำลังลงคิว...';
-
-      try {
-        var scheduleData = {
-          car_id: document.getElementById('schedule_car_id').value,
-          request_type: document.getElementById('schedule_request_type').value || 'planned',
-          start_date: document.getElementById('schedule_start_date').value,
-          start_time: document.getElementById('schedule_start_time').value || '',
-          expected_return_date: document.getElementById('schedule_expected_return_date').value || '',
-          expected_return_time: document.getElementById('schedule_expected_return_time').value || '',
-          issue_description: document.getElementById('schedule_issue_description').value.trim(),
-          garage_name: document.getElementById('schedule_garage_name').value.trim(),
-          notes: document.getElementById('schedule_notes').value.trim()
-        };
-
-        var result = await apiCall('createScheduledRepair', {
-          data: scheduleData
-        });
-
-        if (result.success) {
-          showAlert('ลงคิวซ่อมสำเร็จ - รถถูกงดใช้งานแล้ว', 'success');
-          closeScheduleRepairModal();
-          loadRepairs();
-        } else {
-          showAlert(typeof getUserMessage !== 'undefined' ? getUserMessage(result.message) : (result.message || 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'), 'error');
-        }
-      } catch (error) {
-        console.error('Error scheduling repair:', error);
-        showAlert(handleError(error), 'error');
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = '📅 ลงคิวซ่อม';
-      }
-    }
-  </script>
-
-  <div style="background: var(--color-bg-light); padding: 20px; text-align: center; color: var(--color-text-muted); font-size: 0.9em; margin-top: 20px;">
+  <!-- ═══════ Modal: บันทึกซ่อมเสร็จ/ย้อนหลัง ═══════ -->
+  <div id="completedModal" class="modal-overlay">
+    <div class="modal" style="max-width:600px">
+      <div class="modal-header">
+        <h2 id="cmpTitle">📝 บันทึกซ่อมย้อนหลัง</h2>
+        <button class="modal-close" onclick="closeCompletedModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="completedForm" onsubmit="submitCompleted(event)">
+          <div class="form-group">
+            <label>รถ *</label>
+            <select id="cmp_car_id" required><option value="">เลือกรถ</option></select>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>วันที่ซ่อมเสร็จ *</label><input type="text" id="cmp_date" class="thai-datepicker" required></div>
+            <div class="form-group"><label>เวลา</label><input type="text" id="cmp_time" class="thai-timepicker"></div>
+          </div>
+          <div class="form-group">
+            <label>อาการ/รายการซ่อม *</label>
+            <textarea id="cmp_issue" rows="3" required placeholder="อธิบายสิ่งที่ซ่อม"></textarea>
+          </div>
+          <div class="form-group">
+            <label>รายการซ่อม (คั่นด้วย , )</label>
+            <input type="text" id="cmp_items" placeholder="เปลี่ยนยาง, เปลี่ยนน้ำมันเครื่อง">
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>เลขไมล์</label><input type="number" id="cmp_mileage" placeholder="กม."></div>
+            <div class="form-group"><label>ค่าใช้จ่าย (บาท)</label><input type="number" id="cmp_cost" step="0.01" placeholder="0.00"></div>
+          </div>
+          <div class="form-group">
+            <label>อู่/ร้านซ่อม</label>
+            <input type="text" id="cmp_garage" placeholder="ชื่ออู่หรือร้านซ่อม">
+          </div>
+          <div class="form-group">
+            <label>ผู้นำไปซ่อม</label>
+            <select id="cmp_taken_by"><option value="">-- เลือก --</option></select>
+          </div>
+          <div class="form-group">
+            <label>หมายเหตุ</label>
+            <textarea id="cmp_notes" rows="2"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary" id="cmpSubmitBtn" style="width:100%">💾 บันทึก</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ Modal: รายละเอียดซ่อม ═══════ -->
+  <div id="detailModal" class="modal-overlay">
+    <div class="modal" style="max-width:650px">
+      <div class="modal-header">
+        <h2>🔧 รายละเอียดการซ่อม</h2>
+        <button class="modal-close" onclick="closeDetailModal()">×</button>
+      </div>
+      <div class="modal-body" id="detailBody"></div>
+    </div>
+  </div>
+
+  <div style="background:var(--color-bg-light);padding:20px;text-align:center;color:var(--color-text-muted);font-size:.9em;margin-top:20px">
     <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
   </div>
-</body>
 
+  <script>
+    /* ─── State ─── */
+    var vehicles = [], drivers = [], currentTab = 'workflow';
+    var editingId = null, currentAction = null, currentRepairId = null;
+
+    var STATUS_MAP = {
+      requested:  { label: 'รอพิจารณา',    icon: '📨', cls: 'status-requested' },
+      approved:   { label: 'อนุมัติแล้ว',   icon: '✅', cls: 'status-approved' },
+      inspected:  { label: 'ตรวจสภาพแล้ว', icon: '🔍', cls: 'status-inspected' },
+      documented: { label: 'ทำบันทึกแล้ว', icon: '📄', cls: 'status-documented' },
+      repairing:  { label: 'กำลังซ่อม',    icon: '🔨', cls: 'status-repairing' },
+      completed:  { label: 'ซ่อมเสร็จ',    icon: '✅', cls: 'status-completed' },
+      rejected:   { label: 'ไม่อนุมัติ',    icon: '❌', cls: 'status-rejected' }
+    };
+    var STEP_ORDER = ['requested','approved','inspected','documented','repairing','completed'];
+
+    /* ─── Init ─── */
+    function waitForCommon(){return new Promise(function(resolve){if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){resolve();return}var c=0;var t=setInterval(function(){c++;if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){clearInterval(t);resolve()}else if(c>50){clearInterval(t);resolve()}},100)})}
+
+    document.addEventListener('DOMContentLoaded', async function(){
+      await waitForCommon();
+      if(typeof requireAuth==='function'&&!requireAuth()) return;
+      await Promise.all([loadVehicles(), loadDrivers()]);
+      loadWorkflow();
+      setTimeout(function(){if(typeof initAllThaiDateTimePickers==='function') initAllThaiDateTimePickers()},500);
+    });
+
+    /* ─── Tab Switch ─── */
+    function switchTab(tab){
+      currentTab = tab;
+      document.querySelectorAll('.tab-content').forEach(function(el){el.classList.remove('active')});
+      document.querySelectorAll('.tab').forEach(function(el){el.classList.remove('active')});
+      document.getElementById('tab-'+tab).classList.add('active');
+      event.target.classList.add('active');
+      if(tab==='workflow') loadWorkflow();
+      else if(tab==='history') loadHistory();
+      else if(tab==='inspection') loadInspection();
+    }
+
+    /* ─── Load Vehicles & Drivers ─── */
+    async function loadVehicles(){
+      try{
+        var r=await apiCall('getVehicles',{});
+        if(r.success&&r.data&&r.data.vehicles) vehicles=r.data.vehicles;
+        ['wfFilterCar','hFilterCar','insFilterCar','rpt_car_id','cmp_car_id'].forEach(function(selId){
+          var sel=document.getElementById(selId);
+          if(!sel) return;
+          var val=sel.value;
+          var isFilter=selId.indexOf('Filter')!==-1;
+          sel.innerHTML=isFilter?'<option value="">รถทั้งหมด</option>':'<option value="">เลือกรถ</option>';
+          vehicles.forEach(function(v){
+            var o=document.createElement('option');
+            o.value=v.car_id;
+            o.textContent=v.license_plate+' - '+(v.brand||'')+' '+(v.model||'');
+            sel.appendChild(o);
+          });
+          if(val) sel.value=val;
+        });
+      }catch(e){console.error(e)}
+    }
+
+    async function loadDrivers(){
+      try{
+        var r=await apiCall('getDrivers',{status:'active'});
+        if(r.success&&r.data&&r.data.drivers) drivers=r.data.drivers;
+        ['rpt_driver','cmp_taken_by'].forEach(function(selId){
+          var sel=document.getElementById(selId);
+          if(!sel) return;
+          sel.innerHTML='<option value="">-- เลือก --</option>';
+          drivers.forEach(function(d){
+            var o=document.createElement('option');
+            o.value=d.driver_id;
+            o.textContent=(d.title||'')+' '+(d.first_name||'')+' '+(d.last_name||'');
+            sel.appendChild(o);
+          });
+        });
+      }catch(e){console.error(e)}
+    }
+
+    /* ─── Helpers ─── */
+    function vLabel(carId){
+      var v=vehicles.find(function(x){return x.car_id===carId});
+      return v?(v.license_plate+' '+(v.brand||'')+' '+(v.model||'')).trim():carId||'-';
+    }
+    function dLabel(driverId){
+      var d=drivers.find(function(x){return x.driver_id===driverId});
+      return d?((d.title||'')+' '+(d.first_name||'')+' '+(d.last_name||'')).trim():(driverId||'-');
+    }
+    function fmtDate(s){
+      if(!s) return '-';
+      try{
+        var p=s.split(/[T ]/);var dd=p[0].split('-');
+        var months=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+        return parseInt(dd[2])+' '+months[parseInt(dd[1])-1]+' '+(parseInt(dd[0])+543);
+      }catch(e){return s}
+    }
+    function statusBadge(s){
+      var m=STATUS_MAP[s]||{label:s,icon:'',cls:''};
+      return '<span class="status-badge '+m.cls+'">'+m.icon+' '+m.label+'</span>';
+    }
+    function showAlert(msg,type){
+      var c=document.getElementById('alertContainer');
+      c.innerHTML='<div class="alert alert-'+type+'">'+msg+'</div>';
+      setTimeout(function(){c.innerHTML=''},5000);
+    }
+
+    /* ═══════════════════════════════════════════════════
+       Tab 1: Workflow — แจ้งซ่อม / ติดตามสถานะ
+       ═══════════════════════════════════════════════════ */
+    async function loadWorkflow(){
+      var el=document.getElementById('wfList');
+      document.getElementById('wfLoading').style.display='block';
+      el.innerHTML='';
+      try{
+        var filters={};
+        var fc=document.getElementById('wfFilterCar').value;
+        var fs=document.getElementById('wfFilterStatus').value;
+        if(fc) filters.car_id=fc;
+        if(fs) filters.status=fs;
+        var r=await apiCall('getRepairs',filters);
+        var list=(r.success&&r.data)?( Array.isArray(r.data)?r.data:[] ):[];
+        if(!fs) list=list.filter(function(x){return x.status!=='completed'});
+        if(list.length===0){
+          el.innerHTML='<div class="empty-state"><div class="empty-state-icon">🔧</div><p>ไม่มีรายการแจ้งซ่อม</p></div>';
+        } else {
+          list.forEach(function(rp){ el.innerHTML+=renderWorkflowCard(rp) });
+        }
+      }catch(e){console.error(e);el.innerHTML='<p style="color:var(--color-danger)">โหลดข้อมูลไม่สำเร็จ</p>'}
+      finally{document.getElementById('wfLoading').style.display='none'}
+    }
+
+    function renderWorkflowCard(rp){
+      var user=getCurrentUser();
+      var isAdmin=user&&(user.role==='admin'||hasModulePermission('repair','edit'));
+      var sm=STATUS_MAP[rp.status]||{label:rp.status,icon:'',cls:''};
+
+      var html='<div class="repair-card">';
+      html+='<div class="repair-card-header">';
+      html+='<div class="repair-card-title">'+vLabel(rp.car_id)+'</div>';
+      html+=statusBadge(rp.status);
+      html+='</div>';
+      html+='<div class="repair-card-body">';
+      html+='<p>📝 '+(rp.issue_description||'-')+'</p>';
+      html+='<p style="font-size:.8rem;color:var(--color-text-muted)">แจ้งเมื่อ '+fmtDate(rp.date_reported)+' โดย '+(rp.reporter_name||'-')+'</p>';
+
+      // Timeline
+      html+='<div class="timeline">';
+      var currentIdx=STEP_ORDER.indexOf(rp.status);
+      var isRejected=rp.status==='rejected';
+      STEP_ORDER.forEach(function(step,i){
+        var isDone=i<currentIdx;
+        var isActive=i===currentIdx;
+        var cls=isDone?'done':(isActive?'active':'');
+        if(isRejected&&step==='requested') cls='rejected';
+        var sl=STATUS_MAP[step]||{label:step,icon:''};
+        html+='<div class="tl-step '+cls+'">';
+        html+='<div class="tl-dot"></div>';
+        html+='<div class="tl-label">'+sl.icon+' '+sl.label+'</div>';
+        // Show meta info for completed steps
+        if(step==='requested'&&rp.date_reported) html+='<div class="tl-meta">'+fmtDate(rp.date_reported)+'</div>';
+        if(step==='approved'&&rp.approved_at) html+='<div class="tl-meta">'+fmtDate(rp.approved_at)+'</div>';
+        if(step==='inspected'&&rp.inspection_date) html+='<div class="tl-meta">'+fmtDate(rp.inspection_date)+'</div>';
+        if(step==='repairing'&&rp.date_started) html+='<div class="tl-meta">'+fmtDate(rp.date_started)+' | '+(rp.garage_name||'-')+'</div>';
+        if(step==='completed'&&rp.date_completed) html+='<div class="tl-meta">'+fmtDate(rp.date_completed)+' | '+(rp.cost?rp.cost.toLocaleString()+' บาท':'-')+'</div>';
+
+        // Action buttons for current step (admin only)
+        if(isActive&&isAdmin&&!isRejected){
+          html+='<div class="tl-action">';
+          if(step==='requested'){
+            html+='<button class="btn btn-primary" style="padding:4px 12px;font-size:.82rem" onclick="openAction(\'approve\',\''+rp.id+'\')">✅ อนุมัติ</button> ';
+            html+='<button class="btn btn-danger" style="padding:4px 12px;font-size:.82rem" onclick="openAction(\'reject\',\''+rp.id+'\')">❌ ไม่อนุมัติ</button>';
+          }
+          if(step==='approved') html+='<button class="btn btn-primary" style="padding:4px 12px;font-size:.82rem" onclick="openAction(\'inspect\',\''+rp.id+'\')">🔍 บันทึกตรวจสภาพ</button>';
+          if(step==='inspected') html+='<button class="btn btn-primary" style="padding:4px 12px;font-size:.82rem" onclick="openAction(\'document\',\''+rp.id+'\')">📄 ทำบันทึกข้อความ</button>';
+          if(step==='documented') html+='<button class="btn btn-primary" style="padding:4px 12px;font-size:.82rem" onclick="openAction(\'start-repair\',\''+rp.id+'\')">🔨 เริ่มซ่อม</button>';
+          if(step==='repairing') html+='<button class="btn btn-primary" style="padding:4px 12px;font-size:.82rem" onclick="openAction(\'complete\',\''+rp.id+'\')">✅ ซ่อมเสร็จ</button>';
+          html+='</div>';
+        }
+        html+='</div>';
+      });
+      if(isRejected){
+        html+='<div class="tl-step rejected">';
+        html+='<div class="tl-dot"></div>';
+        html+='<div class="tl-label">❌ ไม่อนุมัติ</div>';
+        html+='<div class="tl-meta">'+(rp.rejection_reason||'-')+'</div>';
+        html+='</div>';
+      }
+      html+='</div>'; // end timeline
+
+      html+='</div>'; // end body
+      html+='<div style="margin-top:.5rem;text-align:right">';
+      html+='<button class="btn btn-ghost" style="padding:4px 10px;font-size:.82rem" onclick="showDetail(\''+rp.id+'\')">📄 รายละเอียด</button>';
+      html+='</div>';
+      html+='</div>'; // end card
+      return html;
+    }
+
+    /* ─── Report Modal (แจ้งซ่อม) ─── */
+    function openReportModal(){
+      document.getElementById('reportForm').reset();
+      document.getElementById('reportModal').classList.add('show');
+    }
+    function closeReportModal(){document.getElementById('reportModal').classList.remove('show')}
+
+    async function submitReport(e){
+      e.preventDefault();
+      var btn=document.getElementById('rptSubmitBtn');
+      btn.disabled=true; btn.textContent='กำลังส่ง...';
+      try{
+        var data={
+          car_id: document.getElementById('rpt_car_id').value,
+          issue_description: document.getElementById('rpt_issue').value.trim(),
+          requested_by_driver_id: document.getElementById('rpt_driver').value||null,
+          mileage_at_repair: parseInt(document.getElementById('rpt_mileage').value)||0,
+          notes: document.getElementById('rpt_notes').value.trim()
+        };
+        var r=await apiCall('createRepair',data);
+        if(r.success){
+          showAlert('ส่งแจ้งซ่อมเรียบร้อยแล้ว','success');
+          closeReportModal();
+          loadWorkflow();
+        }else{showAlert(r.message||'ดำเนินการไม่สำเร็จ','error')}
+      }catch(e){showAlert('เกิดข้อผิดพลาด กรุณาลองใหม่','error')}
+      finally{btn.disabled=false;btn.textContent='📩 ส่งแจ้งซ่อม'}
+    }
+
+    /* ─── Action Modal (workflow transitions) ─── */
+    function openAction(action,repairId){
+      currentAction=action; currentRepairId=repairId;
+      var title='', fields='';
+      switch(action){
+        case 'approve':
+          title='✅ อนุมัติแจ้งซ่อม';
+          fields='<p style="font-size:.9rem">ยืนยันอนุมัติการแจ้งซ่อมรายการนี้?</p>';
+          break;
+        case 'reject':
+          title='❌ ไม่อนุมัติแจ้งซ่อม';
+          fields='<div class="form-group"><label>เหตุผล *</label><textarea id="act_reason" rows="3" required placeholder="ระบุเหตุผลที่ไม่อนุมัติ"></textarea></div>';
+          break;
+        case 'inspect':
+          title='🔍 บันทึกตรวจสภาพ+ใบเสนอราคา';
+          fields='<div class="form-group"><label>วันที่ตรวจ</label><input type="text" id="act_inspect_date" class="thai-datepicker"></div>';
+          fields+='<div class="form-group"><label>อู่/ร้านซ่อม</label><input type="text" id="act_garage" placeholder="ชื่ออู่"></div>';
+          fields+='<div class="form-group"><label>บันทึกผลตรวจ</label><textarea id="act_inspect_notes" rows="3" placeholder="ผลการตรวจสภาพ"></textarea></div>';
+          break;
+        case 'document':
+          title='📄 ทำบันทึกข้อความ';
+          fields='<div class="form-group"><label>บันทึกข้อความ</label><textarea id="act_memo_notes" rows="3" placeholder="รายละเอียดบันทึกข้อความ"></textarea></div>';
+          break;
+        case 'start-repair':
+          title='🔨 เริ่มดำเนินการซ่อม';
+          fields='<div class="form-group"><label>วันที่เริ่มซ่อม</label><input type="text" id="act_start_date" class="thai-datepicker"></div>';
+          fields+='<div class="form-group"><label>อู่/ร้านซ่อม</label><input type="text" id="act_sr_garage" placeholder="ชื่ออู่"></div>';
+          fields+='<div class="form-group"><label>ค่าใช้จ่ายประมาณ (บาท)</label><input type="number" id="act_sr_cost" step="0.01"></div>';
+          break;
+        case 'complete':
+          title='✅ บันทึกซ่อมเสร็จ';
+          fields='<div class="form-group"><label>วันที่ซ่อมเสร็จ</label><input type="text" id="act_complete_date" class="thai-datepicker"></div>';
+          fields+='<div class="form-group"><label>ค่าใช้จ่ายรวม (บาท)</label><input type="number" id="act_c_cost" step="0.01"></div>';
+          fields+='<div class="form-group"><label>หมายเหตุ</label><textarea id="act_c_notes" rows="2"></textarea></div>';
+          break;
+      }
+      document.getElementById('actTitle').textContent=title;
+      document.getElementById('actFields').innerHTML=fields;
+      document.getElementById('actionModal').classList.add('show');
+      setTimeout(function(){if(typeof initAllThaiDateTimePickers==='function') initAllThaiDateTimePickers()},100);
+    }
+    function closeActionModal(){document.getElementById('actionModal').classList.remove('show');currentAction=null;currentRepairId=null}
+
+    async function submitAction(e){
+      e.preventDefault();
+      var btn=document.getElementById('actSubmitBtn');
+      btn.disabled=true; btn.textContent='กำลังดำเนินการ...';
+      try{
+        var path='/api/repair/log/'+currentRepairId+'/'+currentAction;
+        var body={};
+        switch(currentAction){
+          case 'reject':
+            body.reason=(document.getElementById('act_reason')||{}).value||'';
+            break;
+          case 'inspect':
+            body.inspection_date=(document.getElementById('act_inspect_date')||{}).value||'';
+            body.garage_name=(document.getElementById('act_garage')||{}).value||'';
+            body.inspection_notes=(document.getElementById('act_inspect_notes')||{}).value||'';
+            break;
+          case 'document':
+            body.memo_notes=(document.getElementById('act_memo_notes')||{}).value||'';
+            break;
+          case 'start-repair':
+            body.date_started=(document.getElementById('act_start_date')||{}).value||'';
+            body.garage_name=(document.getElementById('act_sr_garage')||{}).value||'';
+            body.cost=parseFloat((document.getElementById('act_sr_cost')||{}).value)||null;
+            break;
+          case 'complete':
+            body.date_completed=(document.getElementById('act_complete_date')||{}).value||'';
+            body.cost=parseFloat((document.getElementById('act_c_cost')||{}).value)||null;
+            body.notes=(document.getElementById('act_c_notes')||{}).value||'';
+            break;
+        }
+        var r=await API.put(path,body);
+        if(r.success){
+          showAlert(r.message||'ดำเนินการสำเร็จ','success');
+          closeActionModal();
+          loadWorkflow();
+        }else{showAlert(r.message||r.error||'ดำเนินการไม่สำเร็จ','error')}
+      }catch(e){console.error(e);showAlert('เกิดข้อผิดพลาด กรุณาลองใหม่','error')}
+      finally{btn.disabled=false;btn.textContent='✅ ยืนยัน'}
+    }
+
+    /* ─── Detail Modal ─── */
+    async function showDetail(id){
+      var body=document.getElementById('detailBody');
+      body.innerHTML='<div class="loading">กำลังโหลด...</div>';
+      document.getElementById('detailModal').classList.add('show');
+      try{
+        var r=await apiCall('getRepair',{id:id});
+        if(!r.success){body.innerHTML='<p>โหลดไม่สำเร็จ</p>';return}
+        var rp=r.data;
+        var html='<div style="margin-bottom:.75rem">'+statusBadge(rp.status)+'</div>';
+        html+='<div class="detail-grid">';
+        html+='<div class="detail-item"><label>รถ</label><span>'+vLabel(rp.car_id)+'</span></div>';
+        html+='<div class="detail-item"><label>แจ้งเมื่อ</label><span>'+fmtDate(rp.date_reported)+'</span></div>';
+        html+='<div class="detail-item"><label>ผู้แจ้ง</label><span>'+(rp.reporter_name||'-')+'</span></div>';
+        html+='<div class="detail-item"><label>เลขไมล์</label><span>'+(rp.mileage_at_repair?rp.mileage_at_repair.toLocaleString()+' กม.':'-')+'</span></div>';
+        html+='<div class="detail-item"><label>อู่</label><span>'+(rp.garage_name||'-')+'</span></div>';
+        html+='<div class="detail-item"><label>ค่าใช้จ่าย</label><span>'+(rp.cost?rp.cost.toLocaleString()+' บาท':'-')+'</span></div>';
+        html+='</div>';
+        html+='<hr style="margin:1rem 0;border-color:var(--color-border)">';
+        html+='<p><strong>อาการ:</strong> '+(rp.issue_description||'-')+'</p>';
+        if(rp.repair_items){
+          var items=[];try{items=JSON.parse(rp.repair_items)}catch(e){items=rp.repair_items?[rp.repair_items]:[]}
+          if(items.length) html+='<p><strong>รายการซ่อม:</strong> '+items.join(', ')+'</p>';
+        }
+        if(rp.notes) html+='<p><strong>หมายเหตุ:</strong> '+rp.notes+'</p>';
+        if(rp.inspection_notes) html+='<p><strong>ผลตรวจสภาพ:</strong> '+rp.inspection_notes+'</p>';
+        if(rp.memo_notes) html+='<p><strong>บันทึกข้อความ:</strong> '+rp.memo_notes+'</p>';
+        if(rp.rejection_reason) html+='<p style="color:var(--color-danger)"><strong>เหตุผลที่ไม่อนุมัติ:</strong> '+rp.rejection_reason+'</p>';
+
+        // Documents
+        var docs=[
+          {label:'ใบเสนอราคา',key:'quotation_documents'},
+          {label:'บันทึกข้อความ',key:'memo_documents'},
+          {label:'ใบเสร็จ',key:'receipt_documents'},
+          {label:'เอกสาร',key:'documents'}
+        ];
+        docs.forEach(function(d){
+          if(rp[d.key]){
+            var arr=[];try{arr=JSON.parse(rp[d.key])}catch(e){}
+            if(arr.length){
+              html+='<p style="margin-top:8px"><strong>'+d.label+':</strong></p><div class="file-chips">';
+              arr.forEach(function(url,i){
+                html+='<a class="file-chip" href="'+url+'" target="_blank">📎 ไฟล์ '+(i+1)+'</a>';
+              });
+              html+='</div>';
+            }
+          }
+        });
+
+        body.innerHTML=html;
+      }catch(e){body.innerHTML='<p style="color:var(--color-danger)">เกิดข้อผิดพลาด</p>'}
+    }
+    function closeDetailModal(){document.getElementById('detailModal').classList.remove('show')}
+
+    /* ═══════════════════════════════════════════════════
+       Tab 2: บันทึกซ่อมเสร็จ / ย้อนหลัง
+       ═══════════════════════════════════════════════════ */
+    async function loadHistory(){
+      document.getElementById('hLoading').style.display='block';
+      document.getElementById('hBody').innerHTML='';
+      try{
+        var filters={status:'completed'};
+        var fc=document.getElementById('hFilterCar').value;
+        if(fc) filters.car_id=fc;
+        var r=await apiCall('getRepairs',filters);
+        var list=(r.success&&r.data)?(Array.isArray(r.data)?r.data:[]):[];
+        if(list.length===0){
+          document.getElementById('hBody').innerHTML='<tr><td colspan="8" class="empty-state"><div class="empty-state-icon">🔧</div><p>ไม่มีบันทึกซ่อมเสร็จ</p></td></tr>';
+          return;
+        }
+        var html='';
+        list.forEach(function(rp){
+          var items=[];try{items=JSON.parse(rp.repair_items||'[]')}catch(e){}
+          html+='<tr>';
+          html+='<td>'+fmtDate(rp.date_completed||rp.date_reported)+'</td>';
+          html+='<td>'+vLabel(rp.car_id)+'</td>';
+          html+='<td>'+(rp.mileage_at_repair?rp.mileage_at_repair.toLocaleString():'-')+' กม.</td>';
+          html+='<td>'+(rp.issue_description||items.join(', ')||'-')+'</td>';
+          html+='<td>'+(rp.garage_name||'-')+'</td>';
+          html+='<td>'+(rp.reporter_name||rp.taken_by||'-')+'</td>';
+          html+='<td>'+(rp.cost?rp.cost.toLocaleString()+' บาท':'-')+'</td>';
+          html+='<td>';
+          var user=getCurrentUser();
+          if(user&&(user.role==='admin'||hasModulePermission('repair','edit'))){
+            html+='<button class="btn btn-ghost" style="padding:4px 10px;font-size:.82rem" onclick="editCompleted(\''+rp.id+'\')">✏️</button>';
+          }
+          html+='</td>';
+          html+='</tr>';
+        });
+        document.getElementById('hBody').innerHTML=html;
+      }catch(e){console.error(e);document.getElementById('hBody').innerHTML='<tr><td colspan="8" style="color:var(--color-danger)">โหลดข้อมูลไม่สำเร็จ</td></tr>'}
+      finally{document.getElementById('hLoading').style.display='none'}
+    }
+
+    /* ─── Completed Modal ─── */
+    function openAddCompletedModal(){
+      editingId=null;
+      document.getElementById('cmpTitle').textContent='📝 บันทึกซ่อมย้อนหลัง';
+      document.getElementById('completedForm').reset();
+      document.getElementById('completedModal').classList.add('show');
+      setTimeout(function(){if(typeof initAllThaiDateTimePickers==='function') initAllThaiDateTimePickers()},100);
+    }
+    function closeCompletedModal(){document.getElementById('completedModal').classList.remove('show')}
+
+    async function editCompleted(id){
+      try{
+        var r=await apiCall('getRepair',{id:id});
+        if(!r.success){showAlert('โหลดข้อมูลไม่สำเร็จ','error');return}
+        var rp=r.data;
+        editingId=id;
+        document.getElementById('cmpTitle').textContent='✏️ แก้ไขบันทึกซ่อม';
+        document.getElementById('cmp_car_id').value=rp.car_id||'';
+        var dc=rp.date_completed||rp.date_reported||'';
+        if(dc){
+          var parts=dc.split(/[T ]/);
+          document.getElementById('cmp_date').value=parts[0]||'';
+          if(parts[1]) document.getElementById('cmp_time').value=parts[1].substring(0,5);
+        }
+        document.getElementById('cmp_issue').value=rp.issue_description||'';
+        var items=[];try{items=JSON.parse(rp.repair_items||'[]')}catch(e){}
+        document.getElementById('cmp_items').value=items.join(', ');
+        document.getElementById('cmp_mileage').value=rp.mileage_at_repair||'';
+        document.getElementById('cmp_cost').value=rp.cost||'';
+        document.getElementById('cmp_garage').value=rp.garage_name||'';
+        document.getElementById('cmp_taken_by').value=rp.taken_by||'';
+        document.getElementById('cmp_notes').value=rp.notes||'';
+        document.getElementById('completedModal').classList.add('show');
+        setTimeout(function(){if(typeof initAllThaiDateTimePickers==='function') initAllThaiDateTimePickers()},100);
+      }catch(e){showAlert('เกิดข้อผิดพลาด','error')}
+    }
+
+    async function submitCompleted(e){
+      e.preventDefault();
+      var btn=document.getElementById('cmpSubmitBtn');
+      btn.disabled=true;btn.textContent='กำลังบันทึก...';
+      try{
+        var dateVal=document.getElementById('cmp_date').value;
+        var timeVal=document.getElementById('cmp_time').value;
+        var dateCompleted=dateVal+(timeVal?' '+timeVal+':00':'');
+
+        var takenByVal=document.getElementById('cmp_taken_by').value;
+        var takenByName=dLabel(takenByVal);
+        if(takenByName==='-') takenByName=takenByVal;
+
+        var data={
+          car_id: document.getElementById('cmp_car_id').value,
+          date_reported: dateCompleted,
+          date_completed: dateCompleted,
+          issue_description: document.getElementById('cmp_issue').value.trim(),
+          repair_items: document.getElementById('cmp_items').value.trim().split(/[,\n]/).map(function(s){return s.trim()}).filter(Boolean),
+          mileage_at_repair: parseInt(document.getElementById('cmp_mileage').value)||0,
+          cost: parseFloat(document.getElementById('cmp_cost').value)||0,
+          garage_name: document.getElementById('cmp_garage').value.trim(),
+          taken_by: takenByName,
+          notes: document.getElementById('cmp_notes').value.trim(),
+          status: 'completed'
+        };
+
+        var r;
+        if(editingId){
+          data.id=editingId;
+          r=await apiCall('updateRepair',data);
+        }else{
+          r=await apiCall('createRepair',data);
+        }
+        if(r.success){
+          showAlert(editingId?'แก้ไขสำเร็จ':'บันทึกสำเร็จ','success');
+          closeCompletedModal();
+          loadHistory();
+        }else{showAlert(r.message||'ดำเนินการไม่สำเร็จ','error')}
+      }catch(e){showAlert('เกิดข้อผิดพลาด','error')}
+      finally{btn.disabled=false;btn.textContent='💾 บันทึก'}
+    }
+
+    /* ═══════════════════════════════════════════════════
+       Tab 3: ผลตรวจสภาพรถ
+       ═══════════════════════════════════════════════════ */
+    async function loadInspection(){
+      document.getElementById('insLoading').style.display='block';
+      document.getElementById('alertsList').innerHTML='';
+      document.getElementById('checkLogList').innerHTML='';
+      var fc=document.getElementById('insFilterCar').value;
+      var fs=document.getElementById('insFilterStatus').value;
+      try{
+        // Load inspection alerts
+        var alertParams={};
+        if(fc) alertParams.car_id=fc;
+        if(fs==='resolved') alertParams.resolved='1';
+        else if(fs==='unresolved') alertParams.resolved='0';
+        var ar=await apiCall('getCheckAlerts',alertParams);
+        var alerts=(ar.success&&ar.data)?(Array.isArray(ar.data)?ar.data:[]):[];
+
+        if(alerts.length===0){
+          document.getElementById('alertsList').innerHTML='<div class="empty-state" style="padding:1rem"><p>✅ ไม่มีแจ้งเตือนผลตรวจสภาพ</p></div>';
+        }else{
+          var aHtml='';
+          alerts.forEach(function(a){
+            var isCritical=a.risk_level==='critical';
+            var isResolved=a.resolved===1||a.resolved==='1';
+            var cls=isResolved?'resolved':(isCritical?'critical':'');
+            aHtml+='<div class="alert-card '+cls+'">';
+            aHtml+='<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">';
+            aHtml+='<strong>'+(isCritical?'🔴':'🟡')+' '+vLabel(a.car_id)+'</strong>';
+            if(isResolved) aHtml+='<span class="status-badge status-completed">แก้ไขแล้ว</span>';
+            else aHtml+='<span class="status-badge status-requested">ยังไม่แก้ไข</span>';
+            aHtml+='</div>';
+            // Parse items
+            var items=[];try{items=JSON.parse(a.items||'[]')}catch(e){}
+            if(items.length) aHtml+='<p style="margin-top:4px">รายการ: '+items.join(', ')+'</p>';
+            if(a.recommendations) aHtml+='<p>คำแนะนำ: '+a.recommendations+'</p>';
+            aHtml+='<p style="font-size:.78rem;color:var(--color-text-muted)">'+fmtDate(a.created_at)+'</p>';
+            if(!isResolved){
+              aHtml+='<div style="margin-top:6px">';
+              aHtml+='<button class="btn btn-primary" style="padding:4px 12px;font-size:.82rem" onclick="createRepairFromAlert(\''+a.car_id+'\',\''+encodeURIComponent(items.join(', '))+'\')">🔧 สร้างแจ้งซ่อม</button>';
+              aHtml+='</div>';
+            }
+            aHtml+='</div>';
+          });
+          document.getElementById('alertsList').innerHTML=aHtml;
+        }
+
+        // Load check_log
+        var logParams={};
+        if(fc) logParams.car_id=fc;
+        var lr=await apiCall('getCheckLog',logParams);
+        var logs=(lr.success&&lr.data)?(Array.isArray(lr.data)?lr.data:[]):[];
+
+        if(logs.length===0){
+          document.getElementById('checkLogList').innerHTML='<div class="empty-state" style="padding:1rem"><p>ไม่มีประวัติตรวจสภาพ</p></div>';
+        }else{
+          var lHtml='';
+          logs.forEach(function(log){
+            var statusCls=log.overall_status==='critical'?'critical':(log.overall_status==='warning'?'':'resolved');
+            lHtml+='<div class="alert-card '+statusCls+'" style="border-left-width:3px">';
+            lHtml+='<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">';
+            lHtml+='<strong>'+vLabel(log.car_id)+'</strong>';
+            var sLabel=log.overall_status==='ok'?'✅ ปกติ':(log.overall_status==='critical'?'🔴 พบปัญหาวิกฤต':'🟡 พบปัญหา');
+            lHtml+='<span>'+sLabel+'</span>';
+            lHtml+='</div>';
+            lHtml+='<p style="font-size:.82rem">ผู้ตรวจ: '+(log.inspector||'-')+' | '+fmtDate(log.created_at)+'</p>';
+            if(log.notes) lHtml+='<p style="font-size:.82rem">'+log.notes+'</p>';
+            lHtml+='</div>';
+          });
+          document.getElementById('checkLogList').innerHTML=lHtml;
+        }
+      }catch(e){
+        console.error(e);
+        document.getElementById('alertsList').innerHTML='<p style="color:var(--color-danger)">โหลดข้อมูลไม่สำเร็จ</p>';
+      }finally{document.getElementById('insLoading').style.display='none'}
+    }
+
+    function createRepairFromAlert(carId, encodedItems){
+      switchTabTo('workflow');
+      openReportModal();
+      document.getElementById('rpt_car_id').value=carId;
+      document.getElementById('rpt_issue').value=decodeURIComponent(encodedItems);
+    }
+
+    function switchTabTo(tab){
+      currentTab=tab;
+      document.querySelectorAll('.tab-content').forEach(function(el){el.classList.remove('active')});
+      document.querySelectorAll('.tab').forEach(function(el){el.classList.remove('active')});
+      document.getElementById('tab-'+tab).classList.add('active');
+      var tabs=document.querySelectorAll('.tab');
+      var idx={workflow:0,history:1,inspection:2}[tab]||0;
+      if(tabs[idx]) tabs[idx].classList.add('active');
+    }
+  </script>
+</body>
 </html>
