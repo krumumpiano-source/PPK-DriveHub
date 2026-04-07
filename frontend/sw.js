@@ -1,5 +1,5 @@
 ﻿// sw.js — PPK DriveHub Service Worker
-var CACHE_NAME='ppk-v2';
+var CACHE_NAME='ppk-v3';
 var STATIC_ASSETS=[
   '/common.css','/config.js','/js/api.js','/js/export-utils.js','/common.js',
   '/dashboard.html','/login.html','/manifest.json'
@@ -25,6 +25,8 @@ self.addEventListener('fetch',function(e){
   var url=new URL(e.request.url);
   // Skip non-GET requests
   if(e.request.method!=='GET')return;
+  // Skip cross-origin requests (Google Fonts, CDNs, etc.)
+  if(url.origin!==self.location.origin)return;
   // Skip API calls — let them go to network directly
   if(url.pathname.startsWith('/api/'))return;
   // Skip navigation requests (HTML pages) — avoid redirect issues with Cloudflare Pages
