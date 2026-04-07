@@ -386,28 +386,40 @@ function renderImpersonationBanner() {
 
 function stopImpersonateMode() {
     if (typeof API === 'undefined') return;
-    // Call backend to delete impersonated session
-    apiCall('stopImpersonate', {}).catch(function() {});
-    // Restore original admin token
+    // If this was a real backend impersonation, clean up session
+    if (!localStorage.getItem('ppk_role_preview')) {
+        apiCall('stopImpersonate', {}).catch(function() {});
+    }
+    // Remove role preview flag
+    localStorage.removeItem('ppk_role_preview');
+    // Restore original admin token/user
     API.stopImpersonate();
-    window.location.href = 'user-management.html';
+    window.location.href = 'dashboard.html';
 }
 
 function previewRole(role) {
-    if (typeof API === 'undefined' || typeof apiCall === 'undefined') return;
-    var btn = event && event.target ? event.target.closest('.role-preview-btn') : null;
-    if (btn) { btn.disabled = true; btn.textContent = 'กำลังโหลด...'; }
+    if (typeof API === 'undefined') return;
+    // Client-side role preview — no backend needed
+    var currentUser = API.getUser();
+    if (!currentUser) return;
 
-    apiCall('impersonateRole', { role: role }).then(function(res) {
-        var data = res.data || res;
-        if (data.token && data.user) {
-            API.startImpersonate(data.token, data.user);
-            window.location.href = 'dashboard.html';
-        }
-    }).catch(function(err) {
-        alert(err.message || 'ไม่สามารถดูมุมมองบทบาทนี้ได้');
-        if (btn) { btn.disabled = false; btn.textContent = ''; }
-    });
+    // Save original credentials (same keys as impersonation)
+    if (!API.isImpersonating()) {
+        localStorage.setItem('ppk_orig_token', API.getToken());
+        localStorage.setItem('ppk_orig_user', JSON.stringify(currentUser));
+    }
+
+    // Create preview user with target role + empty permissions
+    var previewUser = JSON.parse(JSON.stringify(currentUser));
+    previewUser.role = role;
+    previewUser.permissions = {};
+    previewUser.is_impersonated = true;
+    API.setUser(previewUser);
+
+    // Flag so we know it's a client-side preview (not real impersonation)
+    localStorage.setItem('ppk_role_preview', '1');
+
+    window.location.href = 'dashboard.html';
 }
 
 function renderFloatingQR() {
