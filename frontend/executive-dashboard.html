@@ -1,0 +1,199 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard ผู้บริหาร - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>window.API_BASE_URL=CONFIG.API_BASE_URL;window.currentPage='executive-dashboard';window.REQUIRE_AUTH=true;</script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="common.css">
+  <script src="js/api.js"></script><script src="common.js"></script>
+  <style>
+    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:1.5rem}
+    .kpi{background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:1rem;text-align:center}
+    .kpi-val{font-size:1.8rem;font-weight:700;color:var(--color-primary)}
+    .kpi-label{font-size:.82rem;color:var(--color-text-muted);margin-top:4px}
+    .kpi-sub{font-size:.78rem;color:var(--color-text-light)}
+    .chart-card{background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:1rem;margin-bottom:1rem}
+    .chart-card h3{font-size:1rem;margin-bottom:.75rem}
+    .chart-wrap{max-height:300px}
+    .rank-table{width:100%;border-collapse:collapse;font-size:.85rem}
+    .rank-table th,.rank-table td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--color-border)}
+    .rank-table th{background:var(--color-bg-light);font-weight:600}
+    .alert-list{display:flex;flex-direction:column;gap:6px}
+    .alert-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius-md);font-size:.85rem}
+    .alert-item.danger{background:#fee2e2;color:#991b1b}
+    .alert-item.warning{background:#fef3c7;color:#92400e}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+    @media(max-width:768px){.two-col{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📈 Dashboard ผู้บริหาร</h1>
+      <p>ระบบจัดการยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+    </div>
+    <div id="navigation"></div>
+    <div class="content">
+      <div id="alertContainer"></div>
+      <div id="loading" class="loading" style="display:none">กำลังโหลด...</div>
+      <div id="kpiSection"></div>
+      <div class="two-col">
+        <div class="chart-card"><h3>📊 เที่ยวรถรายเดือน</h3><div class="chart-wrap"><canvas id="tripChart"></canvas></div></div>
+        <div class="chart-card"><h3>⛽ ค่าน้ำมันรายเดือน</h3><div class="chart-wrap"><canvas id="fuelChart"></canvas></div></div>
+      </div>
+      <div class="two-col">
+        <div class="chart-card"><h3>🏆 Top 5 พนักงาน</h3><div id="topDrivers"></div></div>
+        <div class="chart-card"><h3>⚠️ Bottom 5 พนักงาน</h3><div id="bottomDrivers"></div></div>
+      </div>
+      <div class="chart-card"><h3>🚗 ค่าใช้จ่ายรายคัน</h3><div id="vehicleCosts"></div></div>
+      <div class="chart-card"><h3>🔔 แจ้งเตือน</h3><div id="alertsList" class="alert-list"></div></div>
+    </div>
+  </div>
+  <div style="background:var(--color-bg-light);padding:20px;text-align:center;color:var(--color-text-muted);font-size:.9em;margin-top:20px">
+    <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+  </div>
+  <script>
+    var tripChart,fuelChart;
+
+    function waitForCommon(){return new Promise(function(r){if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){r();return}var c=0;var t=setInterval(function(){c++;if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){clearInterval(t);r()}else if(c>50){clearInterval(t);r()}},100)})}
+
+    document.addEventListener('DOMContentLoaded',async function(){
+      await waitForCommon();
+      if(typeof requireAuth==='function'&&!requireAuth())return;
+      loadAll();
+    });
+
+    function fmt$(n){return n?Number(n).toLocaleString():'-'}
+
+    async function loadAll(){
+      document.getElementById('loading').style.display='block';
+      try{
+        var [dash,perf,vehicles,expiry]=await Promise.all([
+          API.get('/api/reports/dashboard'),
+          API.get('/api/reports/driver-performance'),
+          API.get('/api/reports/vehicles'),
+          API.get('/api/reports/expiry?days=30')
+        ]);
+        
+        // KPIs
+        if(dash.success){
+          var d=dash.data;
+          var h='<div class="kpi-grid">';
+          h+='<div class="kpi"><div class="kpi-val">'+(d.queue_today?.total||0)+'</div><div class="kpi-label">เที่ยววันนี้</div><div class="kpi-sub">เสร็จ '+(d.queue_today?.completed||0)+'</div></div>';
+          h+='<div class="kpi"><div class="kpi-val">'+(d.vehicles?.active||0)+'/'+(d.vehicles?.total||0)+'</div><div class="kpi-label">รถพร้อมใช้</div><div class="kpi-sub">ซ่อม '+(d.vehicles?.in_maintenance||0)+'</div></div>';
+          h+='<div class="kpi"><div class="kpi-val">'+(d.drivers?.active||0)+'</div><div class="kpi-label">พนักงาน active</div><div class="kpi-sub">ล้า '+(d.drivers?.fatigued||0)+'</div></div>';
+          h+='<div class="kpi"><div class="kpi-val">'+fmt$(d.fuel_month?.total_amount)+'</div><div class="kpi-label">ค่าน้ำมันเดือนนี้</div><div class="kpi-sub">'+(d.fuel_month?.total_liters||0).toFixed(0)+' ลิตร</div></div>';
+          h+='<div class="kpi"><div class="kpi-val">'+(d.repairs_active?.total||0)+'</div><div class="kpi-label">งานซ่อมค้าง</div><div class="kpi-sub">รายงาน '+(d.repairs_active?.reported||0)+'</div></div>';
+          h+='<div class="kpi"><div class="kpi-val">'+(d.alerts_unresolved||0)+'</div><div class="kpi-label">แจ้งเตือนค้าง</div></div>';
+          h+='</div>';
+          document.getElementById('kpiSection').innerHTML=h;
+        }
+
+        // Driver performance ranking
+        if(perf.success){
+          var list=Array.isArray(perf.data)?perf.data:[];
+          list.sort(function(a,b){return b.avg_score-a.avg_score});
+          var top5=list.slice(0,5);
+          var bot5=list.slice(-5).reverse();
+          document.getElementById('topDrivers').innerHTML=renderRankTable(top5,'🥇');
+          document.getElementById('bottomDrivers').innerHTML=renderRankTable(bot5,'⚠️');
+
+          // Calculate avg score across all
+          if(list.length>0){
+            var avg=list.reduce(function(s,d){return s+d.avg_score},0)/list.length;
+            var kpiGrid=document.querySelector('.kpi-grid');
+            if(kpiGrid) kpiGrid.innerHTML+='<div class="kpi"><div class="kpi-val">'+avg.toFixed(2)+'/5</div><div class="kpi-label">คะแนนเฉลี่ย</div></div>';
+          }
+        }
+
+        // Vehicle costs
+        if(vehicles.success){
+          var vList=Array.isArray(vehicles.data)?vehicles.data:[];
+          var vh='<div style="overflow-x:auto"><table class="rank-table"><thead><tr><th>ทะเบียน</th><th>รุ่น</th><th>เที่ยว</th><th>น้ำมัน</th><th>ซ่อม</th><th>รวม</th></tr></thead><tbody>';
+          vList.forEach(function(v){
+            var total=(v.total_fuel_cost||0)+(v.total_repair_cost||0);
+            vh+='<tr><td>'+v.license_plate+'</td><td>'+(v.brand||'')+' '+(v.model||'')+'</td><td>'+v.trip_count+'</td><td>'+fmt$(v.total_fuel_cost)+'</td><td>'+fmt$(v.total_repair_cost)+'</td><td><strong>'+fmt$(total)+'</strong></td></tr>';
+          });
+          vh+='</tbody></table></div>';
+          document.getElementById('vehicleCosts').innerHTML=vh;
+        }
+
+        // Alerts
+        if(expiry.success){
+          var alerts=[];
+          (expiry.data?.tax_expiring||[]).forEach(function(t){alerts.push({text:'📋 ภาษี '+t.license_plate+' หมด '+t.expiry_date,type:'warning'})});
+          (expiry.data?.insurance_expiring||[]).forEach(function(i){alerts.push({text:'🛡️ ประกัน '+i.license_plate+' หมด '+i.expiry_date,type:'danger'})});
+          var ah=alerts.length?'':'<p style="color:var(--color-text-muted);font-size:.85rem">ไม่มีแจ้งเตือน</p>';
+          alerts.forEach(function(a){ah+='<div class="alert-item '+a.type+'">'+a.text+'</div>'});
+          document.getElementById('alertsList').innerHTML=ah;
+        }
+
+        // Charts: monthly trips + fuel (last 6 months)
+        loadMonthlyCharts();
+      }catch(e){console.error(e)}
+      finally{document.getElementById('loading').style.display='none'}
+    }
+
+    function renderRankTable(list,icon){
+      if(!list.length)return'<p style="color:var(--color-text-muted);font-size:.85rem">ไม่มีข้อมูล</p>';
+      var h='<table class="rank-table"><thead><tr><th>#</th><th>ชื่อ</th><th>คะแนน</th></tr></thead><tbody>';
+      list.forEach(function(d,i){h+='<tr><td>'+icon+'</td><td>'+d.driver_name+'</td><td><strong>'+d.avg_score.toFixed(2)+'</strong>/5</td></tr>'});
+      return h+'</tbody></table>';
+    }
+
+    async function loadMonthlyCharts(){
+      try{
+        // Get last 6 months queue data
+        var months=[];var now=new Date();
+        for(var i=5;i>=0;i--){var d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push(d.toISOString().substr(0,7))}
+        var labels=months.map(function(m){var p=m.split('-');var mn=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];return mn[parseInt(p[1])-1]+' '+(parseInt(p[0])+543).toString().substr(2)});
+
+        // Get usage report for last 6 months
+        var dateFrom=months[0]+'-01';
+        var dateTo=months[5]+'-31';
+        var [usageRes,fuelRes]=await Promise.all([
+          API.get('/api/reports/usage?date_from='+dateFrom+'&date_to='+dateTo),
+          API.get('/api/reports/fuel?date_from='+dateFrom+'&date_to='+dateTo)
+        ]);
+
+        // Count trips per month
+        var tripCounts=months.map(function(){return 0});
+        if(usageRes.success&&usageRes.data?.records){
+          usageRes.data.records.forEach(function(r){
+            if(r.record_type!=='departure')return;
+            var m=r.datetime?.substr(0,7);
+            var idx=months.indexOf(m);
+            if(idx>=0)tripCounts[idx]++;
+          });
+        }
+
+        // Fuel cost per month
+        var fuelCosts=months.map(function(){return 0});
+        if(fuelRes.success&&fuelRes.data?.records){
+          fuelRes.data.records.forEach(function(r){
+            var m=r.date?.substr(0,7);
+            var idx=months.indexOf(m);
+            if(idx>=0)fuelCosts[idx]+=(r.amount||0);
+          });
+        }
+
+        // Trip chart
+        var ctx1=document.getElementById('tripChart');
+        if(ctx1){
+          if(tripChart)tripChart.destroy();
+          tripChart=new Chart(ctx1,{type:'bar',data:{labels:labels,datasets:[{label:'จำนวนเที่ยว',data:tripCounts,backgroundColor:'#6366f1'}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+        }
+        // Fuel chart
+        var ctx2=document.getElementById('fuelChart');
+        if(ctx2){
+          if(fuelChart)fuelChart.destroy();
+          fuelChart=new Chart(ctx2,{type:'line',data:{labels:labels,datasets:[{label:'ค่าน้ำมัน (บาท)',data:fuelCosts,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.1)',fill:true,tension:.3}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+        }
+      }catch(e){console.error(e)}
+    }
+  </script>
+</body>
+</html>

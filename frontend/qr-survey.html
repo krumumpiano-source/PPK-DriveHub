@@ -1,0 +1,144 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>แบบประเมินผู้โดยสาร - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>window.API_BASE_URL=CONFIG.API_BASE_URL;window.currentPage='qr-survey';window.REQUIRE_AUTH=false;</script>
+  <link rel="stylesheet" href="common.css">
+  <script src="js/api.js"></script>
+  <style>
+    body{font-family:var(--font-family);background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+    .survey-card{background:#fff;border-radius:var(--radius-2xl);box-shadow:var(--shadow-xl);max-width:480px;width:100%;overflow:hidden}
+    .survey-header{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:24px;text-align:center}
+    .survey-header h1{font-size:1.2rem;margin-bottom:4px}
+    .survey-header p{font-size:.85rem;opacity:.85}
+    .car-info{background:rgba(255,255,255,.15);padding:10px;border-radius:var(--radius-md);margin-top:10px;font-size:.9rem}
+    .survey-body{padding:20px}
+    .q-item{margin-bottom:20px}
+    .q-label{font-weight:600;font-size:.9rem;margin-bottom:8px;color:var(--color-text)}
+    .stars{display:flex;gap:4px;direction:rtl;justify-content:flex-end}
+    .stars input{display:none}
+    .stars label{font-size:1.8rem;cursor:pointer;color:#d1d5db;transition:color .15s}
+    .stars label:hover,.stars label:hover~label,.stars input:checked~label{color:#f59e0b}
+    .survey-footer{text-align:center;padding:12px 20px 20px;font-size:.8rem;color:var(--color-text-muted)}
+    .thank-you{text-align:center;padding:40px 20px}
+    .thank-you .icon{font-size:3rem;margin-bottom:12px}
+    .thank-you h2{font-size:1.2rem;margin-bottom:8px}
+    .thank-you p{color:var(--color-text-light);font-size:.9rem}
+    #surveyForm button[type=submit]{width:100%;padding:14px;font-size:1rem;font-weight:600;border:none;border-radius:var(--radius-lg);background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;cursor:pointer;margin-top:8px}
+    #surveyForm button[type=submit]:disabled{opacity:.5}
+    .error-box{background:#fee2e2;color:#991b1b;padding:16px;border-radius:var(--radius-lg);text-align:center;margin:20px}
+  </style>
+</head>
+<body>
+  <div class="survey-card">
+    <div class="survey-header">
+      <h1>⭐ แบบประเมินผู้โดยสาร</h1>
+      <p>กรุณาให้คะแนนการบริการของพนักงานขับรถ</p>
+      <div class="car-info" id="carInfo">กำลังโหลด...</div>
+    </div>
+
+    <div id="formSection" class="survey-body" style="display:none">
+      <form id="surveyForm" onsubmit="submitSurvey(event)">
+        <div class="q-item"><div class="q-label">1. ความสุภาพ มีมารยาท</div><div class="stars" id="s_politeness"></div></div>
+        <div class="q-item"><div class="q-label">2. ขับรถปลอดภัย</div><div class="stars" id="s_safety"></div></div>
+        <div class="q-item"><div class="q-label">3. ตรงต่อเวลา</div><div class="stars" id="s_punctuality"></div></div>
+        <div class="q-item"><div class="q-label">4. ความสะอาดของรถ</div><div class="stars" id="s_cleanliness"></div></div>
+        <div class="q-item"><div class="q-label">5. การแต่งกายเรียบร้อย</div><div class="stars" id="s_appearance"></div></div>
+        <div class="q-item"><div class="q-label">6. ความพึงพอใจโดยรวม</div><div class="stars" id="s_overall"></div></div>
+        <div class="q-item">
+          <div class="q-label">ข้อเสนอแนะ (ถ้ามี)</div>
+          <textarea id="comment" rows="3" style="width:100%;padding:10px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:.9rem" placeholder="พิมพ์ข้อเสนอแนะ..."></textarea>
+        </div>
+        <div class="q-item">
+          <div class="q-label">ชื่อผู้ประเมิน (ไม่บังคับ)</div>
+          <input type="text" id="respondent" style="width:100%;padding:10px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:.9rem" placeholder="ชื่อ-สกุล">
+        </div>
+        <button type="submit" id="submitBtn">📩 ส่งแบบประเมิน</button>
+      </form>
+    </div>
+
+    <div id="thankYou" class="thank-you" style="display:none">
+      <div class="icon">🙏</div>
+      <h2>ขอบคุณสำหรับการประเมิน</h2>
+      <p>ข้อมูลของท่านจะนำไปพัฒนาการบริการต่อไป</p>
+    </div>
+
+    <div id="errorSection" style="display:none"></div>
+
+    <div class="survey-footer">
+      <p>ระบบจัดการยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+    </div>
+  </div>
+
+  <script>
+    var carId=null,driverId=null;
+    var SCORES=['politeness','safety','punctuality','cleanliness','appearance','overall'];
+
+    // Build star inputs
+    SCORES.forEach(function(name){
+      var el=document.getElementById('s_'+name);
+      for(var i=5;i>=1;i--){
+        el.innerHTML+='<input type="radio" name="'+name+'" id="'+name+i+'" value="'+i+'"><label for="'+name+i+'">★</label>';
+      }
+    });
+
+    // Get car_id from URL
+    (async function(){
+      var params=new URLSearchParams(window.location.search);
+      carId=params.get('car')||params.get('car_id')||params.get('vehicleId');
+      if(!carId){
+        document.getElementById('carInfo').textContent='ไม่พบรหัสรถ กรุณาสแกน QR Code ใหม่';
+        document.getElementById('errorSection').innerHTML='<div class="error-box">❌ ไม่พบรหัสรถ กรุณาสแกน QR Code อีกครั้ง</div>';
+        document.getElementById('errorSection').style.display='block';
+        return;
+      }
+      try{
+        var r=await API.get('/api/survey/car-info?car_id='+encodeURIComponent(carId));
+        if(r.success&&r.data){
+          document.getElementById('carInfo').textContent='🚗 '+(r.data.license_plate||'')+' '+(r.data.brand||'')+' '+(r.data.model||'');
+          driverId=r.data.driver_id||null;
+        }else{
+          document.getElementById('carInfo').textContent='🚗 รหัสรถ: '+carId;
+        }
+      }catch(e){
+        document.getElementById('carInfo').textContent='🚗 รหัสรถ: '+carId;
+      }
+      document.getElementById('formSection').style.display='block';
+    })();
+
+    async function submitSurvey(e){
+      e.preventDefault();
+      // Validate all scores filled
+      var data={car_id:carId,driver_id:driverId};
+      var allFilled=true;
+      SCORES.forEach(function(name){
+        var checked=document.querySelector('input[name="'+name+'"]:checked');
+        if(checked) data[name+'_score']=parseInt(checked.value);
+        else allFilled=false;
+      });
+      if(!allFilled){alert('กรุณาให้คะแนนทุกหัวข้อ');return}
+      data.comment=document.getElementById('comment').value.trim();
+      data.respondent_name=document.getElementById('respondent').value.trim();
+
+      var btn=document.getElementById('submitBtn');
+      btn.disabled=true;btn.textContent='กำลังส่ง...';
+      try{
+        var r=await API.post('/api/survey/submit',data);
+        if(r.success){
+          document.getElementById('formSection').style.display='none';
+          document.getElementById('thankYou').style.display='block';
+        }else{
+          alert(r.message||r.error||'ส่งไม่สำเร็จ กรุณาลองใหม่');
+          btn.disabled=false;btn.textContent='📩 ส่งแบบประเมิน';
+        }
+      }catch(e){
+        alert('เกิดข้อผิดพลาด กรุณาลองใหม่');
+        btn.disabled=false;btn.textContent='📩 ส่งแบบประเมิน';
+      }
+    }
+  </script>
+</body>
+</html>

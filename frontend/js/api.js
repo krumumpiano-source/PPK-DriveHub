@@ -233,6 +233,43 @@ const ACTION_MAP = {
   // OCR
   'ocrExtract':          (d) => API.post('/api/ocr/extract', d),
 
+  // Vehicle Requests
+  'getVehicleRequests':  (d) => API.get('/api/vehicle-requests' + _q(d)),
+  'getVehicleRequest':   (d) => API.get(`/api/vehicle-requests/${d.id}`),
+  'createVehicleRequest':(d) => API.post('/api/vehicle-requests', d),
+  'updateVehicleRequest':(d) => API.put(`/api/vehicle-requests/${d.id}`, d),
+  'cancelVehicleRequest':(d) => API.put(`/api/vehicle-requests/${d.id}/cancel`, d),
+  'approveVehicleRequest':(d) => API.put(`/api/vehicle-requests/${d.id}/approve`, d),
+  'rejectVehicleRequest':(d) => API.put(`/api/vehicle-requests/${d.id}/reject`, d),
+  'assignVehicleRequest':(d) => API.put(`/api/vehicle-requests/${d.id}/assign`, d),
+
+  // Survey
+  'getSurveyCarInfo':    (d) => API.get(`/api/survey/car-info?car_id=${d.car_id}`),
+  'submitSurvey':        (d) => API.post('/api/survey/submit', d),
+  'getSurveyResults':    (d) => API.get('/api/survey/results' + _q(d)),
+
+  // Incidents
+  'getIncidents':        (d) => API.get('/api/incidents' + _q(d)),
+  'getIncident':         (d) => API.get(`/api/incidents/${d.id}`),
+  'createIncident':      (d) => API.post('/api/incidents', d),
+  'updateIncident':      (d) => API.put(`/api/incidents/${d.id}`, d),
+  'resolveIncident':     (d) => API.put(`/api/incidents/${d.id}/resolve`, d),
+  'deleteIncident':      (d) => API.del(`/api/incidents/${d.id}`),
+
+  // Inspections (ตรอ.)
+  'getInspections':      (d) => API.get('/api/tax-insurance/inspections' + _q(d)),
+  'createInspection':    (d) => API.post('/api/tax-insurance/inspections', d),
+  'updateInspection':    (d) => API.put(`/api/tax-insurance/inspections/${d.id}`, d),
+  'deleteInspection':    (d) => API.del(`/api/tax-insurance/inspections/${d.id}`),
+
+  // Driver Performance
+  'getDriverPerformance':    (d) => API.get('/api/reports/driver-performance' + _q(d)),
+  'getDriverPerformanceById':(d) => API.get(`/api/reports/driver-performance/${d.id}` + _q(d)),
+
+  // Vehicle Timeline & Cost
+  'getVehicleTimeline':  (d) => API.get(`/api/reports/vehicle-timeline/${d.carId}` + _q(d)),
+  'getVehicleCost':      (d) => API.get(`/api/reports/vehicle-cost/${d.carId}` + _q(d)),
+
   // Backward-Compatible Aliases
   'getVehicleById':      (d) => API.get(`/api/vehicles/${d.id || d.carId}`),
   'getAllUsers':         (d) => API.get('/api/admin/users' + _q(d)),

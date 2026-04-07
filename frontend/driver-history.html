@@ -659,6 +659,18 @@
     <div id="navigation"></div>
 
     <div class="content">
+      <!-- Today's Queue Highlight -->
+      <div id="todayHighlight" style="display:none;margin-bottom:1.5rem">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:1rem" id="driverStats"></div>
+        <div style="background:linear-gradient(135deg,#6366f1,#818cf8);border-radius:var(--radius-lg);padding:1.2rem;color:#fff;margin-bottom:1rem">
+          <h3 style="margin-bottom:.75rem;font-size:1.1rem">📋 คิววันนี้</h3>
+          <div id="todayQueueCards"></div>
+        </div>
+        <div style="text-align:center">
+          <a href="qr-scan.html" style="display:inline-block;background:#fff;color:var(--color-primary);padding:14px 36px;border-radius:var(--radius-lg);font-size:1.2rem;text-decoration:none;font-weight:700;box-shadow:var(--shadow-card)">📱 สแกน QR Code</a>
+        </div>
+      </div>
+
       <div class="tabs">
         <button class="tab active" onclick="switchTab('queues')">🚗 คิวของฉัน</button>
         <button class="tab" onclick="switchTab('history')">📝 ประวัติการใช้งาน</button>
@@ -841,6 +853,7 @@
       loadVehicles();
       loadDrivers();
       loadQueues();
+      loadTodayHighlight();
     });
 
     async function displayDriverName() {
@@ -902,6 +915,40 @@
           driverNameEl.textContent = '👤 พนักงานขับรถ';
         }
       }
+    }
+
+    async function loadTodayHighlight(){
+      try{
+        if(!currentUser)return;
+        var today=formatDate(new Date());
+        var driverId=currentUser.driver_id||currentUser.id;
+        var res=await apiCall('getQueue',{date_from:today,date_to:today});
+        if(!res||!res.success)return;
+        var myQueues=(res.data||[]).filter(function(q){return q.driver_id===driverId});
+
+        // Stats
+        var total=myQueues.length;
+        var done=myQueues.filter(function(q){return q.status==='completed'}).length;
+        var statsH='<div style="background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:10px;text-align:center"><div style="font-size:1.5rem;font-weight:700;color:var(--color-primary)">'+total+'</div><div style="font-size:.8rem;color:var(--color-text-muted)">เที่ยววันนี้</div></div>';
+        statsH+='<div style="background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:10px;text-align:center"><div style="font-size:1.5rem;font-weight:700;color:#22c55e">'+done+'</div><div style="font-size:.8rem;color:var(--color-text-muted)">เสร็จแล้ว</div></div>';
+        statsH+='<div style="background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:10px;text-align:center"><div style="font-size:1.5rem;font-weight:700;color:#f59e0b">'+(total-done)+'</div><div style="font-size:.8rem;color:var(--color-text-muted)">ที่เหลือ</div></div>';
+        document.getElementById('driverStats').innerHTML=statsH;
+
+        // Queue cards
+        if(myQueues.length===0){
+          document.getElementById('todayQueueCards').innerHTML='<p style="opacity:.8">ไม่มีคิววันนี้</p>';
+        }else{
+          var h='';myQueues.forEach(function(q){
+            var time=(q.time_start||q.departure_time||'--:--')+' - '+(q.time_end||q.return_time||'--:--');
+            h+='<div style="background:rgba(255,255,255,.15);padding:10px 14px;border-radius:var(--radius-md);margin-bottom:6px">';
+            h+='<strong>'+time+'</strong> &middot; '+(q.destination||q.mission||'-');
+            if(q.license_plate)h+=' <span style="opacity:.8;font-size:.85rem">('+q.license_plate+')</span>';
+            h+='</div>';
+          });
+          document.getElementById('todayQueueCards').innerHTML=h;
+        }
+        document.getElementById('todayHighlight').style.display='block';
+      }catch(e){console.error(e)}
     }
 
     function switchTab(tab) {

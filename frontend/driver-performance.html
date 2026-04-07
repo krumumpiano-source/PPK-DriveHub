@@ -1,0 +1,173 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ประเมินพนักงานขับรถ - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>window.API_BASE_URL=CONFIG.API_BASE_URL;window.currentPage='driver-performance';window.REQUIRE_AUTH=true;</script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
+  <link rel="stylesheet" href="common.css">
+  <script src="js/api.js"></script><script src="js/export-utils.js"></script><script src="common.js"></script>
+  <style>
+    .perf-table{width:100%;border-collapse:collapse;font-size:.88rem}
+    .perf-table th,.perf-table td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--color-border)}
+    .perf-table th{background:var(--color-bg-light);font-weight:600;position:sticky;top:0;z-index:1}
+    .perf-table tr:hover{background:var(--color-bg-light)}
+    .score-bar{display:inline-block;height:8px;border-radius:4px;vertical-align:middle;margin-left:6px}
+    .score-bar.high{background:var(--color-success)}
+    .score-bar.mid{background:var(--color-warning)}
+    .score-bar.low{background:var(--color-danger)}
+    .radar-container{max-width:450px;margin:0 auto}
+    .dim-labels{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;margin-top:1rem}
+    .dim-label{display:flex;justify-content:space-between;align-items:center;font-size:.85rem;padding:6px 10px;background:var(--color-bg-light);border-radius:var(--radius-md)}
+    .dim-val{font-weight:700}
+    .detail-card{background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1rem}
+    .detail-card h3{margin-bottom:.75rem;font-size:1rem}
+    .filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;align-items:flex-end}
+    .filter-row .form-group{margin-bottom:0}
+    .filter-row label{font-size:.82rem;display:block;margin-bottom:4px;font-weight:500}
+    .filter-row input,.filter-row select{padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem}
+    .back-btn{cursor:pointer;color:var(--color-primary);font-weight:500;display:inline-flex;align-items:center;gap:4px;margin-bottom:1rem}
+    .back-btn:hover{text-decoration:underline}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🏆 ประเมินพนักงานขับรถ</h1>
+      <p>ระบบจัดการยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+    </div>
+    <div id="navigation"></div>
+    <div class="content">
+      <div id="alertContainer"></div>
+      <div class="filter-row">
+        <div class="form-group"><label>จาก</label><input type="text" id="dateFrom" class="thai-datepicker"></div>
+        <div class="form-group"><label>ถึง</label><input type="text" id="dateTo" class="thai-datepicker"></div>
+        <button class="btn btn-primary" onclick="loadPerformance()">📊 แสดงผล</button>
+        <button class="btn btn-secondary" onclick="exportPerformance('excel')" style="background:#217346;color:#fff">📥 Excel</button>
+        <button class="btn btn-secondary" onclick="exportPerformance('pdf')" style="background:#c62828;color:#fff">📄 PDF</button>
+      </div>
+      <div id="loading" class="loading" style="display:none">กำลังคำนวณ...</div>
+      <div id="listView"></div>
+      <div id="detailView" style="display:none"></div>
+    </div>
+  </div>
+  <div style="background:var(--color-bg-light);padding:20px;text-align:center;color:var(--color-text-muted);font-size:.9em;margin-top:20px">
+    <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+  </div>
+  <script>
+    var perfData=[];
+    var radarChart=null;
+    var DIM_LABELS={survey:'แบบประเมินผู้โดยสาร',usage_quality:'คุณภาพการบันทึก',daily_check:'ตรวจสภาพรายวัน',punctuality:'ความตรงเวลา',vehicle_care:'การดูแลรถ',fuel_records:'บันทึกน้ำมัน',fuel_efficiency:'อัตราสิ้นเปลือง',repair_reporting:'การแจ้งซ่อม',repair_turnaround:'ความเร็วนำซ่อม'};
+
+    function waitForCommon(){return new Promise(function(r){if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){r();return}var c=0;var t=setInterval(function(){c++;if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){clearInterval(t);r()}else if(c>50){clearInterval(t);r()}},100)})}
+
+    document.addEventListener('DOMContentLoaded',async function(){
+      await waitForCommon();
+      if(typeof requireAuth==='function'&&!requireAuth())return;
+      // Set default date range: 90 days
+      var now=new Date();var d90=new Date(now.getTime()-90*86400000);
+      document.getElementById('dateFrom').value=d90.toISOString().substr(0,10);
+      document.getElementById('dateTo').value=now.toISOString().substr(0,10);
+      setTimeout(function(){if(typeof initAllThaiDateTimePickers==='function')initAllThaiDateTimePickers()},500);
+      loadPerformance();
+    });
+
+    async function loadPerformance(){
+      document.getElementById('loading').style.display='block';
+      document.getElementById('listView').innerHTML='';
+      document.getElementById('detailView').style.display='none';
+      try{
+        var df=document.getElementById('dateFrom').value;var dt=document.getElementById('dateTo').value;
+        var r=await API.get('/api/reports/driver-performance?date_from='+df+'&date_to='+dt);
+        if(r.success){perfData=Array.isArray(r.data)?r.data:[];renderList()}
+        else{document.getElementById('listView').innerHTML='<p>โหลดไม่สำเร็จ</p>'}
+      }catch(e){console.error(e);document.getElementById('listView').innerHTML='<p style="color:var(--color-danger)">'+e.message+'</p>'}
+      finally{document.getElementById('loading').style.display='none'}
+    }
+
+    function exportPerformance(fmt){
+      if(!perfData.length){alert('ไม่มีข้อมูล');return}
+      var hd=['#','พนักงาน','คะแนนรวม'];Object.values(DIM_LABELS).forEach(function(l){hd.push(l)});
+      var rows=[];perfData.forEach(function(d,i){
+        var row=[i+1,d.driver_name,d.avg_score.toFixed(2)];
+        d.dimensions.forEach(function(dm){row.push(dm.score.toFixed(1))});
+        rows.push(row);
+      });
+      var opts={filename:'driver-performance',title:'ประเมินผลพนักงานขับรถ PPK DriveHub',headers:hd,rows:rows};
+      if(fmt==='excel')ExportUtils.exportExcel(opts);
+      else ExportUtils.exportPDF(opts);
+    }
+
+    function scoreClass(s){return s>=3.5?'high':s>=2?'mid':'low'}
+    function renderList(){
+      if(!perfData.length){document.getElementById('listView').innerHTML='<div class="empty-state"><div class="empty-state-icon">📊</div><p>ไม่มีข้อมูลพนักงาน</p></div>';return}
+      perfData.sort(function(a,b){return b.avg_score-a.avg_score});
+      var h='<div style="overflow-x:auto"><table class="perf-table"><thead><tr><th>#</th><th>พนักงาน</th><th>คะแนนรวม</th>';
+      Object.values(DIM_LABELS).forEach(function(l){h+='<th style="font-size:.78rem">'+l+'</th>'});
+      h+='<th></th></tr></thead><tbody>';
+      perfData.forEach(function(d,i){
+        h+='<tr><td>'+(i+1)+'</td><td>'+d.driver_name+(d.driver_status!=='active'?' <span style="color:var(--color-text-muted)">('+d.driver_status+')</span>':'')+'</td>';
+        h+='<td><strong>'+d.avg_score.toFixed(2)+'</strong>/5 <span class="score-bar '+scoreClass(d.avg_score)+'" style="width:'+Math.round(d.avg_score*20)+'px"></span></td>';
+        d.dimensions.forEach(function(dm){h+='<td>'+dm.score.toFixed(1)+'</td>'});
+        h+='<td><button class="btn btn-primary" style="padding:4px 10px;font-size:.8rem" onclick="showDetail(\''+d.driver_id+'\')">📈 ดูกราฟ</button></td>';
+        h+='</tr>';
+      });
+      h+='</tbody></table></div>';
+      document.getElementById('listView').innerHTML=h;
+    }
+
+    function showDetail(driverId){
+      var d=perfData.find(function(x){return x.driver_id===driverId});
+      if(!d)return;
+      document.getElementById('listView').style.display='none';
+      var dv=document.getElementById('detailView');dv.style.display='block';
+      var h='<div class="back-btn" onclick="backToList()">⬅️ กลับ</div>';
+      h+='<div class="detail-card"><h3>🏆 '+d.driver_name+' — คะแนนรวม '+d.avg_score.toFixed(2)+'/5</h3>';
+      h+='<div class="radar-container"><canvas id="radarCanvas"></canvas></div>';
+      h+='<div class="dim-labels">';
+      d.dimensions.forEach(function(dm){
+        h+='<div class="dim-label"><span>'+(DIM_LABELS[dm.name]||dm.name)+'</span><span class="dim-val" style="color:var(--color-'+scoreClass(dm.score).replace('high','success').replace('mid','warning').replace('low','danger')+')">'+dm.score.toFixed(2)+'/5</span></div>';
+      });
+      h+='</div></div>';
+      dv.innerHTML=h;
+      // Render radar
+      setTimeout(function(){renderRadar(d)},100);
+    }
+
+    function renderRadar(d){
+      var ctx=document.getElementById('radarCanvas');if(!ctx)return;
+      if(radarChart){radarChart.destroy()}
+      radarChart=new Chart(ctx,{
+        type:'radar',
+        data:{
+          labels:d.dimensions.map(function(dm){return DIM_LABELS[dm.name]||dm.name}),
+          datasets:[{
+            label:d.driver_name,
+            data:d.dimensions.map(function(dm){return Math.round(dm.score*100)/100}),
+            backgroundColor:'rgba(99,102,241,0.2)',
+            borderColor:'#6366f1',
+            borderWidth:2,
+            pointBackgroundColor:'#6366f1'
+          }]
+        },
+        options:{
+          responsive:true,
+          scales:{r:{min:0,max:5,ticks:{stepSize:1,font:{size:10}},pointLabels:{font:{size:11}}}},
+          plugins:{legend:{display:false}}
+        }
+      });
+    }
+
+    function backToList(){
+      document.getElementById('listView').style.display='block';
+      document.getElementById('detailView').style.display='none';
+      if(radarChart){radarChart.destroy();radarChart=null}
+    }
+  </script>
+</body>
+</html>

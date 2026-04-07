@@ -1,0 +1,146 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>สแกน QR Code - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>window.API_BASE_URL=CONFIG.API_BASE_URL;window.currentPage='qr-scan';window.REQUIRE_AUTH=false;</script>
+  <link rel="stylesheet" href="common.css">
+  <script src="js/api.js"></script><script src="js/offline-sync.js"></script><script src="common.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    body{font-family:var(--font-family);background:var(--gradient-primary);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+    .scan-container{background:#fff;border-radius:var(--radius-2xl);box-shadow:var(--shadow-xl);max-width:440px;width:100%;overflow:hidden}
+    .scan-header{background:var(--gradient-primary);color:#fff;padding:24px;text-align:center}
+    .scan-header h1{font-size:1.3rem;margin-bottom:4px}
+    .scan-header p{font-size:.85rem;opacity:.85}
+    .scan-body{padding:20px}
+    #reader{width:100%;border-radius:var(--radius-lg);overflow:hidden;margin-bottom:16px}
+    #reader video{border-radius:var(--radius-lg)}
+    .type-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+    .type-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 8px;border:2px solid var(--color-border);border-radius:var(--radius-lg);background:#fff;cursor:pointer;transition:all .15s;font-size:.85rem;font-weight:500;color:var(--color-text)}
+    .type-btn:hover{border-color:var(--color-primary);background:var(--color-primary-light)}
+    .type-btn .icon{font-size:1.8rem}
+    .result-box{padding:16px;border-radius:var(--radius-lg);text-align:center;margin-top:12px;display:none}
+    .result-box.success{background:#d1fae5;color:#065f46;display:block}
+    .result-box.error{background:#fee2e2;color:#991b1b;display:block}
+    .scan-footer{text-align:center;padding:12px 20px 20px;font-size:.8rem;color:var(--color-text-muted)}
+    #startBtn{width:100%;padding:14px;font-size:1rem;font-weight:600;border:none;border-radius:var(--radius-lg);background:var(--gradient-primary);color:#fff;cursor:pointer;margin-bottom:8px}
+    #startBtn:disabled{opacity:.5}
+    .manual-section{border-top:1px solid var(--color-border);padding-top:16px;margin-top:16px}
+    .manual-section h3{font-size:.9rem;margin-bottom:10px;color:var(--color-text-light);text-align:center}
+  </style>
+</head>
+<body>
+  <div class="scan-container">
+    <div class="scan-header">
+      <h1>📱 สแกน QR Code</h1>
+      <p>สแกน QR Code บนรถเพื่อเข้าสู่ระบบที่ต้องการ</p>
+    </div>
+    <div class="scan-body">
+      <div id="reader"></div>
+      <button id="startBtn" onclick="startScan()">📷 เปิดกล้องสแกน</button>
+      <div id="resultBox"></div>
+
+      <div class="manual-section">
+        <h3>หรือเลือกระบบด้วยตนเอง</h3>
+        <div class="type-grid">
+          <button class="type-btn" onclick="goManual('usage')"><span class="icon">📝</span>บันทึกใช้รถ</button>
+          <button class="type-btn" onclick="goManual('check')"><span class="icon">✅</span>ตรวจสภาพ</button>
+          <button class="type-btn" onclick="goManual('fuel')"><span class="icon">⛽</span>เติมน้ำมัน</button>
+          <button class="type-btn" onclick="goManual('survey')"><span class="icon">⭐</span>แบบประเมิน</button>
+        </div>
+      </div>
+    </div>
+    <div class="scan-footer">
+      <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+    </div>
+  </div>
+
+  <script>
+    var scanner=null;
+    var TYPE_MAP={
+      usage:'qr-usage-record.html',
+      check:'qr-daily-check.html',
+      fuel:'qr-fuel-record.html',
+      survey:'qr-survey.html'
+    };
+
+    function startScan(){
+      var btn=document.getElementById('startBtn');
+      btn.disabled=true;btn.textContent='กำลังเปิดกล้อง...';
+      hideResult();
+      scanner=new Html5Qrcode('reader');
+      scanner.start(
+        {facingMode:'environment'},
+        {fps:10,qrbox:{width:250,height:250}},
+        onScanSuccess,
+        function(){}
+      ).then(function(){btn.style.display='none'})
+       .catch(function(err){
+         btn.disabled=false;btn.textContent='📷 เปิดกล้องสแกน';
+         showResult('ไม่สามารถเปิดกล้องได้: '+err,'error');
+       });
+    }
+
+    function onScanSuccess(decoded){
+      if(scanner) scanner.stop().catch(function(){});
+      document.getElementById('startBtn').style.display='block';
+      document.getElementById('startBtn').disabled=false;
+      document.getElementById('startBtn').textContent='📷 สแกนอีกครั้ง';
+
+      try{
+        // Try JSON first: {"car_id":"xxx","type":"usage"}
+        var data=JSON.parse(decoded);
+        if(data.car_id&&data.type&&TYPE_MAP[data.type]){
+          showResult('พบ QR: '+data.type+' → กำลังเปลี่ยนหน้า...','success');
+          setTimeout(function(){window.location.href=TYPE_MAP[data.type]+'?car='+encodeURIComponent(data.car_id)},800);
+          return;
+        }
+      }catch(e){}
+
+      // Try URL: https://domain/qr-usage-record.html?car=xxx
+      try{
+        var url=new URL(decoded);
+        var page=url.pathname.split('/').pop();
+        var carId=url.searchParams.get('car')||url.searchParams.get('car_id')||url.searchParams.get('vehicleId');
+        if(page&&carId){
+          showResult('พบ QR → กำลังเปลี่ยนหน้า...','success');
+          setTimeout(function(){window.location.href=page+'?car='+encodeURIComponent(carId)},800);
+          return;
+        }
+      }catch(e){}
+
+      // Try plain car_id
+      if(decoded&&decoded.length>5&&decoded.length<100){
+        showResult('พบ QR: '+decoded+' — เลือกระบบที่ต้องการ','success');
+        document.querySelectorAll('.type-btn').forEach(function(btn){
+          btn.onclick=function(){goManual(btn.textContent.includes('ใช้รถ')?'usage':btn.textContent.includes('ตรวจ')?'check':btn.textContent.includes('น้ำมัน')?'fuel':'survey',decoded)};
+        });
+        return;
+      }
+
+      showResult('QR Code ไม่ถูกต้อง กรุณาสแกนใหม่','error');
+    }
+
+    function goManual(type,carId){
+      var url=TYPE_MAP[type]||'qr-usage-record.html';
+      if(carId) url+='?car='+encodeURIComponent(carId);
+      window.location.href=url;
+    }
+
+    function showResult(msg,cls){
+      var el=document.getElementById('resultBox');
+      el.className='result-box '+cls;
+      el.textContent=msg;
+      el.style.display='block';
+    }
+    function hideResult(){
+      var el=document.getElementById('resultBox');
+      el.style.display='none';
+    }
+  </script>
+</body>
+</html>

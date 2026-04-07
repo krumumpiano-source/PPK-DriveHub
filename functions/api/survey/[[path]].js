@@ -11,6 +11,19 @@ export async function onRequest(context) {
   const path = url.pathname;
   const method = request.method;
 
+  // --- GET /api/survey/car-info --- PUBLIC (สำหรับ QR survey page)
+  if (path === '/api/survey/car-info' && method === 'GET') {
+    const carId = url.searchParams.get('car_id');
+    if (!carId) return error('กรุณาระบุ car_id');
+    const car = await dbFirst(env.DB,
+      `SELECT id, license_plate, brand, model FROM cars WHERE id = ? OR license_plate = ?`, [carId, carId]);
+    if (!car) return error('ไม่พบรถ', 404);
+    const latestQueue = await dbFirst(env.DB,
+      `SELECT driver_id FROM queue WHERE car_id = ? AND status IN ('ongoing','completed','scheduled')
+       ORDER BY date DESC, time_start DESC LIMIT 1`, [car.id]);
+    return success({ ...car, driver_id: latestQueue?.driver_id || null });
+  }
+
   // --- POST /api/survey/submit --- PUBLIC (ไม่ต้อง login)
   if (path === '/api/survey/submit' && method === 'POST') {
     const body = await parseBody(request);

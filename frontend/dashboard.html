@@ -294,6 +294,40 @@
         <div class="content">
           <div id="loading" class="loading">กำลังโหลดข้อมูล...</div>
 
+          <!-- Driver Dashboard -->
+          <div id="driverDashboard" style="display:none">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:1.5rem" id="driverKpi"></div>
+            <div style="background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:1.2rem;margin-bottom:1.5rem">
+              <h3 style="margin-bottom:1rem;font-size:1.1rem">📋 คิวของฉันวันนี้</h3>
+              <div id="driverTodayQueue"></div>
+            </div>
+            <div style="background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:1.2rem;margin-bottom:1.5rem">
+              <h3 style="margin-bottom:1rem;font-size:1.1rem">📅 คิวที่จะถึง (7 วัน)</h3>
+              <div id="driverUpcomingQueue"></div>
+            </div>
+            <div style="text-align:center;margin-top:1rem">
+              <a href="qr-scan.html" style="display:inline-block;background:var(--color-primary);color:#fff;padding:16px 40px;border-radius:var(--radius-lg);font-size:1.2rem;text-decoration:none;font-weight:700">📱 สแกน QR Code</a>
+            </div>
+          </div>
+
+          <!-- Fuel Manager Dashboard -->
+          <div id="fuelDashboard" style="display:none">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:1.5rem" id="fuelKpi"></div>
+            <div style="background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:1.2rem">
+              <h3 style="margin-bottom:1rem;font-size:1.1rem">⛽ รายการเติมน้ำมันล่าสุด</h3>
+              <div id="fuelRecentList"></div>
+            </div>
+          </div>
+
+          <!-- Repair Manager Dashboard -->
+          <div id="repairDashboard" style="display:none">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:1.5rem" id="repairKpi"></div>
+            <div style="background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:1.2rem">
+              <h3 style="margin-bottom:1rem;font-size:1.1rem">🔧 งานซ่อมที่รอดำเนินการ</h3>
+              <div id="repairPendingList"></div>
+            </div>
+          </div>
+
           <div id="dashboardContent" style="display: none;">
             <!-- Calendar -->
             <div class="calendar-container">
@@ -392,8 +426,128 @@
             }
           }
 
-          loadDashboard();
+          // Route by role
+          var user = typeof getCurrentUser==='function'?getCurrentUser():null;
+          var role = user?user.role:'';
+          if(role==='driver'){
+            loadDriverDashboard(user);
+          } else if(role==='fuel'){
+            loadFuelDashboard();
+          } else if(role==='repair'){
+            loadRepairDashboard();
+          } else {
+            // admin, super_admin, vehicle (queue), viewer → full calendar
+            loadDashboard();
+          }
         });
+
+        function _kpi(val,label,sub){return'<div style="background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:1rem;text-align:center"><div style="font-size:1.8rem;font-weight:700;color:var(--color-primary)">'+val+'</div><div style="font-size:.82rem;color:var(--color-text-muted);margin-top:4px">'+label+'</div>'+(sub?'<div style="font-size:.78rem;color:var(--color-text-light)">'+sub+'</div>':'')+'</div>'}
+
+        async function loadDriverDashboard(user){
+          document.getElementById('loading').style.display='block';
+          try{
+            var today=formatDate(new Date());
+            var next7=formatDate(new Date(Date.now()+7*86400000));
+            var driverId=user.driver_id||user.id;
+            var [qToday,qUpcoming]=await Promise.all([
+              apiCall('getQueue',{date_from:today,date_to:today,driver_id:driverId}),
+              apiCall('getQueue',{date_from:today,date_to:next7,driver_id:driverId})
+            ]);
+            var todayList=(qToday&&qToday.success&&Array.isArray(qToday.data))?qToday.data.filter(function(q){return(q.date||q.departure_date)===today&&q.driver_id===driverId}):[];
+            var upList=(qUpcoming&&qUpcoming.success&&Array.isArray(qUpcoming.data))?qUpcoming.data.filter(function(q){return q.driver_id===driverId&&(q.date||q.departure_date)>today}):[];
+
+            var kpiH=_kpi(todayList.length,'เที่ยววันนี้','');
+            kpiH+=_kpi(upList.length,'เที่ยวที่จะถึง','7 วันข้างหน้า');
+            document.getElementById('driverKpi').innerHTML=kpiH;
+
+            // Today's queue
+            if(todayList.length===0){
+              document.getElementById('driverTodayQueue').innerHTML='<p style="color:var(--color-text-muted);text-align:center;padding:20px">ไม่มีคิววันนี้</p>';
+            }else{
+              var h='';todayList.forEach(function(q){
+                var time=(q.time_start||q.departure_time||'--:--')+' - '+(q.time_end||q.return_time||'--:--');
+                h+='<div style="background:var(--color-bg-light);padding:12px;border-radius:var(--radius-md);margin-bottom:8px;border-left:4px solid var(--color-primary)">';
+                h+='<strong>'+time+'</strong><br>';
+                h+='<span style="color:var(--color-text-muted)">'+((q.destination||q.mission||'-'))+'</span>';
+                if(q.license_plate)h+='<br><span style="font-size:.85rem">🚗 '+q.license_plate+'</span>';
+                h+='</div>';
+              });
+              document.getElementById('driverTodayQueue').innerHTML=h;
+            }
+
+            // Upcoming
+            if(upList.length===0){
+              document.getElementById('driverUpcomingQueue').innerHTML='<p style="color:var(--color-text-muted);text-align:center;padding:20px">ไม่มีคิวที่จะถึง</p>';
+            }else{
+              var h2='';upList.slice(0,10).forEach(function(q){
+                var d=q.date||q.departure_date||'';
+                h2+='<div style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--color-border);font-size:.9rem">';
+                h2+='<span>'+d+'</span>';
+                h2+='<span>'+(q.destination||q.mission||'-')+'</span>';
+                h2+='</div>';
+              });
+              document.getElementById('driverUpcomingQueue').innerHTML=h2;
+            }
+            document.getElementById('driverDashboard').style.display='block';
+          }catch(e){console.error(e);document.getElementById('driverDashboard').innerHTML='<p style="color:var(--color-danger)">โหลดข้อมูลไม่สำเร็จ</p>';document.getElementById('driverDashboard').style.display='block';}
+          finally{document.getElementById('loading').style.display='none'}
+        }
+
+        async function loadFuelDashboard(){
+          document.getElementById('loading').style.display='block';
+          try{
+            var res=await API.get('/api/reports/fuel');
+            var data=res.success?res.data:{};
+            var kpiH=_kpi((data.total_records||0),'รายการเติมทั้งหมด','');
+            kpiH+=_kpi(Number(data.total_amount||0).toLocaleString(),'ค่าน้ำมันรวม (บาท)','');
+            kpiH+=_kpi(Number(data.total_liters||0).toFixed(0),'ลิตรรวม','');
+            document.getElementById('fuelKpi').innerHTML=kpiH;
+
+            var records=(data.records||[]).slice(0,10);
+            if(records.length===0){
+              document.getElementById('fuelRecentList').innerHTML='<p style="color:var(--color-text-muted);text-align:center;padding:20px">ยังไม่มีข้อมูล</p>';
+            }else{
+              var h='';records.forEach(function(r){
+                h+='<div style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--color-border);font-size:.9rem">';
+                h+='<span>'+(r.date||'-')+'</span>';
+                h+='<span>'+(r.license_plate||'-')+'</span>';
+                h+='<span>'+Number(r.amount||0).toLocaleString()+' บาท</span>';
+                h+='</div>';
+              });
+              document.getElementById('fuelRecentList').innerHTML=h;
+            }
+            document.getElementById('fuelDashboard').style.display='block';
+          }catch(e){console.error(e);document.getElementById('fuelDashboard').innerHTML='<p style="color:var(--color-danger)">โหลดข้อมูลไม่สำเร็จ</p>';document.getElementById('fuelDashboard').style.display='block';}
+          finally{document.getElementById('loading').style.display='none'}
+        }
+
+        async function loadRepairDashboard(){
+          document.getElementById('loading').style.display='block';
+          try{
+            var res=await API.get('/api/reports/repairs');
+            var data=res.success?res.data:{};
+            var kpiH=_kpi((data.active_count||0),'งานค้าง','');
+            kpiH+=_kpi((data.reported_count||0),'รายงานใหม่','');
+            kpiH+=_kpi(Number(data.total_cost||0).toLocaleString(),'ค่าซ่อมรวม (บาท)','');
+            document.getElementById('repairKpi').innerHTML=kpiH;
+
+            var pending=(data.repairs||[]).filter(function(r){return r.status!=='completed'&&r.status!=='cancelled'}).slice(0,10);
+            if(pending.length===0){
+              document.getElementById('repairPendingList').innerHTML='<p style="color:var(--color-text-muted);text-align:center;padding:20px">ไม่มีงานค้าง</p>';
+            }else{
+              var h='';pending.forEach(function(r){
+                var badge=r.status==='reported'?'🔴':'🟡';
+                h+='<div style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--color-border);font-size:.9rem">';
+                h+='<span>'+badge+' '+(r.license_plate||'-')+'</span>';
+                h+='<span style="color:var(--color-text-muted)">'+(r.issue_description||r.description||'-').substring(0,40)+'</span>';
+                h+='</div>';
+              });
+              document.getElementById('repairPendingList').innerHTML=h;
+            }
+            document.getElementById('repairDashboard').style.display='block';
+          }catch(e){console.error(e);document.getElementById('repairDashboard').innerHTML='<p style="color:var(--color-danger)">โหลดข้อมูลไม่สำเร็จ</p>';document.getElementById('repairDashboard').style.display='block';}
+          finally{document.getElementById('loading').style.display='none'}
+        }
 
         async function loadDashboard() {
           try {

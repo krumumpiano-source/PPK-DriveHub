@@ -388,6 +388,128 @@ export async function onRequest(context) {
     return success(scores);
   }
 
+  // ========== Driver Performance — 9-Dimension Score ==========
+  if (path === '/api/reports/driver-performance' && method === 'GET') {
+    try { requirePermission(user, 'reports', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const dpDateFrom = url.searchParams.get('date_from') || new Date(Date.now() - 90 * 86400000).toISOString().substr(0, 10);
+    const dpDateTo = url.searchParams.get('date_to') || now().substr(0, 10);
+    const dpDrivers = await dbAll(env.DB, "SELECT id, name, status FROM drivers ORDER BY name", []);
+    const dpResults = [];
+
+    for (const drv of dpDrivers) {
+      const did = drv.id;
+      const sv = await dbFirst(env.DB, `SELECT AVG((politeness+safety_driving+punctuality+cleanliness+appearance+overall_satisfaction)/6.0) AS avg_score, COUNT(*) AS cnt FROM survey_responses WHERE driver_id=? AND created_at>=? AND created_at<=?`, [did, dpDateFrom, dpDateTo+' 23:59:59']);
+      const uAll = await dbFirst(env.DB, `SELECT COUNT(*) AS total FROM usage_records WHERE driver_id=? AND datetime>=? AND datetime<=?`, [did, dpDateFrom, dpDateTo+' 23:59:59']);
+      const uGood = await dbFirst(env.DB, `SELECT COUNT(*) AS cnt FROM usage_records WHERE driver_id=? AND datetime>=? AND datetime<=? AND data_quality='normal'`, [did, dpDateFrom, dpDateTo+' 23:59:59']);
+      const dd = await dbFirst(env.DB, `SELECT COUNT(DISTINCT date) AS cnt FROM queue WHERE driver_id=? AND date>=? AND date<=? AND status IN ('completed','ongoing')`, [did, dpDateFrom, dpDateTo]);
+      const cd = await dbFirst(env.DB, `SELECT COUNT(DISTINCT DATE(created_at)) AS cnt FROM check_log WHERE car_id IN (SELECT car_id FROM queue WHERE driver_id=? AND date>=? AND date<=?) AND created_at>=? AND created_at<=?`, [did, dpDateFrom, dpDateTo, dpDateFrom, dpDateTo+' 23:59:59']);
+      const qs = await dbAll(env.DB, `SELECT q.id, q.date, q.time_start, ur.datetime AS dep FROM queue q LEFT JOIN usage_records ur ON ur.queue_id=q.id AND ur.record_type='departure' WHERE q.driver_id=? AND q.date>=? AND q.date<=? AND q.status IN ('completed','ongoing')`, [did, dpDateFrom, dpDateTo]);
+      let ot=0; for(const s of qs){if(!s.dep||!s.time_start)continue;if((new Date(s.dep)-new Date(s.date+'T'+s.time_start))/60000<=15)ot++;}
+      const rc = await dbFirst(env.DB, `SELECT COALESCE(SUM(rl.cost),0) AS tc, COUNT(*) AS cnt FROM repair_log rl JOIN queue q ON rl.car_id=q.car_id WHERE q.driver_id=? AND rl.date_reported>=? AND rl.date_reported<=?`, [did, dpDateFrom, dpDateTo]);
+      const tk = await dbFirst(env.DB, `SELECT COALESCE(SUM(mileage_end-mileage_start),0) AS km FROM usage_records WHERE driver_id=? AND record_type='return' AND datetime>=? AND datetime<=? AND mileage_end>mileage_start`, [did, dpDateFrom, dpDateTo+' 23:59:59']);
+      const fa = await dbFirst(env.DB, `SELECT COUNT(*) AS total FROM fuel_log WHERE driver_id=? AND date>=? AND date<=? AND deleted_at IS NULL`, [did, dpDateFrom, dpDateTo]);
+      const fg = await dbFirst(env.DB, `SELECT COUNT(*) AS cnt FROM fuel_log WHERE driver_id=? AND date>=? AND date<=? AND deleted_at IS NULL AND mileage_before IS NOT NULL AND mileage_after IS NOT NULL`, [did, dpDateFrom, dpDateTo]);
+      const fe = await dbFirst(env.DB, `SELECT AVG(fuel_consumption_rate) AS avg_rate FROM fuel_log WHERE driver_id=? AND date>=? AND date<=? AND fuel_consumption_rate>0 AND deleted_at IS NULL`, [did, dpDateFrom, dpDateTo]);
+      const al = await dbFirst(env.DB, `SELECT COUNT(*) AS cnt FROM inspection_alerts WHERE car_id IN (SELECT car_id FROM queue WHERE driver_id=? AND date>=? AND date<=?) AND created_at>=? AND created_at<=?`, [did, dpDateFrom, dpDateTo, dpDateFrom, dpDateTo+' 23:59:59']);
+      const rf = await dbFirst(env.DB, `SELECT COUNT(*) AS cnt FROM repair_log WHERE reporter_name LIKE ? AND date_reported>=? AND date_reported<=?`, ['%'+(drv.name||'').split(' ')[0]+'%', dpDateFrom, dpDateTo]);
+      const rt = await dbFirst(env.DB, `SELECT AVG(JULIANDAY(COALESCE(date_completed,date_reported))-JULIANDAY(date_reported)) AS avg_days FROM repair_log WHERE car_id IN (SELECT car_id FROM queue WHERE driver_id=? AND date>=? AND date<=?) AND date_reported>=?`, [did, dpDateFrom, dpDateTo, dpDateFrom]);
+
+      const dims=[];
+      dims.push({name:'survey',score:Math.min(sv?.avg_score||0,5),count:sv?.cnt||0});
+      dims.push({name:'usage_quality',score:uAll?.total>0?((uGood?.cnt||0)/uAll.total)*5:0,count:uAll?.total||0});
+      dims.push({name:'daily_check',score:dd?.cnt>0?Math.min(((cd?.cnt||0)/dd.cnt)*5,5):0,count:dd?.cnt||0});
+      dims.push({name:'punctuality',score:qs.length>0?(ot/qs.length)*5:0,count:qs.length});
+      const cpk=(tk?.km||0)>0?(rc?.tc||0)/tk.km:0;
+      dims.push({name:'vehicle_care',score:Math.min(cpk===0?5:Math.max(5-cpk,0),5)});
+      dims.push({name:'fuel_records',score:fa?.total>0?((fg?.cnt||0)/fa.total)*5:0,count:fa?.total||0});
+      const er=fe?.avg_rate||0;
+      dims.push({name:'fuel_efficiency',score:er>0?Math.min((er/8)*5,5):0});
+      dims.push({name:'repair_reporting',score:al?.cnt>0?Math.min(((rf?.cnt||0)/al.cnt)*5,5):(rf?.cnt>0?5:0)});
+      const atd=rt?.avg_days||0;
+      dims.push({name:'repair_turnaround',score:rc?.cnt>0?(atd<=1?5:atd<=3?4:atd<=7?3:atd<=14?2:1):0});
+      const avg=dims.reduce((s,d)=>s+d.score,0)/9;
+      dpResults.push({driver_id:drv.id,driver_name:drv.name,driver_status:drv.status,avg_score:Math.round(avg*100)/100,dimensions:dims,date_from:dpDateFrom,date_to:dpDateTo});
+    }
+    return success(dpResults);
+  }
+
+  // ========== Driver Performance — Single Driver ==========
+  if (path.match(/^\/api\/reports\/driver-performance\/[^/]+$/) && method === 'GET') {
+    try { requirePermission(user, 'reports', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const dpId = path.split('/').pop();
+    const dpDF = url.searchParams.get('date_from') || new Date(Date.now()-90*86400000).toISOString().substr(0,10);
+    const dpDT = url.searchParams.get('date_to') || now().substr(0,10);
+    const dpDrv = await dbFirst(env.DB, "SELECT id, name, status FROM drivers WHERE id=?", [dpId]);
+    if (!dpDrv) return error('ไม่พบพนักงาน', 404);
+    const did=dpDrv.id;
+    const sv=await dbFirst(env.DB,`SELECT AVG((politeness+safety_driving+punctuality+cleanliness+appearance+overall_satisfaction)/6.0) AS avg_score,COUNT(*) AS cnt FROM survey_responses WHERE driver_id=? AND created_at>=? AND created_at<=?`,[did,dpDF,dpDT+' 23:59:59']);
+    const uAll=await dbFirst(env.DB,`SELECT COUNT(*) AS total FROM usage_records WHERE driver_id=? AND datetime>=? AND datetime<=?`,[did,dpDF,dpDT+' 23:59:59']);
+    const uGood=await dbFirst(env.DB,`SELECT COUNT(*) AS cnt FROM usage_records WHERE driver_id=? AND datetime>=? AND datetime<=? AND data_quality='normal'`,[did,dpDF,dpDT+' 23:59:59']);
+    const dd=await dbFirst(env.DB,`SELECT COUNT(DISTINCT date) AS cnt FROM queue WHERE driver_id=? AND date>=? AND date<=? AND status IN ('completed','ongoing')`,[did,dpDF,dpDT]);
+    const cd=await dbFirst(env.DB,`SELECT COUNT(DISTINCT DATE(created_at)) AS cnt FROM check_log WHERE car_id IN (SELECT car_id FROM queue WHERE driver_id=? AND date>=? AND date<=?) AND created_at>=? AND created_at<=?`,[did,dpDF,dpDT,dpDF,dpDT+' 23:59:59']);
+    const qs=await dbAll(env.DB,`SELECT q.date,q.time_start,ur.datetime AS dep FROM queue q LEFT JOIN usage_records ur ON ur.queue_id=q.id AND ur.record_type='departure' WHERE q.driver_id=? AND q.date>=? AND q.date<=? AND q.status IN ('completed','ongoing')`,[did,dpDF,dpDT]);
+    let ot=0;for(const s of qs){if(!s.dep||!s.time_start)continue;if((new Date(s.dep)-new Date(s.date+'T'+s.time_start))/60000<=15)ot++;}
+    const rc=await dbFirst(env.DB,`SELECT COALESCE(SUM(rl.cost),0) AS tc,COUNT(*) AS cnt FROM repair_log rl JOIN queue q ON rl.car_id=q.car_id WHERE q.driver_id=? AND rl.date_reported>=? AND rl.date_reported<=?`,[did,dpDF,dpDT]);
+    const tk=await dbFirst(env.DB,`SELECT COALESCE(SUM(mileage_end-mileage_start),0) AS km FROM usage_records WHERE driver_id=? AND record_type='return' AND datetime>=? AND datetime<=? AND mileage_end>mileage_start`,[did,dpDF,dpDT+' 23:59:59']);
+    const fa=await dbFirst(env.DB,`SELECT COUNT(*) AS total FROM fuel_log WHERE driver_id=? AND date>=? AND date<=? AND deleted_at IS NULL`,[did,dpDF,dpDT]);
+    const fg=await dbFirst(env.DB,`SELECT COUNT(*) AS cnt FROM fuel_log WHERE driver_id=? AND date>=? AND date<=? AND deleted_at IS NULL AND mileage_before IS NOT NULL AND mileage_after IS NOT NULL`,[did,dpDF,dpDT]);
+    const fe=await dbFirst(env.DB,`SELECT AVG(fuel_consumption_rate) AS avg_rate FROM fuel_log WHERE driver_id=? AND date>=? AND date<=? AND fuel_consumption_rate>0 AND deleted_at IS NULL`,[did,dpDF,dpDT]);
+    const al=await dbFirst(env.DB,`SELECT COUNT(*) AS cnt FROM inspection_alerts WHERE car_id IN (SELECT car_id FROM queue WHERE driver_id=? AND date>=? AND date<=?) AND created_at>=? AND created_at<=?`,[did,dpDF,dpDT,dpDF,dpDT+' 23:59:59']);
+    const rf=await dbFirst(env.DB,`SELECT COUNT(*) AS cnt FROM repair_log WHERE reporter_name LIKE ? AND date_reported>=? AND date_reported<=?`,['%'+(dpDrv.name||'').split(' ')[0]+'%',dpDF,dpDT]);
+    const rtd=await dbFirst(env.DB,`SELECT AVG(JULIANDAY(COALESCE(date_completed,date_reported))-JULIANDAY(date_reported)) AS avg_days FROM repair_log WHERE car_id IN (SELECT car_id FROM queue WHERE driver_id=? AND date>=? AND date<=?) AND date_reported>=?`,[did,dpDF,dpDT,dpDF]);
+    const dims=[];
+    dims.push({name:'survey',score:Math.min(sv?.avg_score||0,5),count:sv?.cnt||0});
+    dims.push({name:'usage_quality',score:uAll?.total>0?((uGood?.cnt||0)/uAll.total)*5:0});
+    dims.push({name:'daily_check',score:dd?.cnt>0?Math.min(((cd?.cnt||0)/dd.cnt)*5,5):0});
+    dims.push({name:'punctuality',score:qs.length>0?(ot/qs.length)*5:0});
+    const cpk2=(tk?.km||0)>0?(rc?.tc||0)/tk.km:0;
+    dims.push({name:'vehicle_care',score:Math.min(cpk2===0?5:Math.max(5-cpk2,0),5)});
+    dims.push({name:'fuel_records',score:fa?.total>0?((fg?.cnt||0)/fa.total)*5:0});
+    dims.push({name:'fuel_efficiency',score:(fe?.avg_rate||0)>0?Math.min((fe.avg_rate/8)*5,5):0});
+    dims.push({name:'repair_reporting',score:al?.cnt>0?Math.min(((rf?.cnt||0)/al.cnt)*5,5):(rf?.cnt>0?5:0)});
+    const atd2=rtd?.avg_days||0;
+    dims.push({name:'repair_turnaround',score:rc?.cnt>0?(atd2<=1?5:atd2<=3?4:atd2<=7?3:atd2<=14?2:1):0});
+    const avg2=dims.reduce((s,d)=>s+d.score,0)/9;
+    return success({driver_id:dpDrv.id,driver_name:dpDrv.name,driver_status:dpDrv.status,avg_score:Math.round(avg2*100)/100,dimensions:dims,date_from:dpDF,date_to:dpDT});
+  }
+
+  // ========== Vehicle Timeline ==========
+  if (path.match(/^\/api\/reports\/vehicle-timeline\/[^/]+$/) && method === 'GET') {
+    try { requirePermission(user, 'reports', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const vtCarId = path.split('/').pop();
+    const vtFrom = url.searchParams.get('date_from') || '2020-01-01';
+    const vtTo = url.searchParams.get('date_to') || now().substr(0, 10);
+    const vtType = url.searchParams.get('type');
+    const events = [];
+    if (!vtType || vtType === 'queue') { const r = await dbAll(env.DB, `SELECT q.id,q.date,q.time_start,q.time_end,q.destination,q.purpose,q.status,d.name AS driver_name FROM queue q LEFT JOIN drivers d ON q.driver_id=d.id WHERE q.car_id=? AND q.date>=? AND q.date<=? ORDER BY q.date DESC`, [vtCarId,vtFrom,vtTo]); r.forEach(x=>events.push({type:'queue',date:x.date,data:x})); }
+    if (!vtType || vtType === 'usage') { const r = await dbAll(env.DB, `SELECT id,datetime,record_type,mileage_start,mileage_end,data_quality FROM usage_records WHERE car_id=? AND datetime>=? AND datetime<=? ORDER BY datetime DESC`, [vtCarId,vtFrom,vtTo+' 23:59:59']); r.forEach(x=>events.push({type:'usage',date:x.datetime?.substr(0,10),data:x})); }
+    if (!vtType || vtType === 'fuel') { const r = await dbAll(env.DB, `SELECT id,date,liters,amount,fuel_type,gas_station_name FROM fuel_log WHERE car_id=? AND date>=? AND date<=? AND deleted_at IS NULL ORDER BY date DESC`, [vtCarId,vtFrom,vtTo]); r.forEach(x=>events.push({type:'fuel',date:x.date,data:x})); }
+    if (!vtType || vtType === 'repair') { const r = await dbAll(env.DB, `SELECT id,date_reported,description,cost,status FROM repair_log WHERE car_id=? AND date_reported>=? AND date_reported<=? ORDER BY date_reported DESC`, [vtCarId,vtFrom,vtTo]); r.forEach(x=>events.push({type:'repair',date:x.date_reported,data:x})); }
+    if (!vtType || vtType === 'check') { const r = await dbAll(env.DB, `SELECT id,created_at,overall_status,inspector FROM check_log WHERE car_id=? AND created_at>=? AND created_at<=? ORDER BY created_at DESC`, [vtCarId,vtFrom,vtTo+' 23:59:59']); r.forEach(x=>events.push({type:'check',date:x.created_at?.substr(0,10),data:x})); }
+    if (!vtType || vtType === 'tax') { const r = await dbAll(env.DB, `SELECT id,paid_date,expiry_date,amount,tax_type FROM tax_records WHERE car_id=? ORDER BY paid_date DESC`, [vtCarId]); r.forEach(x=>events.push({type:'tax',date:x.paid_date,data:x})); }
+    if (!vtType || vtType === 'insurance') { const r = await dbAll(env.DB, `SELECT id,paid_date,expiry_date,amount,insurance_type,insurance_company FROM insurance_records WHERE car_id=? ORDER BY paid_date DESC`, [vtCarId]); r.forEach(x=>events.push({type:'insurance',date:x.paid_date,data:x})); }
+    if (!vtType || vtType === 'inspection') { const r = await dbAll(env.DB, `SELECT id,inspection_date,expiry_date,result,cost,station_name FROM inspection_records WHERE car_id=? ORDER BY inspection_date DESC`, [vtCarId]); r.forEach(x=>events.push({type:'inspection',date:x.inspection_date,data:x})); }
+    if (!vtType || vtType === 'incident') { const r = await dbAll(env.DB, `SELECT id,incident_date,incident_type,description,damage_cost,status FROM incidents WHERE car_id=? ORDER BY incident_date DESC`, [vtCarId]); r.forEach(x=>events.push({type:'incident',date:x.incident_date,data:x})); }
+    events.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    return success(events);
+  }
+
+  // ========== Vehicle Cost Summary ==========
+  if (path.match(/^\/api\/reports\/vehicle-cost\/[^/]+$/) && method === 'GET') {
+    try { requirePermission(user, 'reports', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const vcCarId = path.split('/').pop();
+    const vcFrom = url.searchParams.get('date_from') || '2020-01-01';
+    const vcTo = url.searchParams.get('date_to') || now().substr(0, 10);
+    const [vcFuel,vcRepair,vcTax,vcIns,vcInsp] = await Promise.all([
+      dbFirst(env.DB, `SELECT COALESCE(SUM(amount),0) AS total FROM fuel_log WHERE car_id=? AND date>=? AND date<=? AND deleted_at IS NULL`, [vcCarId,vcFrom,vcTo]),
+      dbFirst(env.DB, `SELECT COALESCE(SUM(cost),0) AS total FROM repair_log WHERE car_id=? AND date_reported>=? AND date_reported<=?`, [vcCarId,vcFrom,vcTo]),
+      dbFirst(env.DB, `SELECT COALESCE(SUM(amount),0) AS total FROM tax_records WHERE car_id=?`, [vcCarId]),
+      dbFirst(env.DB, `SELECT COALESCE(SUM(amount),0) AS total FROM insurance_records WHERE car_id=?`, [vcCarId]),
+      dbFirst(env.DB, `SELECT COALESCE(SUM(cost),0) AS total FROM inspection_records WHERE car_id=?`, [vcCarId])
+    ]);
+    return success({ car_id:vcCarId, fuel:vcFuel?.total||0, repair:vcRepair?.total||0, tax:vcTax?.total||0, insurance:vcIns?.total||0, inspection:vcInsp?.total||0, grand_total:(vcFuel?.total||0)+(vcRepair?.total||0)+(vcTax?.total||0)+(vcIns?.total||0)+(vcInsp?.total||0), date_from:vcFrom, date_to:vcTo });
+  }
+
   // ========== Data Quality Report ==========
   if (path === '/api/reports/data-quality' && method === 'GET') {
     try { requirePermission(user, 'reports', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }

@@ -8,7 +8,7 @@
   <script src="config.js"></script>
   <script>window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'fuel-ledger'; window.REQUIRE_AUTH = true;</script>
   <link rel="stylesheet" href="common.css">
-  <script src="js/api.js"></script><script src="common.js"></script>
+  <script src="js/api.js"></script><script src="js/export-utils.js"></script><script src="common.js"></script>
   <style>
     .header { background: var(--gradient-primary); color: white; padding: 30px; text-align: center; }
     .header h1 { font-size: 2em; margin-bottom: 8px; }
@@ -79,6 +79,7 @@
 
         <button class="btn-print" onclick="loadAll()">🔍 โหลดข้อมูล</button>
         <button class="btn-print" onclick="printActiveTab()" style="background:#555;">🖨️ พิมพ์เอกสาร</button>
+        <button class="btn-print" onclick="exportLedgerExcel()" style="background:#217346;">📥 Excel</button>
       </div>
 
       <!-- Tabs -->
@@ -758,6 +759,17 @@
       else if (id === 'tabPurchase') printPurchaseDoc();
     }
     window.printActiveTab = printActiveTab;
+
+    function exportLedgerExcel(){
+      if(!ledgerData||!ledgerData.monthly_data){alert('กรุณาโหลดข้อมูลก่อน');return}
+      var hd=['เดือน','จำนวนครั้ง','ลิตร','จำนวนเงิน (บาท)','งบคงเหลือ (บาท)'];
+      var rows=[];
+      ledgerData.monthly_data.forEach(function(m){
+        rows.push([m.month_name||m.label||'',m.count||0,m.liters||0,m.amount||0,m.remaining_budget||'']);
+      });
+      ExportUtils.exportExcel({filename:'ทะเบียนน้ำมัน_'+ledgerData.fiscal_year_be,sheetName:'ทะเบียนควบคุม',headers:hd,rows:rows});
+    }
+    window.exportLedgerExcel = exportLedgerExcel;
 
     /* ──── Tab 1: ทะเบียนควบคุม ──── */
     function printLedgerDoc() {

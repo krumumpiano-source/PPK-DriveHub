@@ -1,0 +1,182 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ประวัติรายคัน - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>window.API_BASE_URL=CONFIG.API_BASE_URL;window.currentPage='vehicle-timeline';window.REQUIRE_AUTH=true;</script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
+  <link rel="stylesheet" href="common.css">
+  <script src="js/api.js"></script><script src="js/export-utils.js"></script><script src="common.js"></script>
+  <style>
+    .cost-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:1rem}
+    .cost-card{background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:10px;text-align:center}
+    .cost-card .cc-label{font-size:.78rem;color:var(--color-text-muted)}
+    .cost-card .cc-val{font-size:1.1rem;font-weight:700;color:var(--color-primary)}
+    .cost-card.total .cc-val{color:var(--color-danger);font-size:1.2rem}
+    .tl-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--color-border)}
+    .tl-item:last-child{border-bottom:none}
+    .tl-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+    .tl-icon.queue{background:#dbeafe}.tl-icon.usage{background:#e0e7ff}.tl-icon.fuel{background:#fef3c7}
+    .tl-icon.repair{background:#fee2e2}.tl-icon.check{background:#d1fae5}.tl-icon.tax{background:#ede9fe}
+    .tl-icon.insurance{background:#fce7f3}.tl-icon.inspection{background:#cffafe}.tl-icon.incident{background:#fecaca}
+    .tl-body{flex:1;min-width:0}
+    .tl-date{font-size:.78rem;color:var(--color-text-muted)}
+    .tl-title{font-weight:600;font-size:.9rem}
+    .tl-detail{font-size:.82rem;color:var(--color-text-light);margin-top:2px}
+    .filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;align-items:flex-end}
+    .filter-row .form-group{margin-bottom:0}
+    .filter-row label{font-size:.82rem;display:block;margin-bottom:4px;font-weight:500}
+    .filter-row input,.filter-row select{padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🚗 ประวัติรายคัน</h1>
+      <p>ระบบจัดการยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+    </div>
+    <div id="navigation"></div>
+    <div class="content">
+      <div id="alertContainer"></div>
+      <div class="filter-row">
+        <div class="form-group"><label>เลือกรถ</label><select id="filterCar"><option value="">-- เลือกรถ --</option></select></div>
+        <div class="form-group"><label>จาก</label><input type="text" id="dateFrom" class="thai-datepicker"></div>
+        <div class="form-group"><label>ถึง</label><input type="text" id="dateTo" class="thai-datepicker"></div>
+        <div class="form-group"><label>ประเภท</label>
+          <select id="filterType">
+            <option value="">ทั้งหมด</option>
+            <option value="queue">คิวรถ</option><option value="usage">การใช้รถ</option>
+            <option value="fuel">เติมน้ำมัน</option><option value="repair">ซ่อม</option>
+            <option value="check">ตรวจสภาพ</option><option value="tax">ภาษี</option>
+            <option value="insurance">ประกัน</option><option value="inspection">ตรอ.</option>
+            <option value="incident">อุบัติเหตุ</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="loadTimeline()">📊 แสดง</button>
+        <button class="btn btn-secondary" onclick="exportTimeline('excel')" style="background:#217346;color:#fff">📥 Excel</button>
+      </div>
+      <div id="costSummary"></div>
+      <div id="loading" class="loading" style="display:none">กำลังโหลด...</div>
+      <div id="timelineList"></div>
+    </div>
+  </div>
+  <div style="background:var(--color-bg-light);padding:20px;text-align:center;color:var(--color-text-muted);font-size:.9em;margin-top:20px">
+    <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+  </div>
+  <script>
+    var vehicles=[];
+    var ICONS={queue:'📅',usage:'📝',fuel:'⛽',repair:'🔧',check:'✅',tax:'📋',insurance:'🛡️',inspection:'🔍',incident:'⚠️'};
+    var TYPE_LABELS={queue:'คิวรถ',usage:'การใช้รถ',fuel:'เติมน้ำมัน',repair:'ซ่อม',check:'ตรวจสภาพ',tax:'ภาษี',insurance:'ประกัน',inspection:'ตรอ.',incident:'อุบัติเหตุ'};
+
+    function waitForCommon(){return new Promise(function(r){if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){r();return}var c=0;var t=setInterval(function(){c++;if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){clearInterval(t);r()}else if(c>50){clearInterval(t);r()}},100)})}
+
+    document.addEventListener('DOMContentLoaded',async function(){
+      await waitForCommon();
+      if(typeof requireAuth==='function'&&!requireAuth())return;
+      await loadVehicles();
+      var now=new Date();var y1=new Date(now.getFullYear(),0,1);
+      document.getElementById('dateFrom').value=y1.toISOString().substr(0,10);
+      document.getElementById('dateTo').value=now.toISOString().substr(0,10);
+      setTimeout(function(){if(typeof initAllThaiDateTimePickers==='function')initAllThaiDateTimePickers()},500);
+    });
+
+    async function loadVehicles(){
+      try{var r=await apiCall('getVehicles',{});if(r.success&&r.data&&r.data.vehicles){vehicles=r.data.vehicles;var sel=document.getElementById('filterCar');vehicles.forEach(function(v){var o=document.createElement('option');o.value=v.car_id;o.textContent=v.license_plate+' '+(v.brand||'')+' '+(v.model||'');sel.appendChild(o)})}}catch(e){console.error(e)}
+    }
+
+    function fmtDate(s){if(!s)return'-';try{var p=s.split(/[T ]/)[0].split('-');var m=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];return parseInt(p[2])+' '+m[parseInt(p[1])-1]+' '+(parseInt(p[0])+543)}catch(e){return s}}
+    function fmt$(n){return n?Number(n).toLocaleString()+' บาท':'-'}
+
+    var _tlData=[];
+    function exportTimeline(fmt){
+      if(!_tlData.length){alert('ไม่มีข้อมูล');return}
+      var hd=['วันที่','ประเภท','รายละเอียด','ค่าใช้จ่าย'];
+      var rows=_tlData.map(function(e){return[e.date||'',e.type||'',e.description||e.title||'',e.cost||'']});
+      ExportUtils.exportExcel({filename:'vehicle-timeline',sheetName:'Timeline',headers:hd,rows:rows});
+    }
+
+    async function loadTimeline(){
+      var carId=document.getElementById('filterCar').value;
+      if(!carId){alert('กรุณาเลือกรถ');return}
+      document.getElementById('loading').style.display='block';
+      document.getElementById('timelineList').innerHTML='';
+      document.getElementById('costSummary').innerHTML='';
+      try{
+        var df=document.getElementById('dateFrom').value;var dt=document.getElementById('dateTo').value;
+        var tp=document.getElementById('filterType').value;
+        var q='?date_from='+df+'&date_to='+dt;if(tp)q+='&type='+tp;
+        var [tlRes,costRes]=await Promise.all([
+          API.get('/api/reports/vehicle-timeline/'+carId+q),
+          API.get('/api/reports/vehicle-cost/'+carId+'?date_from='+df+'&date_to='+dt)
+        ]);
+        if(costRes.success&&costRes.data){
+          var c=costRes.data;
+          var h='<div class="cost-cards">';
+          h+='<div class="cost-card"><div class="cc-label">⛽ น้ำมัน</div><div class="cc-val">'+fmt$(c.fuel)+'</div></div>';
+          h+='<div class="cost-card"><div class="cc-label">🔧 ซ่อม</div><div class="cc-val">'+fmt$(c.repair)+'</div></div>';
+          h+='<div class="cost-card"><div class="cc-label">📋 ภาษี</div><div class="cc-val">'+fmt$(c.tax)+'</div></div>';
+          h+='<div class="cost-card"><div class="cc-label">🛡️ ประกัน</div><div class="cc-val">'+fmt$(c.insurance)+'</div></div>';
+          h+='<div class="cost-card"><div class="cc-label">🔍 ตรอ.</div><div class="cc-val">'+fmt$(c.inspection)+'</div></div>';
+          h+='<div class="cost-card total"><div class="cc-label">💰 รวมทั้งหมด</div><div class="cc-val">'+fmt$(c.grand_total)+'</div></div>';
+          h+='</div>';
+          document.getElementById('costSummary').innerHTML=h;
+        }
+        if(tlRes.success){
+          var list=Array.isArray(tlRes.data)?tlRes.data:[];
+          _tlData=list;
+          if(!list.length){document.getElementById('timelineList').innerHTML='<div class="empty-state"><div class="empty-state-icon">📅</div><p>ไม่มีข้อมูลในช่วงเวลานี้</p></div>';return}
+          var h2='';
+          list.forEach(function(ev){
+            h2+='<div class="tl-item">';
+            h2+='<div class="tl-icon '+ev.type+'">'+(ICONS[ev.type]||'📋')+'</div>';
+            h2+='<div class="tl-body">';
+            h2+='<div class="tl-date">'+fmtDate(ev.date)+' — '+(TYPE_LABELS[ev.type]||ev.type)+'</div>';
+            h2+='<div class="tl-title">'+getTitle(ev)+'</div>';
+            var detail=getDetail(ev);
+            if(detail)h2+='<div class="tl-detail">'+detail+'</div>';
+            h2+='</div></div>';
+          });
+          document.getElementById('timelineList').innerHTML=h2;
+        }
+      }catch(e){console.error(e);document.getElementById('timelineList').innerHTML='<p style="color:var(--color-danger)">'+e.message+'</p>'}
+      finally{document.getElementById('loading').style.display='none'}
+    }
+
+    function getTitle(ev){
+      var d=ev.data;
+      switch(ev.type){
+        case 'queue':return(d.destination||'ไม่ระบุปลายทาง')+' — '+(d.driver_name||'');
+        case 'usage':return(d.record_type==='departure'?'🚗 ออก':'🏁 กลับ')+' เลขไมล์ '+(d.mileage_start||d.mileage_end||'-');
+        case 'fuel':return'เติม '+(d.liters||0)+' ลิตร — '+fmt$(d.amount);
+        case 'repair':return(d.description||'ซ่อมบำรุง').substring(0,60);
+        case 'check':return'ผลตรวจ: '+(d.overall_status==='good'?'✅ ปกติ':d.overall_status==='warning'?'⚠️ เฝ้าระวัง':'❌ วิกฤต');
+        case 'tax':return'ภาษี '+fmt$(d.amount);
+        case 'insurance':return(d.insurance_company||'ประกัน')+' '+fmt$(d.amount);
+        case 'inspection':return'ตรอ. '+(d.result==='passed'?'✅ ผ่าน':'❌ ไม่ผ่าน');
+        case 'incident':return(d.incident_type==='accident'?'⚡ อุบัติเหตุ':'⚠️ เหตุการณ์')+' — '+(d.description||'').substring(0,40);
+        default:return ev.type;
+      }
+    }
+
+    function getDetail(ev){
+      var d=ev.data;
+      switch(ev.type){
+        case 'queue':return d.purpose||'';
+        case 'usage':return d.data_quality&&d.data_quality!=='normal'?'⚠️ '+d.data_quality:'';
+        case 'fuel':return(d.gas_station_name||'')+(d.fuel_type?' ('+d.fuel_type+')':'');
+        case 'repair':return(d.status||'')+' — '+fmt$(d.cost);
+        case 'check':return(d.inspector||'');
+        case 'tax':return'หมดอายุ '+fmtDate(d.expiry_date);
+        case 'insurance':return'หมดอายุ '+fmtDate(d.expiry_date);
+        case 'inspection':return(d.station_name||'')+' — '+fmt$(d.cost);
+        case 'incident':return(d.status||'')+' — '+fmt$(d.damage_cost);
+        default:return'';
+      }
+    }
+  </script>
+</body>
+</html>

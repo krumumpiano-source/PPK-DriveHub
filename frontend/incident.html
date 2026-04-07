@@ -1,0 +1,216 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>บันทึกอุบัติเหตุ - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>window.API_BASE_URL=CONFIG.API_BASE_URL;window.currentPage='incident';window.REQUIRE_AUTH=true;</script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
+  <link rel="stylesheet" href="common.css">
+  <script src="js/api.js"></script><script src="common.js"></script>
+  <style>
+    .incident-card{background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:1rem;margin-bottom:.75rem}
+    .incident-card.critical{border-left:4px solid var(--color-danger)}
+    .incident-card.resolved{opacity:.75}
+    .inc-header{display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;flex-wrap:wrap}
+    .inc-title{font-weight:600;font-size:.95rem}
+    .inc-body{margin-top:.5rem;font-size:.88rem;color:var(--color-text-light)}
+    .inc-body p{margin-bottom:4px}
+    .inc-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:.78rem;font-weight:500}
+    .type-accident{background:#fee2e2;color:#991b1b}
+    .type-traffic_violation{background:#fef3c7;color:#92400e}
+    .type-damage{background:#fce7f3;color:#9d174d}
+    .type-other{background:#e0e7ff;color:#3730a3}
+    .st-reported{background:#fef3c7;color:#92400e}
+    .st-investigating{background:#dbeafe;color:#1e40af}
+    .st-resolved{background:#d1fae5;color:#065f46}
+    .st-closed{background:#f3f4f6;color:#6b7280}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>⚠️ บันทึกอุบัติเหตุ/เหตุการณ์</h1>
+      <p>ระบบจัดการยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+    </div>
+    <div id="navigation"></div>
+    <div class="content">
+      <div id="alertContainer"></div>
+      <div class="actions-bar" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem">
+        <button class="btn btn-primary" onclick="openAddModal()">➕ เพิ่มบันทึก</button>
+        <select id="filterCar" onchange="loadIncidents()" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem">
+          <option value="">รถทั้งหมด</option>
+        </select>
+        <select id="filterStatus" onchange="loadIncidents()" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem">
+          <option value="">ทุกสถานะ</option>
+          <option value="reported">รายงานแล้ว</option>
+          <option value="investigating">กำลังสืบสวน</option>
+          <option value="resolved">แก้ไขแล้ว</option>
+          <option value="closed">ปิดเรื่อง</option>
+        </select>
+        <button class="btn btn-secondary" onclick="loadIncidents()">🔃 รีเฟรช</button>
+      </div>
+      <div id="loading" class="loading" style="display:none">กำลังโหลด...</div>
+      <div id="incidentList"></div>
+    </div>
+  </div>
+
+  <div id="addModal" class="modal-overlay">
+    <div class="modal" style="max-width:600px">
+      <div class="modal-header">
+        <h2 id="modalTitle">⚠️ เพิ่มบันทึกอุบัติเหตุ</h2>
+        <button class="modal-close" onclick="closeModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="incForm" onsubmit="submitIncident(event)">
+          <div class="form-row">
+            <div class="form-group"><label>รถ *</label><select id="f_car_id" required><option value="">เลือกรถ</option></select></div>
+            <div class="form-group"><label>พนักงานขับรถ</label><select id="f_driver_id"><option value="">-- เลือก --</option></select></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>วันที่เกิดเหตุ *</label><input type="text" id="f_date" class="thai-datepicker" required></div>
+            <div class="form-group"><label>ประเภท *</label>
+              <select id="f_type" required>
+                <option value="">เลือกประเภท</option>
+                <option value="accident">อุบัติเหตุ</option>
+                <option value="traffic_violation">ฝ่าฝืนจราจร</option>
+                <option value="damage">ความเสียหาย</option>
+                <option value="other">อื่นๆ</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group"><label>รายละเอียด *</label><textarea id="f_desc" rows="3" required placeholder="อธิบายเหตุการณ์"></textarea></div>
+          <div class="form-row">
+            <div class="form-group"><label>สถานที่</label><input type="text" id="f_location" placeholder="สถานที่เกิดเหตุ"></div>
+            <div class="form-group"><label>ค่าเสียหาย (บาท)</label><input type="number" id="f_cost" step="0.01" placeholder="0"></div>
+          </div>
+          <div class="form-group"><label>เลขที่บันทึกประจำวัน (ตร.)</label><input type="text" id="f_police" placeholder="ถ้ามี"></div>
+          <div class="form-group"><label>เลขเคลม</label><input type="text" id="f_claim" placeholder="ถ้ามี"></div>
+          <button type="submit" class="btn btn-primary" id="submitBtn" style="width:100%">💾 บันทึก</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="resolveModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>✅ ปิดเรื่อง</h2>
+        <button class="modal-close" onclick="closeResolve()">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="resolveForm" onsubmit="submitResolve(event)">
+          <div class="form-group"><label>บันทึกการแก้ไข</label><textarea id="r_notes" rows="3" placeholder="สรุปการแก้ไข/ผลการดำเนินการ"></textarea></div>
+          <button type="submit" class="btn btn-primary" id="resolveBtn" style="width:100%">✅ ปิดเรื่อง</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:var(--color-bg-light);padding:20px;text-align:center;color:var(--color-text-muted);font-size:.9em;margin-top:20px">
+    <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+  </div>
+
+  <script>
+    var vehicles=[],drivers=[],editingId=null,resolvingId=null;
+    var TYPE_LABELS={accident:'อุบัติเหตุ',traffic_violation:'ฝ่าฝืนจราจร',damage:'ความเสียหาย',other:'อื่นๆ'};
+    var STATUS_LABELS={reported:'รายงานแล้ว',investigating:'กำลังสืบสวน',resolved:'แก้ไขแล้ว',closed:'ปิดเรื่อง'};
+
+    function waitForCommon(){return new Promise(function(resolve){if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){resolve();return}var c=0;var t=setInterval(function(){c++;if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){clearInterval(t);resolve()}else if(c>50){clearInterval(t);resolve()}},100)})}
+
+    document.addEventListener('DOMContentLoaded',async function(){
+      await waitForCommon();
+      if(typeof requireAuth==='function'&&!requireAuth()) return;
+      await Promise.all([loadVehicles(),loadDrivers()]);
+      loadIncidents();
+      setTimeout(function(){if(typeof initAllThaiDateTimePickers==='function') initAllThaiDateTimePickers()},500);
+    });
+
+    async function loadVehicles(){
+      try{var r=await apiCall('getVehicles',{});if(r.success&&r.data&&r.data.vehicles){vehicles=r.data.vehicles;var sel=document.getElementById('filterCar');var fsel=document.getElementById('f_car_id');vehicles.forEach(function(v){var t=v.license_plate+' '+(v.brand||'')+' '+(v.model||'');[sel,fsel].forEach(function(s){if(!s)return;var o=document.createElement('option');o.value=v.car_id;o.textContent=t;s.appendChild(o)})})}}catch(e){console.error(e)}
+    }
+    async function loadDrivers(){
+      try{var r=await apiCall('getDrivers',{status:'active'});if(r.success&&r.data&&r.data.drivers){drivers=r.data.drivers;var sel=document.getElementById('f_driver_id');drivers.forEach(function(d){var o=document.createElement('option');o.value=d.driver_id;o.textContent=(d.title||'')+' '+(d.first_name||'')+' '+(d.last_name||'');sel.appendChild(o)})}}catch(e){console.error(e)}
+    }
+
+    function vLabel(id){var v=vehicles.find(function(x){return x.car_id===id});return v?(v.license_plate+' '+(v.brand||'')).trim():(id||'-')}
+    function dLabel(id){var d=drivers.find(function(x){return x.driver_id===id});return d?((d.title||'')+' '+(d.first_name||'')+' '+(d.last_name||'')).trim():(id||'-')}
+    function fmtDate(s){if(!s)return'-';try{var p=s.split(/[T ]/)[0].split('-');var m=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];return parseInt(p[2])+' '+m[parseInt(p[1])-1]+' '+(parseInt(p[0])+543)}catch(e){return s}}
+    function showAlert(msg,type){var c=document.getElementById('alertContainer');c.innerHTML='<div class="alert alert-'+type+'">'+msg+'</div>';setTimeout(function(){c.innerHTML=''},5000)}
+
+    async function loadIncidents(){
+      document.getElementById('loading').style.display='block';
+      document.getElementById('incidentList').innerHTML='';
+      try{
+        var params={};
+        var fc=document.getElementById('filterCar').value;
+        var fs=document.getElementById('filterStatus').value;
+        if(fc) params.car_id=fc;
+        if(fs) params.status=fs;
+        var r=await API.get('/api/incidents'+_buildQ(params));
+        var list=(r.success&&r.data)?(Array.isArray(r.data)?r.data:[]):[];
+        if(!list.length){document.getElementById('incidentList').innerHTML='<div class="empty-state"><div class="empty-state-icon">✅</div><p>ไม่มีบันทึกอุบัติเหตุ</p></div>';return}
+        var html='';
+        list.forEach(function(inc){
+          var isCrit=inc.incident_type==='accident';
+          var isRes=inc.status==='resolved'||inc.status==='closed';
+          html+='<div class="incident-card'+(isCrit?' critical':'')+(isRes?' resolved':'')+'">';
+          html+='<div class="inc-header"><div class="inc-title">'+vLabel(inc.car_id)+' — '+fmtDate(inc.incident_date)+'</div>';
+          html+='<div><span class="inc-badge type-'+inc.incident_type+'">'+(TYPE_LABELS[inc.incident_type]||inc.incident_type)+'</span> ';
+          html+='<span class="inc-badge st-'+inc.status+'">'+(STATUS_LABELS[inc.status]||inc.status)+'</span></div></div>';
+          html+='<div class="inc-body">';
+          html+='<p>'+(inc.description||'-')+'</p>';
+          if(inc.driver_id) html+='<p>👤 '+dLabel(inc.driver_id)+'</p>';
+          if(inc.location) html+='<p>📍 '+inc.location+'</p>';
+          if(inc.damage_cost) html+='<p>💰 '+Number(inc.damage_cost).toLocaleString()+' บาท</p>';
+          if(inc.police_report_number) html+='<p>📋 บันทึก ตร.: '+inc.police_report_number+'</p>';
+          if(inc.resolution_notes) html+='<p>✅ '+inc.resolution_notes+'</p>';
+          html+='</div>';
+          var user=getCurrentUser();
+          if(user&&(user.role==='admin'||hasModulePermission('repair','edit'))&&!isRes){
+            html+='<div style="margin-top:.5rem;display:flex;gap:6px">';
+            html+='<button class="btn btn-primary" style="padding:4px 12px;font-size:.82rem" onclick="openResolve(\''+inc.id+'\')">✅ ปิดเรื่อง</button>';
+            html+='</div>';
+          }
+          html+='</div>';
+        });
+        document.getElementById('incidentList').innerHTML=html;
+      }catch(e){console.error(e);document.getElementById('incidentList').innerHTML='<p style="color:var(--color-danger)">โหลดไม่สำเร็จ</p>'}
+      finally{document.getElementById('loading').style.display='none'}
+    }
+
+    function _buildQ(obj){if(!obj)return'';var p=new URLSearchParams();for(var k in obj){if(obj[k])p.append(k,obj[k])}var s=p.toString();return s?'?'+s:''}
+
+    function openAddModal(){editingId=null;document.getElementById('modalTitle').textContent='⚠️ เพิ่มบันทึกอุบัติเหตุ';document.getElementById('incForm').reset();document.getElementById('addModal').classList.add('show');setTimeout(function(){if(typeof initAllThaiDateTimePickers==='function') initAllThaiDateTimePickers()},100)}
+    function closeModal(){document.getElementById('addModal').classList.remove('show')}
+    function openResolve(id){resolvingId=id;document.getElementById('resolveForm').reset();document.getElementById('resolveModal').classList.add('show')}
+    function closeResolve(){document.getElementById('resolveModal').classList.remove('show')}
+
+    async function submitIncident(e){
+      e.preventDefault();
+      var btn=document.getElementById('submitBtn');btn.disabled=true;btn.textContent='กำลังบันทึก...';
+      try{
+        var data={car_id:document.getElementById('f_car_id').value,driver_id:document.getElementById('f_driver_id').value||null,incident_date:document.getElementById('f_date').value,incident_type:document.getElementById('f_type').value,description:document.getElementById('f_desc').value.trim(),location:document.getElementById('f_location').value.trim(),damage_cost:parseFloat(document.getElementById('f_cost').value)||0,police_report_number:document.getElementById('f_police').value.trim(),insurance_claim:document.getElementById('f_claim').value.trim()};
+        var r=await API.post('/api/incidents',data);
+        if(r.success){showAlert('บันทึกสำเร็จ','success');closeModal();loadIncidents()}
+        else showAlert(r.message||r.error||'ไม่สำเร็จ','error');
+      }catch(e){showAlert('เกิดข้อผิดพลาด','error')}
+      finally{btn.disabled=false;btn.textContent='💾 บันทึก'}
+    }
+
+    async function submitResolve(e){
+      e.preventDefault();
+      var btn=document.getElementById('resolveBtn');btn.disabled=true;btn.textContent='กำลังดำเนินการ...';
+      try{
+        var r=await API.put('/api/incidents/'+resolvingId+'/resolve',{resolution_notes:document.getElementById('r_notes').value.trim()});
+        if(r.success){showAlert('ปิดเรื่องสำเร็จ','success');closeResolve();loadIncidents()}
+        else showAlert(r.message||r.error||'ไม่สำเร็จ','error');
+      }catch(e){showAlert('เกิดข้อผิดพลาด','error')}
+      finally{btn.disabled=false;btn.textContent='✅ ปิดเรื่อง'}
+    }
+  </script>
+</body>
+</html>

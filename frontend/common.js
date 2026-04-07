@@ -177,21 +177,23 @@ function renderNavigation() {
     var hasRepair = hasModulePermission('repair', 'view') || hasPermission(['admin']);
     var hasTax = hasModulePermission('vehicles', 'view') || hasPermission(['admin']);
     if (hasRepair || hasTax) {
-        nav += _sidebarSection('ระบบซ่อม');
+        nav += _sidebarSection('ระบบซ่อมและตรวจสภาพ');
         if (hasRepair) nav += _sidebarItem('repair.html', 'repair', '🔧', 'บันทึกการซ่อม');
-        if (hasTax) nav += _sidebarItem('tax-insurance.html', 'tax-insurance', '📄', 'ภาษีและประกันภัย');
+        if (hasTax) nav += _sidebarItem('tax-insurance.html', 'tax-insurance', '📄', 'ภาษี/ประกัน/ตรอ.');
+        nav += _sidebarItem('incident.html', 'incident', '🚨', 'รายงานเหตุการณ์');
     }
 
     // ── 4. สแกน QR Code ──
     nav += _sidebarSection('สแกน QR Code');
-    nav += _sidebarItem('qr-usage-record.html', 'qr-usage-record', '📷', 'บันทึกใช้รถ');
-    nav += _sidebarItem('qr-fuel-record.html', 'qr-fuel-record', '🛢️', 'เติมน้ำมัน');
-    nav += _sidebarItem('qr-daily-check.html', 'qr-daily-check', '✅', 'ตรวจสภาพ/แจ้งซ่อม');
+    nav += _sidebarItem('qr-scan.html', 'qr-scan', '📱', 'สแกน QR Code');
 
     // ── 5. รายงานและสถิติ ──
     if (hasModulePermission('reports', 'view') || hasPermission(['admin'])) {
         nav += _sidebarSection('รายงานและสถิติ');
         nav += _sidebarItem('reports.html', 'reports', '📊', 'รายงานและสถิติ');
+        nav += _sidebarItem('driver-performance.html', 'driver-performance', '🏆', 'ผลงานพนักงาน');
+        nav += _sidebarItem('vehicle-timeline.html', 'vehicle-timeline', '🚗', 'ไทม์ไลน์รถ');
+        nav += _sidebarItem('executive-dashboard.html', 'executive-dashboard', '📈', 'Dashboard ผู้บริหาร');
         nav += _sidebarItem('basic-info.html', 'basic-info', '📋', 'ข้อมูลรถและพนักงาน');
     }
 
@@ -391,31 +393,20 @@ function renderFloatingQR() {
 
     var fab = document.createElement('div');
     fab.className = 'qr-fab';
-    fab.innerHTML = '<button class="qr-fab-btn" id="qrFabBtn" title="สแกน QR Code">' +
-        '<span class="qr-fab-icon">📷</span></button>' +
-        '<div class="qr-fab-menu" id="qrFabMenu">' +
-        '<a href="qr-usage-record.html" class="qr-fab-item">📝 บันทึกใช้รถ</a>' +
-        '<a href="qr-fuel-record.html" class="qr-fab-item">⛽ เติมน้ำมัน</a>' +
-        '<a href="qr-daily-check.html" class="qr-fab-item">✅ ตรวจสภาพ/แจ้งซ่อม</a>' +
-        '</div>';
+    fab.innerHTML = '<a class="qr-fab-btn" href="qr-scan.html" title="สแกน QR Code">' +
+        '<span class="qr-fab-icon">📷</span></a>';
     document.body.appendChild(fab);
-
-    var btn = document.getElementById('qrFabBtn');
-    var menu = document.getElementById('qrFabMenu');
-    btn.addEventListener('click', function() {
-        menu.classList.toggle('open');
-        btn.classList.toggle('open');
-    });
-    document.addEventListener('click', function(e) {
-        if (!fab.contains(e.target)) {
-            menu.classList.remove('open');
-            btn.classList.remove('open');
-        }
-    });
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderNav);
 else renderNav();
+
+/* ── PWA: register service worker + inject manifest ── */
+(function(){
+  if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(e){console.warn('SW registration failed',e)})}
+  if(!document.querySelector('link[rel="manifest"]')){var l=document.createElement('link');l.rel='manifest';l.href='/manifest.json';document.head.appendChild(l)}
+  if(!document.querySelector('meta[name="theme-color"]')){var m=document.createElement('meta');m.name='theme-color';m.content='#6366f1';document.head.appendChild(m)}
+})();
 
 /* ── Wrap all plain <table> elements in a scrollable div ── */
 function wrapTablesForMobile() {
