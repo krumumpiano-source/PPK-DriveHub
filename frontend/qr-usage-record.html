@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>บันทึกการใช้รถ - PPK DriveHub</title>
   <script src="config.js"></script>
@@ -681,6 +681,7 @@
           } else {
             document.getElementById('lastMileage').textContent = 'ไม่มีข้อมูล';
           }
+        }
       } catch (error) {
         console.error('Error loading last mileage:', error);
         document.getElementById('lastMileage').textContent = 'ไม่สามารถโหลดได้';
