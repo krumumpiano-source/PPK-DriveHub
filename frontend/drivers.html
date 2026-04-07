@@ -119,6 +119,18 @@
             </div>
 
             <div class="form-row">
+              <div class="form-group" style="grid-column: 1 / -1;">
+                <label>ประเภทพนักงานขับรถ</label>
+                <select id="assignment_type">
+                  <option value="primary">🚗 พนักงานขับรถหลัก</option>
+                  <option value="reserve">🔄 พนักงานขับรถสำรอง</option>
+                  <option value="executive">👔 พนักงานขับรถผู้บริหาร</option>
+                </select>
+                <div class="help-text" style="font-size:0.85em;color:#666;margin-top:4px;">ส่งผลต่อการแสดงผลในแท็บพนักงานขับรถหลัก/สำรอง และการจัดคิว</div>
+              </div>
+            </div>
+
+            <div class="form-row">
               <div class="form-group">
                 <label>ชื่อ <span class="required">*</span></label>
                 <input type="text" id="first_name" required placeholder="ชื่อ">
@@ -494,11 +506,9 @@
           if (driver.license_expiry) html += '<div class="driver-info-item"><span class="driver-info-label">ใบขับขี่หมด:</span><span class="driver-info-value">' + driver.license_expiry + '</span></div>';
           var assignmentType = driver.assignment_type || 'primary';
           var assignmentText = {
-            'out_of_school': 'งานนอกสถานที่',
-            'in_school': 'งานภายในโรงเรียน',
-            'executive': 'ผู้บริหาร',
-            'standby_school': 'สแตนด์บาย',
-            'reserve': 'สำรอง'
+            'primary': 'ขับรถหลัก',
+            'reserve': 'ขับรถสำรอง',
+            'executive': 'ขับรถผู้บริหาร'
           };
           html += '<div class="driver-info-item"><span class="driver-info-label">บทบาท:</span><span class="driver-info-value" style="color: var(--color-primary); font-weight: 600;">' + (assignmentText[assignmentType] || assignmentType) + '</span></div>';
           html += '</div>';
@@ -762,6 +772,8 @@
         document.getElementById('emergency_phone').value = driver.emergency_phone || '';
         document.getElementById('notes').value = driver.notes || '';
         document.getElementById('additional_notes').value = '';
+        var assignEl = document.getElementById('assignment_type');
+        if (assignEl) assignEl.value = driver.assignment_type || 'primary';
 
         if (driver.profile_image) {
           document.getElementById('profileImagePreview').innerHTML = '<img src="' + driver.profile_image + '" alt="Profile">';
@@ -887,7 +899,8 @@
           address: document.getElementById('address').value.trim() || '',
           emergency_contact: document.getElementById('emergency_contact').value.trim() || '',
           emergency_phone: document.getElementById('emergency_phone').value.trim() || '',
-          notes: document.getElementById('notes').value.trim() || ''
+          notes: document.getElementById('notes').value.trim() || '',
+          assignment_type: document.getElementById('assignment_type').value || 'primary'
         };
 
         var additionalNotes = document.getElementById('additional_notes');
