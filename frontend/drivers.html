@@ -125,6 +125,7 @@
                   <option value="primary">🚗 พนักงานขับรถหลัก</option>
                   <option value="reserve">🔄 พนักงานขับรถสำรอง</option>
                   <option value="executive">👔 พนักงานขับรถผู้บริหาร</option>
+                  <option value="special">⭐ พนักงานขับรถเฉพาะกิจ</option>
                 </select>
                 <div class="help-text" style="font-size:0.85em;color:#666;margin-top:4px;">ส่งผลต่อการแสดงผลในแท็บพนักงานขับรถหลัก/สำรอง และการจัดคิว</div>
               </div>
@@ -508,7 +509,8 @@
           var assignmentText = {
             'primary': 'ขับรถหลัก',
             'reserve': 'ขับรถสำรอง',
-            'executive': 'ขับรถผู้บริหาร'
+            'executive': 'ขับรถผู้บริหาร',
+            'special': 'ขับรถเฉพาะกิจ'
           };
           html += '<div class="driver-info-item"><span class="driver-info-label">บทบาท:</span><span class="driver-info-value" style="color: var(--color-primary); font-weight: 600;">' + (assignmentText[assignmentType] || assignmentType) + '</span></div>';
           html += '</div>';
