@@ -15,10 +15,7 @@
   <style>
     .tab { white-space: nowrap; }
 
-    /* ── Actions Bar ── */
-    .actions-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
-
-    /* ── Driver Cards Grid ── */
+    /* ── Driver Cards Grid (page-specific) ── */
     .drivers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
     .driver-card { background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--color-border); box-shadow: var(--shadow-sm); overflow: hidden; transition: transform .2s, box-shadow .2s; }
     .driver-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
@@ -33,41 +30,19 @@
     .driver-info-value { color: var(--color-text); word-break: break-all; }
     .driver-actions { padding: 10px 18px 14px; display: flex; gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--color-border); }
 
-    /* ── Modal ── */
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.6); z-index: 1000; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
-    .modal-overlay.show { display: flex; }
-    .modal { background: #fff; border-radius: var(--radius-xl); padding: 28px; max-width: 800px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,.3); position: relative; }
-    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
-    .modal-header h2 { font-size: 1.3em; font-weight: 700; color: var(--color-primary); }
-    .modal-close { background: none; border: none; font-size: 1.5em; cursor: pointer; color: var(--color-text-muted); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all .2s; }
-    .modal-close:hover { background: #f3f4f6; color: var(--color-text); }
-
-    /* ── Form ── */
-    .form-section { margin-bottom: 20px; }
-    .form-section-title { font-weight: 700; font-size: 1em; color: var(--color-primary); margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid var(--color-primary-light, #c7d2fe); }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 10px; }
-    .form-group { display: flex; flex-direction: column; gap: 4px; }
-    .form-group label { font-weight: 600; font-size: .88em; color: var(--color-text); }
-    .form-group input, .form-group select, .form-group textarea { padding: 10px 12px; border: 1.5px solid var(--color-border); border-radius: var(--radius-md); font-size: .95em; font-family: inherit; transition: border-color .2s; }
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--color-primary); outline: none; box-shadow: 0 0 0 3px rgba(99,102,241,.12); }
-    .required { color: #ef4444; }
+    /* ── Driver-specific form ── */
     .title-options { display: flex; gap: 8px; flex-wrap: wrap; }
     .title-option-btn { padding: 8px 16px; border: 1.5px solid var(--color-border); border-radius: var(--radius-md); background: #fff; cursor: pointer; font-family: inherit; font-size: .9em; transition: all .2s; }
     .title-option-btn:hover { border-color: var(--color-primary); }
     .title-option-btn.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
-    .file-upload { margin-top: 4px; }
-    .file-preview { margin-top: 8px; }
-    .file-preview img { max-width: 120px; max-height: 120px; border-radius: var(--radius-md); border: 1px solid var(--color-border); }
 
     /* ── Leaves ── */
     .leaves-section { margin-top: 20px; }
     .leaves-list { display: flex; flex-direction: column; gap: 8px; }
 
-    /* ── Responsive ── */
     @media (max-width: 640px) {
-      .form-row { grid-template-columns: 1fr; }
       .drivers-grid { grid-template-columns: 1fr; }
-      .modal { padding: 18px; margin: 10px; }
+    }
     }
   </style>
 </head>
