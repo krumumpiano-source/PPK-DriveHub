@@ -384,18 +384,7 @@ function stopImpersonateMode() {
 }
 
 function renderFloatingQR() {
-    // Only show on sidebar pages (authenticated) and not on QR pages themselves
-    if (!checkAuth()) return;
-    var cp = window.currentPage || '';
-    if (cp.indexOf('qr-') === 0) return;
-    // Don't show FAB while impersonating
-    if (typeof API !== 'undefined' && API.isImpersonating()) return;
-
-    var fab = document.createElement('div');
-    fab.className = 'qr-fab';
-    fab.innerHTML = '<a class="qr-fab-btn" href="qr-scan.html" title="สแกน QR Code">' +
-        '<span class="qr-fab-icon">📷</span></a>';
-    document.body.appendChild(fab);
+    // Removed — QR scan accessible via sidebar menu
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderNav);
