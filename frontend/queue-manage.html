@@ -1789,12 +1789,6 @@
       }
     }
 
-    function parseTime(timeStr) {
-      if (!timeStr) return 0;
-      var parts = timeStr.split(':');
-      return parseInt(parts[0]) * 60 + parseInt(parts[1] || 0);
-    }
-
     function changeMonth(delta) {
       currentMonth += delta;
       if (currentMonth < 0) {
