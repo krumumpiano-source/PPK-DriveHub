@@ -43,7 +43,6 @@
     @media (max-width: 640px) {
       .drivers-grid { grid-template-columns: 1fr; }
     }
-    }
   </style>
 </head>
 
@@ -664,9 +663,11 @@
         }
 
         modal.classList.add('show');
-        modal.style.display = 'flex';
-        modal.style.opacity = '1';
-        modal.style.visibility = 'visible';
+        // Close sidebar on mobile when modal opens
+        var sb = document.getElementById('sidebar');
+        var ov = document.getElementById('sidebar-overlay');
+        if (sb) sb.classList.remove('open');
+        if (ov) ov.classList.remove('open');
 
       } catch (error) {
         console.error('Error opening add modal:', error);
@@ -770,9 +771,11 @@
         var modal = document.getElementById('driverModal');
         if (modal) {
           modal.classList.add('show');
-          modal.style.display = 'flex';
-          modal.style.opacity = '1';
-          modal.style.visibility = 'visible';
+          // Close sidebar on mobile when modal opens
+          var sb = document.getElementById('sidebar');
+          var ov = document.getElementById('sidebar-overlay');
+          if (sb) sb.classList.remove('open');
+          if (ov) ov.classList.remove('open');
         }
       } catch (error) {
         console.error('Error opening edit modal:', error);
@@ -784,7 +787,6 @@
       var modal = document.getElementById('driverModal');
       if (modal) {
         modal.classList.remove('show');
-        modal.style.display = 'none';
       }
     }
 
@@ -1019,9 +1021,6 @@
         var modal = document.getElementById('leaveModal');
         if (modal) {
           modal.classList.add('show');
-          modal.style.display = 'flex';
-          modal.style.opacity = '1';
-          modal.style.visibility = 'visible';
         }
         loadLeaves(driverId);
       } catch (error) {
@@ -1034,7 +1033,6 @@
       var modal = document.getElementById('leaveModal');
       if (modal) {
         modal.classList.remove('show');
-        modal.style.display = 'none';
       }
       currentLeaveDriverId = null;
     }
