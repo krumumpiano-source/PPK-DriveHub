@@ -219,6 +219,7 @@ const ACTION_MAP = {
   'approveUserRequest':  (d) => API.put(`/api/admin/requests/${d.id}/approve`, d),
   'rejectUserRequest':   (d) => API.put(`/api/admin/requests/${d.id}/reject`, d),
   'impersonateUser':     (d) => API.post(`/api/admin/impersonate/${d.id}`),
+  'impersonateRole':     (d) => API.post(`/api/admin/impersonate-role/${d.role}`),
   'stopImpersonate':     ()  => API.post('/api/admin/stop-impersonate'),
   'getSettings':         ()  => API.get('/api/admin/settings'),
   'updateSettings':      (d) => API.put('/api/admin/settings', d),

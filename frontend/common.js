@@ -215,6 +215,16 @@ function renderNavigation() {
         nav += _sidebarItem('admin-settings.html', 'settings', '⚙️', 'ตั้งค่าระบบ');
         nav += _sidebarItem('audit-log.html', 'audit-log', '📜', 'บันทึกกิจกรรม');
         nav += _sidebarItem('backup-recovery.html', 'backup-recovery', '💾', 'สำรอง/กู้คืน');
+
+        // ── ดูมุมมองตามบทบาท ──
+        nav += '<div class="sidebar-divider"></div>';
+        nav += '<div class="sidebar-section-title">ดูมุมมองตามบทบาท</div>';
+        nav += '<div class="role-preview-group">';
+        nav += '<button class="role-preview-btn" onclick="previewRole(\'admin\')"><span class="rp-icon">🛡️</span>ผู้ดูแลระบบ</button>';
+        nav += '<button class="role-preview-btn" onclick="previewRole(\'manager\')"><span class="rp-icon">📋</span>ผู้จัดการ</button>';
+        nav += '<button class="role-preview-btn" onclick="previewRole(\'driver\')"><span class="rp-icon">🚗</span>พนักงานขับรถ</button>';
+        nav += '<button class="role-preview-btn" onclick="previewRole(\'staff\')"><span class="rp-icon">👤</span>เจ้าหน้าที่</button>';
+        nav += '</div>';
     }
 
     nav += '<div class="sidebar-divider"></div>';
@@ -381,6 +391,23 @@ function stopImpersonateMode() {
     // Restore original admin token
     API.stopImpersonate();
     window.location.href = 'user-management.html';
+}
+
+function previewRole(role) {
+    if (typeof API === 'undefined' || typeof apiCall === 'undefined') return;
+    var btn = event && event.target ? event.target.closest('.role-preview-btn') : null;
+    if (btn) { btn.disabled = true; btn.textContent = 'กำลังโหลด...'; }
+
+    apiCall('impersonateRole', { role: role }).then(function(res) {
+        var data = res.data || res;
+        if (data.token && data.user) {
+            API.startImpersonate(data.token, data.user);
+            window.location.href = 'dashboard.html';
+        }
+    }).catch(function(err) {
+        alert(err.message || 'ไม่สามารถดูมุมมองบทบาทนี้ได้');
+        if (btn) { btn.disabled = false; btn.textContent = ''; }
+    });
 }
 
 function renderFloatingQR() {
