@@ -865,7 +865,8 @@
       document.getElementById('owner_address').value = vehicle.owner_address || '';
       document.getElementById('notes').value = vehicle.notes || '';
 
-      vehicleImages = vehicle.vehicle_images || [];
+      var rawImgs = vehicle.vehicle_images || '[]';
+      vehicleImages = typeof rawImgs === 'string' ? JSON.parse(rawImgs) : (Array.isArray(rawImgs) ? rawImgs : []);
       displayImages('vehicleImagesPreview', vehicleImages);
 
       document.getElementById('vehicleModal').classList.add('show');
