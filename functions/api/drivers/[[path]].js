@@ -44,18 +44,29 @@ export async function onRequest(context) {
   if (path === '/api/drivers' && method === 'POST') {
     try { requirePermission(user, 'drivers', 'create'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const body = await parseBody(request);
-    if (!body?.name) return error('กรุณาระบุชื่อพนักงานขับรถ');
+    // Compose name from title + first_name + last_name if not provided directly
+    const driverName = body.name || [(body.title || ''), (body.first_name || ''), (body.last_name || '')].filter(Boolean).join(' ').trim();
+    if (!driverName) return error('กรุณาระบุชื่อพนักงานขับรถ');
     const id = generateUUID();
     const ts = now();
     await dbRun(env.DB,
-      `INSERT INTO drivers (id, name, license_number, license_expiry, phone, status,
-        profile_image, id_card_image, fatigue_flag, discipline_score, notes, created_by, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, body.name, body.license_number || '', body.license_expiry || null,
+      `INSERT INTO drivers (id, name, title, first_name, last_name, license_number, license_expiry, phone, status,
+        profile_image, id_card_image, fatigue_flag, discipline_score, notes,
+        line_id, position, start_date, id_card_number, date_of_birth, address,
+        emergency_contact, emergency_phone, assignment_type,
+        created_by, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, driverName, body.title || '', body.first_name || '', body.last_name || '',
+       body.license_number || '', body.license_expiry || null,
        body.phone || '', body.status || 'active',
        body.profile_image || null, body.id_card_image || null,
        body.fatigue_flag || 0, body.discipline_score ?? 100,
-       body.notes || '', user.id, ts, ts]
+       body.notes || '',
+       body.line_id || '', body.position || '', body.start_date || null,
+       body.id_card_number || '', body.date_of_birth || null, body.address || '',
+       body.emergency_contact || '', body.emergency_phone || '',
+       body.assignment_type || 'primary',
+       user.id, ts, ts]
     );
     return success({ id, message: 'เพิ่มพนักงานขับรถเรียบร้อย' }, 201);
   }
@@ -67,8 +78,15 @@ export async function onRequest(context) {
     const body = await parseBody(request);
     const sets = [];
     const params = [];
-    const fields = ['name', 'license_number', 'license_expiry', 'phone', 'status',
+    // Compose name from title + first_name + last_name if parts provided
+    if ((body.first_name || body.last_name) && !body.name) {
+      body.name = [(body.title || ''), (body.first_name || ''), (body.last_name || '')].filter(Boolean).join(' ').trim();
+    }
+    const fields = ['name', 'title', 'first_name', 'last_name',
+      'license_number', 'license_expiry', 'phone', 'status',
       'profile_image', 'id_card_image', 'fatigue_flag', 'discipline_score', 'notes',
+      'line_id', 'position', 'start_date', 'id_card_number', 'date_of_birth',
+      'address', 'emergency_contact', 'emergency_phone', 'assignment_type',
       'deactivated_reason', 'deactivated_at'];
     for (const f of fields) {
       if (body[f] !== undefined) { sets.push(`${f} = ?`); params.push(body[f]); }

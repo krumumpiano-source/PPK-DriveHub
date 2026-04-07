@@ -424,19 +424,9 @@
         if (result.success && result.data && result.data.drivers) {
           drivers = result.data.drivers || [];
 
-          var rules = [];
-          try {
-            var rulesResult = await apiCall('getQueueRules', {});
-            if (rulesResult.success && rulesResult.data && rulesResult.data.rules) {
-              rules = rulesResult.data.rules;
-            }
-          } catch (rulesError) {
-            console.warn('Error loading queue rules (non-critical):', rulesError);
-            // Continue without rules - drivers will default to 'reserve'
-          }
-
+          // assignment_type comes directly from DB (default 'primary')
           drivers.forEach(function (driver) {
-            driver.assignment_type = getDriverAssignmentType(driver.driver_id, rules);
+            if (!driver.assignment_type) driver.assignment_type = 'primary';
           });
 
           // Filter by tab (primary/reserve)
@@ -460,27 +450,21 @@
       }
     }
 
-    function getDriverAssignmentType(driverId, rules) {
-      for (var i = 0; i < (rules || []).length; i++) {
-        if (rules[i].driver_id === driverId && (rules[i].active === true || rules[i].active === 'TRUE')) {
-          return rules[i].assignment_type || 'out_of_school';
-        }
-      }
-      // Default: ถ้าไม่มี rule ถือว่าเป็น reserve
-      return 'reserve';
+    function getDriverAssignmentType(driver) {
+      return driver.assignment_type || 'primary';
     }
 
     function filterDriversByTab(driversList, tab) {
       if (tab === 'primary') {
-        // Primary drivers: out_of_school, in_school, executive, standby_school (ไม่ใช่ reserve)
+        // Primary drivers: ทุกคนที่ assignment_type ไม่ใช่ 'reserve' (default = 'primary')
         return driversList.filter(function (driver) {
-          var assignmentType = driver.assignment_type || 'reserve';
+          var assignmentType = driver.assignment_type || 'primary';
           return assignmentType !== 'reserve';
         });
       } else if (tab === 'reserve') {
-        // Reserve drivers: ไม่มี rule หรือ assignment_type = reserve
+        // Reserve drivers: เฉพาะคนที่ตั้งเป็น reserve เท่านั้น
         return driversList.filter(function (driver) {
-          var assignmentType = driver.assignment_type || 'reserve';
+          var assignmentType = driver.assignment_type || 'primary';
           return assignmentType === 'reserve';
         });
       }
@@ -499,7 +483,7 @@
 
           html += '<div class="driver-card">';
           html += '<div class="driver-card-header">';
-          html += '<div class="driver-name">' + (driver.full_name || driver.first_name + ' ' + driver.last_name) + '</div>';
+          html += '<div class="driver-name">' + (driver.name || ((driver.first_name || '') + ' ' + (driver.last_name || '')).trim() || '-') + '</div>';
           html += '<div class="driver-status ' + statusClass + '">' + statusText + '</div>';
           html += '</div>';
 
@@ -508,7 +492,8 @@
           if (driver.line_id) html += '<div class="driver-info-item"><span class="driver-info-label">LINE:</span><span class="driver-info-value">' + driver.line_id + '</span></div>';
           if (driver.position) html += '<div class="driver-info-item"><span class="driver-info-label">ตำแหน่ง:</span><span class="driver-info-value">' + driver.position + '</span></div>';
           if (driver.license_number) html += '<div class="driver-info-item"><span class="driver-info-label">ใบขับขี่:</span><span class="driver-info-value">' + driver.license_number + '</span></div>';
-          var assignmentType = driver.assignment_type || 'reserve';
+          if (driver.license_expiry) html += '<div class="driver-info-item"><span class="driver-info-label">ใบขับขี่หมด:</span><span class="driver-info-value">' + driver.license_expiry + '</span></div>';
+          var assignmentType = driver.assignment_type || 'primary';
           var assignmentText = {
             'out_of_school': 'งานนอกสถานที่',
             'in_school': 'งานภายในโรงเรียน',
@@ -531,7 +516,7 @@
 
             if (hasEditPermission) {
               html += '<button class="btn btn-primary" onclick="editDriver(\'' + driver.id + '\')">✏️ แก้ไข</button>';
-              html += '<button class="btn btn-primary" onclick="manageLeaves(\'' + driver.id + '\', \'' + (driver.full_name || driver.first_name + ' ' + driver.last_name) + '\')">📅 จัดการลา</button>';
+              html += '<button class="btn btn-primary" onclick="manageLeaves(\'' + driver.id + '\', \'' + (driver.name || '').replace(/'/g, '') + '\')">📅 จัดการลา</button>';
               html += '<button class="btn btn-danger" onclick="deleteDriver(\'' + driver.id + '\')">🗑️ ลบ</button>';
             }
           } catch (e) {
@@ -885,6 +870,7 @@
 
         var driverData = {
           title: titleValue,
+          name: [titleValue, firstName, lastName].filter(Boolean).join(' ').trim(),
           status: document.getElementById('status').value || 'active',
           first_name: firstName,
           last_name: lastName,
