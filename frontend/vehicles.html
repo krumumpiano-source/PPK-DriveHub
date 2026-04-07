@@ -17,105 +17,199 @@
   <link rel="stylesheet" href="common.css">
   <script src="js/api.js"></script><script src="common.js"></script>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    /* ── Summary Stats ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
+      margin-bottom: 18px;
     }
+    .stat-box {
+      background: #fff;
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      text-align: center;
+      border: 1px solid var(--color-border);
+    }
+    .stat-box .stat-num {
+      font-size: 1.6em;
+      font-weight: 800;
+      color: var(--color-primary);
+      line-height: 1;
+    }
+    .stat-box .stat-label {
+      font-size: .78em;
+      color: var(--color-text-muted);
+      margin-top: 4px;
+    }
+    .stat-box.stat-active .stat-num { color: #16a34a; }
+    .stat-box.stat-support .stat-num { color: #d97706; }
+    .stat-box.stat-off .stat-num { color: #dc2626; }
 
-    body { }
+    /* ── Search / Filter ── */
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .search-input {
+      flex: 1;
+      min-width: 180px;
+      padding: 10px 14px 10px 36px;
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: .95em;
+      font-family: inherit;
+      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85zm-5.44.156a5 5 0 1 1 0-10 5 5 0 0 1 0 10z'/%3E%3C/svg%3E") no-repeat 12px center;
+      transition: border-color .2s;
+    }
+    .search-input:focus { border-color: var(--color-primary); outline: none; }
+    .filter-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .chip {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1.5px solid var(--color-border);
+      background: #fff;
+      font-size: .82em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .chip:hover { border-color: var(--color-primary); }
+    .chip.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
 
-    .container { }
-
+    /* ── Vehicle Cards Grid ── */
     .vehicles-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-      gap: 1rem;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 14px;
     }
 
     .vehicle-card {
-      background: white;
-      border-radius: var(--radius-lg, 12px);
-      box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.08));
-      border: 1px solid var(--color-border, #e2e8f0);
+      background: #fff;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-sm);
       overflow: hidden;
-      transition: box-shadow 0.2s;
+      transition: transform .2s, box-shadow .2s;
+      display: flex;
+      flex-direction: column;
     }
     .vehicle-card:hover {
-      box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.12));
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
     }
 
     .vehicle-card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 1rem 1.25rem;
-      background: var(--color-bg-lighter, #f8fafc);
-      border-bottom: 1px solid var(--color-border-light, #f1f5f9);
+      padding: 14px 16px 10px;
+      background: var(--color-bg-lighter);
+      border-bottom: 1px solid var(--color-border);
     }
 
     .vehicle-license {
-      font-size: 1.2rem;
-      font-weight: 700;
-      color: var(--color-primary, #1e40af);
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--color-primary);
+      letter-spacing: .3px;
     }
 
-    .vehicle-status {
-      font-size: 0.78rem;
+    .vehicle-badges {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .badge-sm {
+      font-size: .7rem;
       font-weight: 600;
-      padding: 4px 10px;
-      border-radius: 20px;
+      padding: 2px 8px;
+      border-radius: 12px;
       white-space: nowrap;
     }
-    .vehicle-status.status-active { background: #dcfce7; color: #166534; }
-    .vehicle-status.status-maintenance { background: #fef3c7; color: #92400e; }
-    .vehicle-status.status-unavailable { background: #fee2e2; color: #991b1b; }
+    .badge-active { background: #dcfce7; color: #166534; }
+    .badge-maintenance { background: #fef3c7; color: #92400e; }
+    .badge-unavailable { background: #fee2e2; color: #991b1b; }
+    .badge-primary { background: #dbeafe; color: #1e40af; }
+    .badge-support { background: #fef3c7; color: #92400e; }
 
-    .vehicle-info {
-      padding: 1rem 1.25rem;
+    .vehicle-body {
+      padding: 12px 16px;
+      flex: 1;
     }
-
-    .vehicle-info-item {
+    .vehicle-detail {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      padding: 6px 0;
-      border-bottom: 1px solid var(--color-border-light, #f1f5f9);
-      font-size: 0.88rem;
-      gap: 8px;
+      padding: 5px 0;
+      font-size: .88em;
+      border-bottom: 1px dashed rgba(0,0,0,.06);
     }
-    .vehicle-info-item:last-child { border-bottom: none; }
-
-    .vehicle-info-label {
-      color: var(--color-text-muted, #64748b);
-      font-weight: 500;
-      white-space: nowrap;
-      min-width: 100px;
-      flex-shrink: 0;
-    }
-
-    .vehicle-info-value {
-      color: var(--color-text, #1e293b);
-      text-align: right;
-      word-break: break-word;
-    }
+    .vehicle-detail:last-child { border-bottom: none; }
+    .vehicle-detail .vd-label { color: var(--color-text-muted); }
+    .vehicle-detail .vd-value { font-weight: 600; color: var(--color-text); }
 
     .vehicle-actions {
-      padding: 0.75rem 1.25rem;
-      border-top: 1px solid var(--color-border-light, #f1f5f9);
+      padding: 10px 16px;
+      border-top: 1px solid var(--color-border);
       display: flex;
-      flex-wrap: wrap;
       gap: 8px;
       align-items: center;
     }
+    .vehicle-actions .btn { font-size: .82em; padding: 6px 14px; }
+    .btn-more {
+      margin-left: auto;
+      position: relative;
+    }
+    .dropdown-menu {
+      display: none;
+      position: absolute;
+      right: 0;
+      bottom: 100%;
+      margin-bottom: 6px;
+      background: #fff;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
+      min-width: 200px;
+      z-index: 50;
+      overflow: hidden;
+    }
+    .dropdown-menu.show { display: block; }
+    .dropdown-item {
+      display: block;
+      width: 100%;
+      padding: 10px 14px;
+      border: none;
+      background: none;
+      text-align: left;
+      font-family: inherit;
+      font-size: .88em;
+      cursor: pointer;
+      transition: background .15s;
+      white-space: nowrap;
+    }
+    .dropdown-item:hover { background: var(--color-bg-lighter); }
 
-    @media (max-width: 768px) {
-      .vehicles-grid {
-        grid-template-columns: 1fr;
-      }
-      .tab {
-        white-space: nowrap;
-      }
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--color-text-muted);
+    }
+    .empty-state-icon { font-size: 2.5em; margin-bottom: 8px; }
+
+    @media (max-width: 640px) {
+      .vehicles-grid { grid-template-columns: 1fr; }
+      .toolbar { flex-direction: column; }
+      .search-input { min-width: 100%; }
     }
   </style>
 </head>
@@ -132,14 +226,32 @@
     <div class="content">
       <div id="alertContainer"></div>
 
+      <!-- Summary Stats -->
+      <div class="stats-row" id="statsRow">
+        <div class="stat-box"><div class="stat-num" id="statTotal">-</div><div class="stat-label">ทั้งหมด</div></div>
+        <div class="stat-box stat-active"><div class="stat-num" id="statActive">-</div><div class="stat-label">พร้อมใช้งาน</div></div>
+        <div class="stat-box stat-support"><div class="stat-num" id="statSupport">-</div><div class="stat-label">สนับสนุน</div></div>
+        <div class="stat-box stat-off"><div class="stat-num" id="statOff">-</div><div class="stat-label">ยกเลิก</div></div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <input type="text" class="search-input" id="searchInput" placeholder="ค้นหาทะเบียน, ยี่ห้อ, รุ่น..." oninput="filterVehicles()">
+        <div class="filter-chips">
+          <button class="chip active" data-filter="all" onclick="setFilter('all', this)">ทั้งหมด</button>
+          <button class="chip" data-filter="primary" onclick="setFilter('primary', this)">🚐 รถหลัก</button>
+          <button class="chip" data-filter="support" onclick="setFilter('support', this)">🚗 สนับสนุน</button>
+          <button class="chip" data-filter="unavailable" onclick="setFilter('unavailable', this)">⛔ ยกเลิก</button>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
       <div class="actions-bar">
         <button class="btn btn-primary" id="addVehicleBtn"
           onclick="typeof window.openAddModal === 'function' && window.openAddModal();">
           ➕ เพิ่มรถใหม่
         </button>
-        <button class="btn btn-secondary" onclick="loadVehicles()">
-          🔃 รีเฟรช
-        </button>
+        <button class="btn btn-secondary" onclick="loadVehicles()">🔃 รีเฟรช</button>
         <button class="btn btn-secondary" id="toggleInactiveBtn" onclick="toggleInactiveVehicles()" style="margin-left:auto;">
           🗑️ รถที่ลบแล้ว
         </button>
@@ -588,6 +700,19 @@
     function displayVehicles(vehiclesList) {
       var html = '';
 
+      // Update stats
+      var total = vehiclesList.length;
+      var active = 0, support = 0, off = 0;
+      vehiclesList.forEach(function(v) {
+        if (v.status === 'unavailable') off++;
+        else if (v.vehicle_category === 'support') support++;
+        else active++;
+      });
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statActive').textContent = active;
+      document.getElementById('statSupport').textContent = support;
+      document.getElementById('statOff').textContent = off;
+
       if (vehiclesList.length === 0) {
         html = '<div class="empty-state"><div class="empty-state-icon">🚗</div><p>ไม่พบข้อมูลรถ</p></div>';
       } else {
@@ -600,53 +725,49 @@
           return (orderStatus[a.status] !== undefined ? orderStatus[a.status] : 4) - (orderStatus[b.status] !== undefined ? orderStatus[b.status] : 4);
         });
         vehiclesList.forEach(function (vehicle) {
-          var statusClass = 'status-' + (vehicle.status || 'active');
-          var statusText = {
-            'active': 'พร้อมใช้งาน',
-            'maintenance': 'ซ่อมบำรุง',
-            'unavailable': 'ยกเลิกใช้งาน'
-          }[vehicle.status] || 'พร้อมใช้งาน';
+          var statusBadge = vehicle.status === 'maintenance' ? '<span class="badge-sm badge-maintenance">ซ่อมบำรุง</span>'
+            : vehicle.status === 'unavailable' ? '<span class="badge-sm badge-unavailable">ยกเลิก</span>'
+            : '<span class="badge-sm badge-active">พร้อมใช้</span>';
+          var catBadge = vehicle.vehicle_category === 'support'
+            ? '<span class="badge-sm badge-support">สนับสนุน</span>'
+            : '<span class="badge-sm badge-primary">รถหลัก</span>';
 
-          html += '<div class="vehicle-card">';
+          var fuelMap = { 'diesel': 'ดีเซล', 'gasoline': 'เบนซิน', 'hybrid': 'ไฮบริด', 'electric': 'ไฟฟ้า' };
+
+          html += '<div class="vehicle-card" data-cat="' + (vehicle.vehicle_category || 'primary') + '" data-status="' + (vehicle.status || 'active') + '" data-search="' + ((vehicle.license_plate || '') + ' ' + (vehicle.brand || '') + ' ' + (vehicle.model || '') + ' ' + (vehicle.province || '')).toLowerCase() + '">';
+
+          // Header
           html += '<div class="vehicle-card-header">';
           html += '<div class="vehicle-license">' + (vehicle.license_plate || '-') + '</div>';
-          html += '<div class="vehicle-status ' + statusClass + '">' + statusText + '</div>';
+          html += '<div class="vehicle-badges">' + catBadge + statusBadge + '</div>';
           html += '</div>';
 
-          html += '<div class="vehicle-info">';
-          html += '<div class="vehicle-info-item"><span class="vehicle-info-label">ยี่ห้อ/รุ่น:</span><span class="vehicle-info-value">' + (vehicle.brand || '') + ' ' + (vehicle.model || '') + '</span></div>';
-          html += '<div class="vehicle-info-item"><span class="vehicle-info-label">ประเภท:</span><span class="vehicle-info-value">' + (vehicle.vehicle_category === 'support' ? 'รถใช้งานสนับสนุน' : 'รถใช้งานหลัก') + '</span></div>';
-          if (vehicle.year) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">รุ่นปี (พ.ศ.):</span><span class="vehicle-info-value">' + vehicle.year + '</span></div>';
-          if (vehicle.color) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">สี:</span><span class="vehicle-info-value">' + vehicle.color + '</span></div>';
-          if (vehicle.seat_count) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">ที่นั่ง:</span><span class="vehicle-info-value">' + vehicle.seat_count + ' ที่นั่ง</span></div>';
-          var fuelMap = { 'diesel': 'ดีเซล', 'gasoline': 'เบนซิน', 'hybrid': 'ไฮบริด', 'electric': 'ไฟฟ้า' };
-          if (vehicle.fuel_type) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">เชื้อเพลิง:</span><span class="vehicle-info-value">' + (fuelMap[vehicle.fuel_type] || vehicle.fuel_type) + '</span></div>';
-          if (vehicle.chassis_number) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">เลขตัวถัง:</span><span class="vehicle-info-value">' + vehicle.chassis_number + '</span></div>';
-          if (vehicle.engine_number) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">เลขเครื่องยนต์:</span><span class="vehicle-info-value">' + vehicle.engine_number + '</span></div>';
-          if (vehicle.registration_date) {
-            var rd = vehicle.registration_date;
-            try { var rdParts = rd.split('-'); var rdBE = parseInt(rdParts[0],10) + 543; rd = rdParts[2] + '/' + rdParts[1] + '/' + rdBE; } catch(e){}
-            html += '<div class="vehicle-info-item"><span class="vehicle-info-label">วันจดทะเบียน:</span><span class="vehicle-info-value">' + rd + '</span></div>';
-          }
-          if (vehicle.owner_name) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">เจ้าของ:</span><span class="vehicle-info-value">' + vehicle.owner_name + '</span></div>';
-          if (vehicle.owner_address) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">ที่อยู่:</span><span class="vehicle-info-value">' + vehicle.owner_address + '</span></div>';
-          if (vehicle.current_mileage) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">เลขไมล์:</span><span class="vehicle-info-value">' + Number(vehicle.current_mileage).toLocaleString() + ' กม.</span></div>';
-          if (vehicle.notes) html += '<div class="vehicle-info-item"><span class="vehicle-info-label">หมายเหตุ:</span><span class="vehicle-info-value">' + vehicle.notes + '</span></div>';
+          // Body — only key info
+          html += '<div class="vehicle-body">';
+          html += '<div class="vehicle-detail"><span class="vd-label">ยี่ห้อ/รุ่น</span><span class="vd-value">' + (vehicle.brand || '-') + ' ' + (vehicle.model || '') + '</span></div>';
+          if (vehicle.year) html += '<div class="vehicle-detail"><span class="vd-label">ปี พ.ศ.</span><span class="vd-value">' + vehicle.year + '</span></div>';
+          if (vehicle.color) html += '<div class="vehicle-detail"><span class="vd-label">สี</span><span class="vd-value">' + vehicle.color + '</span></div>';
+          if (vehicle.seat_count) html += '<div class="vehicle-detail"><span class="vd-label">ที่นั่ง</span><span class="vd-value">' + vehicle.seat_count + '</span></div>';
+          if (vehicle.fuel_type) html += '<div class="vehicle-detail"><span class="vd-label">เชื้อเพลิง</span><span class="vd-value">' + (fuelMap[vehicle.fuel_type] || vehicle.fuel_type) + '</span></div>';
+          if (vehicle.current_mileage) html += '<div class="vehicle-detail"><span class="vd-label">ไมล์</span><span class="vd-value">' + Number(vehicle.current_mileage).toLocaleString() + ' กม.</span></div>';
           html += '</div>';
 
+          // Actions — clean: Edit + Delete + More dropdown
           html += '<div class="vehicle-actions">';
           if (hasModulePermission('vehicles', 'edit') || getCurrentUser().role === 'admin') {
             html += '<button class="btn btn-primary" onclick="editVehicle(\'' + vehicle.id + '\')">✏️ แก้ไข</button>';
             html += '<button class="btn btn-danger" onclick="deleteVehicle(\'' + vehicle.id + '\')">🗑️ ลบ</button>';
-            html += '<div style="margin-top:8px;font-size:0.85em;">';
-            html += '<button type="button" class="btn btn-secondary" style="padding:4px 8px;font-size:0.9em;" onclick="changeVehicleCategory(\'' + vehicle.id + '\', \'' + (vehicle.vehicle_category === 'support' ? 'primary' : 'support') + '\')">' + (vehicle.vehicle_category === 'support' ? '↩ เปลี่ยนเป็นรถหลัก' : 'เปลี่ยนเป็นรถสนับสนุน') + '</button> ';
+            html += '<div class="btn-more">';
+            html += '<button class="btn btn-secondary" onclick="toggleDropdown(event, this)">⋯</button>';
+            html += '<div class="dropdown-menu">';
+            html += '<button class="dropdown-item" onclick="changeVehicleCategory(\'' + vehicle.id + '\', \'' + (vehicle.vehicle_category === 'support' ? 'primary' : 'support') + '\')">' + (vehicle.vehicle_category === 'support' ? '🚐 เปลี่ยนเป็นรถหลัก' : '🚗 เปลี่ยนเป็นสนับสนุน') + '</button>';
             if (vehicle.status !== 'unavailable') {
-              html += '<button type="button" class="btn btn-secondary" style="padding:4px 8px;font-size:0.9em;" onclick="setVehicleUnavailable(\'' + vehicle.id + '\')">ยกเลิกใช้รถ</button>';
+              html += '<button class="dropdown-item" onclick="setVehicleUnavailable(\'' + vehicle.id + '\')">⛔ ยกเลิกใช้รถ</button>';
             } else {
-              html += '<button type="button" class="btn btn-secondary" style="padding:4px 8px;font-size:0.9em;" onclick="setVehicleAvailable(\'' + vehicle.id + '\')">เปิดใช้รถอีกครั้ง</button>';
+              html += '<button class="dropdown-item" onclick="setVehicleAvailable(\'' + vehicle.id + '\')">✅ เปิดใช้รถอีกครั้ง</button>';
             }
-            html += '<button type="button" class="btn btn-secondary" style="padding:4px 8px;font-size:0.9em;margin-top:4px;" onclick="initializeMaintenanceFromToday(\'' + vehicle.id + '\')" title="ใช้เลขไมล์และวันนี้เป็นจุดเริ่มต้นสำหรับแจ้งเตือนซ่อมบำรุง (ครั้งแรกที่ใช้ระบบหรือรถที่ยังไม่เคยจดประวัติ)">📋 ตั้งค่าประวัติการบำรุงครั้งแรก</button>';
-            html += '</div>';
+            html += '<button class="dropdown-item" onclick="initializeMaintenanceFromToday(\'' + vehicle.id + '\')">📋 ตั้งค่าบำรุงครั้งแรก</button>';
+            html += '</div></div>';
           }
           html += '</div>';
           html += '</div>';
@@ -1089,6 +1210,49 @@
         alert.remove();
       }, 5000);
     }
+
+    /* ── Filter / Search / Dropdown ── */
+    var currentFilter = 'all';
+
+    function setFilter(filter, chipEl) {
+      currentFilter = filter;
+      document.querySelectorAll('.chip').forEach(function(c) { c.classList.remove('active'); });
+      chipEl.classList.add('active');
+      filterVehicles();
+    }
+
+    function filterVehicles() {
+      var query = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+      var cards = document.querySelectorAll('#vehiclesGrid .vehicle-card');
+      var shown = 0;
+      cards.forEach(function(card) {
+        var matchFilter = currentFilter === 'all'
+          || (currentFilter === 'unavailable' && card.dataset.status === 'unavailable')
+          || (currentFilter === 'primary' && card.dataset.cat === 'primary' && card.dataset.status !== 'unavailable')
+          || (currentFilter === 'support' && card.dataset.cat === 'support' && card.dataset.status !== 'unavailable');
+        var matchSearch = !query || (card.dataset.search || '').indexOf(query) !== -1;
+        if (matchFilter && matchSearch) {
+          card.style.display = '';
+          shown++;
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    function toggleDropdown(e, btn) {
+      e.stopPropagation();
+      var menu = btn.parentElement.querySelector('.dropdown-menu');
+      var wasOpen = menu.classList.contains('show');
+      // Close all open dropdowns first
+      document.querySelectorAll('.dropdown-menu.show').forEach(function(m) { m.classList.remove('show'); });
+      if (!wasOpen) menu.classList.add('show');
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function() {
+      document.querySelectorAll('.dropdown-menu.show').forEach(function(m) { m.classList.remove('show'); });
+    });
   </script>
 
   <div style="background: var(--color-bg-light); padding: 20px; text-align: center; color: var(--color-text-muted); font-size: 0.9em; margin-top: 20px;">
