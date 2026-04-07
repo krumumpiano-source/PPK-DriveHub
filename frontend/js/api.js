@@ -117,11 +117,11 @@ const ACTION_MAP = {
   'getDriver':           (d) => API.get(`/api/drivers/${d.id}`),
   'createDriver':        (d) => API.post('/api/drivers', d),
   'updateDriver':        (d) => API.put(`/api/drivers/${d.id}`, d),
-  'deactivateDriver':    (d) => API.put(`/api/drivers/${d.id}/deactivate`, d),
+  'deactivateDriver':    (d) => API.del(`/api/drivers/${d.id}`),
   'reportFatigue':       (d) => API.post('/api/drivers/fatigue', d),
   'getDriverLeaves':     (d) => API.get(`/api/drivers/${d.id}/leaves`),
   'createDriverLeave':   (d) => API.post(`/api/drivers/${d.id}/leaves`, d),
-  'deleteDriverLeave':   (d) => API.del(`/api/drivers/${d.id}/leaves/${d.leaveId}`),
+  'deleteDriverLeave':   (d) => API.del(`/api/drivers/leaves/${d.leaveId}`),
 
   // Queue
   'getQueue':            (d) => API.get('/api/queue' + _q(d)),
@@ -139,7 +139,7 @@ const ACTION_MAP = {
   // Fuel
   'getFuelLog':          (d) => API.get('/api/fuel/log' + _q(d)),
   'getFuelItem':         (d) => API.get(`/api/fuel/${d.id}`),
-  'createFuel':          (d) => API.post('/api/fuel', d),
+  'createFuel':          (d) => API.post('/api/fuel/record', d),
   'updateFuel':          (d) => API.put(`/api/fuel/${d.id}`, d),
   'getFuelTypes':        ()  => API.get('/api/fuel/types'),
   'getFuelReports':      (d) => API.get('/api/fuel/reports' + _q(d)),
@@ -274,7 +274,7 @@ const ACTION_MAP = {
   'getVehicleById':      (d) => API.get(`/api/vehicles/${d.id || d.carId}`),
   'getAllUsers':         (d) => API.get('/api/admin/users' + _q(d)),
   'createDailyCheck':    (d) => API.post('/api/check/daily', d),
-  'createFuelLog':       (d) => API.post('/api/fuel', d),
+  'createFuelLog':       (d) => API.post('/api/fuel/record', d),
   'getFuelLogs':         (d) => API.get('/api/fuel/log' + _q(d)),
   'getRepairLogs':       (d) => API.get('/api/repair/log' + _q(d)),
   'getRepairLogById':    (d) => API.get(`/api/repair/log/${d.id}`),
