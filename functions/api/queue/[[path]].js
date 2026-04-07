@@ -41,8 +41,15 @@ export async function onRequest(context) {
     return success(rows);
   }
 
+  // --- GET /api/queue/rules ---
+  if (path === '/api/queue/rules' && method === 'GET') {
+    try { requirePermission(user, 'queue', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const rules = await dbAll(env.DB, 'SELECT * FROM queue_rules ORDER BY key', []);
+    return success({ rules });
+  }
+
   // --- GET /api/queue/:id ---
-  if (path.match(/^\/api\/queue\/[^/]+$/) && !path.includes('/freeze') && !path.includes('/cancel') && !path.includes('/complete') && method === 'GET') {
+  if (path.match(/^\/api\/queue\/[^/]+$/) && !path.includes('/freeze') && !path.includes('/cancel') && !path.includes('/complete') && !path.includes('/rules') && method === 'GET') {
     try { requirePermission(user, 'queue', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = extractParam(path, '/api/queue/');
     const row = await dbFirst(env.DB,

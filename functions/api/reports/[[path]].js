@@ -398,7 +398,7 @@ export async function onRequest(context) {
 
     for (const drv of dpDrivers) {
       const did = drv.id;
-      const sv = await dbFirst(env.DB, `SELECT AVG((politeness+safety_driving+punctuality+cleanliness+appearance+overall_satisfaction)/6.0) AS avg_score, COUNT(*) AS cnt FROM survey_responses WHERE driver_id=? AND created_at>=? AND created_at<=?`, [did, dpDateFrom, dpDateTo+' 23:59:59']);
+      const sv = await dbFirst(env.DB, `SELECT AVG((politeness_score+safety_score+punctuality_score+cleanliness_score+appearance_score+overall_score)/6.0) AS avg_score, COUNT(*) AS cnt FROM survey_responses WHERE driver_id=? AND created_at>=? AND created_at<=?`, [did, dpDateFrom, dpDateTo+' 23:59:59']);
       const uAll = await dbFirst(env.DB, `SELECT COUNT(*) AS total FROM usage_records WHERE driver_id=? AND datetime>=? AND datetime<=?`, [did, dpDateFrom, dpDateTo+' 23:59:59']);
       const uGood = await dbFirst(env.DB, `SELECT COUNT(*) AS cnt FROM usage_records WHERE driver_id=? AND datetime>=? AND datetime<=? AND data_quality='normal'`, [did, dpDateFrom, dpDateTo+' 23:59:59']);
       const dd = await dbFirst(env.DB, `SELECT COUNT(DISTINCT date) AS cnt FROM queue WHERE driver_id=? AND date>=? AND date<=? AND status IN ('completed','ongoing')`, [did, dpDateFrom, dpDateTo]);
@@ -442,7 +442,7 @@ export async function onRequest(context) {
     const dpDrv = await dbFirst(env.DB, "SELECT id, name, status FROM drivers WHERE id=?", [dpId]);
     if (!dpDrv) return error('ไม่พบพนักงาน', 404);
     const did=dpDrv.id;
-    const sv=await dbFirst(env.DB,`SELECT AVG((politeness+safety_driving+punctuality+cleanliness+appearance+overall_satisfaction)/6.0) AS avg_score,COUNT(*) AS cnt FROM survey_responses WHERE driver_id=? AND created_at>=? AND created_at<=?`,[did,dpDF,dpDT+' 23:59:59']);
+    const sv=await dbFirst(env.DB,`SELECT AVG((politeness_score+safety_score+punctuality_score+cleanliness_score+appearance_score+overall_score)/6.0) AS avg_score,COUNT(*) AS cnt FROM survey_responses WHERE driver_id=? AND created_at>=? AND created_at<=?`,[did,dpDF,dpDT+' 23:59:59']);
     const uAll=await dbFirst(env.DB,`SELECT COUNT(*) AS total FROM usage_records WHERE driver_id=? AND datetime>=? AND datetime<=?`,[did,dpDF,dpDT+' 23:59:59']);
     const uGood=await dbFirst(env.DB,`SELECT COUNT(*) AS cnt FROM usage_records WHERE driver_id=? AND datetime>=? AND datetime<=? AND data_quality='normal'`,[did,dpDF,dpDT+' 23:59:59']);
     const dd=await dbFirst(env.DB,`SELECT COUNT(DISTINCT date) AS cnt FROM queue WHERE driver_id=? AND date>=? AND date<=? AND status IN ('completed','ongoing')`,[did,dpDF,dpDT]);
