@@ -305,6 +305,7 @@
     /* ─── State ─── */
     var vehicles = [], drivers = [], currentTab = 'workflow';
     var editingId = null, currentAction = null, currentRepairId = null;
+    var isDriverMode = false;
 
     var STATUS_MAP = {
       requested:  { label: 'รอพิจารณา',    icon: '📨', cls: 'status-requested' },
@@ -320,12 +321,38 @@
     /* ─── Init ─── */
     function waitForCommon(){return new Promise(function(resolve){if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){resolve();return}var c=0;var t=setInterval(function(){c++;if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){clearInterval(t);resolve()}else if(c>50){clearInterval(t);resolve()}},100)})}
 
+    function setupDriverMode(){
+      var user=getCurrentUser();
+      if(!user) return;
+      var hasRepairPerm = (typeof hasModulePermission==='function' && hasModulePermission('repair','view')) || (user.role==='admin');
+      if(!hasRepairPerm && user.driver_id){
+        isDriverMode=true;
+        document.getElementById('summaryCards').style.display='none';
+        document.querySelector('.tabs').style.display='none';
+        document.getElementById('tab-history').style.display='none';
+        document.getElementById('tab-inspection').style.display='none';
+        document.querySelector('.header h1').textContent='🔧 แจ้งซ่อม';
+        document.querySelector('.header p').textContent='แจ้งปัญหา/อาการเสีย และติดตามสถานะการซ่อม';
+        // Hide filter dropdowns for driver
+        var wfFilter=document.getElementById('wfFilterCar');
+        if(wfFilter) wfFilter.style.display='none';
+        var wfSFilter=document.getElementById('wfFilterStatus');
+        if(wfSFilter) wfSFilter.style.display='none';
+        // Auto-select driver in report form
+        setTimeout(function(){
+          var sel=document.getElementById('rpt_driver');
+          if(sel) sel.value=user.driver_id;
+        },600);
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', async function(){
       await waitForCommon();
       if(typeof requireAuth==='function'&&!requireAuth()) return;
+      setupDriverMode();
       await Promise.all([loadVehicles(), loadDrivers()]);
       loadWorkflow();
-      loadSummary();
+      if(!isDriverMode) loadSummary();
       setTimeout(function(){if(typeof initAllThaiDateTimePickers==='function') initAllThaiDateTimePickers()},500);
     });
 
@@ -401,6 +428,14 @@
             sel.appendChild(o);
           });
         });
+        // Auto-select driver in report form for driver mode
+        if(isDriverMode){
+          var user=getCurrentUser();
+          if(user&&user.driver_id){
+            var sel=document.getElementById('rpt_driver');
+            if(sel) sel.value=user.driver_id;
+          }
+        }
       }catch(e){console.error(e)}
     }
 
@@ -447,8 +482,15 @@
         var r=await apiCall('getRepairs',filters);
         var list=(r.success&&r.data)?( Array.isArray(r.data)?r.data:[] ):[];
         if(!fs) list=list.filter(function(x){return x.status!=='completed'});
+        // In driver mode, show only this driver's reports
+        if(isDriverMode){
+          var user=getCurrentUser();
+          if(user&&user.driver_id){
+            list=list.filter(function(x){return x.requested_by_driver_id==user.driver_id||x.reporter_name===(user.full_name||'')});
+          }
+        }
         if(list.length===0){
-          el.innerHTML='<div class="empty-state"><div class="empty-state-icon">🔧</div><p>ไม่มีรายการแจ้งซ่อม</p></div>';
+          el.innerHTML='<div class="empty-state"><div class="empty-state-icon">🔧</div><p>'+(isDriverMode?'ยังไม่มีรายการแจ้งซ่อมของคุณ':'ไม่มีรายการแจ้งซ่อม')+'</p></div>';
         } else {
           list.forEach(function(rp){ el.innerHTML+=renderWorkflowCard(rp) });
         }
@@ -520,6 +562,14 @@
     /* ─── Report Modal (แจ้งซ่อม) ─── */
     function openReportModal(){
       document.getElementById('reportForm').reset();
+      // Auto-select driver in driver mode
+      if(isDriverMode){
+        var user=getCurrentUser();
+        if(user&&user.driver_id){
+          var sel=document.getElementById('rpt_driver');
+          if(sel) sel.value=user.driver_id;
+        }
+      }
       document.getElementById('reportModal').classList.add('show');
     }
     function closeReportModal(){document.getElementById('reportModal').classList.remove('show')}

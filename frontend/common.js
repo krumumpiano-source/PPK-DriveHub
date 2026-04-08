@@ -177,9 +177,11 @@ function renderNavigation() {
     // ── 3. ระบบซ่อม ──
     var hasRepair = hasModulePermission('repair', 'view') || hasPermission(['admin']);
     var hasTax = hasModulePermission('vehicles', 'view') || hasPermission(['admin']);
-    if (hasRepair || hasTax) {
+    var isDriver = !!user.driver_id;
+    if (hasRepair || hasTax || isDriver) {
         nav += _sidebarSection('ระบบซ่อมและตรวจสภาพ');
         if (hasRepair) nav += _sidebarItem('repair.html', 'repair', '🔧', 'บันทึกการซ่อม');
+        else if (isDriver) nav += _sidebarItem('repair.html', 'repair', '🔧', 'แจ้งซ่อม');
         if (hasTax) nav += _sidebarItem('tax-insurance.html', 'tax-insurance', '📄', 'ภาษี/ประกัน/ตรอ.');
         nav += _sidebarItem('incident.html', 'incident', '🚨', 'รายงานเหตุการณ์');
     }
