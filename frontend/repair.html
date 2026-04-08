@@ -75,6 +75,20 @@
     .file-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:var(--color-bg-light);border-radius:16px;font-size:.78rem;color:var(--color-primary);cursor:pointer}
     .file-chip:hover{background:var(--color-primary);color:#fff}
 
+    /* OCR Upload Zone */
+    .ocr-zone{border:2px dashed var(--color-border);border-radius:var(--radius-lg);padding:1rem;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:1rem;position:relative}
+    .ocr-zone:hover,.ocr-zone.dragover{border-color:var(--color-primary);background:rgba(99,102,241,.04)}
+    .ocr-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+    .ocr-zone-icon{font-size:1.8rem;margin-bottom:4px}
+    .ocr-zone-text{font-size:.84rem;color:var(--color-text-muted)}
+    .ocr-zone-text strong{color:var(--color-primary)}
+    .ocr-preview{margin-top:.5rem;max-height:120px;overflow:hidden;border-radius:var(--radius-md)}
+    .ocr-preview img{max-width:100%;max-height:120px;object-fit:contain}
+    .ocr-status{margin-top:.5rem;font-size:.82rem;padding:6px 12px;border-radius:var(--radius-md);display:none}
+    .ocr-status.loading{display:block;background:#eff6ff;color:#1e40af}
+    .ocr-status.success{display:block;background:#f0fdf4;color:#065f46}
+    .ocr-status.error{display:block;background:#fef2f2;color:#991b1b}
+
     @media(max-width:600px){
       .detail-grid{grid-template-columns:1fr}
       .stepper-label{font-size:.6rem}
@@ -247,6 +261,15 @@
         <button class="modal-close" onclick="closeCompletedModal()">×</button>
       </div>
       <div class="modal-body">
+        <!-- OCR Upload Zone -->
+        <div class="ocr-zone" id="cmpOcrZone" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="event.preventDefault();this.classList.remove('dragover');handleOcrFile(event.dataTransfer.files[0],'cmp')">
+          <input type="file" accept="image/*,application/pdf" onchange="handleOcrFile(this.files[0],'cmp')">
+          <div class="ocr-zone-icon">📷</div>
+          <div class="ocr-zone-text"><strong>อัปโหลดรูป/PDF ใบเสร็จอู่</strong><br>ระบบจะดึงข้อมูลมากรอกให้อัตโนมัติ</div>
+          <div id="cmpOcrPreview" class="ocr-preview"></div>
+        </div>
+        <div id="cmpOcrStatus" class="ocr-status"></div>
+
         <form id="completedForm" onsubmit="submitCompleted(event)">
           <div class="form-group">
             <label>รถ *</label>
@@ -628,7 +651,14 @@
           break;
         case 'complete':
           title='✅ บันทึกซ่อมเสร็จ';
-          fields='<div class="form-group"><label>วันที่ซ่อมเสร็จ</label><input type="text" id="act_complete_date" class="thai-datepicker"></div>';
+          fields='<div class="ocr-zone" id="actOcrZone" ondragover="event.preventDefault();this.classList.add(\'dragover\')" ondragleave="this.classList.remove(\'dragover\')" ondrop="event.preventDefault();this.classList.remove(\'dragover\');handleOcrFile(event.dataTransfer.files[0],\'act\')">';
+          fields+='<input type="file" accept="image/*,application/pdf" onchange="handleOcrFile(this.files[0],\'act\')">';
+          fields+='<div class="ocr-zone-icon">📷</div>';
+          fields+='<div class="ocr-zone-text"><strong>อัปโหลดรูป/PDF ใบเสร็จอู่</strong><br>ดึงข้อมูลอัตโนมัติ</div>';
+          fields+='<div id="actOcrPreview" class="ocr-preview"></div>';
+          fields+='</div>';
+          fields+='<div id="actOcrStatus" class="ocr-status"></div>';
+          fields+='<div class="form-group"><label>วันที่ซ่อมเสร็จ</label><input type="text" id="act_complete_date" class="thai-datepicker"></div>';
           fields+='<div class="form-group"><label>ค่าใช้จ่ายรวม (บาท)</label><input type="number" id="act_c_cost" step="0.01"></div>';
           fields+='<div class="form-group"><label>หมายเหตุ</label><textarea id="act_c_notes" rows="2"></textarea></div>';
           break;
@@ -810,6 +840,94 @@
         document.getElementById('completedModal').classList.add('show');
         setTimeout(function(){if(typeof initAllThaiDateTimePickers==='function') initAllThaiDateTimePickers()},100);
       }catch(e){showAlert('เกิดข้อผิดพลาด','error')}
+    }
+
+    /* ═══════════════════════════════════════════════════
+       OCR: อัปโหลดเอกสาร → ดึงข้อมูลอัตโนมัติ
+       ═══════════════════════════════════════════════════ */
+    async function handleOcrFile(file, prefix){
+      if(!file) return;
+      var allowed=['image/jpeg','image/png','image/webp','application/pdf'];
+      if(allowed.indexOf(file.type)===-1){
+        showOcrStatus(prefix,'error','❌ รองรับเฉพาะ รูป (JPG/PNG) หรือ PDF');
+        return;
+      }
+      if(file.size>10*1024*1024){
+        showOcrStatus(prefix,'error','❌ ไฟล์ใหญ่เกิน 10MB');
+        return;
+      }
+      // Show preview
+      var previewEl=document.getElementById(prefix+'OcrPreview');
+      if(previewEl){
+        if(file.type.startsWith('image/')){
+          var url=URL.createObjectURL(file);
+          previewEl.innerHTML='<img src="'+url+'" alt="preview">';
+        }else{
+          previewEl.innerHTML='<div style="padding:8px;font-size:.84rem">📄 '+file.name+'</div>';
+        }
+      }
+      // Convert to base64
+      showOcrStatus(prefix,'loading','🔄 กำลังวิเคราะห์เอกสาร...');
+      try{
+        var base64=await fileToBase64(file);
+        var r=await apiCall('ocrExtract',{base64:base64,mime:file.type,doc_type:'repair_doc'});
+        if(r.success&&r.data&&r.data.extracted){
+          var d=r.data.extracted;
+          fillOcrData(prefix,d);
+          showOcrStatus(prefix,'success','✅ ดึงข้อมูลสำเร็จ — กรุณาตรวจสอบก่อนบันทึก');
+        }else{
+          showOcrStatus(prefix,'error','⚠️ ไม่สามารถอ่านข้อมูลจากเอกสารนี้ได้ กรุณากรอกเอง');
+        }
+      }catch(e){
+        console.error(e);
+        showOcrStatus(prefix,'error','❌ เกิดข้อผิดพลาด: '+(e.message||''));
+      }
+    }
+
+    function fileToBase64(file){
+      return new Promise(function(resolve,reject){
+        var reader=new FileReader();
+        reader.onload=function(){
+          var result=reader.result;
+          var base64=result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror=reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function fillOcrData(prefix,d){
+      if(prefix==='cmp'){
+        if(d.shop_name){document.getElementById('cmp_garage').value=d.shop_name}
+        if(d.description){document.getElementById('cmp_issue').value=d.description}
+        if(d.repair_type){
+          var existing=document.getElementById('cmp_items').value;
+          document.getElementById('cmp_items').value=existing?(existing+', '+d.repair_type):d.repair_type;
+        }
+        if(d.actual_cost){document.getElementById('cmp_cost').value=d.actual_cost}
+        if(d.date){document.getElementById('cmp_date').value=d.date}
+      }else if(prefix==='act'){
+        if(d.actual_cost){var el=document.getElementById('act_c_cost');if(el) el.value=d.actual_cost}
+        if(d.date){var el2=document.getElementById('act_complete_date');if(el2) el2.value=d.date}
+        if(d.description||d.shop_name){
+          var el3=document.getElementById('act_c_notes');
+          if(el3){
+            var parts=[];
+            if(d.shop_name) parts.push('อู่: '+d.shop_name);
+            if(d.description) parts.push(d.description);
+            if(d.repair_type) parts.push('รายการ: '+d.repair_type);
+            el3.value=parts.join(' | ');
+          }
+        }
+      }
+    }
+
+    function showOcrStatus(prefix,type,msg){
+      var el=document.getElementById(prefix+'OcrStatus');
+      if(!el) return;
+      el.className='ocr-status '+type;
+      el.textContent=msg;
     }
 
     async function submitCompleted(e){
