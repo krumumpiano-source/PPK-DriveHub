@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ขอใช้รถ - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>window.API_BASE_URL=CONFIG.API_BASE_URL;window.currentPage='vehicle-request';window.REQUIRE_AUTH=true;</script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
+  <link rel="stylesheet" href="common.css">
+  <script src="js/api.js"></script><script src="common.js"></script>
+  <style>
+    .vr-tabs{display:flex;gap:0;border-bottom:2px solid var(--color-border);margin-bottom:1.5rem}
+    .vr-tab{padding:10px 20px;cursor:pointer;font-size:.92rem;font-weight:500;border-bottom:3px solid transparent;color:var(--color-text-muted);transition:all .2s}
+    .vr-tab:hover{color:var(--color-primary)}
+    .vr-tab.active{color:var(--color-primary);border-bottom-color:var(--color-primary);font-weight:600}
+    .vr-panel{display:none}.vr-panel.active{display:block}
+    .vr-card{background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:1rem;margin-bottom:.75rem}
+    .vr-header{display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;flex-wrap:wrap}
+    .vr-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:.78rem;font-weight:500}
+    .st-pending{background:#fef3c7;color:#92400e}
+    .st-approved{background:#d1fae5;color:#065f46}
+    .st-rejected{background:#fee2e2;color:#991b1b}
+    .st-cancelled{background:#f3f4f6;color:#6b7280}
+    .vr-detail{margin-top:.5rem;font-size:.88rem;color:var(--color-text-light)}
+    .vr-detail p{margin-bottom:4px}
+    .vr-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+    @media(max-width:640px){.vr-form-grid{grid-template-columns:1fr}.vr-tabs{overflow-x:auto}}
+    .passenger-row{display:flex;gap:8px;margin-bottom:6px;align-items:center}
+    .passenger-row input{flex:1}
+    .approve-section{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--radius-lg);padding:1rem;margin-top:1rem}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📝 ขอใช้รถราชการ</h1>
+      <p>ระบบจัดการยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+    </div>
+    <div id="navigation"></div>
+    <div class="content">
+      <div id="alertContainer"></div>
+      <div class="vr-tabs">
+        <div class="vr-tab active" onclick="switchTab('create')">📝 แบบฟอร์มขอใช้รถ</div>
+        <div class="vr-tab" onclick="switchTab('mylist')">📋 คำขอของฉัน</div>
+        <div class="vr-tab" id="tabApprove" style="display:none" onclick="switchTab('approve')">✅ อนุมัติคำขอ</div>
+      </div>
+
+      <!-- Tab 1: Create Request -->
+      <div id="panelCreate" class="vr-panel active">
+        <div class="vr-card">
+          <h3 style="margin-bottom:1rem">กรอกแบบฟอร์มขอใช้รถ</h3>
+          <form id="requestForm" onsubmit="submitRequest(event)">
+            <div class="vr-form-grid">
+              <div class="form-group">
+                <label>ชื่อ-สกุล ผู้ขอ <span style="color:var(--color-danger)">*</span></label>
+                <input type="text" id="fRequesterName" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label>กลุ่มสาระ/หน่วยงาน</label>
+                <input type="text" id="fDepartment" class="form-control">
+              </div>
+              <div class="form-group">
+                <label>วันที่ใช้รถ <span style="color:var(--color-danger)">*</span></label>
+                <input type="text" id="fDate" class="form-control" placeholder="เลือกวันที่" required>
+              </div>
+              <div class="form-group">
+                <label>ลำดับความสำคัญ</label>
+                <select id="fPriority" class="form-control">
+                  <option value="general">ทั่วไป</option>
+                  <option value="teaching">สนับสนุนการสอน</option>
+                  <option value="urgent">เร่งด่วน</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>เวลาออก</label>
+                <input type="time" id="fTimeStart" class="form-control">
+              </div>
+              <div class="form-group">
+                <label>เวลากลับ (โดยประมาณ)</label>
+                <input type="time" id="fTimeEnd" class="form-control">
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label>สถานที่ปลายทาง <span style="color:var(--color-danger)">*</span></label>
+                <input type="text" id="fDestination" class="form-control" required>
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label>เส้นทาง</label>
+                <input type="text" id="fRoute" class="form-control" placeholder="เช่น พะเยา - เชียงใหม่ - พะเยา">
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label>วัตถุประสงค์</label>
+                <textarea id="fPurpose" class="form-control" rows="2"></textarea>
+              </div>
+              <div class="form-group">
+                <label>จำนวนผู้ร่วมเดินทาง</label>
+                <input type="number" id="fPassengers" class="form-control" min="1" value="1" onchange="updatePassengerFields()">
+              </div>
+              <div class="form-group">
+                <label><input type="checkbox" id="fUrgent"> กรณีฉุกเฉิน (ไม่ถึง 3 วันทำการ)</label>
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label>รายชื่อผู้ร่วมเดินทาง</label>
+                <div id="passengerList"></div>
+                <button type="button" class="btn btn-sm" onclick="addPassengerRow()" style="margin-top:4px;font-size:.82rem">➕ เพิ่มชื่อ</button>
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label>หมายเหตุ</label>
+                <textarea id="fNotes" class="form-control" rows="2"></textarea>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:1rem">
+              <button type="submit" class="btn btn-primary">📤 ส่งคำขอ</button>
+              <button type="button" class="btn btn-outline" onclick="printRequest()">🖨️ พิมพ์แบบฟอร์ม</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Tab 2: My Requests -->
+      <div id="panelMylist" class="vr-panel">
+        <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
+          <select id="filterMyStatus" onchange="loadMyRequests()" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem">
+            <option value="">ทุกสถานะ</option>
+            <option value="pending">รออนุมัติ</option>
+            <option value="approved">อนุมัติแล้ว</option>
+            <option value="rejected">ไม่อนุมัติ</option>
+            <option value="cancelled">ยกเลิก</option>
+          </select>
+        </div>
+        <div id="myRequestList"><p style="color:var(--color-text-muted);text-align:center;padding:2rem">กำลังโหลด...</p></div>
+      </div>
+
+      <!-- Tab 3: Approve (queue manager/admin) -->
+      <div id="panelApprove" class="vr-panel">
+        <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
+          <select id="filterApproveStatus" onchange="loadPendingRequests()" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem">
+            <option value="pending">รออนุมัติ</option>
+            <option value="">ทั้งหมด</option>
+            <option value="approved">อนุมัติแล้ว</option>
+            <option value="rejected">ไม่อนุมัติ</option>
+          </select>
+        </div>
+        <div id="pendingRequestList"><p style="color:var(--color-text-muted);text-align:center;padding:2rem">กำลังโหลด...</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Approve Modal -->
+  <div id="approveModal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width:600px">
+      <h3 id="approveModalTitle">อนุมัติคำขอใช้รถ</h3>
+      <div id="approveModalBody"></div>
+      <div class="approve-section">
+        <div class="vr-form-grid">
+          <div class="form-group">
+            <label>เลือกรถ <span style="color:var(--color-danger)">*</span></label>
+            <select id="mAssignCar" class="form-control"><option value="">โหลดรายการรถ...</option></select>
+          </div>
+          <div class="form-group">
+            <label>เลือกพนักงานขับรถ <span style="color:var(--color-danger)">*</span></label>
+            <select id="mAssignDriver" class="form-control"><option value="">โหลดรายการพนักงาน...</option></select>
+          </div>
+        </div>
+        <div class="form-group"><label>หมายเหตุ</label><textarea id="mNotes" class="form-control" rows="2"></textarea></div>
+        <div style="display:flex;gap:8px;margin-top:1rem">
+          <button class="btn btn-primary" onclick="doApprove()">✅ อนุมัติ + จัดคิว</button>
+          <button class="btn btn-danger" onclick="doReject()">❌ ไม่อนุมัติ</button>
+          <button class="btn btn-outline" onclick="closeModal('approveModal')">ปิด</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var allCars = [], allDrivers = [], currentApproveId = null;
+
+    function switchTab(tab) {
+      document.querySelectorAll('.vr-tab').forEach(function(t){ t.classList.remove('active'); });
+      document.querySelectorAll('.vr-panel').forEach(function(p){ p.classList.remove('active'); });
+      var map = { create:'panelCreate', mylist:'panelMylist', approve:'panelApprove' };
+      document.getElementById(map[tab]).classList.add('active');
+      event.target.classList.add('active');
+      if (tab === 'mylist') loadMyRequests();
+      if (tab === 'approve') loadPendingRequests();
+    }
+
+    function addPassengerRow(name) {
+      var div = document.getElementById('passengerList');
+      var row = document.createElement('div');
+      row.className = 'passenger-row';
+      row.innerHTML = '<input type="text" class="form-control passenger-name" placeholder="ชื่อ-สกุล" value="' + (name || '') + '"><button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-size:1.1rem">🗑️</button>';
+      div.appendChild(row);
+    }
+
+    function updatePassengerFields() {
+      // optional auto-add rows
+    }
+
+    function getPassengerNames() {
+      var names = [];
+      document.querySelectorAll('.passenger-name').forEach(function(inp) {
+        if (inp.value.trim()) names.push(inp.value.trim());
+      });
+      return names;
+    }
+
+    async function submitRequest(e) {
+      e.preventDefault();
+      var data = {
+        requester_name: document.getElementById('fRequesterName').value.trim(),
+        department: document.getElementById('fDepartment').value.trim(),
+        date: document.getElementById('fDate').value,
+        time_start: document.getElementById('fTimeStart').value || null,
+        time_end: document.getElementById('fTimeEnd').value || null,
+        destination: document.getElementById('fDestination').value.trim(),
+        route: document.getElementById('fRoute').value.trim(),
+        purpose: document.getElementById('fPurpose').value.trim(),
+        passengers: parseInt(document.getElementById('fPassengers').value) || 1,
+        passenger_names: getPassengerNames(),
+        priority: document.getElementById('fPriority').value,
+        is_urgent: document.getElementById('fUrgent').checked,
+        notes: document.getElementById('fNotes').value.trim()
+      };
+      if (!data.date || !data.destination) { showAlert('กรุณากรอกวันที่และสถานที่ปลายทาง', 'danger'); return; }
+      try {
+        var res = await apiCall('createVehicleRequest', data);
+        if (res && res.success) {
+          showAlert('ส่งคำขอใช้รถเรียบร้อยแล้ว', 'success');
+          document.getElementById('requestForm').reset();
+          document.getElementById('passengerList').innerHTML = '';
+        } else {
+          showAlert((res && res.error) || 'เกิดข้อผิดพลาด', 'danger');
+        }
+      } catch (err) { showAlert('เกิดข้อผิดพลาด: ' + err.message, 'danger'); }
+    }
+
+    function printRequest() {
+      var name = document.getElementById('fRequesterName').value || '-';
+      var dept = document.getElementById('fDepartment').value || '-';
+      var date = document.getElementById('fDate').value || '-';
+      var dest = document.getElementById('fDestination').value || '-';
+      var route = document.getElementById('fRoute').value || '-';
+      var purpose = document.getElementById('fPurpose').value || '-';
+      var passengers = getPassengerNames().join(', ') || '-';
+      var timeS = document.getElementById('fTimeStart').value || '-';
+      var timeE = document.getElementById('fTimeEnd').value || '-';
+      var w = window.open('', '_blank', 'width=800,height=600');
+      w.document.write('<html><head><title>แบบฟอร์มขอใช้รถ</title><style>body{font-family:Sarabun,sans-serif;padding:40px;font-size:14px}h2{text-align:center}table{width:100%;border-collapse:collapse;margin-top:20px}td{padding:6px 8px;border:1px solid #ccc}.sig{margin-top:60px;display:flex;justify-content:space-around}.sig div{text-align:center;width:200px}.sig .line{border-bottom:1px solid #333;margin-bottom:8px;height:40px}</style></head><body>');
+      w.document.write('<h2>แบบฟอร์มขอใช้รถราชการ</h2><p style="text-align:center">โรงเรียนพะเยาพิทยาคม</p>');
+      w.document.write('<table><tr><td style="width:30%"><strong>ผู้ขอใช้รถ</strong></td><td>' + name + '</td></tr>');
+      w.document.write('<tr><td><strong>กลุ่มสาระ/หน่วยงาน</strong></td><td>' + dept + '</td></tr>');
+      w.document.write('<tr><td><strong>วันที่</strong></td><td>' + date + '</td></tr>');
+      w.document.write('<tr><td><strong>เวลา</strong></td><td>' + timeS + ' - ' + timeE + '</td></tr>');
+      w.document.write('<tr><td><strong>สถานที่ปลายทาง</strong></td><td>' + dest + '</td></tr>');
+      w.document.write('<tr><td><strong>เส้นทาง</strong></td><td>' + route + '</td></tr>');
+      w.document.write('<tr><td><strong>วัตถุประสงค์</strong></td><td>' + purpose + '</td></tr>');
+      w.document.write('<tr><td><strong>ผู้ร่วมเดินทาง</strong></td><td>' + passengers + '</td></tr></table>');
+      w.document.write('<div class="sig"><div><div class="line"></div>(ผู้ขอใช้รถ)</div><div><div class="line"></div>(ผู้อนุมัติ)</div></div>');
+      w.document.write('</body></html>');
+      w.document.close();
+      w.print();
+    }
+
+    var statusLabel = { pending: '🟡 รออนุมัติ', approved: '🟢 อนุมัติแล้ว', rejected: '🔴 ไม่อนุมัติ', cancelled: '⚪ ยกเลิก' };
+    var statusClass = { pending: 'st-pending', approved: 'st-approved', rejected: 'st-rejected', cancelled: 'st-cancelled' };
+
+    function renderRequestCard(r, showActions) {
+      var passengers = '';
+      try { var pn = JSON.parse(r.passenger_names || '[]'); passengers = pn.join(', '); } catch(e) {}
+      var h = '<div class="vr-card">';
+      h += '<div class="vr-header"><div>';
+      h += '<strong>' + (r.date || '-') + '</strong> &nbsp; <span class="vr-badge ' + (statusClass[r.status] || '') + '">' + (statusLabel[r.status] || r.status) + '</span>';
+      if (r.is_urgent) h += ' <span class="vr-badge" style="background:#fef3c7;color:#92400e">🚨 ฉุกเฉิน</span>';
+      h += '</div></div>';
+      h += '<div class="vr-detail">';
+      h += '<p>📍 <strong>' + (r.destination || '-') + '</strong></p>';
+      if (r.route) h += '<p>🛣️ ' + r.route + '</p>';
+      if (r.purpose) h += '<p>📝 ' + r.purpose + '</p>';
+      h += '<p>⏰ ' + (r.time_start || '-') + ' - ' + (r.time_end || '-') + ' &nbsp; 👥 ' + (r.passengers || 1) + ' คน</p>';
+      if (passengers) h += '<p>👤 ' + passengers + '</p>';
+      if (r.requester_name) h += '<p>ขอโดย: ' + r.requester_name + (r.requester_department ? ' (' + r.requester_department + ')' : '') + '</p>';
+      if (r.status === 'approved') {
+        h += '<p style="color:#065f46">🚗 ' + (r.license_plate || '-') + ' ' + (r.car_brand || '') + ' &nbsp; 👤 ' + (r.driver_name || '-') + '</p>';
+      }
+      if (r.status === 'rejected' && r.rejection_reason) {
+        h += '<p style="color:#991b1b">❌ เหตุผล: ' + r.rejection_reason + '</p>';
+      }
+      h += '</div>';
+      if (showActions && r.status === 'pending') {
+        h += '<div style="margin-top:8px;display:flex;gap:6px">';
+        h += '<button class="btn btn-primary btn-sm" onclick="openApproveModal(\'' + r.id + '\')">✅ จัดรถ+อนุมัติ</button>';
+        h += '<button class="btn btn-danger btn-sm" onclick="quickReject(\'' + r.id + '\')">❌ ไม่อนุมัติ</button>';
+        h += '</div>';
+      }
+      if (!showActions && r.status === 'pending') {
+        h += '<div style="margin-top:8px"><button class="btn btn-outline btn-sm" onclick="cancelRequest(\'' + r.id + '\')">🗑️ ยกเลิกคำขอ</button></div>';
+      }
+      h += '</div>';
+      return h;
+    }
+
+    async function loadMyRequests() {
+      var user = getCurrentUser();
+      var status = document.getElementById('filterMyStatus').value;
+      var params = { requester_id: user.id };
+      if (status) params.status = status;
+      try {
+        var res = await apiCall('getVehicleRequests', params);
+        var list = (res && res.success && Array.isArray(res.data)) ? res.data : [];
+        if (list.length === 0) {
+          document.getElementById('myRequestList').innerHTML = '<p style="color:var(--color-text-muted);text-align:center;padding:2rem">ยังไม่มีคำขอ</p>';
+          return;
+        }
+        var h = '';
+        list.forEach(function(r) { h += renderRequestCard(r, false); });
+        document.getElementById('myRequestList').innerHTML = h;
+      } catch (err) {
+        document.getElementById('myRequestList').innerHTML = '<p style="color:var(--color-danger)">โหลดข้อมูลไม่สำเร็จ</p>';
+      }
+    }
+
+    async function loadPendingRequests() {
+      var status = document.getElementById('filterApproveStatus').value;
+      var params = {};
+      if (status) params.status = status;
+      try {
+        var res = await apiCall('getVehicleRequests', params);
+        var list = (res && res.success && Array.isArray(res.data)) ? res.data : [];
+        if (list.length === 0) {
+          document.getElementById('pendingRequestList').innerHTML = '<p style="color:var(--color-text-muted);text-align:center;padding:2rem">ไม่มีคำขอ</p>';
+          return;
+        }
+        var h = '';
+        list.forEach(function(r) { h += renderRequestCard(r, true); });
+        document.getElementById('pendingRequestList').innerHTML = h;
+      } catch (err) {
+        document.getElementById('pendingRequestList').innerHTML = '<p style="color:var(--color-danger)">โหลดข้อมูลไม่สำเร็จ</p>';
+      }
+    }
+
+    async function cancelRequest(id) {
+      if (!confirm('ยืนยันยกเลิกคำขอนี้?')) return;
+      try {
+        var res = await apiCall('cancelVehicleRequest', { id: id });
+        if (res && res.success) {
+          showAlert('ยกเลิกคำขอเรียบร้อย', 'success');
+          loadMyRequests();
+        } else { showAlert((res && res.error) || 'เกิดข้อผิดพลาด', 'danger'); }
+      } catch (err) { showAlert('เกิดข้อผิดพลาด', 'danger'); }
+    }
+
+    async function openApproveModal(id) {
+      currentApproveId = id;
+      try {
+        var res = await apiCall('getVehicleRequest', { id: id });
+        if (!res || !res.success) { showAlert('ไม่พบข้อมูลคำขอ', 'danger'); return; }
+        var r = res.data;
+        var body = '<div class="vr-detail">';
+        body += '<p><strong>📅 ' + r.date + '</strong> (' + (r.time_start || '-') + ' - ' + (r.time_end || '-') + ')</p>';
+        body += '<p>📍 ' + (r.destination || '-') + '</p>';
+        if (r.route) body += '<p>🛣️ ' + r.route + '</p>';
+        body += '<p>👤 ' + (r.requester_name || '-') + ' ' + (r.requester_department ? '(' + r.requester_department + ')' : '') + '</p>';
+        body += '<p>📝 ' + (r.purpose || '-') + ' &nbsp; 👥 ' + (r.passengers || 1) + ' คน</p>';
+        body += '</div>';
+        document.getElementById('approveModalBody').innerHTML = body;
+      } catch(e) {}
+
+      // Load cars & drivers
+      if (allCars.length === 0) {
+        try {
+          var cRes = await apiCall('getVehicles');
+          allCars = (cRes && cRes.success && Array.isArray(cRes.data)) ? cRes.data.filter(function(c){ return c.status === 'active'; }) : [];
+        } catch(e) {}
+      }
+      if (allDrivers.length === 0) {
+        try {
+          var dRes = await apiCall('getDrivers');
+          allDrivers = (dRes && dRes.success && Array.isArray(dRes.data)) ? dRes.data.filter(function(d){ return d.status === 'active'; }) : [];
+        } catch(e) {}
+      }
+      var carSel = '<option value="">-- เลือกรถ --</option>';
+      allCars.forEach(function(c) {
+        carSel += '<option value="' + c.id + '">' + (c.license_plate || '') + ' ' + (c.brand || '') + '</option>';
+      });
+      document.getElementById('mAssignCar').innerHTML = carSel;
+      var drvSel = '<option value="">-- เลือกพนักงาน --</option>';
+      allDrivers.forEach(function(d) {
+        drvSel += '<option value="' + d.id + '">' + (d.name || '') + '</option>';
+      });
+      document.getElementById('mAssignDriver').innerHTML = drvSel;
+      document.getElementById('mNotes').value = '';
+      document.getElementById('approveModal').style.display = 'flex';
+    }
+
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    async function doApprove() {
+      var carId = document.getElementById('mAssignCar').value;
+      var driverId = document.getElementById('mAssignDriver').value;
+      if (!carId || !driverId) { showAlert('กรุณาเลือกรถและพนักงานขับรถ', 'warning'); return; }
+      try {
+        var res = await apiCall('approveVehicleRequest', {
+          id: currentApproveId,
+          assigned_car_id: carId,
+          assigned_driver_id: driverId,
+          notes: document.getElementById('mNotes').value
+        });
+        if (res && res.success) {
+          showAlert('อนุมัติคำขอและสร้างคิวเรียบร้อย', 'success');
+          closeModal('approveModal');
+          loadPendingRequests();
+        } else { showAlert((res && res.error) || 'เกิดข้อผิดพลาด', 'danger'); }
+      } catch (err) { showAlert('เกิดข้อผิดพลาด: ' + err.message, 'danger'); }
+    }
+
+    async function doReject() {
+      var reason = prompt('เหตุผลที่ไม่อนุมัติ:');
+      if (reason === null) return;
+      try {
+        var res = await apiCall('rejectVehicleRequest', { id: currentApproveId, reason: reason });
+        if (res && res.success) {
+          showAlert('ปฏิเสธคำขอเรียบร้อย', 'success');
+          closeModal('approveModal');
+          loadPendingRequests();
+        } else { showAlert((res && res.error) || 'เกิดข้อผิดพลาด', 'danger'); }
+      } catch (err) { showAlert('เกิดข้อผิดพลาด', 'danger'); }
+    }
+
+    async function quickReject(id) {
+      var reason = prompt('เหตุผลที่ไม่อนุมัติ:');
+      if (reason === null) return;
+      try {
+        var res = await apiCall('rejectVehicleRequest', { id: id, reason: reason });
+        if (res && res.success) {
+          showAlert('ปฏิเสธคำขอเรียบร้อย', 'success');
+          loadPendingRequests();
+        } else { showAlert((res && res.error) || 'เกิดข้อผิดพลาด', 'danger'); }
+      } catch (err) { showAlert('เกิดข้อผิดพลาด', 'danger'); }
+    }
+
+    // Init
+    document.addEventListener('DOMContentLoaded', async function() {
+      await waitForCommon();
+      if (typeof requireAuth === 'function') { if (!requireAuth()) { window.location.href = 'login.html'; return; } }
+      var user = getCurrentUser();
+      // Prefill requester name
+      document.getElementById('fRequesterName').value = user.full_name || user.display_name || user.username || '';
+      // Show approve tab for queue manager / admin
+      var canApprove = false;
+      try { canApprove = hasModulePermission('queue', 'edit') || hasPermission(['admin', 'super_admin']); } catch(e) {}
+      if (canApprove) document.getElementById('tabApprove').style.display = '';
+      // Init date picker
+      if (typeof flatpickr !== 'undefined') {
+        flatpickr('#fDate', { locale: 'th', dateFormat: 'Y-m-d', minDate: 'today' });
+      }
+    });
+  </script>
+</body>
+</html>

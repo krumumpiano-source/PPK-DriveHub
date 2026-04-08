@@ -324,6 +324,18 @@
             </div>
           </div>
 
+          <!-- Requester Dashboard (staff/viewer) -->
+          <div id="requesterDashboard" style="display:none">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:1.5rem" id="requesterKpi"></div>
+            <div style="background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:1.2rem;margin-bottom:1rem">
+              <h3 style="margin-bottom:1rem;font-size:1.1rem">📋 คำขอใช้รถของฉัน</h3>
+              <div id="requesterList"></div>
+            </div>
+            <div style="text-align:center;margin-top:1rem">
+              <a href="vehicle-request.html" style="display:inline-block;background:var(--color-primary);color:#fff;padding:16px 40px;border-radius:var(--radius-lg);font-size:1.1rem;text-decoration:none;font-weight:700">📝 ขอใช้รถ</a>
+            </div>
+          </div>
+
           <div id="dashboardContent" style="display: none;">
             <!-- Calendar -->
             <div class="calendar-container">
@@ -425,14 +437,19 @@
           // Route by role
           var user = typeof getCurrentUser==='function'?getCurrentUser():null;
           var role = user?user.role:'';
-          if(role==='driver'){
+          if(role==='manager' || role==='executive'){
+            window.location.href='executive-dashboard.html';
+            return;
+          } else if(role==='driver'){
             loadDriverDashboard(user);
           } else if(role==='fuel'){
             loadFuelDashboard();
           } else if(role==='repair'){
             loadRepairDashboard();
+          } else if(role==='staff' || role==='viewer'){
+            loadRequesterDashboard(user);
           } else {
-            // admin, super_admin, vehicle (queue), viewer → full calendar
+            // admin, super_admin, vehicle (queue) → full calendar
             loadDashboard();
           }
         });
@@ -542,6 +559,36 @@
             }
             document.getElementById('repairDashboard').style.display='block';
           }catch(e){console.error(e);document.getElementById('repairDashboard').innerHTML='<p style="color:var(--color-danger)">โหลดข้อมูลไม่สำเร็จ</p>';document.getElementById('repairDashboard').style.display='block';}
+          finally{document.getElementById('loading').style.display='none'}
+        }
+
+        async function loadRequesterDashboard(user){
+          document.getElementById('loading').style.display='block';
+          try{
+            var res=await apiCall('getVehicleRequests',{requester_id:user.id});
+            var list=(res&&res.success&&Array.isArray(res.data))?res.data:[];
+            var pending=list.filter(function(r){return r.status==='pending'}).length;
+            var approved=list.filter(function(r){return r.status==='approved'}).length;
+            var kpiH=_kpi(list.length,'คำขอทั้งหมด','');
+            kpiH+=_kpi(pending,'รออนุมัติ','');
+            kpiH+=_kpi(approved,'อนุมัติแล้ว','');
+            document.getElementById('requesterKpi').innerHTML=kpiH;
+
+            if(list.length===0){
+              document.getElementById('requesterList').innerHTML='<p style="color:var(--color-text-muted);text-align:center;padding:20px">ยังไม่มีคำขอใช้รถ</p>';
+            }else{
+              var h='';list.slice(0,10).forEach(function(r){
+                var stMap={pending:'🟡 รออนุมัติ',approved:'🟢 อนุมัติแล้ว',rejected:'🔴 ไม่อนุมัติ',cancelled:'⚪ ยกเลิก'};
+                h+='<div style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--color-border);font-size:.9rem">';
+                h+='<span>'+(r.date||'-')+'</span>';
+                h+='<span>'+(r.destination||'-')+'</span>';
+                h+='<span>'+(stMap[r.status]||r.status)+'</span>';
+                h+='</div>';
+              });
+              document.getElementById('requesterList').innerHTML=h;
+            }
+            document.getElementById('requesterDashboard').style.display='block';
+          }catch(e){console.error(e);document.getElementById('requesterDashboard').innerHTML='<p style="color:var(--color-danger)">โหลดข้อมูลไม่สำเร็จ</p>';document.getElementById('requesterDashboard').style.display='block';}
           finally{document.getElementById('loading').style.display='none'}
         }
 

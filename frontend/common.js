@@ -158,8 +158,9 @@ function renderNavigation() {
     var hasQueue = hasModulePermission('queue', 'edit') || hasPermission(['admin']);
     var hasUsage = hasModulePermission('usage_log', 'view') || hasPermission(['admin']);
     var hasHistory = user.driver_id || hasPermission(['admin']);
-    if (hasQueue || hasUsage || hasHistory) {
+    if (true) {
         nav += _sidebarSection('คิวและการใช้รถ');
+        nav += _sidebarItem('vehicle-request.html', 'vehicle-request', '📝', 'ขอใช้รถ');
         if (hasQueue) nav += _sidebarItem('queue-manage.html', 'queue', '📅', 'จัดการคิวรถ');
         if (hasUsage) nav += _sidebarItem('usage-log.html', 'usage-log', '📝', 'บันทึกการใช้รถ');
         if (hasHistory) nav += _sidebarItem('driver-history.html', 'driver-history', '📋', 'คิวและประวัติส่วนตัว');
