@@ -321,9 +321,11 @@ function renderNav() {
     body.insertBefore(sidebar, body.firstChild);
 
     // Move any remaining visible elements (e.g. .footer divs outside .container) into mainArea
+    // But keep modal-overlay elements directly under body for proper position:fixed behavior
     Array.from(body.children).forEach(function(el) {
         if (el === sidebar || el === overlay || el === mainArea) return;
         if (['SCRIPT','LINK','STYLE','META','NOSCRIPT'].indexOf(el.tagName) !== -1) return;
+        if (el.classList && el.classList.contains('modal-overlay')) return;
         mainArea.appendChild(el);
     });
 
