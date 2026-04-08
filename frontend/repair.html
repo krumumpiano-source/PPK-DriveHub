@@ -16,18 +16,36 @@
   <link rel="stylesheet" href="common.css">
   <script src="js/api.js"></script><script src="common.js"></script>
   <style>
-    .timeline{position:relative;padding-left:28px;margin:1rem 0}
-    .timeline::before{content:'';position:absolute;left:10px;top:0;bottom:0;width:2px;background:var(--color-border)}
-    .tl-step{position:relative;padding:8px 0 16px;opacity:.5}
-    .tl-step.active{opacity:1}
-    .tl-step.done{opacity:1}
-    .tl-step .tl-dot{position:absolute;left:-22px;top:10px;width:14px;height:14px;border-radius:50%;border:2px solid var(--color-border);background:#fff;z-index:1}
-    .tl-step.done .tl-dot{background:var(--color-success);border-color:var(--color-success)}
-    .tl-step.active .tl-dot{background:var(--color-primary);border-color:var(--color-primary);box-shadow:0 0 0 4px rgba(99,102,241,.2)}
-    .tl-step.rejected .tl-dot{background:var(--color-danger);border-color:var(--color-danger)}
-    .tl-label{font-weight:600;font-size:.88rem}
-    .tl-meta{font-size:.8rem;color:var(--color-text-light);margin-top:2px}
-    .tl-action{margin-top:6px}
+    /* Horizontal Stepper */
+    .stepper{display:flex;align-items:flex-start;margin:.75rem 0 .5rem;position:relative}
+    .stepper-step{flex:1;display:flex;flex-direction:column;align-items:center;position:relative;z-index:1}
+    .stepper-step::before{content:'';position:absolute;top:10px;right:50%;left:0;height:2px;background:var(--color-border);z-index:0}
+    .stepper-step:first-child::before{display:none}
+    .stepper-step.done::before{background:var(--color-success)}
+    .stepper-step.active::before{background:var(--color-primary)}
+    .stepper-dot{width:22px;height:22px;border-radius:50%;border:2px solid var(--color-border);background:#fff;display:flex;align-items:center;justify-content:center;font-size:.6rem;position:relative;z-index:1;transition:all .2s}
+    .stepper-step.done .stepper-dot{background:var(--color-success);border-color:var(--color-success);color:#fff}
+    .stepper-step.active .stepper-dot{background:var(--color-primary);border-color:var(--color-primary);color:#fff;box-shadow:0 0 0 3px rgba(99,102,241,.18)}
+    .stepper-step.rejected .stepper-dot{background:var(--color-danger);border-color:var(--color-danger);color:#fff}
+    .stepper-label{font-size:.68rem;margin-top:3px;color:var(--color-text-muted);text-align:center;line-height:1.2}
+    .stepper-step.done .stepper-label{color:var(--color-success)}
+    .stepper-step.active .stepper-label{color:var(--color-primary);font-weight:600}
+
+    /* Summary Cards */
+    .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.75rem;margin-bottom:1.25rem}
+    .summary-card{background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:.75rem;text-align:center;transition:box-shadow .15s}
+    .summary-card:hover{box-shadow:var(--shadow-md)}
+    .summary-card .sc-icon{font-size:1.25rem;margin-bottom:2px}
+    .summary-card .sc-value{font-size:1.4rem;font-weight:700;line-height:1.2}
+    .summary-card .sc-label{font-size:.75rem;color:var(--color-text-light);margin-top:2px}
+    .sc-pending .sc-value{color:#92400e}
+    .sc-progress .sc-value{color:var(--color-primary)}
+    .sc-done .sc-value{color:#065f46}
+    .sc-cost .sc-value{color:#9d174d;font-size:1.1rem}
+
+    /* Card action bar */
+    .repair-card-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--color-border)}
+    .repair-card-actions .spacer{flex:1}
 
     .repair-card{background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:1rem;margin-bottom:.75rem;transition:box-shadow .15s}
     .repair-card:hover{box-shadow:var(--shadow-md)}
@@ -59,6 +77,11 @@
 
     @media(max-width:600px){
       .detail-grid{grid-template-columns:1fr}
+      .stepper-label{font-size:.6rem}
+      .stepper-dot{width:18px;height:18px;font-size:.5rem}
+      .summary-grid{grid-template-columns:repeat(2,1fr)}
+      .summary-card{padding:.5rem}
+      .summary-card .sc-value{font-size:1.2rem}
     }
   </style>
 </head>
@@ -72,10 +95,34 @@
     <div class="content">
       <div id="alertContainer"></div>
 
+      <!-- Summary KPIs -->
+      <div class="summary-grid" id="summaryCards">
+        <div class="summary-card sc-pending">
+          <div class="sc-icon">📨</div>
+          <div class="sc-value" id="sumPending">-</div>
+          <div class="sc-label">รอดำเนินการ</div>
+        </div>
+        <div class="summary-card sc-progress">
+          <div class="sc-icon">🔨</div>
+          <div class="sc-value" id="sumProgress">-</div>
+          <div class="sc-label">กำลังซ่อม</div>
+        </div>
+        <div class="summary-card sc-done">
+          <div class="sc-icon">✅</div>
+          <div class="sc-value" id="sumDone">-</div>
+          <div class="sc-label">เสร็จเดือนนี้</div>
+        </div>
+        <div class="summary-card sc-cost">
+          <div class="sc-icon">💰</div>
+          <div class="sc-value" id="sumCost">-</div>
+          <div class="sc-label">ค่าซ่อมเดือนนี้</div>
+        </div>
+      </div>
+
       <div class="tabs">
-        <button class="tab active" onclick="switchTab('workflow')">📋 แจ้งซ่อม/ติดตาม</button>
-        <button class="tab" onclick="switchTab('history')">📝 บันทึกซ่อมเสร็จ</button>
-        <button class="tab" onclick="switchTab('inspection')">🔍 ผลตรวจสภาพ</button>
+        <button class="tab active" onclick="switchTab('workflow')">🔧 งานซ่อม</button>
+        <button class="tab" onclick="switchTab('history')">📋 ประวัติซ่อม</button>
+        <button class="tab" onclick="switchTab('inspection')">🔍 ตรวจสภาพ</button>
       </div>
 
       <!-- ═══════ Tab 1: แจ้งซ่อม / ติดตามสถานะ ═══════ -->
@@ -278,8 +325,32 @@
       if(typeof requireAuth==='function'&&!requireAuth()) return;
       await Promise.all([loadVehicles(), loadDrivers()]);
       loadWorkflow();
+      loadSummary();
       setTimeout(function(){if(typeof initAllThaiDateTimePickers==='function') initAllThaiDateTimePickers()},500);
     });
+
+    /* ─── Summary KPIs ─── */
+    async function loadSummary(){
+      try{
+        var r=await apiCall('getRepairs',{});
+        var all=(r.success&&r.data)?(Array.isArray(r.data)?r.data:[]):[];
+        var pending=0,progress=0,doneMonth=0,costMonth=0;
+        var now=new Date();
+        var ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+        all.forEach(function(rp){
+          if(['requested','approved','inspected','documented'].indexOf(rp.status)!==-1) pending++;
+          if(rp.status==='repairing') progress++;
+          if(rp.status==='completed'){
+            var dc=rp.date_completed||rp.date_reported||'';
+            if(dc.substring(0,7)===ym){ doneMonth++; costMonth+=(rp.cost||0); }
+          }
+        });
+        document.getElementById('sumPending').textContent=pending;
+        document.getElementById('sumProgress').textContent=progress;
+        document.getElementById('sumDone').textContent=doneMonth;
+        document.getElementById('sumCost').textContent=costMonth?costMonth.toLocaleString()+' ฿':'-';
+      }catch(e){console.error(e)}
+    }
 
     /* ─── Tab Switch ─── */
     function switchTab(tab){
@@ -389,63 +460,58 @@
       var user=getCurrentUser();
       var isAdmin=user&&(user.role==='admin'||hasModulePermission('repair','edit'));
       var sm=STATUS_MAP[rp.status]||{label:rp.status,icon:'',cls:''};
+      var borderColors={requested:'#f59e0b',approved:'#3b82f6',inspected:'#6366f1',documented:'#8b5cf6',repairing:'#ec4899',completed:'#10b981',rejected:'#ef4444'};
 
-      var html='<div class="repair-card">';
+      var html='<div class="repair-card" style="border-left:4px solid '+(borderColors[rp.status]||'var(--color-border)')+'">';
       html+='<div class="repair-card-header">';
       html+='<div class="repair-card-title">'+vLabel(rp.car_id)+'</div>';
       html+=statusBadge(rp.status);
       html+='</div>';
       html+='<div class="repair-card-body">';
       html+='<p>📝 '+(rp.issue_description||'-')+'</p>';
-      html+='<p style="font-size:.8rem;color:var(--color-text-muted)">แจ้งเมื่อ '+fmtDate(rp.date_reported)+' โดย '+(rp.reporter_name||'-')+'</p>';
+      html+='<p style="font-size:.8rem;color:var(--color-text-muted)">📅 '+fmtDate(rp.date_reported)+' • 👤 '+(rp.reporter_name||'-')+'</p>';
 
-      // Timeline
-      html+='<div class="timeline">';
+      // Horizontal stepper
       var currentIdx=STEP_ORDER.indexOf(rp.status);
       var isRejected=rp.status==='rejected';
+      var stepShort={requested:'แจ้ง',approved:'อนุมัติ',inspected:'ตรวจ',documented:'บันทึก',repairing:'ซ่อม',completed:'เสร็จ'};
+      html+='<div class="stepper">';
       STEP_ORDER.forEach(function(step,i){
         var isDone=i<currentIdx;
         var isActive=i===currentIdx;
         var cls=isDone?'done':(isActive?'active':'');
-        if(isRejected&&step==='requested') cls='rejected';
-        var sl=STATUS_MAP[step]||{label:step,icon:''};
-        html+='<div class="tl-step '+cls+'">';
-        html+='<div class="tl-dot"></div>';
-        html+='<div class="tl-label">'+sl.icon+' '+sl.label+'</div>';
-        // Show meta info for completed steps
-        if(step==='requested'&&rp.date_reported) html+='<div class="tl-meta">'+fmtDate(rp.date_reported)+'</div>';
-        if(step==='approved'&&rp.approved_at) html+='<div class="tl-meta">'+fmtDate(rp.approved_at)+'</div>';
-        if(step==='inspected'&&rp.inspection_date) html+='<div class="tl-meta">'+fmtDate(rp.inspection_date)+'</div>';
-        if(step==='repairing'&&rp.date_started) html+='<div class="tl-meta">'+fmtDate(rp.date_started)+' | '+(rp.garage_name||'-')+'</div>';
-        if(step==='completed'&&rp.date_completed) html+='<div class="tl-meta">'+fmtDate(rp.date_completed)+' | '+(rp.cost?rp.cost.toLocaleString()+' บาท':'-')+'</div>';
-
-        // Action buttons for current step (admin only)
-        if(isActive&&isAdmin&&!isRejected){
-          html+='<div class="tl-action">';
-          if(step==='requested'){
-            html+='<button class="btn btn-primary" style="padding:4px 12px;font-size:.82rem" onclick="openAction(\'approve\',\''+rp.id+'\')">✅ อนุมัติ</button> ';
-            html+='<button class="btn btn-danger" style="padding:4px 12px;font-size:.82rem" onclick="openAction(\'reject\',\''+rp.id+'\')">❌ ไม่อนุมัติ</button>';
-          }
-          if(step==='approved') html+='<button class="btn btn-primary" style="padding:4px 12px;font-size:.82rem" onclick="openAction(\'inspect\',\''+rp.id+'\')">🔍 บันทึกตรวจสภาพ</button>';
-          if(step==='inspected') html+='<button class="btn btn-primary" style="padding:4px 12px;font-size:.82rem" onclick="openAction(\'document\',\''+rp.id+'\')">📄 ทำบันทึกข้อความ</button>';
-          if(step==='documented') html+='<button class="btn btn-primary" style="padding:4px 12px;font-size:.82rem" onclick="openAction(\'start-repair\',\''+rp.id+'\')">🔨 เริ่มซ่อม</button>';
-          if(step==='repairing') html+='<button class="btn btn-primary" style="padding:4px 12px;font-size:.82rem" onclick="openAction(\'complete\',\''+rp.id+'\')">✅ ซ่อมเสร็จ</button>';
-          html+='</div>';
-        }
+        if(isRejected&&i===0) cls='rejected';
+        var sl=STATUS_MAP[step]||{icon:''};
+        html+='<div class="stepper-step '+cls+'">';
+        html+='<div class="stepper-dot">'+(isDone?'✓':(isActive?sl.icon:''))+'</div>';
+        html+='<div class="stepper-label">'+stepShort[step]+'</div>';
         html+='</div>';
       });
       if(isRejected){
-        html+='<div class="tl-step rejected">';
-        html+='<div class="tl-dot"></div>';
-        html+='<div class="tl-label">❌ ไม่อนุมัติ</div>';
-        html+='<div class="tl-meta">'+(rp.rejection_reason||'-')+'</div>';
+        html+='<div class="stepper-step rejected">';
+        html+='<div class="stepper-dot">✕</div>';
+        html+='<div class="stepper-label">ปฏิเสธ</div>';
         html+='</div>';
       }
-      html+='</div>'; // end timeline
-
+      html+='</div>';
+      if(rp.status==='repairing'&&rp.garage_name) html+='<p style="font-size:.8rem;color:var(--color-text-muted)">🏪 '+rp.garage_name+'</p>';
+      if(rp.status==='completed'&&rp.cost) html+='<p style="font-size:.8rem;color:var(--color-text-muted)">💰 '+rp.cost.toLocaleString()+' บาท</p>';
+      if(isRejected&&rp.rejection_reason) html+='<p style="font-size:.8rem;color:var(--color-danger)">❌ '+rp.rejection_reason+'</p>';
       html+='</div>'; // end body
-      html+='<div style="margin-top:.5rem;text-align:right">';
-      html+='<button class="btn btn-ghost" style="padding:4px 10px;font-size:.82rem" onclick="showDetail(\''+rp.id+'\')">📄 รายละเอียด</button>';
+
+      html+='<div class="repair-card-actions">';
+      if(isAdmin&&!isRejected){
+        if(rp.status==='requested'){
+          html+='<button class="btn btn-primary" style="padding:5px 14px;font-size:.84rem" onclick="openAction(\'approve\',\''+rp.id+'\')">✅ อนุมัติ</button>';
+          html+='<button class="btn btn-danger" style="padding:5px 14px;font-size:.84rem" onclick="openAction(\'reject\',\''+rp.id+'\')">❌ ไม่อนุมัติ</button>';
+        }
+        if(rp.status==='approved') html+='<button class="btn btn-primary" style="padding:5px 14px;font-size:.84rem" onclick="openAction(\'inspect\',\''+rp.id+'\')">🔍 ตรวจสภาพ</button>';
+        if(rp.status==='inspected') html+='<button class="btn btn-primary" style="padding:5px 14px;font-size:.84rem" onclick="openAction(\'document\',\''+rp.id+'\')">📄 ทำบันทึก</button>';
+        if(rp.status==='documented') html+='<button class="btn btn-primary" style="padding:5px 14px;font-size:.84rem" onclick="openAction(\'start-repair\',\''+rp.id+'\')">🔨 เริ่มซ่อม</button>';
+        if(rp.status==='repairing') html+='<button class="btn btn-primary" style="padding:5px 14px;font-size:.84rem" onclick="openAction(\'complete\',\''+rp.id+'\')">✅ ซ่อมเสร็จ</button>';
+      }
+      html+='<div class="spacer"></div>';
+      html+='<button class="btn btn-ghost" style="padding:5px 12px;font-size:.84rem" onclick="showDetail(\''+rp.id+'\')">📄 ดูเพิ่มเติม</button>';
       html+='</div>';
       html+='</div>'; // end card
       return html;
@@ -475,6 +541,7 @@
           showAlert('ส่งแจ้งซ่อมเรียบร้อยแล้ว','success');
           closeReportModal();
           loadWorkflow();
+          loadSummary();
         }else{showAlert(r.message||'ดำเนินการไม่สำเร็จ','error')}
       }catch(e){showAlert('เกิดข้อผิดพลาด กรุณาลองใหม่','error')}
       finally{btn.disabled=false;btn.textContent='📩 ส่งแจ้งซ่อม'}
@@ -558,6 +625,7 @@
           showAlert(r.message||'ดำเนินการสำเร็จ','success');
           closeActionModal();
           loadWorkflow();
+          loadSummary();
         }else{showAlert(r.message||r.error||'ดำเนินการไม่สำเร็จ','error')}
       }catch(e){console.error(e);showAlert('เกิดข้อผิดพลาด กรุณาลองใหม่','error')}
       finally{btn.disabled=false;btn.textContent='✅ ยืนยัน'}
@@ -732,6 +800,7 @@
           showAlert(editingId?'แก้ไขสำเร็จ':'บันทึกสำเร็จ','success');
           closeCompletedModal();
           loadHistory();
+          loadSummary();
         }else{showAlert(r.message||'ดำเนินการไม่สำเร็จ','error')}
       }catch(e){showAlert('เกิดข้อผิดพลาด','error')}
       finally{btn.disabled=false;btn.textContent='💾 บันทึก'}
