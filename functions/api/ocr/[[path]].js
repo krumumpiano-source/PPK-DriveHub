@@ -55,14 +55,37 @@ const PROMPTS = {
   "expiry_date": "YYYY-MM-DD"
 }`,
 
-  repair_doc: `วิเคราะห์ภาพเอกสารซ่อมรถหรือใบเสร็จอู่ และส่งคืนข้อมูลในรูปแบบ JSON ต่อไปนี้เท่านั้น:
+  repair_doc: `วิเคราะห์ภาพใบแจ้งหนี้/ใบเสร็จซ่อมรถ (เช่น ใบจากศูนย์ Toyota, อู่ทั่วไป) และส่งคืนข้อมูลในรูปแบบ JSON ต่อไปนี้เท่านั้น ห้ามเพิ่มข้อความอื่น:
 {
+  "invoice_number": "เลขที่เอกสาร/ใบแจ้งหนี้",
+  "work_order_number": "เลขที่ใบสั่งซ่อม (ถ้ามี)",
   "shop_name": "ชื่ออู่หรือศูนย์บริการ",
-  "repair_type": "ประเภทการซ่อม",
-  "description": "รายละเอียดการซ่อม",
-  "actual_cost": 0,
-  "date": "YYYY-MM-DD"
-}`,
+  "service_type": "scheduled_maintenance หรือ repair (ถ้าเป็นเช็คระยะ/บำรุงรักษาตามระยะให้ใส่ scheduled_maintenance, ถ้าเป็นซ่อมทั่วไปให้ใส่ repair)",
+  "description": "สรุปรายละเอียดการซ่อม/เช็คระยะทั้งหมดสั้นๆ",
+  "date": "YYYY-MM-DD (วันที่เข้าซ่อม)",
+  "date_completed": "YYYY-MM-DD (วันที่ซ่อมเสร็จ ถ้ามี)",
+  "mileage_in": 0,
+  "mileage_out": 0,
+  "mechanic_name": "ชื่อพนักงานรับรถ/ช่าง (ถ้ามี)",
+  "labour_cost": 0.00,
+  "parts_cost": 0.00,
+  "discount_amount": 0.00,
+  "vat_amount": 0.00,
+  "grand_total": 0.00,
+  "items": [
+    {
+      "part_code": "รหัสอะไหล่",
+      "description": "ชื่อรายการ",
+      "brand_condition": "ยี่ห้อ/สภาพ (ถ้ามี)",
+      "quantity": 1,
+      "unit_price": 0.00,
+      "discount_percent": 0,
+      "net_amount": 0.00,
+      "item_type": "part หรือ labour หรือ service"
+    }
+  ]
+}
+หมายเหตุ: ถ้ามีหลายหน้า ให้รวมข้อมูลทั้งหมดเป็น JSON เดียว. item_type ให้ใส่ "service" สำหรับรายการเช็คระยะฟรี, "part" สำหรับอะไหล่, "labour" สำหรับค่าแรง. ถ้ายอดเป็น "ฟรี" ให้ใส่ net_amount = 0`,
 };
 
 export async function onRequest(context) {

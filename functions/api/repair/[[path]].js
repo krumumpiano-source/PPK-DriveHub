@@ -42,7 +42,20 @@ export async function onRequest(context) {
       `SELECT rl.*, c.license_plate, c.brand FROM repair_log rl
        LEFT JOIN cars c ON rl.car_id = c.id WHERE rl.id = ?`, [id]);
     if (!row) return error('ไม่พบข้อมูลซ่อม', 404);
+    // Attach itemized parts
+    const items = await dbAll(env.DB,
+      `SELECT * FROM repair_items WHERE repair_id = ? ORDER BY sort_order, created_at`, [id]);
+    row.items_detail = items || [];
     return success(row);
+  }
+
+  // --- GET /api/repair/log/:id/items ---
+  if (path.match(/^\/api\/repair\/log\/[^/]+\/items$/) && method === 'GET') {
+    try { requirePermission(user, 'repair', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const id = path.split('/').slice(-2, -1)[0];
+    const items = await dbAll(env.DB,
+      `SELECT * FROM repair_items WHERE repair_id = ? ORDER BY sort_order, created_at`, [id]);
+    return success(items || []);
   }
 
   // --- POST /api/repair/log ---
@@ -52,22 +65,49 @@ export async function onRequest(context) {
     if (!body?.car_id) return error('กรุณาระบุยานพาหนะ');
     const id = generateUUID();
     const ts = now();
+    const status = body.status || 'requested';
     await dbRun(env.DB,
       `INSERT INTO repair_log (id, car_id, date_reported, date_started, date_completed,
         status, mileage_at_repair, reporter_id, reporter_name, garage_name,
         repair_items, issue_description, cost, documents, notes,
-        requested_by_driver_id, created_by, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, 'requested', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        requested_by_driver_id, created_by, created_at, updated_at,
+        invoice_number, work_order_number, service_type,
+        labour_cost, parts_cost, discount_amount, vat_amount, grand_total,
+        mileage_out, mechanic_name)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, body.car_id, body.date_reported || ts.substr(0,10),
        body.date_started || null, body.date_completed || null,
+       status,
        body.mileage_at_repair || 0,
        body.reporter_id || user.id, body.reporter_name || user.display_name || '',
        body.garage_name || body.shop_name || '',
        JSON.stringify(body.repair_items || []),
        body.issue_description || body.description || '',
        body.cost || 0, JSON.stringify(body.documents || []),
-       body.notes || '', body.requested_by_driver_id || null, user.id, ts, ts]
+       body.notes || '', body.requested_by_driver_id || null, user.id, ts, ts,
+       body.invoice_number || null, body.work_order_number || null,
+       body.service_type || 'repair',
+       body.labour_cost || 0, body.parts_cost || 0,
+       body.discount_amount || 0, body.vat_amount || 0, body.grand_total || 0,
+       body.mileage_out || null, body.mechanic_name || null]
     );
+    // Save itemized parts if provided
+    if (body.items_detail && Array.isArray(body.items_detail) && body.items_detail.length) {
+      for (let i = 0; i < body.items_detail.length; i++) {
+        const it = body.items_detail[i];
+        await dbRun(env.DB,
+          `INSERT INTO repair_items (id, repair_id, part_code, description, brand_condition,
+            quantity, unit_price, discount_percent, discount_amount, net_amount,
+            item_type, sort_order, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [generateUUID(), id, it.part_code || '', it.description || '',
+           it.brand_condition || '', it.quantity || 1, it.unit_price || 0,
+           it.discount_percent || 0, it.discount_amount || 0, it.net_amount || 0,
+           it.item_type || 'part', i, ts]
+        );
+      }
+    }
 
     const car = await dbFirst(env.DB, 'SELECT license_plate, brand FROM cars WHERE id = ?', [body.car_id]);
     const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : body.car_id;
@@ -89,16 +129,40 @@ export async function onRequest(context) {
     const params = [];
     const fields = ['car_id','date_reported','date_started','date_completed','status',
       'mileage_at_repair','reporter_id','reporter_name','garage_name',
-      'issue_description','cost','notes'];
+      'issue_description','cost','notes',
+      'invoice_number','work_order_number','service_type',
+      'labour_cost','parts_cost','discount_amount','vat_amount','grand_total',
+      'mileage_out','mechanic_name'];
     for (const f of fields) {
       if (body[f] !== undefined) { sets.push(`${f} = ?`); params.push(body[f]); }
     }
     if (body.repair_items !== undefined) { sets.push('repair_items = ?'); params.push(JSON.stringify(body.repair_items)); }
     if (body.documents !== undefined) { sets.push('documents = ?'); params.push(JSON.stringify(body.documents)); }
-    if (!sets.length) return error('ไม่มีข้อมูลที่จะอัปเดต');
-    sets.push('updated_at = ?'); params.push(now());
-    params.push(id);
-    await dbRun(env.DB, `UPDATE repair_log SET ${sets.join(', ')} WHERE id = ?`, params);
+    if (!sets.length && !(body.items_detail && body.items_detail.length)) return error('ไม่มีข้อมูลที่จะอัปเดต');
+    if (sets.length) {
+      sets.push('updated_at = ?'); params.push(now());
+      params.push(id);
+      await dbRun(env.DB, `UPDATE repair_log SET ${sets.join(', ')} WHERE id = ?`, params);
+    }
+    // Upsert itemized parts
+    if (body.items_detail && Array.isArray(body.items_detail)) {
+      await dbRun(env.DB, `DELETE FROM repair_items WHERE repair_id = ?`, [id]);
+      const ts2 = now();
+      for (let i = 0; i < body.items_detail.length; i++) {
+        const it = body.items_detail[i];
+        if (!it.description) continue;
+        await dbRun(env.DB,
+          `INSERT INTO repair_items (id, repair_id, part_code, description, brand_condition,
+            quantity, unit_price, discount_percent, discount_amount, net_amount,
+            item_type, sort_order, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [generateUUID(), id, it.part_code || '', it.description || '',
+           it.brand_condition || '', it.quantity || 1, it.unit_price || 0,
+           it.discount_percent || 0, it.discount_amount || 0, it.net_amount || 0,
+           it.item_type || 'part', i, ts2]
+        );
+      }
+    }
     return success({ message: 'อัปเดตข้อมูลซ่อมเรียบร้อย' });
   }
 
@@ -223,10 +287,42 @@ export async function onRequest(context) {
     const ts = now();
     await dbRun(env.DB,
       `UPDATE repair_log SET status = 'completed', date_completed = ?,
-       cost = COALESCE(?, cost), receipt_documents = ?, notes = COALESCE(?, notes), updated_at = ? WHERE id = ?`,
+       cost = COALESCE(?, cost), receipt_documents = ?, notes = COALESCE(?, notes),
+       invoice_number = COALESCE(?, invoice_number), work_order_number = COALESCE(?, work_order_number),
+       service_type = COALESCE(?, service_type),
+       labour_cost = COALESCE(?, labour_cost), parts_cost = COALESCE(?, parts_cost),
+       discount_amount = COALESCE(?, discount_amount), vat_amount = COALESCE(?, vat_amount),
+       grand_total = COALESCE(?, grand_total), mileage_out = COALESCE(?, mileage_out),
+       mechanic_name = COALESCE(?, mechanic_name),
+       updated_at = ? WHERE id = ?`,
       [body?.date_completed || ts.substr(0,10), body?.cost || null,
-       JSON.stringify(body?.receipt_documents || []), body?.notes || null, ts, id]
+       JSON.stringify(body?.receipt_documents || []), body?.notes || null,
+       body?.invoice_number || null, body?.work_order_number || null,
+       body?.service_type || null,
+       body?.labour_cost || null, body?.parts_cost || null,
+       body?.discount_amount || null, body?.vat_amount || null,
+       body?.grand_total || null, body?.mileage_out || null,
+       body?.mechanic_name || null,
+       ts, id]
     );
+    // Save itemized parts if provided
+    if (body?.items_detail && Array.isArray(body.items_detail) && body.items_detail.length) {
+      await dbRun(env.DB, `DELETE FROM repair_items WHERE repair_id = ?`, [id]);
+      for (let i = 0; i < body.items_detail.length; i++) {
+        const it = body.items_detail[i];
+        if (!it.description) continue;
+        await dbRun(env.DB,
+          `INSERT INTO repair_items (id, repair_id, part_code, description, brand_condition,
+            quantity, unit_price, discount_percent, discount_amount, net_amount,
+            item_type, sort_order, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [generateUUID(), id, it.part_code || '', it.description || '',
+           it.brand_condition || '', it.quantity || 1, it.unit_price || 0,
+           it.discount_percent || 0, it.discount_amount || 0, it.net_amount || 0,
+           it.item_type || 'part', i, ts]
+        );
+      }
+    }
     // อัปเดตสถานะรถกลับเป็น active
     await dbRun(env.DB, `UPDATE cars SET status = 'active', updated_at = ? WHERE id = ?`, [ts, row.car_id]);
     const car = await dbFirst(env.DB, 'SELECT license_plate, brand FROM cars WHERE id = ?', [row.car_id]);
@@ -246,6 +342,7 @@ export async function onRequest(context) {
   if (path.match(/^\/api\/repair\/log\/[^/]+$/) && method === 'DELETE') {
     try { requirePermission(user, 'repair', 'delete'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/').pop();
+    await dbRun(env.DB, 'DELETE FROM repair_items WHERE repair_id = ?', [id]);
     await dbRun(env.DB, 'DELETE FROM repair_log WHERE id = ?', [id]);
     return success({ message: 'ลบข้อมูลซ่อมเรียบร้อย' });
   }
