@@ -1,5 +1,5 @@
 ﻿// sw.js — PPK DriveHub Service Worker
-var CACHE_NAME='ppk-v4';
+var CACHE_NAME='ppk-v5';
 var STATIC_ASSETS=[
   '/common.css','/config.js','/js/api.js','/js/export-utils.js','/common.js',
   '/dashboard.html','/login.html','/manifest.json'
