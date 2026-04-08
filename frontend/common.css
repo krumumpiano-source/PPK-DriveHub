@@ -461,7 +461,7 @@ img { max-width: 100%; height: auto; }
 /* ── PAGE CONTENT ──────────────────────────────────────── */
 .container {
   flex: 1;
-  padding: clamp(16px, 3vw, 32px) clamp(24px, 4vw, 48px) 36px;
+  padding: clamp(16px, 3vw, 32px) clamp(28px, 5vw, 56px) 36px;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
@@ -470,7 +470,7 @@ img { max-width: 100%; height: auto; }
 .header {
   background: white;
   color: var(--color-text);
-  padding: clamp(14px, 2.5vw, 20px) clamp(16px, 3vw, 24px);
+  padding: clamp(14px, 2.5vw, 20px) clamp(20px, 3vw, 28px);
   border-radius: var(--radius-lg);
   margin-bottom: 18px;
   border: 1px solid var(--color-border);
@@ -493,7 +493,7 @@ img { max-width: 100%; height: auto; }
   line-height: 1.4;
 }
 
-.content { padding: 0; }
+.content { padding: 0 4px; }
 
 /* ── SIDEBAR OVERLAY (mobile) ──────────────────────────── */
 .sidebar-overlay {
