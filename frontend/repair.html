@@ -493,7 +493,7 @@
           sel.innerHTML=isFilter?'<option value="">รถทั้งหมด</option>':'<option value="">เลือกรถ</option>';
           vehicles.forEach(function(v){
             var o=document.createElement('option');
-            o.value=v.car_id;
+            o.value=v.id;
             o.textContent=v.license_plate+' - '+(v.brand||'')+' '+(v.model||'');
             sel.appendChild(o);
           });
@@ -530,7 +530,7 @@
 
     /* ─── Helpers ─── */
     function vLabel(carId){
-      var v=vehicles.find(function(x){return x.car_id===carId});
+      var v=vehicles.find(function(x){return x.id===carId});
       return v?(v.license_plate+' '+(v.brand||'')+' '+(v.model||'')).trim():carId||'-';
     }
     function dLabel(driverId){
@@ -1038,7 +1038,7 @@
         var r=await apiCall('getMaintenanceVehicle',{car_id:carId});
         if(!r.success||!r.data||!r.data.length){panel.style.display='none';return}
         var items=r.data;
-        var car=vehicles.find(function(v){return v.car_id===carId});
+        var car=vehicles.find(function(v){return v.id===carId});
         var currentKm=car?car.current_mileage:0;
         // Only show items that have records (last_km or last_date)
         var tracked=items.filter(function(it){return it.last_km||it.last_date});
