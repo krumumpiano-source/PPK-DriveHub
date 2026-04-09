@@ -317,14 +317,25 @@
               </div>
 
               <div class="form-group">
-                <label>รายการที่ต้องแจ้งเตือน</label>
+                <label>รายการที่ต้องแจ้งเตือน (ค่ามาตรฐาน)</label>
                 <div class="help-text" style="margin-bottom:10px;">
-                  ค่าที่ตั้งจะถูกบันทึกลงระบบและใช้เทียบกับเลขไมล์รถ/เวลาที่ผ่าน
-                  เพื่อสร้างแจ้งเตือนเมื่อใกล้ครบหรือเกินเกณฑ์ (ร่วมกับค่า "แจ้งเตือนล่วงหน้า" ด้านบน)</div>
+                  ค่าเริ่มต้นจาก DB ใช้เทียบกับเลขไมล์รถ/เวลาที่ผ่าน —
+                  ยี่ห้อที่มี Profile เฉพาะจะใช้ค่าของยี่ห้อแทน</div>
                 <div class="maintenance-items" id="maintenanceItems">
-                  <!-- Will be populated dynamically -->
+                  <!-- Will be populated dynamically from API -->
                 </div>
               </div>
+            </div>
+
+            <!-- ระยะซ่อมบำรุงตามยี่ห้อรถ -->
+            <div class="settings-section">
+              <div class="section-title">🏭 ระยะซ่อมบำรุงตามยี่ห้อรถ</div>
+              <div class="help-text" style="margin-bottom:10px;">
+                แต่ละยี่ห้อมีระยะเปลี่ยนถ่ายไม่เท่ากัน — ระบบจะใช้ค่าของยี่ห้อนั้นแทนค่าเริ่มต้น
+                (กดเลือกยี่ห้อเพื่อดู/แก้ไข)
+              </div>
+              <div id="brandProfileTabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px;"></div>
+              <div id="brandProfileContent"></div>
             </div>
 
             <!-- การแจ้งเตือนภาษีและประกัน -->
@@ -393,26 +404,24 @@
           });
         }
 
-        var maintenanceItems = [
-          { key: 'engine_oil', name: 'น้ำมันเครื่อง', default_km: 5000, default_months: 6 },
-          { key: 'gear_oil', name: 'น้ำมันเกียร์', default_km: 40000, default_months: 48 },
-          { key: 'brake_oil', name: 'น้ำมันเบรก', default_km: 60000, default_months: 60 },
-          { key: 'coolant', name: 'น้ำยาหล่อเย็น', default_km: 100000, default_months: 84 },
-          { key: 'power_steering', name: 'น้ำมันพวงมาลัยพาวเวอร์', default_km: 40000, default_months: 48 },
-          { key: 'air_filter', name: 'ไส้กรองอากาศ', default_km: 10000, default_months: 12 },
-          { key: 'ac_filter', name: 'ไส้กรองแอร์', default_km: 20000, default_months: 24 },
-          { key: 'spark_plug', name: 'หัวเทียน (รถเบนซิน)', default_km: 60000, default_months: 60 },
-          { key: 'timing_belt', name: 'สายพานไทม์มิ่ง', default_km: 80000, default_months: 72 },
-          { key: 'serpentine_belt', name: 'สายพานหน้าเครื่อง', default_km: 80000, default_months: 72 },
-          { key: 'brake_pad', name: 'ผ้าเบรก', default_km: 40000, default_months: 48 },
-          { key: 'brake_disc', name: 'จานเบรก', default_km: 60000, default_months: 60 },
-          { key: 'tire', name: 'ยางรถ', default_km: 50000, default_months: 60 },
-          { key: 'shock_absorber', name: 'โช้คอัพ', default_km: 80000, default_months: 72 },
-          { key: 'ball_joint', name: 'ลูกหมาก', default_km: 100000, default_months: 84 },
-          { key: 'bush', name: 'บูชยาง', default_km: 100000, default_months: 84 },
-          { key: 'battery', name: 'แบตเตอรี่', default_km: 0, default_months: 36 },
-          { key: 'wiper', name: 'ใบปัดน้ำฝน', default_km: 0, default_months: 12 }
-        ];
+        // Loaded from API — will be populated in loadMaintenanceSettings()
+        var maintenanceItems = [];
+        var _brandProfiles = [];
+        var _activeBrand = null;
+
+        var categoryLabels = {
+          fluid: '💧 น้ำมัน/ของเหลว',
+          filter: '🔍 ไส้กรอง',
+          belt: '⚙️ สายพาน',
+          brake: '🛑 ระบบเบรก',
+          tire: '🛞 ยาง/ล้อ',
+          suspension: '🔩 ช่วงล่าง',
+          ignition: '🔥 ระบบจุดระเบิด',
+          electrical: '🔋 ระบบไฟฟ้า',
+          other: '🔧 อื่นๆ',
+          dlt: '📋 ตรวจตามกฎหมาย (ขนส่ง)',
+          general: '📦 ทั่วไป'
+        };
 
         document.addEventListener('DOMContentLoaded', async function () {
           await waitForCommon();
@@ -434,38 +443,161 @@
           }
 
           if (typeof apiCall === 'undefined') {
-            renderMaintenanceItems();
-            setDefaultFormValues();
             showSettingsForm();
-            showAlert('โหลดระบบไม่สมบูรณ์ กรุณารีเฟรชหรือเปิดผ่านเว็บของโรงเรียน เพื่อให้บันทึกการตั้งค่าได้', 'error');
+            showAlert('โหลดระบบไม่สมบูรณ์ กรุณารีเฟรชหรือเปิดผ่านเว็บของโรงเรียน', 'error');
             return;
           }
 
-          renderMaintenanceItems();
           loadSettings();
           loadFuelTypes();
         });
 
         function renderMaintenanceItems() {
           var container = document.getElementById('maintenanceItems');
+          if (!container) return;
           container.innerHTML = '';
-
-          maintenanceItems.forEach(function (item) {
-            var itemDiv = document.createElement('div');
-            itemDiv.className = 'maintenance-item';
-            itemDiv.innerHTML =
-              '<div class="maintenance-item-header">' + item.name + '</div>' +
-              '<div class="maintenance-item-row">' +
-              '<div><label style="font-size: 0.85em;">ระยะทาง (กม.)</label><input type="number" id="maintenance_' + item.key + '_km" min="0" step="1000" placeholder="' + item.default_km + '"></div>' +
-              '<div><label style="font-size: 0.85em;">ระยะเวลา (เดือน)</label><input type="number" id="maintenance_' + item.key + '_months" min="0" step="1" placeholder="' + item.default_months + '"></div>' +
-              '</div>';
-            container.appendChild(itemDiv);
+          if (!maintenanceItems.length) {
+            container.innerHTML = '<div style="color:var(--color-text-muted);padding:20px;">กำลังโหลดรายการ...</div>';
+            return;
+          }
+          // Group by category
+          var groups = {};
+          maintenanceItems.forEach(function(item) {
+            var cat = item.category || 'general';
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push(item);
+          });
+          var order = ['fluid','filter','belt','brake','tire','suspension','ignition','electrical','other','dlt','general'];
+          order.forEach(function(cat) {
+            var items = groups[cat];
+            if (!items || !items.length) return;
+            var header = document.createElement('div');
+            header.style.cssText = 'grid-column:1/-1;font-weight:700;font-size:1.05em;color:var(--color-primary);margin-top:10px;border-bottom:2px solid var(--color-primary);padding-bottom:4px;';
+            header.textContent = categoryLabels[cat] || cat;
+            container.appendChild(header);
+            items.forEach(function(item) {
+              var tag = '';
+              if (item.fuel_type_filter) tag = ' (' + (item.fuel_type_filter === 'diesel' ? 'ดีเซล' : 'เบนซิน') + ')';
+              if (item.dlt_required) tag += ' ⚖️';
+              var itemDiv = document.createElement('div');
+              itemDiv.className = 'maintenance-item';
+              itemDiv.setAttribute('data-id', item.id);
+              itemDiv.innerHTML =
+                '<div class="maintenance-item-header">' + escHtml(item.item_name) + tag + '</div>' +
+                '<div class="maintenance-item-row">' +
+                '<div><label style="font-size:0.85em;">ระยะทาง (กม.)</label><input type="number" id="ms_' + item.item_key + '_km" min="0" step="1000" value="' + (item.interval_km || 0) + '"></div>' +
+                '<div><label style="font-size:0.85em;">ระยะเวลา (เดือน)</label><input type="number" id="ms_' + item.item_key + '_mo" min="0" step="1" value="' + (item.interval_months || 0) + '"></div>' +
+                '</div>';
+              container.appendChild(itemDiv);
+            });
           });
         }
 
-        /** ใส่ค่าเริ่มต้นในฟอร์ม (ใช้เมื่อโหลดจากเซิร์ฟเวอร์ไม่ได้ หรือ timeout) */
-        function setDefaultFormValues() {
+        function showSettingsForm() {
+          var loadingEl = document.getElementById('loading');
+          var contentEl = document.getElementById('settingsContent');
+          if (loadingEl) loadingEl.style.display = 'none';
+          if (contentEl) contentEl.style.display = 'block';
+        }
+
+        async function loadMaintenanceSettings() {
+          try {
+            var r = await apiCall('getMaintenanceSettings', {});
+            if (r && r.success && Array.isArray(r.data)) {
+              maintenanceItems = r.data;
+            }
+          } catch(e) { console.error('loadMaintenanceSettings:', e); }
+          renderMaintenanceItems();
+        }
+
+        async function loadBrandProfiles() {
+          var tabs = document.getElementById('brandProfileTabs');
+          if (!tabs) return;
+          try {
+            var r = await apiCall('getMaintenanceProfileBrands', {});
+            if (r && r.success && Array.isArray(r.data)) {
+              var brands = [];
+              r.data.forEach(function(row) {
+                if (brands.indexOf(row.brand) === -1) brands.push(row.brand);
+              });
+              tabs.innerHTML = '';
+              brands.forEach(function(b) {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-secondary';
+                btn.style.cssText = 'padding:8px 16px;font-size:0.95em;';
+                btn.textContent = b;
+                btn.onclick = function() { selectBrand(b); };
+                tabs.appendChild(btn);
+              });
+              if (brands.length && !_activeBrand) selectBrand(brands[0]);
+            }
+          } catch(e) { console.error('loadBrandProfiles:', e); }
+        }
+
+        async function selectBrand(brand) {
+          _activeBrand = brand;
+          // Highlight active tab
+          var tabs = document.getElementById('brandProfileTabs');
+          if (tabs) {
+            Array.from(tabs.children).forEach(function(btn) {
+              btn.className = btn.textContent === brand ? 'btn btn-primary' : 'btn btn-secondary';
+            });
+          }
+          var container = document.getElementById('brandProfileContent');
+          if (!container) return;
+          container.innerHTML = '<div style="padding:20px;color:var(--color-text-muted);">กำลังโหลด...</div>';
+          try {
+            var r = await apiCall('getMaintenanceProfiles', { brand: brand });
+            if (r && r.success && Array.isArray(r.data)) {
+              _brandProfiles = r.data;
+              renderBrandProfiles(brand);
+            }
+          } catch(e) {
+            container.innerHTML = '<div class="alert alert-error">โหลดข้อมูลไม่สำเร็จ</div>';
+          }
+        }
+
+        function renderBrandProfiles(brand) {
+          var container = document.getElementById('brandProfileContent');
+          if (!container) return;
+          if (!_brandProfiles.length) {
+            container.innerHTML = '<div style="padding:20px;color:var(--color-text-muted);">ยังไม่มี profile สำหรับ ' + escHtml(brand) + '</div>';
+            return;
+          }
+          var html = '<table style="width:100%;border-collapse:collapse;font-size:0.92em;">';
+          html += '<thead><tr style="background:var(--color-primary);color:white;">';
+          html += '<th style="padding:8px;text-align:left;">รายการ</th>';
+          html += '<th style="padding:8px;text-align:left;">หมวด</th>';
+          html += '<th style="padding:8px;text-align:center;">ระยะทาง (กม.)</th>';
+          html += '<th style="padding:8px;text-align:center;">ระยะเวลา (เดือน)</th>';
+          html += '<th style="padding:8px;text-align:left;">หมายเหตุ</th>';
+          html += '</tr></thead><tbody>';
+          _brandProfiles.forEach(function(p) {
+            html += '<tr style="border-bottom:1px solid #e9ecef;">';
+            html += '<td style="padding:8px;font-weight:600;">' + escHtml(p.item_name || p.item_key) + '</td>';
+            html += '<td style="padding:8px;">' + escHtml(categoryLabels[p.category] || p.category || '') + '</td>';
+            html += '<td style="padding:8px;text-align:center;">';
+            html += '<input type="number" data-profile-id="' + p.id + '" data-field="interval_km" value="' + (p.interval_km || 0) + '" min="0" step="1000" style="width:80px;padding:4px;text-align:center;">';
+            html += '</td>';
+            html += '<td style="padding:8px;text-align:center;">';
+            html += '<input type="number" data-profile-id="' + p.id + '" data-field="interval_months" value="' + (p.interval_months || 0) + '" min="0" step="1" style="width:60px;padding:4px;text-align:center;">';
+            html += '</td>';
+            html += '<td style="padding:8px;color:var(--color-text-muted);font-size:0.9em;">' + escHtml(p.notes || '') + '</td>';
+            html += '</tr>';
+          });
+          html += '</tbody></table>';
+          container.innerHTML = html;
+        }
+
+        async function loadSettings() {
+          var loadingEl = document.getElementById('loading');
+          var contentEl = document.getElementById('settingsContent');
+          if (loadingEl) loadingEl.style.display = 'block';
+          if (contentEl) contentEl.style.display = 'none';
+
           var el = function (id) { return document.getElementById(id); };
+          // Set defaults
           if (el('max_car_usage_per_week')) el('max_car_usage_per_week').value = 3;
           if (el('max_driver_long_jobs_per_week')) el('max_driver_long_jobs_per_week').value = 2;
           if (el('fatigue_distance_threshold')) el('fatigue_distance_threshold').value = 400;
@@ -475,45 +607,16 @@
           if (el('emergency_auto_lock')) el('emergency_auto_lock').checked = true;
           if (el('tax_alert_months')) el('tax_alert_months').value = 3;
           if (el('insurance_alert_months')) el('insurance_alert_months').value = 3;
-          maintenanceItems.forEach(function (item) {
-            var kmEl = el('maintenance_' + item.key + '_km');
-            var moEl = el('maintenance_' + item.key + '_months');
-            if (kmEl) kmEl.value = item.default_km;
-            if (moEl) moEl.value = item.default_months;
-          });
-        }
-
-        /** แสดงฟอร์มตั้งค่าและซ่อน loading */
-        function showSettingsForm() {
-          var loadingEl = document.getElementById('loading');
-          var contentEl = document.getElementById('settingsContent');
-          if (loadingEl) loadingEl.style.display = 'none';
-          if (contentEl) contentEl.style.display = 'block';
-        }
-
-        async function loadSettings() {
-          var loadingEl = document.getElementById('loading');
-          var contentEl = document.getElementById('settingsContent');
-          if (loadingEl) loadingEl.style.display = 'block';
-          if (contentEl) contentEl.style.display = 'none';
-
-          setDefaultFormValues();
-
-          var loadTimeout = 12000;
-          var timeoutPromise = new Promise(function (_, reject) {
-            setTimeout(function () { reject(new Error('TIMEOUT')); }, loadTimeout);
-          });
 
           try {
+            // Load admin settings (queue, repair, system settings)
             var result = await Promise.race([
               apiCall('getAdminSettings', {}, { timeout: 10000 }),
-              timeoutPromise
+              new Promise(function(_, reject) { setTimeout(function() { reject(new Error('TIMEOUT')); }, 12000); })
             ]);
 
             if (result && result.success && result.data && result.data.settings) {
               var settings = result.data.settings;
-              var el = function (id) { return document.getElementById(id); };
-
               if (settings.queue) {
                 if (settings.queue.rotation_policy) {
                   if (el('max_car_usage_per_week')) el('max_car_usage_per_week').value = settings.queue.rotation_policy.max_car_usage_per_week || 3;
@@ -524,103 +627,106 @@
                   if (el('recovery_day_enabled')) el('recovery_day_enabled').checked = settings.queue.fatigue_rule.recovery_day_enabled !== false;
                 }
               }
-
               if (settings.repair) {
                 if (el('pm_advance_days')) el('pm_advance_days').value = settings.repair.pm_advance_days || 7;
                 if (el('pm_advance_km')) el('pm_advance_km').value = settings.repair.pm_advance_km || 100;
                 if (el('emergency_auto_lock')) el('emergency_auto_lock').checked = settings.repair.emergency_auto_lock !== false;
               }
-
               var sys = (settings.system && settings.system.data && settings.system.data.settings) ? settings.system.data.settings : null;
               if (!sys) {
                 try {
-                  var systemResult = await apiCall('getSystemSettings', {}, { timeout: 8000 });
-                  if (systemResult && systemResult.success && systemResult.data && systemResult.data.settings) sys = systemResult.data.settings;
-                } catch (e) { }
+                  var sr = await apiCall('getSystemSettings', {}, { timeout: 8000 });
+                  if (sr && sr.success && sr.data && sr.data.settings) sys = sr.data.settings;
+                } catch(e){}
               }
               if (sys) {
                 if (el('tax_alert_months')) el('tax_alert_months').value = (sys.tax_alert_months && sys.tax_alert_months.value != null) ? sys.tax_alert_months.value : 3;
                 if (el('insurance_alert_months')) el('insurance_alert_months').value = (sys.insurance_alert_months && sys.insurance_alert_months.value != null) ? sys.insurance_alert_months.value : 3;
-                maintenanceItems.forEach(function (item) {
-                  var kmKey = 'maintenance_' + item.key + '_km';
-                  var moKey = 'maintenance_' + item.key + '_months';
-                  if (sys[kmKey] && sys[kmKey].value != null) { var k = el(kmKey); if (k) k.value = sys[kmKey].value; }
-                  if (sys[moKey] && sys[moKey].value != null) { var m = el(moKey); if (m) m.value = sys[moKey].value; }
-                });
               }
             }
-          } catch (error) {
-            console.error('Error loading settings:', error);
-            if (error && error.message === 'TIMEOUT') {
-              showAlert('โหลดค่าจากเซิร์ฟเวอร์ไม่สำเร็จ (หมดเวลา) แสดงค่าเริ่มต้น กรุณาเปิดผ่านเว็บของโรงเรียนหรือลองรีเฟรช', 'error');
-            } else {
-              showAlert(typeof handleError !== 'undefined' ? handleError(error) : 'ไม่สามารถโหลดข้อมูลได้ แสดงค่าเริ่มต้น', 'error');
+          } catch (err) {
+            console.error('Error loading admin settings:', err);
+            if (err && err.message === 'TIMEOUT') {
+              showAlert('โหลดค่าจากเซิร์ฟเวอร์ไม่สำเร็จ (หมดเวลา) แสดงค่าเริ่มต้น', 'error');
             }
           }
+
+          // Load maintenance settings from dedicated API
+          await loadMaintenanceSettings();
+          // Load brand profiles
+          await loadBrandProfiles();
 
           showSettingsForm();
         }
 
         async function saveSettings() {
           var el = function (id) { return document.getElementById(id); };
-          if (!el('max_car_usage_per_week') || typeof apiCall !== 'function') {
+          if (typeof apiCall !== 'function') {
             showAlert('ระบบยังไม่พร้อม กรุณารีเฟรชหน้า', 'error');
             return;
           }
           try {
-            var maxCar = parseInt(el('max_car_usage_per_week').value, 10) || 3;
-            var maxDriver = parseInt(el('max_driver_long_jobs_per_week').value, 10) || 2;
-            var fatigueKm = parseInt(el('fatigue_distance_threshold').value, 10) || 400;
-            var recoveryEnabled = el('recovery_day_enabled') ? el('recovery_day_enabled').checked : true;
-            var pmDays = parseInt(el('pm_advance_days').value, 10) || 7;
-            var pmKm = parseInt(el('pm_advance_km').value, 10) || 100;
-            var emergencyLock = el('emergency_auto_lock') ? el('emergency_auto_lock').checked : true;
-            var taxMonths = parseInt(el('tax_alert_months').value, 10) || 3;
-            var insMonths = parseInt(el('insurance_alert_months').value, 10) || 3;
+            // Save queue/repair/tax/insurance to system_settings
+            await apiCall('updateSystemSetting', { key: 'max_car_usage_per_week', value: parseInt(el('max_car_usage_per_week').value, 10) || 3 });
+            await apiCall('updateSystemSetting', { key: 'max_driver_long_jobs_per_week', value: parseInt(el('max_driver_long_jobs_per_week').value, 10) || 2 });
+            await apiCall('updateSystemSetting', { key: 'fatigue_distance_threshold', value: parseInt(el('fatigue_distance_threshold').value, 10) || 400 });
+            await apiCall('updateSystemSetting', { key: 'recovery_day_enabled', value: el('recovery_day_enabled') ? el('recovery_day_enabled').checked : true });
+            await apiCall('updateSystemSetting', { key: 'pm_advance_days', value: parseInt(el('pm_advance_days').value, 10) || 7 });
+            await apiCall('updateSystemSetting', { key: 'pm_advance_km', value: parseInt(el('pm_advance_km').value, 10) || 100 });
+            await apiCall('updateSystemSetting', { key: 'emergency_auto_lock', value: el('emergency_auto_lock') ? el('emergency_auto_lock').checked : true });
+            await apiCall('updateSystemSetting', { key: 'tax_alert_months', value: parseInt(el('tax_alert_months').value, 10) || 3 });
+            await apiCall('updateSystemSetting', { key: 'insurance_alert_months', value: parseInt(el('insurance_alert_months').value, 10) || 3 });
 
-            await apiCall('updateSystemSetting', { key: 'max_car_usage_per_week', value: maxCar });
-            await apiCall('updateSystemSetting', { key: 'max_driver_long_jobs_per_week', value: maxDriver });
-            await apiCall('updateSystemSetting', { key: 'fatigue_distance_threshold', value: fatigueKm });
-            await apiCall('updateSystemSetting', { key: 'recovery_day_enabled', value: recoveryEnabled });
-            await apiCall('updateSystemSetting', { key: 'pm_advance_days', value: pmDays });
-            await apiCall('updateSystemSetting', { key: 'pm_advance_km', value: pmKm });
-            await apiCall('updateSystemSetting', { key: 'emergency_auto_lock', value: emergencyLock });
-            await apiCall('updateSystemSetting', { key: 'tax_alert_months', value: taxMonths });
-            await apiCall('updateSystemSetting', { key: 'insurance_alert_months', value: insMonths });
+            // Save maintenance settings via bulk API
+            var bulkItems = [];
+            maintenanceItems.forEach(function(item) {
+              var kmEl = el('ms_' + item.item_key + '_km');
+              var moEl = el('ms_' + item.item_key + '_mo');
+              if (kmEl && moEl) {
+                bulkItems.push({
+                  id: item.id,
+                  interval_km: parseInt(kmEl.value, 10) || 0,
+                  interval_months: parseInt(moEl.value, 10) || 0,
+                  enabled: item.enabled
+                });
+              }
+            });
+            if (bulkItems.length) {
+              await apiCall('bulkUpdateMaintenanceSettings', { items: bulkItems });
+            }
 
-            for (var i = 0; i < maintenanceItems.length; i++) {
-              var item = maintenanceItems[i];
-              var kmVal = parseInt(el('maintenance_' + item.key + '_km') && el('maintenance_' + item.key + '_km').value, 10);
-              var moVal = parseInt(el('maintenance_' + item.key + '_months') && el('maintenance_' + item.key + '_months').value, 10);
-              if (isNaN(kmVal)) kmVal = item.default_km;
-              if (isNaN(moVal)) moVal = item.default_months;
-              await apiCall('updateSystemSetting', { key: 'maintenance_' + item.key + '_km', value: kmVal });
-              await apiCall('updateSystemSetting', { key: 'maintenance_' + item.key + '_months', value: moVal });
+            // Save brand profile changes
+            var profileInputs = document.querySelectorAll('[data-profile-id]');
+            var profileUpdates = {};
+            profileInputs.forEach(function(inp) {
+              var pid = inp.getAttribute('data-profile-id');
+              var field = inp.getAttribute('data-field');
+              if (!profileUpdates[pid]) profileUpdates[pid] = { id: pid };
+              profileUpdates[pid][field] = parseInt(inp.value, 10) || 0;
+            });
+            for (var pid in profileUpdates) {
+              await apiCall('updateMaintenanceProfile', profileUpdates[pid]);
             }
 
             showAlert('บันทึกการตั้งค่าสำเร็จ', 'success');
-          } catch (error) {
-            console.error('Error saving settings:', error);
-            showAlert(typeof handleError !== 'undefined' ? handleError(error) : 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'error');
+          } catch (err) {
+            console.error('Error saving settings:', err);
+            showAlert(typeof handleError !== 'undefined' ? handleError(err) : 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'error');
           }
         }
 
         async function resetToDefault() {
-          if (!confirm('คุณต้องการรีเซ็ตการตั้งค่าทั้งหมดเป็นค่าเริ่มต้นหรือไม่?')) {
-            return;
-          }
-
+          if (!confirm('คุณต้องการรีเซ็ตการตั้งค่าทั้งหมดเป็นค่าเริ่มต้นหรือไม่?')) return;
           try {
             var result = await apiCall('resetAdminSettingsToDefault', {});
-
             if (result.success) {
               showAlert('รีเซ็ตเป็นค่าเริ่มต้นสำเร็จ', 'success');
               loadSettings();
             } else {
-              showAlert(typeof getUserMessage !== 'undefined' ? getUserMessage(result.message) : (result.message || 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'), 'error');
+              showAlert(typeof getUserMessage !== 'undefined' ? getUserMessage(result.message) : (result.message || 'ดำเนินการไม่สำเร็จ'), 'error');
             }
-          } catch (error) {
-            showAlert(typeof handleError !== 'undefined' ? handleError(error) : 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'error');
+          } catch (err) {
+            showAlert(typeof handleError !== 'undefined' ? handleError(err) : 'ดำเนินการไม่สำเร็จ', 'error');
           }
         }
 
@@ -631,10 +737,7 @@
           alert.textContent = message;
           container.innerHTML = '';
           container.appendChild(alert);
-
-          setTimeout(function () {
-            alert.remove();
-          }, 5000);
+          setTimeout(function () { alert.remove(); }, 5000);
         }
 
         // ---- Fuel Types Management ----

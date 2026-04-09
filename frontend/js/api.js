@@ -199,11 +199,20 @@ const ACTION_MAP = {
 
   // Maintenance
   'getMaintenanceSettings': () => API.get('/api/maintenance/settings'),
-  'updateMaintenanceSettings': (d) => API.put('/api/maintenance/settings', d),
+  'updateMaintenanceSetting': (d) => API.put(`/api/maintenance/settings/${d.id}`, d),
+  'bulkUpdateMaintenanceSettings': (d) => API.put('/api/maintenance/settings/bulk', d),
   'getMaintenanceSchedule': () => API.get('/api/maintenance/schedule'),
   'getMaintenanceAlerts':  (d) => API.get('/api/maintenance/alerts' + _q(d)),
   'createMaintenanceAlert':(d) => API.post('/api/maintenance/alerts', d),
   'resolveMaintenanceAlert':(d) => API.put(`/api/maintenance/alerts/${d.id}/resolve`, d),
+  'getMaintenanceVehicle': (d) => API.get(`/api/maintenance/vehicle/${d.car_id}`),
+  'postMaintenanceVehicle':(d) => API.post('/api/maintenance/vehicle', d),
+  // Maintenance Profiles
+  'getMaintenanceProfiles':     (d) => API.get('/api/maintenance/profiles' + _q(d)),
+  'getMaintenanceProfileBrands':() => API.get('/api/maintenance/profiles/brands'),
+  'createMaintenanceProfile':   (d) => API.post('/api/maintenance/profiles', d),
+  'updateMaintenanceProfile':   (d) => API.put(`/api/maintenance/profiles/${d.id}`, d),
+  'deleteMaintenanceProfile':   (d) => API.del(`/api/maintenance/profiles/${d.id}`),
 
   // Notifications
   'getNotifications':    (d) => API.get('/api/notifications' + _q(d)),

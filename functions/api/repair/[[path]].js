@@ -20,6 +20,9 @@ export async function onRequest(context) {
     try {
       const settings = await dbAll(env.DB, 'SELECT * FROM maintenance_settings WHERE enabled = 1', []);
       if (!settings || !settings.length) return;
+      // Get car info for profile resolution
+      const car = await dbFirst(env.DB, 'SELECT brand, model, fuel_type FROM cars WHERE id = ?', [carId]);
+
       // Parse repair items (could be JSON array of strings or detailed items)
       let itemTexts = [];
       try {
@@ -28,38 +31,87 @@ export async function onRequest(context) {
           parsed.forEach(p => itemTexts.push(typeof p === 'string' ? p : (p.description || '')));
         }
       } catch(e) {}
-      // Also get detailed items from repair_items table (may have more descriptions)
-      // Combine issue_description text is handled by caller adding it to repairItemsJson
       const fullText = itemTexts.join(' ').toLowerCase();
 
-      // Keyword mapping: maintenance_settings.item_key → Thai keywords to match
+      // Comprehensive keyword mapping for all 34 maintenance items
       const keywordMap = {
-        oil_change:   ['น้ำมันเครื่อง', 'เปลี่ยนน้ำมัน', 'oil change', 'engine oil'],
-        oil_filter:   ['ไส้กรองน้ำมัน', 'กรองน้ำมัน', 'oil filter'],
-        air_filter:   ['ไส้กรองอากาศ', 'กรองอากาศ', 'air filter'],
-        fuel_filter:  ['กรองน้ำมันเชื้อเพลิง', 'กรองเชื้อเพลิง', 'fuel filter', 'กรองดีเซล'],
-        tire_rotation:['สลับยาง', 'เปลี่ยนยาง', 'ยาง', 'tire'],
-        brake_check:  ['เบรค', 'เบรก', 'ผ้าเบรค', 'brake', 'น้ำมันเบรค'],
-        spark_plug:   ['หัวเทียน', 'spark plug'],
-        coolant:      ['น้ำหล่อเย็น', 'coolant', 'หม้อน้ำ'],
-        belt_check:   ['สายพาน', 'belt'],
-        battery_check:['แบตเตอรี่', 'battery', 'แบต']
+        // Fluids
+        engine_oil:            ['น้ำมันเครื่อง', 'เปลี่ยนน้ำมัน', 'oil change', 'engine oil', 'ถ่ายน้ำมัน'],
+        oil_filter:            ['ไส้กรองน้ำมัน', 'กรองน้ำมัน', 'oil filter'],
+        gear_oil:              ['น้ำมันเกียร์', 'gear oil', 'transmission oil', 'atf', 'เกียร์ออโต้'],
+        brake_fluid:           ['น้ำมันเบรก', 'น้ำมันเบรค', 'brake fluid', 'dot 3', 'dot 4'],
+        coolant:               ['น้ำหล่อเย็น', 'coolant', 'หม้อน้ำ', 'น้ำยาหล่อเย็น', 'radiator'],
+        power_steering_fluid:  ['พวงมาลัยพาวเวอร์', 'power steering', 'น้ำมันพวงมาลัย'],
+        differential_oil:      ['น้ำมันเฟืองท้าย', 'เฟืองท้าย', 'differential', 'หัวเพลา'],
+        // Filters
+        air_filter:            ['ไส้กรองอากาศ', 'กรองอากาศ', 'air filter'],
+        fuel_filter:           ['กรองน้ำมันเชื้อเพลิง', 'กรองเชื้อเพลิง', 'fuel filter', 'กรองดีเซล', 'กรองโซล่า'],
+        ac_filter:             ['กรองแอร์', 'ไส้กรองแอร์', 'cabin filter', 'แอร์'],
+        fuel_water_separator:  ['กรองน้ำ', 'water separator', 'ระบายน้ำ'],
+        // Belts
+        timing_belt:           ['สายพานไทม์มิ่ง', 'timing belt', 'timing chain'],
+        serpentine_belt:       ['สายพานหน้าเครื่อง', 'v-belt', 'serpentine', 'สายพาน'],
+        // Brakes
+        brake_pad:             ['ผ้าเบรก', 'ผ้าเบรค', 'brake pad', 'เบรค', 'เบรก'],
+        brake_disc:            ['จานเบรก', 'จานเบรค', 'brake disc', 'brake rotor'],
+        // Tires
+        tire:                  ['เปลี่ยนยาง', 'ยางใหม่', 'ยางรถ', 'tire replacement'],
+        tire_rotation:         ['สลับยาง', 'tire rotation', 'หมุนยาง'],
+        wheel_alignment:       ['ตั้งศูนย์', 'alignment', 'ศูนย์ล้อ', 'บาลานซ์'],
+        // Suspension
+        shock_absorber:        ['โช้คอัพ', 'โช้ค', 'shock absorber', 'โชคอัพ'],
+        ball_joint:            ['ลูกหมาก', 'ball joint'],
+        bush:                  ['บูชยาง', 'บูช', 'ปีกนก', 'กันโคลง', 'bushing'],
+        hub_grease:            ['จารบีดุมล้อ', 'จารบี', 'hub grease', 'bearing grease'],
+        // Ignition
+        spark_plug:            ['หัวเทียน', 'spark plug'],
+        glow_plug:             ['หัวเผา', 'glow plug'],
+        injector_cleaning:     ['หัวฉีด', 'ล้างหัวฉีด', 'injector', 'nozzle'],
+        // Electrical
+        battery:               ['แบตเตอรี่', 'battery', 'แบต', 'accu'],
+        alternator_check:      ['ไดชาร์จ', 'alternator', 'ไดนาโม'],
+        // Other
+        wiper:                 ['ใบปัดน้ำฝน', 'wiper', 'ที่ปัดน้ำฝน'],
+        clutch:                ['คลัทช์', 'clutch', 'คลัช'],
+        ac_service:            ['ล้างแอร์', 'แอร์', 'a/c service', 'เติมน้ำยาแอร์'],
+        // DLT
+        dlt_inspection:        ['ตรวจสภาพ', 'ขนส่ง', 'ตรอ.'],
+        emission_check:        ['ควันดำ', 'มลพิษ', 'emission', 'ไอเสีย'],
+        fire_extinguisher:     ['ถังดับเพลิง', 'fire extinguisher'],
+        safety_equipment:      ['อุปกรณ์ความปลอดภัย', 'ค้อนทุบกระจก', 'สามเหลี่ยม']
       };
 
       const dc = dateCompleted || new Date().toISOString().substr(0, 10);
 
       for (const ms of settings) {
+        // Check if fuel_type_filter matches (skip diesel-only items for gasoline cars, etc.)
+        if (ms.fuel_type_filter && car && car.fuel_type !== ms.fuel_type_filter) continue;
+
         // Check if any keyword matches
         const keywords = keywordMap[ms.item_key] || [ms.item_name.toLowerCase()];
         const matched = keywords.some(kw => fullText.includes(kw.toLowerCase()));
         if (!matched) continue;
 
+        // Resolve brand-specific interval via profiles
+        let intervalKm = ms.interval_km;
+        let intervalMonths = ms.interval_months;
+        if (car?.brand) {
+          // Try exact brand+model
+          const profile = await dbFirst(env.DB,
+            `SELECT interval_km, interval_months FROM maintenance_profiles WHERE brand = ? AND (model = ? OR model = '*') AND item_key = ? ORDER BY CASE WHEN model = '*' THEN 1 ELSE 0 END LIMIT 1`,
+            [car.brand, car.model || '*', ms.item_key]);
+          if (profile) {
+            intervalKm = profile.interval_km ?? intervalKm;
+            intervalMonths = profile.interval_months ?? intervalMonths;
+          }
+        }
+
         // Calculate next service
-        const nextKm = ms.interval_km ? (mileage + ms.interval_km) : null;
+        const nextKm = intervalKm ? (mileage + intervalKm) : null;
         let nextDate = null;
-        if (ms.interval_months) {
+        if (intervalMonths) {
           const d = new Date(dc);
-          d.setMonth(d.getMonth() + ms.interval_months);
+          d.setMonth(d.getMonth() + intervalMonths);
           nextDate = d.toISOString().substr(0, 10);
         }
 
