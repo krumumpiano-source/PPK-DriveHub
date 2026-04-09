@@ -73,9 +73,9 @@ export async function onRequest(context) {
         requested_by_driver_id, created_by, created_at, updated_at,
         invoice_number, work_order_number, service_type,
         labour_cost, parts_cost, discount_amount, vat_amount, grand_total,
-        mileage_out, mechanic_name)
+        mileage_out, mechanic_name, taken_by, claim_number, insurance_company)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, body.car_id, body.date_reported || ts.substr(0,10),
        body.date_started || null, body.date_completed || null,
        status,
@@ -90,7 +90,8 @@ export async function onRequest(context) {
        body.service_type || 'repair',
        body.labour_cost || 0, body.parts_cost || 0,
        body.discount_amount || 0, body.vat_amount || 0, body.grand_total || 0,
-       body.mileage_out || null, body.mechanic_name || null]
+       body.mileage_out || null, body.mechanic_name || null,
+       body.taken_by || null, body.claim_number || null, body.insurance_company || null]
     );
     // Save itemized parts if provided
     if (body.items_detail && Array.isArray(body.items_detail) && body.items_detail.length) {
@@ -132,7 +133,7 @@ export async function onRequest(context) {
       'issue_description','cost','notes',
       'invoice_number','work_order_number','service_type',
       'labour_cost','parts_cost','discount_amount','vat_amount','grand_total',
-      'mileage_out','mechanic_name'];
+      'mileage_out','mechanic_name','taken_by','claim_number','insurance_company'];
     for (const f of fields) {
       if (body[f] !== undefined) { sets.push(`${f} = ?`); params.push(body[f]); }
     }
@@ -294,6 +295,8 @@ export async function onRequest(context) {
        discount_amount = COALESCE(?, discount_amount), vat_amount = COALESCE(?, vat_amount),
        grand_total = COALESCE(?, grand_total), mileage_out = COALESCE(?, mileage_out),
        mechanic_name = COALESCE(?, mechanic_name),
+       taken_by = COALESCE(?, taken_by), claim_number = COALESCE(?, claim_number),
+       insurance_company = COALESCE(?, insurance_company),
        updated_at = ? WHERE id = ?`,
       [body?.date_completed || ts.substr(0,10), body?.cost || null,
        JSON.stringify(body?.receipt_documents || []), body?.notes || null,
@@ -303,6 +306,8 @@ export async function onRequest(context) {
        body?.discount_amount || null, body?.vat_amount || null,
        body?.grand_total || null, body?.mileage_out || null,
        body?.mechanic_name || null,
+       body?.taken_by || null, body?.claim_number || null,
+       body?.insurance_company || null,
        ts, id]
     );
     // Save itemized parts if provided

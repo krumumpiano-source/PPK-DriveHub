@@ -368,20 +368,64 @@ CREATE TABLE IF NOT EXISTS repair_log (
   date_reported TEXT NOT NULL,
   date_started TEXT,
   date_completed TEXT,
-  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','in_progress','completed','cancelled')),
+  status TEXT NOT NULL DEFAULT 'requested' CHECK(status IN (
+    'requested','approved','rejected','inspected','documented','repairing','completed','cancelled'
+  )),
   mileage_at_repair INTEGER,
+  mileage_out INTEGER,
   reporter_id TEXT,
   reporter_name TEXT,
   garage_name TEXT,
-  repair_items TEXT DEFAULT '[]',                 -- JSON array of repair items
+  mechanic_name TEXT,
+  taken_by TEXT,
+  repair_items TEXT DEFAULT '[]',                 -- JSON array of repair item names
   issue_description TEXT,
   cost REAL,
+  labour_cost REAL DEFAULT 0,
+  parts_cost REAL DEFAULT 0,
+  discount_amount REAL DEFAULT 0,
+  vat_amount REAL DEFAULT 0,
+  grand_total REAL DEFAULT 0,
+  invoice_number TEXT,
+  work_order_number TEXT,
+  service_type TEXT DEFAULT 'repair',             -- repair/scheduled_service/accident/insurance
+  claim_number TEXT,
+  insurance_company TEXT,
   documents TEXT DEFAULT '[]',                    -- JSON array of R2 keys
+  quotation_documents TEXT DEFAULT '[]',
+  memo_documents TEXT DEFAULT '[]',
+  receipt_documents TEXT DEFAULT '[]',
+  memo_notes TEXT,
   notes TEXT,
+  approved_by TEXT,
+  approved_at TEXT,
+  rejected_by TEXT,
+  rejected_at TEXT,
+  rejection_reason TEXT,
+  inspection_date TEXT,
+  inspection_notes TEXT,
+  requested_by_driver_id TEXT REFERENCES drivers(id),
   created_by TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT,
   FOREIGN KEY (car_id) REFERENCES cars(id)
+);
+
+CREATE TABLE IF NOT EXISTS repair_items (
+  id TEXT PRIMARY KEY,
+  repair_id TEXT NOT NULL,
+  part_code TEXT DEFAULT '',
+  description TEXT NOT NULL,
+  brand_condition TEXT DEFAULT '',
+  quantity REAL DEFAULT 1,
+  unit_price REAL DEFAULT 0,
+  discount_percent REAL DEFAULT 0,
+  discount_amount REAL DEFAULT 0,
+  net_amount REAL DEFAULT 0,
+  item_type TEXT DEFAULT 'part' CHECK(item_type IN ('part','labour','service','other')),
+  sort_order INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (repair_id) REFERENCES repair_log(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS scheduled_repairs (

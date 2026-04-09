@@ -75,20 +75,6 @@
     .file-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:var(--color-bg-light);border-radius:16px;font-size:.78rem;color:var(--color-primary);cursor:pointer}
     .file-chip:hover{background:var(--color-primary);color:#fff}
 
-    /* OCR Upload Zone */
-    .ocr-zone{border:2px dashed var(--color-border);border-radius:var(--radius-lg);padding:1rem;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:1rem;position:relative}
-    .ocr-zone:hover,.ocr-zone.dragover{border-color:var(--color-primary);background:rgba(99,102,241,.04)}
-    .ocr-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
-    .ocr-zone-icon{font-size:1.8rem;margin-bottom:4px}
-    .ocr-zone-text{font-size:.84rem;color:var(--color-text-muted)}
-    .ocr-zone-text strong{color:var(--color-primary)}
-    .ocr-preview{margin-top:.5rem;max-height:120px;overflow:hidden;border-radius:var(--radius-md)}
-    .ocr-preview img{max-width:100%;max-height:120px;object-fit:contain}
-    .ocr-status{margin-top:.5rem;font-size:.82rem;padding:6px 12px;border-radius:var(--radius-md);display:none}
-    .ocr-status.loading{display:block;background:#eff6ff;color:#1e40af}
-    .ocr-status.success{display:block;background:#f0fdf4;color:#065f46}
-    .ocr-status.error{display:block;background:#fef2f2;color:#991b1b}
-
     @media(max-width:600px){
       .detail-grid{grid-template-columns:1fr}
       .stepper-label{font-size:.6rem}
@@ -97,28 +83,6 @@
       .summary-card{padding:.5rem}
       .summary-card .sc-value{font-size:1.2rem}
     }
-
-    /* Itemized Parts Table */
-    .items-table{width:100%;border-collapse:collapse;font-size:.82rem;margin:.5rem 0}
-    .items-table th{background:var(--color-bg-light);padding:6px 8px;text-align:left;font-weight:600;border-bottom:2px solid var(--color-border);white-space:nowrap}
-    .items-table td{padding:5px 8px;border-bottom:1px solid var(--color-border);vertical-align:middle}
-    .items-table input,.items-table select{width:100%;padding:4px 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:.82rem;box-sizing:border-box}
-    .items-table input[type=number]{width:80px}
-    .items-table .col-code{width:100px}.items-table .col-qty{width:60px}.items-table .col-price{width:90px}.items-table .col-net{width:90px}.items-table .col-act{width:36px}
-    .items-table tfoot td{font-weight:600;border-top:2px solid var(--color-border);background:var(--color-bg-light)}
-    .btn-add-row{padding:4px 12px;font-size:.82rem;border:1px dashed var(--color-primary);background:transparent;color:var(--color-primary);border-radius:var(--radius-md);cursor:pointer}
-    .btn-add-row:hover{background:rgba(99,102,241,.06)}
-    .btn-del-row{padding:2px 6px;font-size:.78rem;background:transparent;border:none;color:var(--color-danger);cursor:pointer}
-
-    /* Cost breakdown */
-    .cost-breakdown{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:.75rem 0;padding:.75rem;background:var(--color-bg-light);border-radius:var(--radius-md);font-size:.88rem}
-    .cost-breakdown .cb-label{color:var(--color-text-muted)}
-    .cost-breakdown .cb-value{text-align:right;font-weight:500}
-    .cost-breakdown .cb-total{font-weight:700;font-size:1rem;color:var(--color-primary);border-top:1px solid var(--color-border);padding-top:.5rem;grid-column:1/-1;display:flex;justify-content:space-between}
-    .service-type-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:500}
-    .svc-maintenance{background:#dbeafe;color:#1e40af}
-    .svc-repair{background:#fef3c7;color:#92400e}
-    .svc-inspection{background:#e0e7ff;color:#3730a3}
   </style>
 </head>
 <body>
@@ -196,7 +160,7 @@
         <div id="hTableWrap" style="overflow-x:auto">
           <table class="table">
             <thead><tr>
-              <th>วันที่ซ่อม</th><th>รถ</th><th>ประเภท</th><th>เลขไมล์</th><th>อาการ/รายการ</th><th>อู่</th><th>เลขที่เอกสาร</th><th>ค่าใช้จ่าย</th><th></th>
+              <th>วันที่</th><th>ประเภท</th><th>เลขที่ใบ</th><th>รถ</th><th>ไมล์เข้า/ออก</th><th>อาการ/รายการ</th><th>อู่</th><th>ค่าแรง</th><th>ค่าอะไหล่</th><th>รวมสุทธิ</th><th></th>
             </tr></thead>
             <tbody id="hBody"></tbody>
           </table>
@@ -277,93 +241,80 @@
 
   <!-- ═══════ Modal: บันทึกซ่อมเสร็จ/ย้อนหลัง ═══════ -->
   <div id="completedModal" class="modal-overlay">
-    <div class="modal" style="max-width:600px">
+    <div class="modal" style="max-width:700px">
       <div class="modal-header">
         <h2 id="cmpTitle">📝 บันทึกซ่อมย้อนหลัง</h2>
         <button class="modal-close" onclick="closeCompletedModal()">×</button>
       </div>
       <div class="modal-body">
-        <!-- OCR Upload Zone -->
-        <div class="ocr-zone" id="cmpOcrZone" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="event.preventDefault();this.classList.remove('dragover');handleOcrFile(event.dataTransfer.files[0],'cmp')">
-          <input type="file" accept="image/*,application/pdf" onchange="handleOcrFile(this.files[0],'cmp')">
-          <div class="ocr-zone-icon">📷</div>
-          <div class="ocr-zone-text"><strong>อัปโหลดรูป/PDF ใบเสร็จอู่</strong><br>ระบบจะดึงข้อมูลมากรอกให้อัตโนมัติ</div>
-          <div id="cmpOcrPreview" class="ocr-preview"></div>
-        </div>
-        <div id="cmpOcrStatus" class="ocr-status"></div>
-
         <form id="completedForm" onsubmit="submitCompleted(event)">
+          <!-- ข้อมูลหลัก -->
           <div class="form-group">
             <label>รถ *</label>
             <select id="cmp_car_id" required><option value="">เลือกรถ</option></select>
           </div>
           <div class="form-row">
-            <div class="form-group"><label>ประเภทงาน</label>
+            <div class="form-group"><label>วันที่ซ่อมเสร็จ *</label><input type="text" id="cmp_date" class="thai-datepicker" required></div>
+            <div class="form-group"><label>เวลา</label><input type="text" id="cmp_time" class="thai-timepicker"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>ประเภทงาน</label>
               <select id="cmp_service_type">
-                <option value="repair">🔧 ซ่อมทั่วไป</option>
-                <option value="scheduled_maintenance">🔄 เช็คระยะ/บำรุงรักษา</option>
-                <option value="inspection">🔍 ตรวจสภาพ</option>
-                <option value="other">📋 อื่นๆ</option>
+                <option value="repair">ซ่อมทั่วไป</option>
+                <option value="scheduled_service">เช็คระยะ/บำรุงรักษา</option>
+                <option value="accident">ซ่อมอุบัติเหตุ</option>
+                <option value="insurance">เคลมประกัน</option>
               </select>
             </div>
-            <div class="form-group"><label>เลขที่เอกสาร/ใบแจ้งหนี้</label><input type="text" id="cmp_invoice" placeholder="เช่น REP25-01284"></div>
-          </div>
-          <div class="form-row">
-            <div class="form-group"><label>วันที่เข้าซ่อม *</label><input type="text" id="cmp_date" class="thai-datepicker" required></div>
-            <div class="form-group"><label>วันที่ซ่อมเสร็จ</label><input type="text" id="cmp_date_completed" class="thai-datepicker"></div>
+            <div class="form-group"><label>เลขที่ใบซ่อม</label><input type="text" id="cmp_invoice" placeholder="REP09-00800"></div>
           </div>
           <div class="form-group">
-            <label>อาการ/รายละเอียดงาน *</label>
-            <textarea id="cmp_issue" rows="2" required placeholder="สรุปสิ่งที่ซ่อม/เช็คระยะ"></textarea>
+            <label>อาการ/รายการซ่อม *</label>
+            <textarea id="cmp_issue" rows="3" required placeholder="อธิบายสิ่งที่ซ่อม"></textarea>
+          </div>
+          <!-- อู่ + ช่าง -->
+          <div class="form-row">
+            <div class="form-group"><label>อู่/ร้านซ่อม</label><input type="text" id="cmp_garage" placeholder="ชื่ออู่หรือร้านซ่อม"></div>
+            <div class="form-group"><label>ช่างผู้ดูแล</label><input type="text" id="cmp_mechanic" placeholder="ชื่อช่าง"></div>
           </div>
           <div class="form-row">
-            <div class="form-group"><label>เลขไมล์เข้า</label><input type="number" id="cmp_mileage" placeholder="กม."></div>
-            <div class="form-group"><label>เลขไมล์ออก</label><input type="number" id="cmp_mileage_out" placeholder="กม."></div>
+            <div class="form-group">
+              <label>ผู้นำไปซ่อม</label>
+              <select id="cmp_taken_by"><option value="">-- เลือก --</option></select>
+            </div>
+            <div class="form-group"><label>เลขไมล์เข้าซ่อม</label><input type="number" id="cmp_mileage" placeholder="กม."></div>
           </div>
-          <div class="form-row">
-            <div class="form-group"><label>อู่/ศูนย์บริการ</label><input type="text" id="cmp_garage" placeholder="ชื่ออู่"></div>
-            <div class="form-group"><label>ช่าง/พนักงานรับรถ</label><input type="text" id="cmp_mechanic" placeholder="ชื่อช่าง"></div>
-          </div>
-          <div class="form-group">
-            <label>ผู้นำไปซ่อม</label>
-            <select id="cmp_taken_by"><option value="">-- เลือก --</option></select>
-          </div>
-
-          <!-- Itemized Parts/Labour -->
-          <div style="margin:1rem 0 .5rem;display:flex;justify-content:space-between;align-items:center">
-            <label style="font-weight:600;font-size:.9rem">📋 รายการอะไหล่/ค่าแรง</label>
-            <button type="button" class="btn-add-row" onclick="addItemRow()">+ เพิ่มรายการ</button>
-          </div>
-          <div style="overflow-x:auto">
-            <table class="items-table" id="cmpItemsTable">
-              <thead><tr>
-                <th class="col-code">รหัส</th>
-                <th>รายการ</th>
-                <th class="col-qty">จำนวน</th>
-                <th class="col-price">ราคา/หน่วย</th>
-                <th class="col-net">สุทธิ</th>
-                <th class="col-act"></th>
-              </tr></thead>
-              <tbody id="cmpItemsBody"></tbody>
-            </table>
-          </div>
-
-          <!-- Cost Breakdown -->
-          <div style="margin-top:.75rem">
+          <!-- ประกัน (แสดงเมื่อเลือก accident/insurance) -->
+          <div id="cmp_insurance_section" style="display:none">
             <div class="form-row">
-              <div class="form-group"><label>ค่าแรงรวม</label><input type="number" id="cmp_labour_cost" step="0.01" placeholder="0.00"></div>
-              <div class="form-group"><label>ค่าอะไหล่รวม</label><input type="number" id="cmp_parts_cost" step="0.01" placeholder="0.00"></div>
+              <div class="form-group"><label>เลขที่อุบัติเหตุ/เคลม</label><input type="text" id="cmp_claim" placeholder="52506-Y9-6890"></div>
+              <div class="form-group"><label>บริษัทประกัน</label><input type="text" id="cmp_insurance" placeholder="วิริยะ ประกันภัย"></div>
+            </div>
+          </div>
+          <!-- รายการอะไหล่ -->
+          <div style="margin:1rem 0 .5rem;display:flex;align-items:center;justify-content:space-between">
+            <strong style="font-size:.9rem">🔩 รายการอะไหล่/ค่าแรง</strong>
+            <button type="button" class="btn btn-secondary" style="padding:3px 10px;font-size:.8rem" onclick="addItemRow()">➕ เพิ่มรายการ</button>
+          </div>
+          <div id="cmp_items_list"></div>
+          <!-- สรุปค่าใช้จ่าย -->
+          <div style="margin-top:1rem;padding:.75rem;background:var(--color-bg-light);border-radius:var(--radius-md)">
+            <strong style="font-size:.88rem">💰 สรุปค่าใช้จ่าย</strong>
+            <div class="form-row" style="margin-top:.5rem">
+              <div class="form-group"><label>ค่าแรงรวม</label><input type="number" id="cmp_labour" step="0.01" placeholder="0.00" oninput="calcTotal()"></div>
+              <div class="form-group"><label>ค่าอะไหล่รวม</label><input type="number" id="cmp_parts" step="0.01" placeholder="0.00" oninput="calcTotal()"></div>
             </div>
             <div class="form-row">
-              <div class="form-group"><label>ส่วนลด</label><input type="number" id="cmp_discount" step="0.01" placeholder="0.00"></div>
-              <div class="form-group"><label>VAT 7%</label><input type="number" id="cmp_vat" step="0.01" placeholder="0.00"></div>
+              <div class="form-group"><label>ส่วนลด</label><input type="number" id="cmp_discount" step="0.01" placeholder="0.00" oninput="calcTotal()"></div>
+              <div class="form-group"><label>VAT 7%</label><input type="number" id="cmp_vat" step="0.01" placeholder="0.00" oninput="calcTotal()"></div>
             </div>
             <div class="form-row">
               <div class="form-group"><label>ยอดรวมทั้งสิ้น (บาท)</label><input type="number" id="cmp_grand_total" step="0.01" placeholder="0.00" style="font-weight:700;font-size:1rem"></div>
+              <div class="form-group"><label>เลขไมล์ออก</label><input type="number" id="cmp_mileage_out" placeholder="กม."></div>
             </div>
           </div>
-
-          <div class="form-group">
+          <div class="form-group" style="margin-top:.75rem">
             <label>หมายเหตุ</label>
             <textarea id="cmp_notes" rows="2"></textarea>
           </div>
@@ -598,10 +549,7 @@
       html+='</div>';
       html+='<div class="repair-card-body">';
       html+='<p>📝 '+(rp.issue_description||'-')+'</p>';
-      var svcBadge='';
-      if(rp.service_type==='scheduled_maintenance') svcBadge='<span class="service-type-badge svc-maintenance">🔄 เช็คระยะ</span> ';
-      else if(rp.service_type==='inspection') svcBadge='<span class="service-type-badge svc-inspection">🔍 ตรวจ</span> ';
-      html+='<p style="font-size:.8rem;color:var(--color-text-muted)">'+svcBadge+'📅 '+fmtDate(rp.date_reported)+' • 👤 '+(rp.reporter_name||'-')+'</p>';
+      html+='<p style="font-size:.8rem;color:var(--color-text-muted)">📅 '+fmtDate(rp.date_reported)+' • 👤 '+(rp.reporter_name||'-')+'</p>';
 
       // Horizontal stepper
       var currentIdx=STEP_ORDER.indexOf(rp.status);
@@ -627,11 +575,7 @@
       }
       html+='</div>';
       if(rp.status==='repairing'&&rp.garage_name) html+='<p style="font-size:.8rem;color:var(--color-text-muted)">🏪 '+rp.garage_name+'</p>';
-      if(rp.status==='completed'){
-        var costDisplay=rp.grand_total||rp.cost;
-        if(costDisplay) html+='<p style="font-size:.8rem;color:var(--color-text-muted)">💰 '+costDisplay.toLocaleString()+' บาท</p>';
-        if(rp.invoice_number) html+='<p style="font-size:.78rem;color:var(--color-text-muted)">📋 '+rp.invoice_number+'</p>';
-      }
+      if(rp.status==='completed'&&rp.cost) html+='<p style="font-size:.8rem;color:var(--color-text-muted)">💰 '+rp.cost.toLocaleString()+' บาท</p>';
       if(isRejected&&rp.rejection_reason) html+='<p style="font-size:.8rem;color:var(--color-danger)">❌ '+rp.rejection_reason+'</p>';
       html+='</div>'; // end body
 
@@ -722,19 +666,14 @@
           break;
         case 'complete':
           title='✅ บันทึกซ่อมเสร็จ';
-          fields='<div class="ocr-zone" id="actOcrZone" ondragover="event.preventDefault();this.classList.add(\'dragover\')" ondragleave="this.classList.remove(\'dragover\')" ondrop="event.preventDefault();this.classList.remove(\'dragover\');handleOcrFile(event.dataTransfer.files[0],\'act\')">';
-          fields+='<input type="file" accept="image/*,application/pdf" onchange="handleOcrFile(this.files[0],\'act\')">';
-          fields+='<div class="ocr-zone-icon">📷</div>';
-          fields+='<div class="ocr-zone-text"><strong>อัปโหลดรูป/PDF ใบเสร็จอู่</strong><br>ดึงข้อมูลอัตโนมัติ</div>';
-          fields+='<div id="actOcrPreview" class="ocr-preview"></div>';
-          fields+='</div>';
-          fields+='<div id="actOcrStatus" class="ocr-status"></div>';
-          fields+='<div class="form-group"><label>เลขที่เอกสาร</label><input type="text" id="act_invoice" placeholder="เช่น REP25-01284"></div>';
-          fields+='<div class="form-group"><label>วันที่ซ่อมเสร็จ</label><input type="text" id="act_complete_date" class="thai-datepicker"></div>';
-          fields+='<div class="form-row"><div class="form-group"><label>ค่าแรงรวม</label><input type="number" id="act_labour" step="0.01"></div>';
-          fields+='<div class="form-group"><label>ค่าอะไหล่รวม</label><input type="number" id="act_parts" step="0.01"></div></div>';
-          fields+='<div class="form-row"><div class="form-group"><label>VAT</label><input type="number" id="act_vat" step="0.01"></div>';
-          fields+='<div class="form-group"><label>ค่าใช้จ่ายรวม (บาท)</label><input type="number" id="act_c_cost" step="0.01"></div></div>';
+          fields='<div class="form-group"><label>วันที่ซ่อมเสร็จ</label><input type="text" id="act_complete_date" class="thai-datepicker"></div>';
+          fields+='<div class="form-group"><label>เลขที่ใบซ่อม</label><input type="text" id="act_c_invoice" placeholder="REP09-00800"></div>';
+          fields+='<div class="form-row"><div class="form-group"><label>ค่าแรง (บาท)</label><input type="number" id="act_c_labour" step="0.01"></div>';
+          fields+='<div class="form-group"><label>ค่าอะไหล่ (บาท)</label><input type="number" id="act_c_parts" step="0.01"></div></div>';
+          fields+='<div class="form-row"><div class="form-group"><label>ส่วนลด</label><input type="number" id="act_c_discount" step="0.01"></div>';
+          fields+='<div class="form-group"><label>VAT 7%</label><input type="number" id="act_c_vat" step="0.01"></div></div>';
+          fields+='<div class="form-group"><label>ยอดรวมทั้งสิ้น (บาท)</label><input type="number" id="act_c_cost" step="0.01"></div>';
+          fields+='<div class="form-group"><label>เลขไมล์ออก (กม.)</label><input type="number" id="act_c_mileage_out"></div>';
           fields+='<div class="form-group"><label>หมายเหตุ</label><textarea id="act_c_notes" rows="2"></textarea></div>';
           break;
       }
@@ -773,11 +712,13 @@
             body.date_completed=(document.getElementById('act_complete_date')||{}).value||'';
             body.cost=parseFloat((document.getElementById('act_c_cost')||{}).value)||null;
             body.notes=(document.getElementById('act_c_notes')||{}).value||'';
-            body.invoice_number=(document.getElementById('act_invoice')||{}).value||'';
-            body.labour_cost=parseFloat((document.getElementById('act_labour')||{}).value)||null;
-            body.parts_cost=parseFloat((document.getElementById('act_parts')||{}).value)||null;
-            body.vat_amount=parseFloat((document.getElementById('act_vat')||{}).value)||null;
-            body.grand_total=body.cost;
+            body.invoice_number=(document.getElementById('act_c_invoice')||{}).value||'';
+            body.labour_cost=parseFloat((document.getElementById('act_c_labour')||{}).value)||null;
+            body.parts_cost=parseFloat((document.getElementById('act_c_parts')||{}).value)||null;
+            body.discount_amount=parseFloat((document.getElementById('act_c_discount')||{}).value)||null;
+            body.vat_amount=parseFloat((document.getElementById('act_c_vat')||{}).value)||null;
+            body.grand_total=parseFloat((document.getElementById('act_c_cost')||{}).value)||null;
+            body.mileage_out=parseInt((document.getElementById('act_c_mileage_out')||{}).value)||null;
             break;
         }
         var r=await API.put(path,body);
@@ -800,57 +741,60 @@
         var r=await apiCall('getRepair',{id:id});
         if(!r.success){body.innerHTML='<p>โหลดไม่สำเร็จ</p>';return}
         var rp=r.data;
-        var svcMap={scheduled_maintenance:{label:'เช็คระยะ/บำรุงรักษา',cls:'svc-maintenance'},repair:{label:'ซ่อมทั่วไป',cls:'svc-repair'},inspection:{label:'ตรวจสภาพ',cls:'svc-inspection'},other:{label:'อื่นๆ',cls:''}};
-        var svc=svcMap[rp.service_type]||svcMap.repair;
+        var typeLabels={repair:'ซ่อมทั่วไป',scheduled_service:'เช็คระยะ/บำรุงรักษา',accident:'ซ่อมอุบัติเหตุ',insurance:'เคลมประกัน'};
         var html='<div style="margin-bottom:.75rem;display:flex;gap:8px;flex-wrap:wrap">'+statusBadge(rp.status);
-        html+='<span class="service-type-badge '+svc.cls+'">'+svc.label+'</span>';
-        if(rp.invoice_number) html+='<span style="font-size:.8rem;color:var(--color-text-muted)">📋 '+rp.invoice_number+'</span>';
+        if(rp.service_type&&rp.service_type!=='repair') html+='<span class="status-badge" style="background:#e0e7ff;color:#3730a3">'+(typeLabels[rp.service_type]||rp.service_type)+'</span>';
         html+='</div>';
         html+='<div class="detail-grid">';
         html+='<div class="detail-item"><label>รถ</label><span>'+vLabel(rp.car_id)+'</span></div>';
-        html+='<div class="detail-item"><label>วันที่เข้าซ่อม</label><span>'+fmtDate(rp.date_reported)+'</span></div>';
-        if(rp.date_completed) html+='<div class="detail-item"><label>ซ่อมเสร็จ</label><span>'+fmtDate(rp.date_completed)+'</span></div>';
+        html+='<div class="detail-item"><label>แจ้งเมื่อ</label><span>'+fmtDate(rp.date_reported)+'</span></div>';
         html+='<div class="detail-item"><label>ผู้แจ้ง</label><span>'+(rp.reporter_name||'-')+'</span></div>';
+        if(rp.invoice_number) html+='<div class="detail-item"><label>เลขที่ใบซ่อม</label><span>'+rp.invoice_number+'</span></div>';
         html+='<div class="detail-item"><label>เลขไมล์เข้า</label><span>'+(rp.mileage_at_repair?rp.mileage_at_repair.toLocaleString()+' กม.':'-')+'</span></div>';
         if(rp.mileage_out) html+='<div class="detail-item"><label>เลขไมล์ออก</label><span>'+rp.mileage_out.toLocaleString()+' กม.</span></div>';
-        html+='<div class="detail-item"><label>อู่/ศูนย์</label><span>'+(rp.garage_name||'-')+'</span></div>';
-        if(rp.mechanic_name) html+='<div class="detail-item"><label>ช่าง/พนักงาน</label><span>'+rp.mechanic_name+'</span></div>';
+        html+='<div class="detail-item"><label>อู่</label><span>'+(rp.garage_name||'-')+'</span></div>';
+        if(rp.mechanic_name) html+='<div class="detail-item"><label>ช่างผู้ดูแล</label><span>'+rp.mechanic_name+'</span></div>';
+        if(rp.taken_by) html+='<div class="detail-item"><label>ผู้นำไปซ่อม</label><span>'+rp.taken_by+'</span></div>';
+        if(rp.claim_number) html+='<div class="detail-item"><label>เลขเคลม/อุบัติเหตุ</label><span>'+rp.claim_number+'</span></div>';
+        if(rp.insurance_company) html+='<div class="detail-item"><label>บริษัทประกัน</label><span>'+rp.insurance_company+'</span></div>';
         html+='</div>';
-
-        // Cost breakdown
-        if(rp.labour_cost||rp.parts_cost||rp.grand_total){
-          html+='<div class="cost-breakdown">';
-          html+='<div class="cb-label">ค่าแรง</div><div class="cb-value">'+(rp.labour_cost?rp.labour_cost.toLocaleString():'-')+' ฿</div>';
-          html+='<div class="cb-label">ค่าอะไหล่</div><div class="cb-value">'+(rp.parts_cost?rp.parts_cost.toLocaleString():'-')+' ฿</div>';
-          if(rp.discount_amount) { html+='<div class="cb-label">ส่วนลด</div><div class="cb-value">-'+rp.discount_amount.toLocaleString()+' ฿</div>'; }
-          if(rp.vat_amount) { html+='<div class="cb-label">VAT 7%</div><div class="cb-value">'+rp.vat_amount.toLocaleString()+' ฿</div>'; }
-          html+='<div class="cb-total"><span>ยอดรวมทั้งสิ้น</span><span>'+(rp.grand_total||rp.cost||0).toLocaleString()+' ฿</span></div>';
+        // ค่าใช้จ่าย
+        if(rp.labour_cost||rp.parts_cost||rp.grand_total||rp.cost){
+          html+='<hr style="margin:1rem 0;border-color:var(--color-border)">';
+          html+='<strong style="font-size:.9rem">💰 ค่าใช้จ่าย</strong>';
+          html+='<div class="detail-grid" style="margin-top:.5rem">';
+          if(rp.labour_cost) html+='<div class="detail-item"><label>ค่าแรง</label><span>'+rp.labour_cost.toLocaleString()+' บาท</span></div>';
+          if(rp.parts_cost) html+='<div class="detail-item"><label>ค่าอะไหล่</label><span>'+rp.parts_cost.toLocaleString()+' บาท</span></div>';
+          if(rp.discount_amount) html+='<div class="detail-item"><label>ส่วนลด</label><span>-'+rp.discount_amount.toLocaleString()+' บาท</span></div>';
+          if(rp.vat_amount) html+='<div class="detail-item"><label>VAT 7%</label><span>'+rp.vat_amount.toLocaleString()+' บาท</span></div>';
+          var total=rp.grand_total||rp.cost||0;
+          html+='<div class="detail-item"><label>ยอดรวมทั้งสิ้น</label><span style="font-weight:700;color:var(--color-primary)">'+total.toLocaleString()+' บาท</span></div>';
           html+='</div>';
-        } else if(rp.cost) {
-          html+='<p style="margin-top:.5rem"><strong>ค่าใช้จ่าย:</strong> '+rp.cost.toLocaleString()+' บาท</p>';
         }
-
-        // Itemized parts table
-        if(rp.items_detail && rp.items_detail.length){
-          html+='<div style="margin-top:.75rem"><strong>📋 รายการอะไหล่/ค่าแรง</strong></div>';
-          html+='<div style="overflow-x:auto"><table class="items-table"><thead><tr>';
-          html+='<th>รหัส</th><th>รายการ</th><th>จำนวน</th><th>ราคา/หน่วย</th><th>สุทธิ</th>';
-          html+='</tr></thead><tbody>';
+        // รายการอะไหล่แยกชิ้น
+        if(rp.items_detail&&rp.items_detail.length){
+          html+='<hr style="margin:1rem 0;border-color:var(--color-border)">';
+          html+='<strong style="font-size:.9rem">🔩 รายการอะไหล่/ค่าแรง</strong>';
+          html+='<div style="overflow-x:auto;margin-top:.5rem"><table class="table" style="font-size:.82rem"><thead><tr>';
+          html+='<th>รหัส</th><th>รายการ</th><th>จำนวน</th><th>ราคา/หน่วย</th><th>ส่วนลด</th><th>สุทธิ</th></tr></thead><tbody>';
           rp.items_detail.forEach(function(it){
-            var typeIcon=it.item_type==='labour'?'🔧':(it.item_type==='service'?'🔄':'📦');
             html+='<tr>';
-            html+='<td style="font-size:.78rem;color:var(--color-text-muted)">'+(it.part_code||'-')+'</td>';
-            html+='<td>'+typeIcon+' '+(it.description||'-')+'</td>';
-            html+='<td style="text-align:center">'+(it.quantity||1)+'</td>';
-            html+='<td style="text-align:right">'+(it.unit_price?it.unit_price.toLocaleString():'-')+'</td>';
-            html+='<td style="text-align:right;font-weight:500">'+(it.net_amount?it.net_amount.toLocaleString():it.unit_price==='0'||!it.net_amount?'ฟรี':'-')+'</td>';
+            html+='<td>'+(it.part_code||'-')+'</td>';
+            html+='<td>'+(it.description||'-')+'</td>';
+            html+='<td>'+(it.quantity||1)+'</td>';
+            html+='<td>'+(it.unit_price?it.unit_price.toLocaleString():'-')+'</td>';
+            html+='<td>'+(it.discount_amount?it.discount_amount.toLocaleString():'-')+'</td>';
+            html+='<td>'+(it.net_amount?it.net_amount.toLocaleString():'-')+'</td>';
             html+='</tr>';
           });
           html+='</tbody></table></div>';
         }
-
         html+='<hr style="margin:1rem 0;border-color:var(--color-border)">';
         html+='<p><strong>อาการ:</strong> '+(rp.issue_description||'-')+'</p>';
+        if(rp.repair_items){
+          var items=[];try{items=JSON.parse(rp.repair_items)}catch(e){items=rp.repair_items?[rp.repair_items]:[]}
+          if(items.length) html+='<p><strong>รายการซ่อม:</strong> '+items.join(', ')+'</p>';
+        }
         if(rp.notes) html+='<p><strong>หมายเหตุ:</strong> '+rp.notes+'</p>';
         if(rp.inspection_notes) html+='<p><strong>ผลตรวจสภาพ:</strong> '+rp.inspection_notes+'</p>';
         if(rp.memo_notes) html+='<p><strong>บันทึกข้อความ:</strong> '+rp.memo_notes+'</p>';
@@ -894,33 +838,37 @@
         var r=await apiCall('getRepairs',filters);
         var list=(r.success&&r.data)?(Array.isArray(r.data)?r.data:[]):[];
         if(list.length===0){
-          document.getElementById('hBody').innerHTML='<tr><td colspan="8" class="empty-state"><div class="empty-state-icon">🔧</div><p>ไม่มีบันทึกซ่อมเสร็จ</p></td></tr>';
+          document.getElementById('hBody').innerHTML='<tr><td colspan="11" class="empty-state"><div class="empty-state-icon">🔧</div><p>ไม่มีบันทึกซ่อมเสร็จ</p></td></tr>';
           return;
         }
+        var sTypeMap={'general':'ซ่อมทั่วไป','service':'เช็คระยะ','accident':'อุบัติเหตุ','insurance':'เคลมประกัน'};
         var html='';
         list.forEach(function(rp){
-          var svcMap={scheduled_maintenance:'🔄 เช็คระยะ',repair:'🔧 ซ่อม',inspection:'🔍 ตรวจ',other:'📋 อื่นๆ'};
-          var svcLabel=svcMap[rp.service_type]||svcMap.repair;
+          var items=[];try{items=JSON.parse(rp.repair_items||'[]')}catch(e){}
+          var sType=sTypeMap[rp.service_type]||(rp.service_type||'-');
+          var mileIn=rp.mileage_at_repair?rp.mileage_at_repair.toLocaleString():'–';
+          var mileOut=rp.mileage_out?rp.mileage_out.toLocaleString():'–';
           html+='<tr>';
           html+='<td>'+fmtDate(rp.date_completed||rp.date_reported)+'</td>';
+          html+='<td><span style="font-size:.78rem;padding:2px 6px;border-radius:4px;background:#f0f0f0">'+sType+'</span></td>';
+          html+='<td style="font-size:.82rem">'+(rp.invoice_number||'-')+'</td>';
           html+='<td>'+vLabel(rp.car_id)+'</td>';
-          html+='<td>'+svcLabel+'</td>';
-          html+='<td>'+(rp.mileage_at_repair?rp.mileage_at_repair.toLocaleString():'-')+'</td>';
-          html+='<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(rp.issue_description||'-')+'</td>';
+          html+='<td style="font-size:.82rem">'+mileIn+' / '+mileOut+'</td>';
+          html+='<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(rp.issue_description||items.join(', ')||'-')+'</td>';
           html+='<td>'+(rp.garage_name||'-')+'</td>';
-          html+='<td style="font-size:.8rem">'+(rp.invoice_number||'-')+'</td>';
-          html+='<td style="white-space:nowrap">'+(rp.grand_total?rp.grand_total.toLocaleString():(rp.cost?rp.cost.toLocaleString():'-'))+' ฿</td>';
+          html+='<td style="text-align:right">'+(rp.labour_cost?rp.labour_cost.toLocaleString():'–')+'</td>';
+          html+='<td style="text-align:right">'+(rp.parts_cost?rp.parts_cost.toLocaleString():'–')+'</td>';
+          html+='<td style="text-align:right;font-weight:600">'+((rp.grand_total||rp.cost)?((rp.grand_total||rp.cost).toLocaleString()+' ฿'):'-')+'</td>';
           html+='<td>';
           var user=getCurrentUser();
           if(user&&(user.role==='admin'||hasModulePermission('repair','edit'))){
             html+='<button class="btn btn-ghost" style="padding:4px 10px;font-size:.82rem" onclick="editCompleted(\''+rp.id+'\')">✏️</button>';
-            html+='<button class="btn btn-ghost" style="padding:4px 10px;font-size:.82rem" onclick="showDetail(\''+rp.id+'\')">📄</button>';
           }
           html+='</td>';
           html+='</tr>';
         });
         document.getElementById('hBody').innerHTML=html;
-      }catch(e){console.error(e);document.getElementById('hBody').innerHTML='<tr><td colspan="8" style="color:var(--color-danger)">โหลดข้อมูลไม่สำเร็จ</td></tr>'}
+      }catch(e){console.error(e);document.getElementById('hBody').innerHTML='<tr><td colspan="11" style="color:var(--color-danger)">โหลดข้อมูลไม่สำเร็จ</td></tr>'}
       finally{document.getElementById('hLoading').style.display='none'}
     }
 
@@ -929,10 +877,67 @@
       editingId=null;
       document.getElementById('cmpTitle').textContent='📝 บันทึกซ่อมย้อนหลัง';
       document.getElementById('completedForm').reset();
+      document.getElementById('cmp_items_list').innerHTML='';
+      document.getElementById('cmp_insurance_section').style.display='none';
       document.getElementById('completedModal').classList.add('show');
       setTimeout(function(){if(typeof initAllThaiDateTimePickers==='function') initAllThaiDateTimePickers()},100);
     }
     function closeCompletedModal(){document.getElementById('completedModal').classList.remove('show')}
+
+    // Toggle insurance fields
+    document.addEventListener('change', function(e){
+      if(e.target&&e.target.id==='cmp_service_type'){
+        var v=e.target.value;
+        document.getElementById('cmp_insurance_section').style.display=(v==='accident'||v==='insurance')?'':'none';
+      }
+    });
+
+    // Item rows for parts/labour
+    var itemRowCount=0;
+    function addItemRow(data){
+      itemRowCount++;
+      var n=itemRowCount;
+      var d=data||{};
+      var html='<div class="item-row" id="item-row-'+n+'" style="border:1px solid var(--color-border);border-radius:var(--radius-md);padding:.5rem;margin-bottom:.5rem;background:#fafafa">';
+      html+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">';
+      html+='<input type="text" class="ir-code" placeholder="รหัส" value="'+(d.part_code||'')+'" style="width:100px;padding:4px 6px;font-size:.82rem">';
+      html+='<input type="text" class="ir-desc" placeholder="รายการ *" value="'+(d.description||'')+'" style="flex:1;min-width:120px;padding:4px 6px;font-size:.82rem">';
+      html+='<input type="number" class="ir-qty" placeholder="จำนวน" value="'+(d.quantity||1)+'" style="width:60px;padding:4px 6px;font-size:.82rem" step="any">';
+      html+='<input type="number" class="ir-price" placeholder="ราคา/หน่วย" value="'+(d.unit_price||'')+'" style="width:90px;padding:4px 6px;font-size:.82rem" step="0.01">';
+      html+='<input type="number" class="ir-disc" placeholder="ส่วนลด" value="'+(d.discount_amount||'')+'" style="width:80px;padding:4px 6px;font-size:.82rem" step="0.01">';
+      html+='<input type="number" class="ir-net" placeholder="สุทธิ" value="'+(d.net_amount||'')+'" style="width:90px;padding:4px 6px;font-size:.82rem;font-weight:600" step="0.01">';
+      html+='<select class="ir-type" style="padding:4px;font-size:.82rem"><option value="part"'+(d.item_type==='part'?' selected':'')+'>อะไหล่</option><option value="labour"'+(d.item_type==='labour'?' selected':'')+'>ค่าแรง</option><option value="service"'+(d.item_type==='service'?' selected':'')+'>บริการ</option></select>';
+      html+='<button type="button" onclick="removeItemRow('+n+')" style="background:none;border:none;color:var(--color-danger);cursor:pointer;font-size:1rem">🗑️</button>';
+      html+='</div></div>';
+      document.getElementById('cmp_items_list').insertAdjacentHTML('beforeend',html);
+    }
+    function removeItemRow(n){var el=document.getElementById('item-row-'+n);if(el) el.remove()}
+
+    function collectItemRows(){
+      var items=[];
+      document.querySelectorAll('#cmp_items_list .item-row').forEach(function(row){
+        var desc=row.querySelector('.ir-desc').value.trim();
+        if(!desc) return;
+        items.push({
+          part_code: row.querySelector('.ir-code').value.trim(),
+          description: desc,
+          quantity: parseFloat(row.querySelector('.ir-qty').value)||1,
+          unit_price: parseFloat(row.querySelector('.ir-price').value)||0,
+          discount_amount: parseFloat(row.querySelector('.ir-disc').value)||0,
+          net_amount: parseFloat(row.querySelector('.ir-net').value)||0,
+          item_type: row.querySelector('.ir-type').value
+        });
+      });
+      return items;
+    }
+
+    function calcTotal(){
+      var l=parseFloat(document.getElementById('cmp_labour').value)||0;
+      var p=parseFloat(document.getElementById('cmp_parts').value)||0;
+      var d=parseFloat(document.getElementById('cmp_discount').value)||0;
+      var v=parseFloat(document.getElementById('cmp_vat').value)||0;
+      document.getElementById('cmp_grand_total').value=((l+p-d+v)||0).toFixed(2);
+    }
 
     async function editCompleted(id){
       try{
@@ -942,159 +947,41 @@
         editingId=id;
         document.getElementById('cmpTitle').textContent='✏️ แก้ไขบันทึกซ่อม';
         document.getElementById('cmp_car_id').value=rp.car_id||'';
-        document.getElementById('cmp_date').value=(rp.date_reported||'').split(/[T ]/)[0]||'';
-        document.getElementById('cmp_date_completed').value=(rp.date_completed||'').split(/[T ]/)[0]||'';
+        var dc=rp.date_completed||rp.date_reported||'';
+        if(dc){
+          var parts=dc.split(/[T ]/);
+          document.getElementById('cmp_date').value=parts[0]||'';
+          if(parts[1]) document.getElementById('cmp_time').value=parts[1].substring(0,5);
+        }
         document.getElementById('cmp_issue').value=rp.issue_description||'';
         document.getElementById('cmp_mileage').value=rp.mileage_at_repair||'';
-        document.getElementById('cmp_mileage_out').value=rp.mileage_out||'';
         document.getElementById('cmp_garage').value=rp.garage_name||'';
-        document.getElementById('cmp_mechanic').value=rp.mechanic_name||'';
         document.getElementById('cmp_taken_by').value=rp.taken_by||'';
         document.getElementById('cmp_notes').value=rp.notes||'';
-        document.getElementById('cmp_invoice').value=rp.invoice_number||'';
+        // New fields
         document.getElementById('cmp_service_type').value=rp.service_type||'repair';
-        document.getElementById('cmp_labour_cost').value=rp.labour_cost||'';
-        document.getElementById('cmp_parts_cost').value=rp.parts_cost||'';
+        document.getElementById('cmp_invoice').value=rp.invoice_number||'';
+        document.getElementById('cmp_mechanic').value=rp.mechanic_name||'';
+        document.getElementById('cmp_labour').value=rp.labour_cost||'';
+        document.getElementById('cmp_parts').value=rp.parts_cost||'';
         document.getElementById('cmp_discount').value=rp.discount_amount||'';
         document.getElementById('cmp_vat').value=rp.vat_amount||'';
         document.getElementById('cmp_grand_total').value=rp.grand_total||rp.cost||'';
-        // Populate items table
-        document.getElementById('cmpItemsBody').innerHTML='';
-        if(rp.items_detail && rp.items_detail.length){
+        document.getElementById('cmp_mileage_out').value=rp.mileage_out||'';
+        document.getElementById('cmp_claim').value=rp.claim_number||'';
+        document.getElementById('cmp_insurance').value=rp.insurance_company||'';
+        // Show insurance section if applicable
+        var st=rp.service_type||'repair';
+        document.getElementById('cmp_insurance_section').style.display=(st==='accident'||st==='insurance')?'':'none';
+        // Load item rows
+        document.getElementById('cmp_items_list').innerHTML='';
+        itemRowCount=0;
+        if(rp.items_detail&&rp.items_detail.length){
           rp.items_detail.forEach(function(it){ addItemRow(it) });
         }
         document.getElementById('completedModal').classList.add('show');
         setTimeout(function(){if(typeof initAllThaiDateTimePickers==='function') initAllThaiDateTimePickers()},100);
       }catch(e){showAlert('เกิดข้อผิดพลาด','error')}
-    }
-
-    /* ═══════════════════════════════════════════════════
-       Itemized Parts Table — add/remove rows
-       ═══════════════════════════════════════════════════ */
-    function addItemRow(data){
-      var tbody=document.getElementById('cmpItemsBody');
-      var tr=document.createElement('tr');
-      var d=data||{};
-      tr.innerHTML='<td><input type="text" value="'+(d.part_code||'')+'" placeholder="รหัส"></td>'
-        +'<td><input type="text" value="'+(d.description||'')+'" placeholder="รายการ *"></td>'
-        +'<td><input type="number" value="'+(d.quantity||1)+'" min="0" step="1" onchange="calcItemNet(this)"></td>'
-        +'<td><input type="number" value="'+(d.unit_price||'')+'" step="0.01" placeholder="0.00" onchange="calcItemNet(this)"></td>'
-        +'<td><input type="number" value="'+(d.net_amount||'')+'" step="0.01" placeholder="0.00"></td>'
-        +'<td style="display:none"><select><option value="part"'+(d.item_type==='part'?' selected':'')+'>อะไหล่</option>'
-        +'<option value="labour"'+(d.item_type==='labour'?' selected':'')+'>ค่าแรง</option>'
-        +'<option value="service"'+(d.item_type==='service'?' selected':'')+'>บริการ</option></select></td>'
-        +'<td><button type="button" class="btn-del-row" onclick="this.closest(\'tr\').remove()">✕</button></td>';
-      tbody.appendChild(tr);
-    }
-
-    function calcItemNet(el){
-      var tr=el.closest('tr');
-      var inputs=tr.querySelectorAll('input');
-      var qty=parseFloat(inputs[2].value)||1;
-      var price=parseFloat(inputs[3].value)||0;
-      inputs[4].value=(qty*price).toFixed(2);
-    }
-
-    /* ═══════════════════════════════════════════════════
-       OCR: อัปโหลดเอกสาร → ดึงข้อมูลอัตโนมัติ
-       ═══════════════════════════════════════════════════ */
-    async function handleOcrFile(file, prefix){
-      if(!file) return;
-      var allowed=['image/jpeg','image/png','image/webp','application/pdf'];
-      if(allowed.indexOf(file.type)===-1){
-        showOcrStatus(prefix,'error','❌ รองรับเฉพาะ รูป (JPG/PNG) หรือ PDF');
-        return;
-      }
-      if(file.size>10*1024*1024){
-        showOcrStatus(prefix,'error','❌ ไฟล์ใหญ่เกิน 10MB');
-        return;
-      }
-      // Show preview
-      var previewEl=document.getElementById(prefix+'OcrPreview');
-      if(previewEl){
-        if(file.type.startsWith('image/')){
-          var url=URL.createObjectURL(file);
-          previewEl.innerHTML='<img src="'+url+'" alt="preview">';
-        }else{
-          previewEl.innerHTML='<div style="padding:8px;font-size:.84rem">📄 '+file.name+'</div>';
-        }
-      }
-      // Convert to base64
-      showOcrStatus(prefix,'loading','🔄 กำลังวิเคราะห์เอกสาร...');
-      try{
-        var base64=await fileToBase64(file);
-        var r=await apiCall('ocrExtract',{base64:base64,mime:file.type,doc_type:'repair_doc'});
-        if(r.success&&r.data&&r.data.extracted){
-          var d=r.data.extracted;
-          fillOcrData(prefix,d);
-          showOcrStatus(prefix,'success','✅ ดึงข้อมูลสำเร็จ — กรุณาตรวจสอบก่อนบันทึก');
-        }else{
-          showOcrStatus(prefix,'error','⚠️ ไม่สามารถอ่านข้อมูลจากเอกสารนี้ได้ กรุณากรอกเอง');
-        }
-      }catch(e){
-        console.error(e);
-        showOcrStatus(prefix,'error','❌ เกิดข้อผิดพลาด: '+(e.message||''));
-      }
-    }
-
-    function fileToBase64(file){
-      return new Promise(function(resolve,reject){
-        var reader=new FileReader();
-        reader.onload=function(){
-          var result=reader.result;
-          var base64=result.split(',')[1];
-          resolve(base64);
-        };
-        reader.onerror=reject;
-        reader.readAsDataURL(file);
-      });
-    }
-
-    function fillOcrData(prefix,d){
-      if(prefix==='cmp'){
-        if(d.shop_name){document.getElementById('cmp_garage').value=d.shop_name}
-        if(d.description){document.getElementById('cmp_issue').value=d.description}
-        if(d.date){document.getElementById('cmp_date').value=d.date}
-        if(d.date_completed){document.getElementById('cmp_date_completed').value=d.date_completed}
-        if(d.invoice_number){document.getElementById('cmp_invoice').value=d.invoice_number}
-        if(d.service_type){document.getElementById('cmp_service_type').value=d.service_type}
-        if(d.mileage_in){document.getElementById('cmp_mileage').value=d.mileage_in}
-        if(d.mileage_out){document.getElementById('cmp_mileage_out').value=d.mileage_out}
-        if(d.mechanic_name){document.getElementById('cmp_mechanic').value=d.mechanic_name}
-        if(d.labour_cost){document.getElementById('cmp_labour_cost').value=d.labour_cost}
-        if(d.parts_cost){document.getElementById('cmp_parts_cost').value=d.parts_cost}
-        if(d.discount_amount){document.getElementById('cmp_discount').value=d.discount_amount}
-        if(d.vat_amount){document.getElementById('cmp_vat').value=d.vat_amount}
-        if(d.grand_total){document.getElementById('cmp_grand_total').value=d.grand_total}
-        // Fill itemized parts
-        if(d.items && Array.isArray(d.items) && d.items.length){
-          document.getElementById('cmpItemsBody').innerHTML='';
-          d.items.forEach(function(it){ addItemRow(it) });
-        }
-      }else if(prefix==='act'){
-        if(d.grand_total||d.actual_cost){var el=document.getElementById('act_c_cost');if(el) el.value=d.grand_total||d.actual_cost}
-        if(d.date||d.date_completed){var el2=document.getElementById('act_complete_date');if(el2) el2.value=d.date_completed||d.date}
-        if(d.invoice_number){var el3=document.getElementById('act_invoice');if(el3) el3.value=d.invoice_number}
-        if(d.labour_cost){var el4=document.getElementById('act_labour');if(el4) el4.value=d.labour_cost}
-        if(d.parts_cost){var el5=document.getElementById('act_parts');if(el5) el5.value=d.parts_cost}
-        if(d.vat_amount){var el6=document.getElementById('act_vat');if(el6) el6.value=d.vat_amount}
-        if(d.description||d.shop_name){
-          var el7=document.getElementById('act_c_notes');
-          if(el7){
-            var parts=[];
-            if(d.shop_name) parts.push(d.shop_name);
-            if(d.description) parts.push(d.description);
-            el7.value=parts.join(' | ');
-          }
-        }
-      }
-    }
-
-    function showOcrStatus(prefix,type,msg){
-      var el=document.getElementById(prefix+'OcrStatus');
-      if(!el) return;
-      el.className='ocr-status '+type;
-      el.textContent=msg;
     }
 
     async function submitCompleted(e){
@@ -1103,50 +990,41 @@
       btn.disabled=true;btn.textContent='กำลังบันทึก...';
       try{
         var dateVal=document.getElementById('cmp_date').value;
-        var dateCompletedVal=document.getElementById('cmp_date_completed').value||dateVal;
+        var timeVal=document.getElementById('cmp_time').value;
+        var dateCompleted=dateVal+(timeVal?' '+timeVal+':00':'');
 
         var takenByVal=document.getElementById('cmp_taken_by').value;
         var takenByName=dLabel(takenByVal);
         if(takenByName==='-') takenByName=takenByVal;
 
-        // Collect itemized parts
-        var itemsDetail=[];
-        var rows=document.querySelectorAll('#cmpItemsBody tr');
-        rows.forEach(function(tr){
-          var inputs=tr.querySelectorAll('input,select');
-          if(inputs.length>=5&&inputs[1].value.trim()){
-            itemsDetail.push({
-              part_code:inputs[0].value.trim(),
-              description:inputs[1].value.trim(),
-              quantity:parseFloat(inputs[2].value)||1,
-              unit_price:parseFloat(inputs[3].value)||0,
-              net_amount:parseFloat(inputs[4].value)||0,
-              item_type:(inputs[5]&&inputs[5].value)||'part'
-            });
-          }
-        });
+        var itemsDetail=collectItemRows();
+        var repairItemNames=itemsDetail.map(function(it){return it.description}).filter(Boolean);
 
         var data={
           car_id: document.getElementById('cmp_car_id').value,
-          date_reported: dateVal,
-          date_completed: dateCompletedVal,
+          date_reported: dateCompleted,
+          date_completed: dateCompleted,
           issue_description: document.getElementById('cmp_issue').value.trim(),
+          repair_items: repairItemNames,
+          items_detail: itemsDetail,
           mileage_at_repair: parseInt(document.getElementById('cmp_mileage').value)||0,
-          mileage_out: parseInt(document.getElementById('cmp_mileage_out').value)||null,
           garage_name: document.getElementById('cmp_garage').value.trim(),
-          mechanic_name: document.getElementById('cmp_mechanic').value.trim(),
-          taken_by: takenByName,
+          taken_by: takenByName||null,
           notes: document.getElementById('cmp_notes').value.trim(),
           status: 'completed',
-          invoice_number: document.getElementById('cmp_invoice').value.trim(),
+          // New detail fields
           service_type: document.getElementById('cmp_service_type').value,
-          labour_cost: parseFloat(document.getElementById('cmp_labour_cost').value)||0,
-          parts_cost: parseFloat(document.getElementById('cmp_parts_cost').value)||0,
+          invoice_number: document.getElementById('cmp_invoice').value.trim()||null,
+          mechanic_name: document.getElementById('cmp_mechanic').value.trim()||null,
+          labour_cost: parseFloat(document.getElementById('cmp_labour').value)||0,
+          parts_cost: parseFloat(document.getElementById('cmp_parts').value)||0,
           discount_amount: parseFloat(document.getElementById('cmp_discount').value)||0,
           vat_amount: parseFloat(document.getElementById('cmp_vat').value)||0,
           grand_total: parseFloat(document.getElementById('cmp_grand_total').value)||0,
           cost: parseFloat(document.getElementById('cmp_grand_total').value)||0,
-          items_detail: itemsDetail
+          mileage_out: parseInt(document.getElementById('cmp_mileage_out').value)||null,
+          claim_number: document.getElementById('cmp_claim').value.trim()||null,
+          insurance_company: document.getElementById('cmp_insurance').value.trim()||null
         };
 
         var r;
