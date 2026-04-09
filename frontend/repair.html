@@ -108,8 +108,10 @@
     .mnt-item{background:#fff;border:1px solid #d1fae5;border-radius:var(--radius-md,6px);padding:8px 12px;font-size:.82rem}
     .mnt-item.overdue{border-color:#fca5a5;background:#fef2f2}
     .mnt-item.warning{border-color:#fde68a;background:#fffbeb}
+    .mnt-item.stale{border-color:#d1d5db;background:#f9fafb;opacity:.75}
     .mnt-item-name{font-weight:600;font-size:.84rem}
     .mnt-item-info{color:var(--color-text-muted);font-size:.78rem;margin-top:2px}
+    .mnt-section-hdr{font-weight:600;font-size:.85rem;margin:10px 0 6px;display:flex;align-items:center;gap:4px}
     /* ── History Summary Stats ── */
     .h-stat{background:#fff;border:1px solid var(--color-border);border-radius:var(--radius-md,6px);padding:10px 14px;min-width:120px;text-align:center}
     .h-stat-val{font-size:1.15rem;font-weight:700;color:var(--color-primary)}
@@ -1040,48 +1042,85 @@
         var items=r.data;
         var car=vehicles.find(function(v){return v.id===carId});
         var currentKm=car?car.current_mileage:0;
-        // Only show items that have records (last_km or last_date)
+        var today=new Date().toISOString().substring(0,10);
         var tracked=items.filter(function(it){return it.last_km||it.last_date});
         if(!tracked.length){panel.style.display='none';return}
 
-        var html='<div class="mnt-panel">';
-        html+='<h4>\u{1F4CB} \u0e2a\u0e16\u0e32\u0e19\u0e30\u0e01\u0e32\u0e23\u0e1a\u0e33\u0e23\u0e38\u0e07\u0e23\u0e31\u0e01\u0e29\u0e32 — '+vLabel(carId)+'</h4>';
-        html+='<div class="mnt-grid">';
+        // Categorize: overdue (genuine), warning, ok, stale (old data)
+        var overdueArr=[],warningArr=[],okArr=[],staleArr=[];
         tracked.forEach(function(it){
-          var overdueKm=it.next_km&&currentKm&&currentKm>=it.next_km;
-          var overdueDate=it.next_date&&it.next_date<=new Date().toISOString().substring(0,10);
-          var warningKm=it.next_km&&currentKm&&(it.next_km-currentKm)<=1000&&(it.next_km-currentKm)>0;
-          var warningDate=false;
-          if(it.next_date&&!overdueDate){
-            var diffMs=new Date(it.next_date)-new Date();
-            warningDate=diffMs>0&&diffMs<30*86400000;
+          var oKm=it.next_km&&currentKm&&currentKm>=it.next_km;
+          var oDate=it.next_date&&it.next_date<=today;
+          if(oKm||oDate){
+            // Check if overdue by more than 1x interval → stale/unreliable historical data
+            var isStale=false;
+            if(oKm&&it.interval_km&&it.interval_km>0){
+              if((currentKm-it.next_km)>it.interval_km) isStale=true;
+            }
+            if(!isStale&&oDate&&it.interval_months&&it.interval_months>0){
+              var nd=new Date(it.next_date),nw=new Date();
+              var overMonths=(nw.getFullYear()-nd.getFullYear())*12+(nw.getMonth()-nd.getMonth());
+              if(overMonths>it.interval_months) isStale=true;
+            }
+            if(isStale) staleArr.push(it); else overdueArr.push(it);
+          } else {
+            var wKm=it.next_km&&currentKm&&(it.next_km-currentKm)<=3000&&(it.next_km-currentKm)>0;
+            var wDate=false;
+            if(it.next_date&&!oDate){var df=new Date(it.next_date)-new Date();wDate=df>0&&df<60*86400000}
+            if(wKm||wDate) warningArr.push(it); else okArr.push(it);
           }
-          var cls=overdueKm||overdueDate?'overdue':(warningKm||warningDate?'warning':'');
-          html+='<div class="mnt-item '+cls+'">';
-          html+='<div class="mnt-item-name">'+(overdueKm||overdueDate?'\u{1F534} ':(warningKm||warningDate?'\u{1F7E1} ':'\u{1F7E2} '))+it.item_name+'</div>';
-          html+='<div class="mnt-item-info">';
-          if(it.last_date) html+='\u0e17\u0e33\u0e25\u0e48\u0e32\u0e2a\u0e38\u0e14: '+fmtDate(it.last_date);
-          if(it.last_km) html+=(it.last_date?' | ':'')+'\u0e44\u0e21\u0e25\u0e4c: '+it.last_km.toLocaleString()+' \u0e01\u0e21.';
-          html+='</div>';
+        });
+
+        function renderItem(it,status){
+          var icon=status==='overdue'?'\u{1F534}':(status==='warning'?'\u{1F7E1}':(status==='stale'?'\u26AA':'\u{1F7E2}'));
+          var color=status==='overdue'?'#dc2626':(status==='warning'?'#d97706':(status==='stale'?'#9ca3af':'#16a34a'));
+          var h='<div class="mnt-item '+status+'">';
+          h+='<div class="mnt-item-name">'+icon+' '+it.item_name+'</div>';
+          h+='<div class="mnt-item-info">';
+          if(it.last_date) h+='\u0e17\u0e33\u0e25\u0e48\u0e32\u0e2a\u0e38\u0e14: '+fmtDate(it.last_date);
+          if(it.last_km) h+=(it.last_date?' | ':'')+'\u0e44\u0e21\u0e25\u0e4c: '+it.last_km.toLocaleString()+' \u0e01\u0e21.';
+          h+='</div>';
           if(it.next_km||it.next_date){
-            html+='<div class="mnt-item-info" style="color:'+(overdueKm||overdueDate?'#dc2626':(warningKm||warningDate?'#d97706':'#16a34a'))+'">';
-            html+='\u0e04\u0e23\u0e31\u0e49\u0e07\u0e16\u0e31\u0e14\u0e44\u0e1b: ';
-            if(it.next_date) html+=fmtDate(it.next_date);
-            if(it.next_km) html+=(it.next_date?' | ':'')+it.next_km.toLocaleString()+' \u0e01\u0e21.';
-            if(overdueKm) html+=' (\u0e40\u0e01\u0e34\u0e19\u0e01\u0e33\u0e2b\u0e19\u0e14!)';
-            else if(overdueDate) html+=' (\u0e40\u0e25\u0e22\u0e01\u0e33\u0e2b\u0e19\u0e14!)';
-            html+='</div>';
+            h+='<div class="mnt-item-info" style="color:'+color+'">';
+            if(status==='stale') h+='\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e40\u0e01\u0e48\u0e32 — \u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e2a\u0e16\u0e32\u0e19\u0e30\u0e08\u0e23\u0e34\u0e07';
+            else{
+              h+='\u0e04\u0e23\u0e31\u0e49\u0e07\u0e16\u0e31\u0e14\u0e44\u0e1b: ';
+              if(it.next_date) h+=fmtDate(it.next_date);
+              if(it.next_km) h+=(it.next_date?' | ':'')+it.next_km.toLocaleString()+' \u0e01\u0e21.';
+              if(status==='overdue') h+=' (\u0e40\u0e01\u0e34\u0e19\u0e01\u0e33\u0e2b\u0e19\u0e14!)';
+            }
+            h+='</div>';
           }
           if(it.interval_km||it.interval_months){
-            html+='<div class="mnt-item-info">\u0e23\u0e2d\u0e1a: ';
-            if(it.interval_km) html+='\u0e17\u0e38\u0e01 '+it.interval_km.toLocaleString()+' \u0e01\u0e21.';
-            if(it.interval_months) html+=(it.interval_km?' / ':'')+'\u0e17\u0e38\u0e01 '+it.interval_months+' \u0e40\u0e14\u0e37\u0e2d\u0e19';
-            if(it.profile_source&&it.profile_source!=='default') html+=' ('+it.profile_source+')';
-            html+='</div>';
+            h+='<div class="mnt-item-info">\u0e23\u0e2d\u0e1a: ';
+            if(it.interval_km) h+='\u0e17\u0e38\u0e01 '+it.interval_km.toLocaleString()+' \u0e01\u0e21.';
+            if(it.interval_months) h+=(it.interval_km?' / ':'')+'\u0e17\u0e38\u0e01 '+it.interval_months+' \u0e40\u0e14\u0e37\u0e2d\u0e19';
+            if(it.profile_source&&it.profile_source!=='default') h+=' ('+it.profile_source+')';
+            h+='</div>';
           }
-          html+='</div>';
-        });
-        html+='</div></div>';
+          h+='</div>';
+          return h;
+        }
+
+        var html='<div class="mnt-panel">';
+        html+='<h4>\u{1F4CB} \u0e2a\u0e16\u0e32\u0e19\u0e30\u0e01\u0e32\u0e23\u0e1a\u0e33\u0e23\u0e38\u0e07\u0e23\u0e31\u0e01\u0e29\u0e32 — '+vLabel(carId)+'</h4>';
+        if(overdueArr.length){
+          html+='<div class="mnt-section-hdr" style="color:#dc2626">\u{1F534} \u0e40\u0e01\u0e34\u0e19\u0e01\u0e33\u0e2b\u0e19\u0e14 ('+overdueArr.length+')</div>';
+          html+='<div class="mnt-grid">';overdueArr.forEach(function(it){html+=renderItem(it,'overdue')});html+='</div>';
+        }
+        if(warningArr.length){
+          html+='<div class="mnt-section-hdr" style="color:#d97706">\u{1F7E1} \u0e43\u0e01\u0e25\u0e49\u0e16\u0e36\u0e07\u0e01\u0e33\u0e2b\u0e19\u0e14 ('+warningArr.length+')</div>';
+          html+='<div class="mnt-grid">';warningArr.forEach(function(it){html+=renderItem(it,'warning')});html+='</div>';
+        }
+        if(okArr.length){
+          html+='<div class="mnt-section-hdr" style="color:#16a34a">\u{1F7E2} \u0e1b\u0e01\u0e15\u0e34 ('+okArr.length+')</div>';
+          html+='<div class="mnt-grid">';okArr.forEach(function(it){html+=renderItem(it,'')});html+='</div>';
+        }
+        if(staleArr.length){
+          html+='<div class="mnt-section-hdr" style="color:#9ca3af">\u26AA \u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e22\u0e49\u0e2d\u0e19\u0e2b\u0e25\u0e31\u0e07 — \u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e22\u0e37\u0e19\u0e22\u0e31\u0e19 ('+staleArr.length+')</div>';
+          html+='<div class="mnt-grid">';staleArr.forEach(function(it){html+=renderItem(it,'stale')});html+='</div>';
+        }
+        html+='</div>';
         panel.innerHTML=html;
         panel.style.display='block';
       }catch(e){console.error(e);panel.style.display='none'}
