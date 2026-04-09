@@ -14,6 +14,74 @@ export async function onRequest(context) {
   const user = env.user;
   if (!user) return error('Unauthorized', 401);
 
+  // ========== Helper: sync vehicle_maintenance from repair ==========
+  async function syncMaintenanceFromRepair(carId, mileage, dateCompleted, repairItemsJson) {
+    if (!carId || !mileage) return;
+    try {
+      const settings = await dbAll(env.DB, 'SELECT * FROM maintenance_settings WHERE enabled = 1', []);
+      if (!settings || !settings.length) return;
+      // Parse repair items (could be JSON array of strings or detailed items)
+      let itemTexts = [];
+      try {
+        const parsed = typeof repairItemsJson === 'string' ? JSON.parse(repairItemsJson) : repairItemsJson;
+        if (Array.isArray(parsed)) {
+          parsed.forEach(p => itemTexts.push(typeof p === 'string' ? p : (p.description || '')));
+        }
+      } catch(e) {}
+      // Also get detailed items from repair_items table (may have more descriptions)
+      // Combine issue_description text is handled by caller adding it to repairItemsJson
+      const fullText = itemTexts.join(' ').toLowerCase();
+
+      // Keyword mapping: maintenance_settings.item_key → Thai keywords to match
+      const keywordMap = {
+        oil_change:   ['น้ำมันเครื่อง', 'เปลี่ยนน้ำมัน', 'oil change', 'engine oil'],
+        oil_filter:   ['ไส้กรองน้ำมัน', 'กรองน้ำมัน', 'oil filter'],
+        air_filter:   ['ไส้กรองอากาศ', 'กรองอากาศ', 'air filter'],
+        fuel_filter:  ['กรองน้ำมันเชื้อเพลิง', 'กรองเชื้อเพลิง', 'fuel filter', 'กรองดีเซล'],
+        tire_rotation:['สลับยาง', 'เปลี่ยนยาง', 'ยาง', 'tire'],
+        brake_check:  ['เบรค', 'เบรก', 'ผ้าเบรค', 'brake', 'น้ำมันเบรค'],
+        spark_plug:   ['หัวเทียน', 'spark plug'],
+        coolant:      ['น้ำหล่อเย็น', 'coolant', 'หม้อน้ำ'],
+        belt_check:   ['สายพาน', 'belt'],
+        battery_check:['แบตเตอรี่', 'battery', 'แบต']
+      };
+
+      const dc = dateCompleted || new Date().toISOString().substr(0, 10);
+
+      for (const ms of settings) {
+        // Check if any keyword matches
+        const keywords = keywordMap[ms.item_key] || [ms.item_name.toLowerCase()];
+        const matched = keywords.some(kw => fullText.includes(kw.toLowerCase()));
+        if (!matched) continue;
+
+        // Calculate next service
+        const nextKm = ms.interval_km ? (mileage + ms.interval_km) : null;
+        let nextDate = null;
+        if (ms.interval_months) {
+          const d = new Date(dc);
+          d.setMonth(d.getMonth() + ms.interval_months);
+          nextDate = d.toISOString().substr(0, 10);
+        }
+
+        // Upsert vehicle_maintenance
+        await dbRun(env.DB,
+          `INSERT INTO vehicle_maintenance (id, car_id, item_key, last_km, last_date, next_km, next_date, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(car_id, item_key) DO UPDATE SET
+             last_km = excluded.last_km, last_date = excluded.last_date,
+             next_km = excluded.next_km, next_date = excluded.next_date,
+             updated_at = excluded.updated_at`,
+          [generateUUID(), carId, ms.item_key, mileage, dc, nextKm, nextDate, now()]
+        );
+      }
+      // Also update car's current_mileage if higher
+      await dbRun(env.DB,
+        `UPDATE cars SET current_mileage = MAX(COALESCE(current_mileage, 0), ?), updated_at = ? WHERE id = ?`,
+        [mileage, now(), carId]
+      );
+    } catch(e) { console.error('syncMaintenanceFromRepair error:', e); }
+  }
+
   // --- GET /api/repair/log ---
   if (path === '/api/repair/log' && method === 'GET') {
     try { requirePermission(user, 'repair', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
@@ -118,6 +186,13 @@ export async function onRequest(context) {
     await sendTelegramMessage(env,
       `🔧 <b>แจ้งซ่อมใหม่</b>\n🚗 ${carLabel}\n📝 ${body.issue_description || body.description || '-'}\n👨‍💼 โดย: ${user.displayName}`);
 
+    // Auto-sync maintenance schedule if completed
+    if (status === 'completed') {
+      const mil = body.mileage_at_repair || body.mileage_out || 0;
+      const allItems = JSON.stringify([...(body.repair_items || []), body.issue_description || '']);
+      await syncMaintenanceFromRepair(body.car_id, mil, body.date_completed || body.date_reported, allItems);
+    }
+
     return success({ id, message: 'แจ้งซ่อมเรียบร้อย' }, 201);
   }
 
@@ -164,6 +239,16 @@ export async function onRequest(context) {
         );
       }
     }
+    // Auto-sync maintenance schedule if status updated to completed
+    if (body.status === 'completed') {
+      const updated = await dbFirst(env.DB, 'SELECT * FROM repair_log WHERE id = ?', [id]);
+      if (updated) {
+        const mil = updated.mileage_out || updated.mileage_at_repair || 0;
+        const allItems = JSON.stringify([...(function(){try{return JSON.parse(updated.repair_items||'[]')}catch(e){return[]}}()), updated.issue_description || '']);
+        await syncMaintenanceFromRepair(updated.car_id, mil, updated.date_completed || updated.date_reported, allItems);
+      }
+    }
+
     return success({ message: 'อัปเดตข้อมูลซ่อมเรียบร้อย' });
   }
 
@@ -340,6 +425,15 @@ export async function onRequest(context) {
     }
     await notifyAllAdmins(env.DB, 'repair', 'ซ่อมเสร็จ', `ซ่อม ${carLabel} เสร็จเรียบร้อย ค่าใช้จ่ายรวม ${body?.cost || row.cost || 0} บาท`);
     await sendTelegramMessage(env, `✅ <b>ซ่อมเสร็จ</b>\n🚗 ${carLabel}\n💰 ${body?.cost || row.cost || 0} บาท\n👨‍💼 โดย: ${user.displayName}`);
+
+    // Auto-sync maintenance schedule
+    const completedRow = await dbFirst(env.DB, 'SELECT * FROM repair_log WHERE id = ?', [id]);
+    if (completedRow) {
+      const mil = completedRow.mileage_out || completedRow.mileage_at_repair || 0;
+      const allItems = JSON.stringify([...(function(){try{return JSON.parse(completedRow.repair_items||'[]')}catch(e){return[]}}()), completedRow.issue_description || '']);
+      await syncMaintenanceFromRepair(completedRow.car_id, mil, completedRow.date_completed, allItems);
+    }
+
     return success({ message: 'บันทึกซ่อมเสร็จเรียบร้อย' });
   }
 
