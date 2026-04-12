@@ -338,6 +338,23 @@
               <div id="brandProfileContent"></div>
             </div>
 
+            <div class="settings-section">
+              <div class="section-title">🚐 ระยะซ่อมบำรุงแยกรายคัน</div>
+              <div class="help-text" style="margin-bottom:10px;">
+                ใช้ override เฉพาะรถคันนั้น เช่น รถตู้เบนซิน 5,000 กม. แต่ดีเซล 10,000 กม. หากเว้นว่างไว้ ระบบจะสืบทอดจากยี่ห้อ/รุ่นอัตโนมัติ
+              </div>
+              <div class="form-row" style="align-items:end;">
+                <div class="form-group">
+                  <label for="vehicleProfileSelect">เลือกรถ</label>
+                  <select id="vehicleProfileSelect" onchange="selectVehicleProfile(this.value)">
+                    <option value="">เลือกรถเพื่อกำหนดค่าเฉพาะคัน</option>
+                  </select>
+                </div>
+              </div>
+              <div id="vehicleProfileSummary" class="help-text" style="margin-bottom:10px;"></div>
+              <div id="vehicleProfileContent"></div>
+            </div>
+
             <!-- การแจ้งเตือนภาษีและประกัน -->
             <div class="settings-section">
               <div class="section-title">📄 การแจ้งเตือนภาษีและประกัน</div>
@@ -408,6 +425,9 @@
         var maintenanceItems = [];
         var _brandProfiles = [];
         var _activeBrand = null;
+        var _vehicles = [];
+        var _activeVehicleId = null;
+        var _vehicleProfileItems = [];
 
         var categoryLabels = {
           fluid: '💧 น้ำมัน/ของเหลว',
@@ -590,6 +610,99 @@
           container.innerHTML = html;
         }
 
+        async function loadVehicleProfiles() {
+          var select = document.getElementById('vehicleProfileSelect');
+          if (!select) return;
+          try {
+            var r = await apiCall('getVehicles', {});
+            if (r && r.success && Array.isArray(r.data)) {
+              _vehicles = r.data.filter(function(car) { return car.status !== 'inactive'; });
+            }
+          } catch(e) {
+            console.error('loadVehicleProfiles:', e);
+          }
+
+          select.innerHTML = '<option value="">เลือกรถเพื่อกำหนดค่าเฉพาะคัน</option>';
+          _vehicles.forEach(function(car) {
+            var option = document.createElement('option');
+            option.value = car.id;
+            option.textContent = car.license_plate + ' • ' + (car.brand || '-') + ' ' + (car.model || '');
+            select.appendChild(option);
+          });
+
+          if (_activeVehicleId) {
+            select.value = _activeVehicleId;
+          }
+        }
+
+        async function selectVehicleProfile(carId) {
+          _activeVehicleId = carId || null;
+          var container = document.getElementById('vehicleProfileContent');
+          var summary = document.getElementById('vehicleProfileSummary');
+          if (!container || !summary) return;
+          if (!carId) {
+            _vehicleProfileItems = [];
+            summary.textContent = '';
+            container.innerHTML = '<div style="padding:14px;color:var(--color-text-muted);">เลือกรถก่อนเพื่อแก้ไขระยะซ่อมบำรุงเฉพาะคัน</div>';
+            return;
+          }
+
+          container.innerHTML = '<div style="padding:20px;color:var(--color-text-muted);">กำลังโหลด...</div>';
+          try {
+            var r = await apiCall('getMaintenanceVehicleProfiles', { car_id: carId });
+            if (!(r && r.success && r.data && Array.isArray(r.data.items))) throw new Error('LOAD_FAILED');
+            _vehicleProfileItems = r.data.items;
+            var car = r.data.car || {};
+            summary.textContent = 'รถ ' + (car.license_plate || '-') + ' • ' + (car.brand || '-') + ' ' + (car.model || '') + ' • ' + ((car.fuel_type === 'diesel') ? 'ดีเซล' : (car.fuel_type === 'gasoline' ? 'เบนซิน' : (car.fuel_type || '-')));
+            renderVehicleProfiles();
+          } catch (e) {
+            console.error('selectVehicleProfile:', e);
+            container.innerHTML = '<div class="alert alert-error">โหลดค่ารายคันไม่สำเร็จ</div>';
+          }
+        }
+
+        function renderVehicleProfiles() {
+          var container = document.getElementById('vehicleProfileContent');
+          if (!container) return;
+          if (!_vehicleProfileItems.length) {
+            container.innerHTML = '<div style="padding:14px;color:var(--color-text-muted);">ไม่พบรายการบำรุงรักษาสำหรับรถคันนี้</div>';
+            return;
+          }
+
+          var html = '<table style="width:100%;border-collapse:collapse;font-size:0.92em;">';
+          html += '<thead><tr style="background:var(--color-primary);color:white;">';
+          html += '<th style="padding:8px;text-align:left;">รายการ</th>';
+          html += '<th style="padding:8px;text-align:left;">ค่าที่ระบบสืบทอด</th>';
+          html += '<th style="padding:8px;text-align:center;">Override กม.</th>';
+          html += '<th style="padding:8px;text-align:center;">Override เดือน</th>';
+          html += '<th style="padding:8px;text-align:left;">ผลลัพธ์ที่ใช้</th>';
+          html += '</tr></thead><tbody>';
+          _vehicleProfileItems.forEach(function(item) {
+            var inheritedKm = item.brand_profile_km != null ? item.brand_profile_km : item.default_km;
+            var inheritedMonths = item.brand_profile_months != null ? item.brand_profile_months : item.default_months;
+            var inheritedSource = item.brand_profile_km != null || item.brand_profile_months != null ? item.brand_profile_source : 'default';
+            var effectiveLabel = [];
+            if (item.effective_km != null) effectiveLabel.push((item.effective_km || 0).toLocaleString() + ' กม.');
+            if (item.effective_months != null) effectiveLabel.push((item.effective_months || 0) + ' เดือน');
+            html += '<tr style="border-bottom:1px solid #e9ecef;vertical-align:top;">';
+            html += '<td style="padding:8px;font-weight:600;">' + escHtml(item.item_name || item.item_key) + '</td>';
+            html += '<td style="padding:8px;color:var(--color-text-muted);">';
+            html += 'จาก ' + escHtml(inheritedSource || 'default') + '<br>';
+            html += '<span>' + ((inheritedKm != null ? inheritedKm.toLocaleString() + ' กม.' : '-') + ' / ' + (inheritedMonths != null ? inheritedMonths + ' เดือน' : '-')) + '</span>';
+            html += '</td>';
+            html += '<td style="padding:8px;text-align:center;">';
+            html += '<input type="number" data-vehicle-item="' + item.item_key + '" data-vehicle-field="interval_km" value="' + (item.override_km != null ? item.override_km : '') + '" min="0" step="1000" placeholder="สืบทอด" style="width:90px;padding:4px;text-align:center;">';
+            html += '</td>';
+            html += '<td style="padding:8px;text-align:center;">';
+            html += '<input type="number" data-vehicle-item="' + item.item_key + '" data-vehicle-field="interval_months" value="' + (item.override_months != null ? item.override_months : '') + '" min="0" step="1" placeholder="สืบทอด" style="width:90px;padding:4px;text-align:center;">';
+            html += '</td>';
+            html += '<td style="padding:8px;">' + escHtml(effectiveLabel.join(' / ') || '-') + '<br><span style="color:var(--color-text-muted);font-size:0.9em;">source: ' + escHtml(item.profile_source || 'default') + '</span></td>';
+            html += '</tr>';
+          });
+          html += '</tbody></table>';
+          container.innerHTML = html;
+        }
+
         async function loadSettings() {
           var loadingEl = document.getElementById('loading');
           var contentEl = document.getElementById('settingsContent');
@@ -655,6 +768,9 @@
           await loadMaintenanceSettings();
           // Load brand profiles
           await loadBrandProfiles();
+          // Load vehicle-specific profiles
+          await loadVehicleProfiles();
+          if (_activeVehicleId) await selectVehicleProfile(_activeVehicleId);
 
           showSettingsForm();
         }
@@ -706,6 +822,23 @@
             });
             for (var pid in profileUpdates) {
               await apiCall('updateMaintenanceProfile', profileUpdates[pid]);
+            }
+
+            // Save vehicle-specific profile changes for the selected vehicle only
+            if (_activeVehicleId) {
+              var vehicleUpdates = [];
+              var vehicleMap = {};
+              var vehicleInputs = document.querySelectorAll('[data-vehicle-item]');
+              vehicleInputs.forEach(function(inp) {
+                var itemKey = inp.getAttribute('data-vehicle-item');
+                var field = inp.getAttribute('data-vehicle-field');
+                if (!vehicleMap[itemKey]) vehicleMap[itemKey] = { item_key: itemKey, interval_km: null, interval_months: null };
+                var raw = inp.value;
+                vehicleMap[itemKey][field] = raw === '' ? null : (parseInt(raw, 10) || 0);
+              });
+              for (var itemKey in vehicleMap) vehicleUpdates.push(vehicleMap[itemKey]);
+              await apiCall('bulkUpdateMaintenanceVehicleProfiles', { car_id: _activeVehicleId, items: vehicleUpdates });
+              await selectVehicleProfile(_activeVehicleId);
             }
 
             showAlert('บันทึกการตั้งค่าสำเร็จ', 'success');

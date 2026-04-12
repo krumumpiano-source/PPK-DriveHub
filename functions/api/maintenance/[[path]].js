@@ -4,9 +4,15 @@ import {
   parseBody, requirePermission, extractParam
 } from '../../_helpers.js';
 
-// Resolve interval for a specific (brand, model, item_key)
-// Priority: brand+model > brand+* > default from maintenance_settings
-async function resolveInterval(db, brand, model, itemKey, defaultKm, defaultMonths) {
+// Resolve interval for a specific vehicle/item.
+// Priority: vehicle override > brand+model > brand+* > default from maintenance_settings
+async function resolveInterval(db, brand, model, itemKey, defaultKm, defaultMonths, carId = null) {
+  if (carId) {
+    const vehicle = await dbFirst(db,
+      `SELECT interval_km, interval_months, notes FROM maintenance_vehicle_profiles WHERE car_id = ? AND item_key = ?`,
+      [carId, itemKey]);
+    if (vehicle) return { km: vehicle.interval_km, months: vehicle.interval_months, notes: vehicle.notes, source: 'vehicle' };
+  }
   // Try exact brand+model match
   if (brand && model && model !== '*') {
     const exact = await dbFirst(db,
@@ -129,6 +135,96 @@ export async function onRequest(context) {
     return success(rows);
   }
 
+  // ========== Vehicle-specific Maintenance Profiles ==========
+
+  // --- GET /api/maintenance/profiles/vehicle/:carId ---
+  if (path.match(/^\/api\/maintenance\/profiles\/vehicle\/[^/]+$/) && method === 'GET') {
+    try { requirePermission(user, 'maintenance', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const carId = path.split('/').pop();
+    const car = await dbFirst(env.DB,
+      'SELECT id, license_plate, brand, model, fuel_type FROM cars WHERE id = ? AND status != \'inactive\'',
+      [carId]);
+    if (!car) return error('ไม่พบรถ', 404);
+
+    const items = await dbAll(env.DB,
+      'SELECT * FROM maintenance_settings WHERE enabled = 1 ORDER BY sort_order, item_key', []);
+    const overrides = await dbAll(env.DB,
+      'SELECT * FROM maintenance_vehicle_profiles WHERE car_id = ?', [carId]);
+    const overrideMap = {};
+    for (const row of overrides) overrideMap[row.item_key] = row;
+
+    const result = [];
+    for (const item of items) {
+      if (item.fuel_type_filter && car.fuel_type !== item.fuel_type_filter) continue;
+      const exactProfile = await dbFirst(env.DB,
+        `SELECT interval_km, interval_months, notes FROM maintenance_profiles WHERE brand = ? AND model = ? AND item_key = ?`,
+        [car.brand, car.model || '*', item.item_key]);
+      const brandProfile = exactProfile ? null : await dbFirst(env.DB,
+        `SELECT interval_km, interval_months, notes FROM maintenance_profiles WHERE brand = ? AND model = '*' AND item_key = ?`,
+        [car.brand, item.item_key]);
+      const resolved = await resolveInterval(env.DB, car.brand, car.model, item.item_key, item.interval_km, item.interval_months, carId);
+      const override = overrideMap[item.item_key] || null;
+      result.push({
+        item_key: item.item_key,
+        item_name: item.item_name,
+        category: item.category,
+        default_km: item.interval_km,
+        default_months: item.interval_months,
+        brand_profile_km: (exactProfile || brandProfile)?.interval_km ?? null,
+        brand_profile_months: (exactProfile || brandProfile)?.interval_months ?? null,
+        brand_profile_source: exactProfile ? `${car.brand} ${car.model || '*'}` : (brandProfile ? car.brand : 'default'),
+        override_id: override?.id || null,
+        override_km: override?.interval_km ?? null,
+        override_months: override?.interval_months ?? null,
+        override_notes: override?.notes || null,
+        effective_km: resolved.km,
+        effective_months: resolved.months,
+        profile_source: resolved.source
+      });
+    }
+
+    return success({ car, items: result });
+  }
+
+  // --- PUT /api/maintenance/profiles/vehicle/:carId/bulk ---
+  if (path.match(/^\/api\/maintenance\/profiles\/vehicle\/[^/]+\/bulk$/) && method === 'PUT') {
+    try { requirePermission(user, 'maintenance', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const parts = path.split('/');
+    const carId = parts[5];
+    const car = await dbFirst(env.DB, 'SELECT id FROM cars WHERE id = ? AND status != \'inactive\'', [carId]);
+    if (!car) return error('ไม่พบรถ', 404);
+
+    const body = await parseBody(request);
+    if (!Array.isArray(body?.items)) return error('กรุณาส่ง items array');
+
+    const ts = now();
+    let updated = 0;
+    for (const item of body.items) {
+      if (!item?.item_key) continue;
+      const km = item.interval_km === null ? null : (item.interval_km ?? null);
+      const months = item.interval_months === null ? null : (item.interval_months ?? null);
+      const hasOverride = km !== null || months !== null || (item.notes && String(item.notes).trim());
+      if (hasOverride) {
+        await dbRun(env.DB,
+          `INSERT INTO maintenance_vehicle_profiles (id, car_id, item_key, interval_km, interval_months, notes, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(car_id, item_key) DO UPDATE SET
+             interval_km = excluded.interval_km,
+             interval_months = excluded.interval_months,
+             notes = excluded.notes,
+             updated_at = excluded.updated_at`,
+          [generateUUID(), carId, item.item_key, km, months, item.notes || null, ts]);
+      } else {
+        await dbRun(env.DB,
+          'DELETE FROM maintenance_vehicle_profiles WHERE car_id = ? AND item_key = ?',
+          [carId, item.item_key]);
+      }
+      updated++;
+    }
+
+    return success({ message: `บันทึกการตั้งค่ารายคัน ${updated} รายการเรียบร้อย` });
+  }
+
   // --- POST /api/maintenance/profiles ---
   if (path === '/api/maintenance/profiles' && method === 'POST') {
     try { requirePermission(user, 'maintenance', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
@@ -192,15 +288,20 @@ export async function onRequest(context) {
        LEFT JOIN cars c ON vm.car_id = c.id
        WHERE vm.car_id = ?
        ORDER BY ms.sort_order, vm.item_key`, [carId]);
+    const overrides = await dbAll(env.DB,
+      'SELECT item_key, interval_km, interval_months FROM maintenance_vehicle_profiles WHERE car_id = ?',
+      [carId]);
     // Resolve profiles for each record
     const result = [];
     const recordMap = {};
     for (const r of records) { recordMap[r.item_key] = r; }
+    const overrideMap = {};
+    for (const row of overrides) { overrideMap[row.item_key] = row; }
     // Build full list: all applicable items (with or without records)
     for (const item of allItems) {
       // Filter by fuel type
       if (item.fuel_type_filter && car && car.fuel_type !== item.fuel_type_filter) continue;
-      const resolved = await resolveInterval(env.DB, car?.brand, car?.model, item.item_key, item.interval_km, item.interval_months);
+      const resolved = await resolveInterval(env.DB, car?.brand, car?.model, item.item_key, item.interval_km, item.interval_months, carId);
       const rec = recordMap[item.item_key];
       result.push({
         id: rec?.id || null,
@@ -213,6 +314,8 @@ export async function onRequest(context) {
         last_date: rec?.last_date || null,
         next_km: rec?.next_km || null,
         next_date: rec?.next_date || null,
+        override_km: overrideMap[item.item_key]?.interval_km ?? null,
+        override_months: overrideMap[item.item_key]?.interval_months ?? null,
         interval_km: resolved.km,
         interval_months: resolved.months,
         profile_source: resolved.source,

@@ -213,6 +213,8 @@ const ACTION_MAP = {
   'createMaintenanceProfile':   (d) => API.post('/api/maintenance/profiles', d),
   'updateMaintenanceProfile':   (d) => API.put(`/api/maintenance/profiles/${d.id}`, d),
   'deleteMaintenanceProfile':   (d) => API.del(`/api/maintenance/profiles/${d.id}`),
+  'getMaintenanceVehicleProfiles': (d) => API.get(`/api/maintenance/profiles/vehicle/${d.car_id}`),
+  'bulkUpdateMaintenanceVehicleProfiles': (d) => API.put(`/api/maintenance/profiles/vehicle/${d.car_id}/bulk`, { items: d.items }),
 
   // Notifications
   'getNotifications':    (d) => API.get('/api/notifications' + _q(d)),

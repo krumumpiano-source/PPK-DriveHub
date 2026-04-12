@@ -136,10 +136,21 @@ export async function onRequest(context) {
         const matched = matchedByCode || (matchedByText && !excluded);
         if (!matched) continue;
 
-        // Resolve brand-specific interval via profiles
+        // Resolve vehicle-specific interval override first, then fall back to profiles
         let intervalKm = ms.interval_km;
         let intervalMonths = ms.interval_months;
-        if (car?.brand) {
+        let hasVehicleOverride = false;
+        if (carId) {
+          const vehicleProfile = await dbFirst(env.DB,
+            `SELECT interval_km, interval_months FROM maintenance_vehicle_profiles WHERE car_id = ? AND item_key = ?`,
+            [carId, ms.item_key]);
+          if (vehicleProfile) {
+            hasVehicleOverride = true;
+            intervalKm = vehicleProfile.interval_km ?? intervalKm;
+            intervalMonths = vehicleProfile.interval_months ?? intervalMonths;
+          }
+        }
+        if (car?.brand && !hasVehicleOverride) {
           // Try exact brand+model
           const profile = await dbFirst(env.DB,
             `SELECT interval_km, interval_months FROM maintenance_profiles WHERE brand = ? AND (model = ? OR model = '*') AND item_key = ? ORDER BY CASE WHEN model = '*' THEN 1 ELSE 0 END LIMIT 1`,

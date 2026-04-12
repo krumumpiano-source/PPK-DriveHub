@@ -247,16 +247,22 @@ export async function onRequest(context) {
     const rows = await dbAll(env.DB,
       `SELECT c.id AS car_id, c.license_plate, c.brand, c.current_mileage,
        vm.item_key, ms.item_name, vm.last_km, vm.last_date, vm.next_km, vm.next_date,
+       COALESCE(mvp.interval_km, mpe.interval_km, mpw.interval_km, ms.interval_km) AS interval_km,
+       COALESCE(mvp.interval_months, mpe.interval_months, mpw.interval_months, ms.interval_months) AS interval_months,
        CASE
          WHEN vm.next_km IS NOT NULL AND c.current_mileage >= vm.next_km THEN 'overdue'
          WHEN vm.next_date IS NOT NULL AND vm.next_date <= date('now') THEN 'overdue'
-         WHEN vm.next_km IS NOT NULL AND c.current_mileage >= (vm.next_km - ms.interval_km * 0.1) THEN 'upcoming'
+         WHEN vm.next_km IS NOT NULL AND COALESCE(mvp.interval_km, mpe.interval_km, mpw.interval_km, ms.interval_km) IS NOT NULL
+              AND c.current_mileage >= (vm.next_km - COALESCE(mvp.interval_km, mpe.interval_km, mpw.interval_km, ms.interval_km) * 0.1) THEN 'upcoming'
          WHEN vm.next_date IS NOT NULL AND vm.next_date <= date('now', '+30 days') THEN 'upcoming'
          ELSE 'ok'
        END AS maintenance_status
        FROM vehicle_maintenance vm
        LEFT JOIN cars c ON vm.car_id = c.id
        LEFT JOIN maintenance_settings ms ON vm.item_key = ms.item_key
+       LEFT JOIN maintenance_vehicle_profiles mvp ON mvp.car_id = vm.car_id AND mvp.item_key = vm.item_key
+       LEFT JOIN maintenance_profiles mpe ON mpe.brand = c.brand AND mpe.model = c.model AND mpe.item_key = vm.item_key
+       LEFT JOIN maintenance_profiles mpw ON mpw.brand = c.brand AND mpw.model = '*' AND mpw.item_key = vm.item_key
        WHERE c.status != 'inactive'
        ORDER BY c.license_plate, vm.item_key`, []
     );

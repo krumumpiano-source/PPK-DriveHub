@@ -132,9 +132,44 @@ CREATE TABLE IF NOT EXISTS maintenance_settings (
   interval_km INTEGER,
   interval_months INTEGER,
   enabled INTEGER NOT NULL DEFAULT 1,
+  category TEXT DEFAULT 'general',
+  fuel_type_filter TEXT DEFAULT NULL,
+  vehicle_class TEXT DEFAULT NULL,
+  sort_order INTEGER DEFAULT 0,
+  dlt_required INTEGER DEFAULT 0,
   updated_by TEXT,
   updated_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS maintenance_profiles (
+  id TEXT PRIMARY KEY,
+  brand TEXT NOT NULL,
+  model TEXT DEFAULT '*',
+  item_key TEXT NOT NULL,
+  interval_km INTEGER,
+  interval_months INTEGER,
+  notes TEXT,
+  updated_at TEXT NOT NULL,
+  UNIQUE(brand, model, item_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_mp_brand ON maintenance_profiles(brand);
+CREATE INDEX IF NOT EXISTS idx_mp_item ON maintenance_profiles(item_key);
+
+CREATE TABLE IF NOT EXISTS maintenance_vehicle_profiles (
+  id TEXT PRIMARY KEY,
+  car_id TEXT NOT NULL,
+  item_key TEXT NOT NULL,
+  interval_km INTEGER,
+  interval_months INTEGER,
+  notes TEXT,
+  updated_at TEXT NOT NULL,
+  UNIQUE(car_id, item_key),
+  FOREIGN KEY (car_id) REFERENCES cars(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_mvp_car ON maintenance_vehicle_profiles(car_id);
+CREATE INDEX IF NOT EXISTS idx_mvp_item ON maintenance_vehicle_profiles(item_key);
 
 CREATE TABLE IF NOT EXISTS check_log (
   id TEXT PRIMARY KEY,
