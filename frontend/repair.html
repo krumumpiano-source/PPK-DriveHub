@@ -1034,6 +1034,13 @@
       }
     }
 
+    function maintenanceSourceLabel(source){
+      if(!source||source==='default') return 'ค่าเริ่มต้นระบบ';
+      if(source==='vehicle') return 'กำหนดเฉพาะรถคันนี้';
+      if(source.includes(' ')) return 'ตามยี่ห้อ/รุ่น: '+source;
+      return 'ตามยี่ห้อ: '+source;
+    }
+
     async function loadMaintenancePanel(carId){
       var panel=document.getElementById('hMaintenancePanel');
       try{
@@ -1095,7 +1102,7 @@
             h+='<div class="mnt-item-info">\u0e23\u0e2d\u0e1a: ';
             if(it.interval_km) h+='\u0e17\u0e38\u0e01 '+it.interval_km.toLocaleString()+' \u0e01\u0e21.';
             if(it.interval_months) h+=(it.interval_km?' / ':'')+'\u0e17\u0e38\u0e01 '+it.interval_months+' \u0e40\u0e14\u0e37\u0e2d\u0e19';
-            if(it.profile_source&&it.profile_source!=='default') h+=' ('+it.profile_source+')';
+            if(it.profile_source) h+=' ('+maintenanceSourceLabel(it.profile_source)+')';
             h+='</div>';
           }
           h+='</div>';

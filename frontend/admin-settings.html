@@ -351,6 +351,8 @@
                   </select>
                 </div>
                 <div class="form-group" style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <button type="button" class="btn btn-primary" onclick="applyVehiclePreset('gasoline-5000')">Preset เบนซิน 5,000</button>
+                  <button type="button" class="btn btn-primary" onclick="applyVehiclePreset('diesel-10000')">Preset ดีเซล 10,000</button>
                   <button type="button" class="btn btn-secondary" onclick="applyInheritedToVehicleProfile()">คัดลอกค่าที่สืบทอดมา</button>
                   <button type="button" class="btn btn-secondary" onclick="clearVehicleProfileOverrides()">ล้าง Override ทั้งหมด</button>
                 </div>
@@ -705,6 +707,35 @@
           });
           html += '</tbody></table>';
           container.innerHTML = html;
+        }
+
+        function setVehicleOverrideValue(itemKey, field, value) {
+          var input = document.querySelector('[data-vehicle-item="' + itemKey + '"][data-vehicle-field="' + field + '"]');
+          if (input) input.value = value;
+        }
+
+        function applyVehiclePreset(presetKey) {
+          if (!_activeVehicleId || !_vehicleProfileItems.length) {
+            showAlert('เลือกรถก่อน', 'error');
+            return;
+          }
+
+          if (presetKey === 'gasoline-5000') {
+            setVehicleOverrideValue('engine_oil', 'interval_km', 5000);
+            setVehicleOverrideValue('engine_oil', 'interval_months', 6);
+            setVehicleOverrideValue('oil_filter', 'interval_km', 5000);
+            setVehicleOverrideValue('oil_filter', 'interval_months', 6);
+            showAlert('ตั้ง preset รถเบนซิน 5,000 กม. / 6 เดือนแล้ว', 'success');
+            return;
+          }
+
+          if (presetKey === 'diesel-10000') {
+            setVehicleOverrideValue('engine_oil', 'interval_km', 10000);
+            setVehicleOverrideValue('engine_oil', 'interval_months', 6);
+            setVehicleOverrideValue('oil_filter', 'interval_km', 10000);
+            setVehicleOverrideValue('oil_filter', 'interval_months', 6);
+            showAlert('ตั้ง preset รถดีเซล 10,000 กม. / 6 เดือนแล้ว', 'success');
+          }
         }
 
         function applyInheritedToVehicleProfile() {

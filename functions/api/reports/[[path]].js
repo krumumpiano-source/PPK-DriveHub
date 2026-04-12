@@ -250,6 +250,12 @@ export async function onRequest(context) {
        COALESCE(mvp.interval_km, mpe.interval_km, mpw.interval_km, ms.interval_km) AS interval_km,
        COALESCE(mvp.interval_months, mpe.interval_months, mpw.interval_months, ms.interval_months) AS interval_months,
        CASE
+         WHEN mvp.car_id IS NOT NULL THEN 'vehicle'
+         WHEN mpe.id IS NOT NULL THEN c.brand || ' ' || c.model
+         WHEN mpw.id IS NOT NULL THEN c.brand
+         ELSE 'default'
+       END AS profile_source,
+       CASE
          WHEN vm.next_km IS NOT NULL AND c.current_mileage >= vm.next_km THEN 'overdue'
          WHEN vm.next_date IS NOT NULL AND vm.next_date <= date('now') THEN 'overdue'
          WHEN vm.next_km IS NOT NULL AND COALESCE(mvp.interval_km, mpe.interval_km, mpw.interval_km, ms.interval_km) IS NOT NULL

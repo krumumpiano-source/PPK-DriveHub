@@ -299,6 +299,12 @@
     function htmlEsc(s) {
       return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
+    function maintenanceSourceLabel(source) {
+      if (!source || source === 'default') return 'ค่าเริ่มต้นระบบ';
+      if (source === 'vehicle') return 'กำหนดเฉพาะรถคันนี้';
+      if (source.includes(' ')) return 'ตามยี่ห้อ/รุ่น: ' + source;
+      return 'ตามยี่ห้อ: ' + source;
+    }
     function buildQuery(params) {
       var parts = [];
       Object.keys(params).forEach(function (k) {
@@ -705,11 +711,21 @@
       if (overdueList.length === 0) {
         html += '<div class="empty-state" style="padding:30px"><div class="empty-state-icon" style="font-size:2em">✅</div><p>ไม่มีรายการบำรุงรักษาที่ต้องดูแล</p></div>';
       } else {
-        html += '<div style="overflow-x:auto"><table class="report-table"><thead><tr><th>ทะเบียนรถ</th><th>รายการ</th><th>สถานะ</th><th>กม.ถัดไป</th><th>วันถัดไป</th></tr></thead><tbody>';
+        html += '<div style="overflow-x:auto"><table class="report-table"><thead><tr><th>ทะเบียนรถ</th><th>รายการ</th><th>สถานะ</th><th>รอบที่ใช้</th><th>กม.ถัดไป</th><th>วันถัดไป</th></tr></thead><tbody>';
         overdueList.forEach(function (m) {
           var cls = m.maintenance_status === 'overdue' ? 'score-poor' : 'score-normal';
           var statusTH = m.maintenance_status === 'overdue' ? 'เลยกำหนด' : 'ใกล้ถึงกำหนด';
-          html += '<tr><td><strong>' + htmlEsc(m.license_plate || '-') + '</strong></td><td>' + htmlEsc(m.item_name || m.item_key || '-') + '</td><td><span class="score-badge ' + cls + '">' + statusTH + '</span></td><td>' + (m.next_km ? fmtNum(m.next_km) + ' กม.' : '-') + '</td><td>' + fmtDateTH(m.next_date) + '</td></tr>';
+          var intervalLabel = [];
+          if (m.interval_km) intervalLabel.push(fmtNum(m.interval_km) + ' กม.');
+          if (m.interval_months) intervalLabel.push(m.interval_months + ' เดือน');
+          html += '<tr>';
+          html += '<td><strong>' + htmlEsc(m.license_plate || '-') + '</strong></td>';
+          html += '<td>' + htmlEsc(m.item_name || m.item_key || '-') + '<div style="font-size:0.85em;color:var(--color-text-muted);margin-top:4px;">' + htmlEsc(maintenanceSourceLabel(m.profile_source)) + '</div></td>';
+          html += '<td><span class="score-badge ' + cls + '">' + statusTH + '</span></td>';
+          html += '<td>' + htmlEsc(intervalLabel.join(' / ') || '-') + '</td>';
+          html += '<td>' + (m.next_km ? fmtNum(m.next_km) + ' กม.' : '-') + '</td>';
+          html += '<td>' + fmtDateTH(m.next_date) + '</td>';
+          html += '</tr>';
         });
         html += '</tbody></table></div>';
       }
