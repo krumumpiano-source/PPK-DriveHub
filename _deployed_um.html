@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 
 <head>
@@ -681,7 +681,7 @@
       var html = '';
       for (var i = 0; i < _requests.length; i++) {
         var r = _requests[i];
-        var name = (r.name || '').trim() || r.email || '—';
+        var name = ((r.first_name || '') + ' ' + (r.last_name || '')).trim() || r.username || '—';
         var date = r.created_at ? new Date(r.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
         html += '<div class="request-card">';
         html += '<div class="request-info">';
@@ -692,8 +692,8 @@
         if (date) html += '📅 ' + date;
         html += '</div></div>';
         html += '<div class="request-actions">';
-        html += '<button class="btn btn-success btn-sm" onclick="openApproveModal(\'' + r.id + '\')">✅ อนุมัติ</button>';
-        html += '<button class="btn btn-danger btn-sm" onclick="openRejectModal(\'' + r.id + '\')">❌ ปฏิเสธ</button>';
+        html += '<button class="btn btn-success btn-sm" onclick="openApproveModal(' + r.id + ')">✅ อนุมัติ</button>';
+        html += '<button class="btn btn-danger btn-sm" onclick="openRejectModal(' + r.id + ')">❌ ปฏิเสธ</button>';
         html += '</div></div>';
       }
       return html;
@@ -728,7 +728,7 @@
           (isActive ? '✅ ใช้งาน' : '🚫 ระงับ') + '</span></td>';
         html += '<td>' + renderPermIcons(perms, isAdmin) + '</td>';
         html += '<td><div class="action-btns">';
-        html += '<button class="btn btn-primary" style="padding:5px 12px;font-size:0.85em;" title="แก้ไขผู้ใช้" onclick="openEditModal(\'' + u.id + '\')">✏️ แก้ไข</button>';
+        html += '<button class="btn btn-primary" style="padding:5px 12px;font-size:0.85em;" title="แก้ไขผู้ใช้" onclick="openEditModal(' + u.id + ')">✏️ แก้ไข</button>';
         if (u.role !== 'super_admin') {
           html += '<button class="btn btn-secondary" style="padding:5px 12px;font-size:0.85em;" title="ดูมุมมองผู้ใช้นี้" onclick="startImpersonate(\'' + u.id + '\')">👁️ ดูมุมมอง</button>';
         }
@@ -801,7 +801,7 @@
     //  Edit User Modal
     // ══════════════════════════════════════════════════════════
     function openEditModal(userId) {
-      var user = _allUsers.find(function(u) { return String(u.id) === String(userId); });
+      var user = _allUsers.find(function(u) { return u.id === userId; });
       if (!user) return;
       _editUser = user;
 
@@ -989,9 +989,9 @@
     //  Approve / Reject Modals
     // ══════════════════════════════════════════════════════════
     function openApproveModal(reqId) {
-      var req = _requests.find(function(r) { return String(r.id) === String(reqId); });
+      var req = _requests.find(function(r) { return r.id === reqId; });
       if (!req) return;
-      var name = (req.name || '').trim() || req.email || '—';
+      var name = ((req.first_name || '') + ' ' + (req.last_name || '')).trim() || req.username || '—';
       document.getElementById('approveReqId').value = req.id;
       document.getElementById('approveUserName').value = name;
       document.getElementById('approveRole').value = req.requested_role || 'viewer';
@@ -1005,7 +1005,7 @@
     }
 
     async function confirmApprove() {
-      var id = document.getElementById('approveReqId').value.trim();
+      var id = parseInt(document.getElementById('approveReqId').value);
       var role = document.getElementById('approveRole').value;
       var password = document.getElementById('approvePassword').value.trim();
       if (!password) { showToast('กรุณากรอกรหัสผ่าน', 'error'); return; }
@@ -1027,9 +1027,9 @@
     }
 
     function openRejectModal(reqId) {
-      var req = _requests.find(function(r) { return String(r.id) === String(reqId); });
+      var req = _requests.find(function(r) { return r.id === reqId; });
       if (!req) return;
-      var name = (req.name || '').trim() || req.email || '—';
+      var name = ((req.first_name || '') + ' ' + (req.last_name || '')).trim() || req.username || '—';
       document.getElementById('rejectReqId').value = req.id;
       document.getElementById('rejectUserName').value = name;
       document.getElementById('rejectReason').value = '';
@@ -1038,7 +1038,7 @@
     function closeRejectModal() { document.getElementById('rejectModal').classList.remove('active'); }
 
     async function confirmReject() {
-      var id = document.getElementById('rejectReqId').value.trim();
+      var id = parseInt(document.getElementById('rejectReqId').value);
       var reason = document.getElementById('rejectReason').value.trim();
       if (!reason) { showToast('กรุณาระบุเหตุผล', 'error'); return; }
       try {
