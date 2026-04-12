@@ -484,7 +484,7 @@
       <div class="modal-body">
         <input type="hidden" id="approveReqId">
         <p style="margin-bottom:16px; color:var(--color-text-muted); font-size:0.9em;">
-          กำหนดบทบาทและรหัสผ่านเริ่มต้นสำหรับผู้ใช้ใหม่
+          กำหนดบทบาทและสิทธิ์สำหรับผู้ใช้ใหม่ (รหัสผ่านใช้ที่ผู้สมัครตั้งไว้แล้ว)
         </p>
         <div class="form-group">
           <label>ชื่อผู้สมัคร</label>
@@ -500,10 +500,13 @@
             <option value="admin">🔧 แอดมิน</option>
           </select>
         </div>
-        <div class="form-group">
-          <label>รหัสผ่านเริ่มต้น</label>
-          <input type="text" id="approvePassword" value="Password@123" placeholder="Password@123">
-          <div style="font-size:0.8em; color:var(--color-text-muted); margin-top:4px;">ผู้ใช้จะถูกบังคับเปลี่ยนรหัสผ่านเมื่อเข้าสู่ระบบครั้งแรก</div>
+
+        <div class="form-section-title" id="approvePermTitle">🔑 สิทธิ์การเข้าถึง</div>
+        <div id="approvePermSection">
+          <div class="perm-grid" id="approvePermGrid"></div>
+        </div>
+        <div class="admin-note" id="approveAdminPermNote" style="display:none;">
+          ✅ แอดมินมีสิทธิ์เข้าถึงทุกเมนูอัตโนมัติ ไม่ต้องตั้งค่าเพิ่มเติม
         </div>
       </div>
       <div class="modal-footer">
@@ -995,28 +998,79 @@
       document.getElementById('approveReqId').value = req.id;
       document.getElementById('approveUserName').value = name;
       document.getElementById('approveRole').value = req.requested_role || 'viewer';
-      document.getElementById('approvePassword').value = 'Password@123';
+      onApproveRoleChange();
       document.getElementById('approveModal').classList.add('active');
     }
     function closeApproveModal() { document.getElementById('approveModal').classList.remove('active'); }
 
     function onApproveRoleChange() {
-      // Placeholder for future enhanced approve flow
+      var role = document.getElementById('approveRole').value;
+      var isAdmin = role === 'admin' || role === 'super_admin';
+      var permSection = document.getElementById('approvePermSection');
+      var adminNote = document.getElementById('approveAdminPermNote');
+      var permTitle = document.getElementById('approvePermTitle');
+
+      if (isAdmin) {
+        permSection.style.display = 'none';
+        adminNote.style.display = 'block';
+        permTitle.style.display = 'none';
+        return;
+      }
+      permSection.style.display = 'block';
+      adminNote.style.display = 'none';
+      permTitle.style.display = 'block';
+
+      var perms = ROLE_DEFAULT_PERMS[role] || {};
+      renderApprovePermGrid(perms, role);
+    }
+
+    function renderApprovePermGrid(perms, role) {
+      var defaults = ROLE_DEFAULT_PERMS[role] || {};
+      var html = '';
+      for (var i = 0; i < MODULES.length; i++) {
+        var m = MODULES[i];
+        var currentLevel = perms[m.key] || defaults[m.key] || 'view';
+        var defaultLevel = defaults[m.key] || 'view';
+        var isLocked = defaultLevel === 'edit';
+
+        html += '<div class="perm-row' + (isLocked ? ' locked' : '') + '">';
+        html += '<div class="perm-row-label"><span>' + m.icon + '</span> ' + m.label + '</div>';
+        html += '<select data-module="' + m.key + '"' + (isLocked ? ' disabled' : '') + '>';
+        html += '<option value="view"' + (currentLevel === 'view' ? ' selected' : '') + '>👁️ ดูอย่างเดียว</option>';
+        html += '<option value="create"' + (currentLevel === 'create' ? ' selected' : '') + '>➕ สร้าง</option>';
+        html += '<option value="edit"' + (currentLevel === 'edit' ? ' selected' : '') + '>✏️ แก้ไข</option>';
+        html += '<option value="delete"' + (currentLevel === 'delete' ? ' selected' : '') + '>🗑️ ลบ</option>';
+        html += '</select>';
+        html += '</div>';
+      }
+      document.getElementById('approvePermGrid').innerHTML = html;
     }
 
     async function confirmApprove() {
       var id = document.getElementById('approveReqId').value.trim();
       var role = document.getElementById('approveRole').value;
-      var password = document.getElementById('approvePassword').value.trim();
-      if (!password) { showToast('กรุณากรอกรหัสผ่าน', 'error'); return; }
+      var isAdmin = role === 'admin' || role === 'super_admin';
 
-      var permissions = ROLE_DEFAULT_PERMS[role] || {};
+      var permissions = {};
+      if (!isAdmin) {
+        var selects = document.querySelectorAll('#approvePermGrid select[data-module]');
+        var defaults = ROLE_DEFAULT_PERMS[role] || {};
+        selects.forEach(function(sel) {
+          var mod = sel.dataset.module;
+          var defaultLevel = defaults[mod] || 'view';
+          if (sel.disabled && defaultLevel === 'edit') {
+            permissions[mod] = 'edit';
+          } else {
+            permissions[mod] = sel.value;
+          }
+        });
+      }
+
       try {
         await apiCall('approveUserRequest', {
           id: id,
           role: role,
-          permissions: permissions,
-          initial_password: password
+          permissions: permissions
         });
         showToast('อนุมัติคำขอสำเร็จ', 'success');
         closeApproveModal();

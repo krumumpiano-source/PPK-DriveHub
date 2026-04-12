@@ -83,11 +83,21 @@ export async function onRequest(context) {
     const existingUser = await dbFirst(env.DB, 'SELECT id FROM users WHERE email = ?', [email]);
     if (existingUser) return error('email นี้มีบัญชีอยู่แล้ว', 409);
 
+    // Hash user's chosen password and store it
+    let pwHash = null, pwSalt = null;
+    if (body.password) {
+      const complexityErr = validatePasswordComplexity(body.password);
+      if (complexityErr) return error(complexityErr);
+      pwSalt = generateSalt();
+      pwHash = await hashPassword(body.password, pwSalt);
+    }
+
     await dbRun(env.DB,
-      `INSERT INTO user_requests (id, name, email, requested_role, initial_permissions, status, created_at)
-       VALUES (?, ?, ?, ?, ?, 'pending', ?)`,
+      `INSERT INTO user_requests (id, name, email, requested_role, initial_permissions, status, initial_password_hash, salt, created_at)
+       VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
       [generateUUID(), displayName, email,
-       body.role || 'viewer', body.permissions ? JSON.stringify(body.permissions) : '{}', now()]
+       body.role || 'viewer', body.permissions ? JSON.stringify(body.permissions) : '{}',
+       pwHash, pwSalt, now()]
     );
 
     await notifyAllAdmins(env.DB, 'system', 'ผู้ใช้ใหม่ลงทะเบียน',

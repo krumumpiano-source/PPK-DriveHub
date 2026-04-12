@@ -108,22 +108,32 @@ export async function onRequest(context) {
     if (req.status !== 'pending') return error('คำขอนี้ถูกดำเนินการแล้ว');
 
     // Create actual user account
-    const salt = generateSalt();
-    const { hashPassword: hp } = await import('../../_helpers.js');
-    const initialPwd = body.initial_password || 'Password@123';
-    const hash = await hashPassword(initialPwd, salt);
     const nameParts = req.name.split(' ');
     const firstName = nameParts[0] || req.name;
     const lastName = nameParts.slice(1).join(' ') || '';
     const userId = generateUUID();
     const ts = now();
 
+    // Use the password the user set during registration
+    let hash, salt, mustChange;
+    if (req.initial_password_hash && req.salt) {
+      hash = req.initial_password_hash;
+      salt = req.salt;
+      mustChange = 0; // user already chose their password
+    } else {
+      // Fallback for legacy requests without stored password
+      salt = generateSalt();
+      const fallbackPwd = body.initial_password || 'Password@123';
+      hash = await hashPassword(fallbackPwd, salt);
+      mustChange = 1;
+    }
+
     await dbRun(env.DB,
       `INSERT INTO users (id, username, email, password_hash, salt, role, permissions, first_name, last_name, display_name, active, pdpa_accepted, must_change_password, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 1, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?, ?)`,
       [userId, req.email, req.email, hash, salt,
        body.role || req.requested_role, body.permissions ? JSON.stringify(body.permissions) : (req.initial_permissions || '{}'),
-       firstName, lastName, req.name, ts, ts]
+       firstName, lastName, req.name, mustChange, ts, ts]
     );
 
     await dbRun(env.DB,
@@ -132,7 +142,7 @@ export async function onRequest(context) {
     );
 
     await writeAuditLog(env.DB, user.id, user.displayName, 'approve_user_request', 'admin', id, { user_id: userId });
-    return success({ message: 'อนุมัติคำขอสมัครสมาชิกเรียบร้อย', user_id: userId, initial_password: initialPwd });
+    return success({ message: 'อนุมัติคำขอสมัครสมาชิกเรียบร้อย', user_id: userId });
   }
 
   if (path.match(/\/api\/admin\/requests\/[^/]+\/reject/) && method === 'PUT') {
