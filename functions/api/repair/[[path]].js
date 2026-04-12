@@ -1,9 +1,51 @@
 ﻿// Repair logs + scheduled repairs
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
-  parseBody, requirePermission, extractParam, writeAuditLog,
+  parseBody, requirePermission, writeAuditLog,
   sendTelegramMessage, createNotification, notifyAllAdmins
 } from '../../_helpers.js';
+
+function parseMaintenanceSyncItems(repairItemsInput) {
+  try {
+    const parsed = typeof repairItemsInput === 'string' ? JSON.parse(repairItemsInput) : repairItemsInput;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    console.warn('parseMaintenanceSyncItems failed:', err);
+    return [];
+  }
+}
+
+function buildMaintenanceSyncPayload(repairItems, itemsDetail, issueDescription) {
+  const payload = [];
+  if (Array.isArray(repairItems)) {
+    for (const item of repairItems) {
+      if (!item) continue;
+      if (typeof item === 'string') {
+        const text = item.trim();
+        if (text) payload.push({ description: text });
+        continue;
+      }
+      if (typeof item === 'object') {
+        const description = String(item.description || item.name || '').trim();
+        const partCode = String(item.part_code || item.code || '').trim();
+        if (description || partCode) payload.push({ description, part_code: partCode });
+      }
+    }
+  }
+  if (Array.isArray(itemsDetail)) {
+    for (const item of itemsDetail) {
+      if (!item) continue;
+      const description = String(item.description || '').trim();
+      const partCode = String(item.part_code || '').trim();
+      if (description || partCode) payload.push({ description, part_code: partCode });
+    }
+  }
+  if (issueDescription) {
+    const text = String(issueDescription).trim();
+    if (text) payload.push({ description: text });
+  }
+  return payload;
+}
 
 export async function onRequest(context) {
   try {
@@ -19,66 +61,62 @@ export async function onRequest(context) {
     if (!carId || !mileage) return;
     try {
       const settings = await dbAll(env.DB, 'SELECT * FROM maintenance_settings WHERE enabled = 1', []);
-      if (!settings || !settings.length) return;
+      if (!settings?.length) return;
       // Get car info for profile resolution
       const car = await dbFirst(env.DB, 'SELECT brand, model, fuel_type FROM cars WHERE id = ?', [carId]);
 
-      // Parse repair items (could be JSON array of strings or detailed items)
-      let itemTexts = [];
-      try {
-        const parsed = typeof repairItemsJson === 'string' ? JSON.parse(repairItemsJson) : repairItemsJson;
-        if (Array.isArray(parsed)) {
-          parsed.forEach(p => itemTexts.push(typeof p === 'string' ? p : (p.description || '')));
+      // Parse repair items from either legacy text array or detailed item payload.
+      const itemTexts = [];
+      const partCodes = [];
+      const parsed = parseMaintenanceSyncItems(repairItemsJson);
+      parsed.forEach(p => {
+        if (typeof p === 'string') {
+          const text = p.trim();
+          if (text) itemTexts.push(text);
+          return;
         }
-      } catch(e) {}
+        const text = String(p?.description || '').trim();
+        const partCode = String(p?.part_code || '').trim().toLowerCase();
+        if (text) itemTexts.push(text);
+        if (partCode) partCodes.push(partCode);
+      });
       const fullText = itemTexts.join(' ').toLowerCase();
 
-      // Comprehensive keyword mapping for all 34 maintenance items
       const keywordMap = {
-        // Fluids
-        engine_oil:            ['น้ำมันเครื่อง', 'เปลี่ยนน้ำมัน', 'oil change', 'engine oil', 'ถ่ายน้ำมัน'],
-        oil_filter:            ['ไส้กรองน้ำมัน', 'กรองน้ำมัน', 'oil filter'],
-        gear_oil:              ['น้ำมันเกียร์', 'gear oil', 'transmission oil', 'atf', 'เกียร์ออโต้'],
-        brake_fluid:           ['น้ำมันเบรก', 'น้ำมันเบรค', 'brake fluid', 'dot 3', 'dot 4'],
-        coolant:               ['น้ำหล่อเย็น', 'coolant', 'หม้อน้ำ', 'น้ำยาหล่อเย็น', 'radiator'],
-        power_steering_fluid:  ['พวงมาลัยพาวเวอร์', 'power steering', 'น้ำมันพวงมาลัย'],
-        differential_oil:      ['น้ำมันเฟืองท้าย', 'เฟืองท้าย', 'differential', 'หัวเพลา'],
-        // Filters
-        air_filter:            ['ไส้กรองอากาศ', 'กรองอากาศ', 'air filter'],
-        fuel_filter:           ['กรองน้ำมันเชื้อเพลิง', 'กรองเชื้อเพลิง', 'fuel filter', 'กรองดีเซล', 'กรองโซล่า'],
-        ac_filter:             ['กรองแอร์', 'ไส้กรองแอร์', 'cabin filter', 'แอร์'],
-        fuel_water_separator:  ['กรองน้ำ', 'water separator', 'ระบายน้ำ'],
-        // Belts
-        timing_belt:           ['สายพานไทม์มิ่ง', 'timing belt', 'timing chain'],
-        serpentine_belt:       ['สายพานหน้าเครื่อง', 'v-belt', 'serpentine', 'สายพาน'],
-        // Brakes
-        brake_pad:             ['ผ้าเบรก', 'ผ้าเบรค', 'brake pad', 'เบรค', 'เบรก'],
-        brake_disc:            ['จานเบรก', 'จานเบรค', 'brake disc', 'brake rotor'],
-        // Tires
-        tire:                  ['เปลี่ยนยาง', 'ยางใหม่', 'ยางรถ', 'tire replacement'],
-        tire_rotation:         ['สลับยาง', 'tire rotation', 'หมุนยาง'],
-        wheel_alignment:       ['ตั้งศูนย์', 'alignment', 'ศูนย์ล้อ', 'บาลานซ์'],
-        // Suspension
-        shock_absorber:        ['โช้คอัพ', 'โช้ค', 'shock absorber', 'โชคอัพ'],
-        ball_joint:            ['ลูกหมาก', 'ball joint'],
-        bush:                  ['บูชยาง', 'บูช', 'ปีกนก', 'กันโคลง', 'bushing'],
-        hub_grease:            ['จารบีดุมล้อ', 'จารบี', 'hub grease', 'bearing grease'],
-        // Ignition
-        spark_plug:            ['หัวเทียน', 'spark plug'],
-        glow_plug:             ['หัวเผา', 'glow plug'],
-        injector_cleaning:     ['หัวฉีด', 'ล้างหัวฉีด', 'injector', 'nozzle'],
-        // Electrical
-        battery:               ['แบตเตอรี่', 'battery', 'แบต', 'accu'],
-        alternator_check:      ['ไดชาร์จ', 'alternator', 'ไดนาโม'],
-        // Other
-        wiper:                 ['ใบปัดน้ำฝน', 'wiper', 'ที่ปัดน้ำฝน'],
-        clutch:                ['คลัทช์', 'clutch', 'คลัช'],
-        ac_service:            ['ล้างแอร์', 'แอร์', 'a/c service', 'เติมน้ำยาแอร์'],
-        // DLT
-        dlt_inspection:        ['ตรวจสภาพ', 'ขนส่ง', 'ตรอ.'],
-        emission_check:        ['ควันดำ', 'มลพิษ', 'emission', 'ไอเสีย'],
-        fire_extinguisher:     ['ถังดับเพลิง', 'fire extinguisher'],
-        safety_equipment:      ['อุปกรณ์ความปลอดภัย', 'ค้อนทุบกระจก', 'สามเหลี่ยม']
+        engine_oil:           { include: ['น้ำมันเครื่อง', 'เปลี่ยนน้ำมัน', 'oil change', 'engine oil', 'ถ่ายน้ำมัน'], code: ['08880-'] },
+        oil_filter:           { include: ['ไส้กรองน้ำมัน', 'ไส้กรองน้ำมันเครื่อง', 'กรองน้ำมันเครื่อง', 'oil filter'], code: ['90915-'] },
+        gear_oil:             { include: ['น้ำมันเกียร์', 'gear oil', 'transmission oil', 'atf', 'mtf', 'เกียร์ออโต้', 'เกียร์ธรรมดา'] },
+        brake_fluid:          { include: ['น้ำมันเบรก', 'น้ำมันเบรค', 'น้ำมันเบรก-คลัทช์', 'น้ำมันเบรค-คลัทช์', 'brake fluid', 'dot 3', 'dot 4'], exclude: ['น้ำยาล้างเบรก'], code: ['08823-'] },
+        coolant:              { include: ['น้ำหล่อเย็น', 'coolant', 'หม้อน้ำ', 'น้ำยาหล่อเย็น', 'radiator'] },
+        power_steering_fluid: { include: ['พวงมาลัยพาวเวอร์', 'power steering', 'น้ำมันพวงมาลัย'] },
+        differential_oil:     { include: ['น้ำมันเฟืองท้าย', 'เฟืองท้าย', 'differential'] },
+        air_filter:           { include: ['ไส้กรองอากาศ', 'กรองอากาศ', 'air filter'] },
+        fuel_filter:          { include: ['กรองน้ำมันเชื้อเพลิง', 'กรองเชื้อเพลิง', 'fuel filter', 'กรองดีเซล', 'กรองโซล่า'] },
+        ac_filter:            { include: ['กรองแอร์', 'ไส้กรองแอร์', 'cabin filter'] },
+        fuel_water_separator: { include: ['กรองน้ำ', 'water separator', 'ระบายน้ำ'] },
+        timing_belt:          { include: ['สายพานไทม์มิ่ง', 'timing belt', 'timing chain'] },
+        serpentine_belt:      { include: ['สายพานหน้าเครื่อง', 'v-belt', 'serpentine belt', 'serpentine'] },
+        brake_pad:            { include: ['ผ้าเบรก', 'ผ้าเบรค', 'brake pad'], exclude: ['น้ำมันเบรก', 'น้ำมันเบรค', 'จานเบรก', 'จานเบรค', 'น้ำยาล้างเบรก'] },
+        brake_disc:           { include: ['จานเบรก', 'จานเบรค', 'brake disc', 'brake rotor'] },
+        tire:                 { include: ['เปลี่ยนยาง', 'ยางใหม่', 'เปลี่ยนชุดยาง', 'tire replacement'], exclude: ['สลับยาง', 'ตั้งศูนย์', 'ถ่วงล้อ'] },
+        tire_rotation:        { include: ['สลับยาง', 'tire rotation', 'หมุนยาง', 'สลับยางและถ่วงล้อ'] },
+        wheel_alignment:      { include: ['ตั้งศูนย์', 'alignment', 'ศูนย์ล้อ'] },
+        shock_absorber:       { include: ['โช้คอัพ', 'shock absorber', 'โชคอัพ'] },
+        ball_joint:           { include: ['ลูกหมาก', 'ball joint'] },
+        bush:                 { include: ['บูชยาง', 'บูช', 'ปีกนก', 'กันโคลง', 'bushing'] },
+        hub_grease:           { include: ['จารบีดุมล้อ', 'hub grease', 'bearing grease'] },
+        spark_plug:           { include: ['หัวเทียน', 'spark plug'] },
+        glow_plug:            { include: ['หัวเผา', 'glow plug'] },
+        injector_cleaning:    { include: ['หัวฉีด', 'ล้างหัวฉีด', 'injector', 'nozzle'] },
+        battery:              { include: ['แบตเตอรี่', 'battery', 'แบต', 'accu'] },
+        alternator_check:     { include: ['ไดชาร์จ', 'alternator', 'ไดนาโม'] },
+        wiper:                { include: ['ใบปัดน้ำฝน', 'wiper', 'ที่ปัดน้ำฝน'] },
+        clutch:               { include: ['คลัทช์', 'clutch', 'คลัช'], exclude: ['น้ำมันเบรก-คลัทช์', 'น้ำมันเบรค-คลัทช์'] },
+        ac_service:           { include: ['ล้างแอร์', 'ล้างตู้แอร์', 'ทำความสะอาดตู้แอร์', 'ล้างคอยล์เย็น', 'a/c service', 'เติมน้ำยาแอร์'], code: ['aircare'] },
+        dlt_inspection:       { include: ['ตรวจสภาพรถประจำปี', 'ตรวจสภาพรถ', 'ตรอ.'], exclude: ['ตรวจสภาพก่อนซ่อม', 'ตรวจสภาพเบื้องต้น'] },
+        emission_check:       { include: ['ควันดำ', 'มลพิษ', 'emission', 'ไอเสีย'] },
+        fire_extinguisher:    { include: ['ถังดับเพลิง', 'fire extinguisher'] },
+        safety_equipment:     { include: ['อุปกรณ์ความปลอดภัย', 'ค้อนทุบกระจก', 'สามเหลี่ยม'] }
       };
 
       const dc = dateCompleted || new Date().toISOString().substr(0, 10);
@@ -88,8 +126,14 @@ export async function onRequest(context) {
         if (ms.fuel_type_filter && car && car.fuel_type !== ms.fuel_type_filter) continue;
 
         // Check if any keyword matches
-        const keywords = keywordMap[ms.item_key] || [ms.item_name.toLowerCase()];
-        const matched = keywords.some(kw => fullText.includes(kw.toLowerCase()));
+        const matcher = keywordMap[ms.item_key];
+        const includes = (matcher?.include || [ms.item_name.toLowerCase()]).map(kw => kw.toLowerCase());
+        const excludes = (matcher?.exclude || []).map(kw => kw.toLowerCase());
+        const codes = (matcher?.code || []).map(code => code.toLowerCase());
+        const matchedByText = includes.some(kw => fullText.includes(kw));
+        const excluded = excludes.some(kw => fullText.includes(kw));
+        const matchedByCode = codes.some(codeHint => partCodes.some(code => code.includes(codeHint)));
+        const matched = matchedByCode || (matchedByText && !excluded);
         if (!matched) continue;
 
         // Resolve brand-specific interval via profiles
@@ -241,7 +285,7 @@ export async function onRequest(context) {
     // Auto-sync maintenance schedule if completed
     if (status === 'completed') {
       const mil = body.mileage_at_repair || body.mileage_out || 0;
-      const allItems = JSON.stringify([...(body.repair_items || []), body.issue_description || '']);
+      const allItems = buildMaintenanceSyncPayload(body.repair_items || [], body.items_detail || [], body.issue_description || '');
       await syncMaintenanceFromRepair(body.car_id, mil, body.date_completed || body.date_reported, allItems);
     }
 
@@ -296,7 +340,13 @@ export async function onRequest(context) {
       const updated = await dbFirst(env.DB, 'SELECT * FROM repair_log WHERE id = ?', [id]);
       if (updated) {
         const mil = updated.mileage_out || updated.mileage_at_repair || 0;
-        const allItems = JSON.stringify([...(function(){try{return JSON.parse(updated.repair_items||'[]')}catch(e){return[]}}()), updated.issue_description || '']);
+        const detailRows = await dbAll(env.DB,
+          'SELECT part_code, description FROM repair_items WHERE repair_id = ? ORDER BY sort_order, created_at', [id]);
+        const allItems = buildMaintenanceSyncPayload(
+          parseMaintenanceSyncItems(updated.repair_items || '[]'),
+          detailRows,
+          updated.issue_description || ''
+        );
         await syncMaintenanceFromRepair(updated.car_id, mil, updated.date_completed || updated.date_reported, allItems);
       }
     }
@@ -482,7 +532,13 @@ export async function onRequest(context) {
     const completedRow = await dbFirst(env.DB, 'SELECT * FROM repair_log WHERE id = ?', [id]);
     if (completedRow) {
       const mil = completedRow.mileage_out || completedRow.mileage_at_repair || 0;
-      const allItems = JSON.stringify([...(function(){try{return JSON.parse(completedRow.repair_items||'[]')}catch(e){return[]}}()), completedRow.issue_description || '']);
+      const detailRows = await dbAll(env.DB,
+        'SELECT part_code, description FROM repair_items WHERE repair_id = ? ORDER BY sort_order, created_at', [id]);
+      const allItems = buildMaintenanceSyncPayload(
+        parseMaintenanceSyncItems(completedRow.repair_items || '[]'),
+        detailRows,
+        completedRow.issue_description || ''
+      );
       await syncMaintenanceFromRepair(completedRow.car_id, mil, completedRow.date_completed, allItems);
     }
 
