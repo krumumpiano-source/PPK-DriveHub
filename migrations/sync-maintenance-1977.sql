@@ -110,12 +110,12 @@ ON CONFLICT(car_id, item_key) DO UPDATE SET
   last_km=344313, last_date='2021-03-11', next_km=424313, next_date='2025-03-11', updated_at='2026-04-09T00:00:00';
 
 -- spark_plug: REP-038 (2023-09-25 @ 390,047 km) "เปลี่ยนหัวเทียน"
--- interval: 40,000 km / 24 months → next: 430,047 / 2025-09-25 (OVERDUE!)
+-- Ventury gasoline profile: 100,000 km / 60 months → next: 490,047 / 2028-09-25
 INSERT INTO vehicle_maintenance (id, car_id, item_key, last_km, last_date, next_km, next_date, updated_at)
 VALUES ('vm-1977-spark-plug', 'b43ad8e2-04d0-40e0-90ab-d598bf44282d', 'spark_plug',
-        390047, '2023-09-25', 430047, '2025-09-25', '2026-04-09T00:00:00')
+        390047, '2023-09-25', 490047, '2028-09-25', '2026-04-09T00:00:00')
 ON CONFLICT(car_id, item_key) DO UPDATE SET
-  last_km=390047, last_date='2023-09-25', next_km=430047, next_date='2025-09-25', updated_at='2026-04-09T00:00:00';
+  last_km=390047, last_date='2023-09-25', next_km=490047, next_date='2028-09-25', updated_at='2026-04-09T00:00:00';
 
 -- injector_cleaning: REP-041 (2025-06-24 @ 411,622 km) "ล้างหัวฉีดเบนซิน"
 -- interval: 60,000 km / 36 months → next: 471,622 / 2028-06-24

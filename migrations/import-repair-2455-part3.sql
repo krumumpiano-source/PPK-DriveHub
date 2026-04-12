@@ -412,14 +412,14 @@ INSERT INTO vehicle_maintenance (id, car_id, item_key, last_km, last_date, next_
 VALUES ('vm-2455-oil_filter', 'd5685d4b-914f-4140-8de6-6050a514ae9b', 'oil_filter', 326966, '2022-04-18', 336966, '2022-10-18', '2026-04-12T00:00:00Z')
 ON CONFLICT(car_id, item_key) DO UPDATE SET last_km=excluded.last_km, last_date=excluded.last_date, next_km=excluded.next_km, next_date=excluded.next_date, updated_at=excluded.updated_at;
 
--- transmission_oil: last at 381,254 km (2025-03-14) record 52
+-- gear_oil: last at 381,254 km (2025-03-14) record 52
 INSERT INTO vehicle_maintenance (id, car_id, item_key, last_km, last_date, next_km, next_date, updated_at)
-VALUES ('vm-2455-transmission_oil', 'd5685d4b-914f-4140-8de6-6050a514ae9b', 'transmission_oil', 381254, '2025-03-14', 421254, '2027-03-14', '2026-04-12T00:00:00Z')
+VALUES ('vm-2455-gear_oil', 'd5685d4b-914f-4140-8de6-6050a514ae9b', 'gear_oil', 381254, '2025-03-14', 421254, '2027-03-14', '2026-04-12T00:00:00Z')
 ON CONFLICT(car_id, item_key) DO UPDATE SET last_km=excluded.last_km, last_date=excluded.last_date, next_km=excluded.next_km, next_date=excluded.next_date, updated_at=excluded.updated_at;
 
 -- differential_oil: last at 381,254 km (2025-03-14) record 52
 INSERT INTO vehicle_maintenance (id, car_id, item_key, last_km, last_date, next_km, next_date, updated_at)
-VALUES ('vm-2455-differential_oil', 'd5685d4b-914f-4140-8de6-6050a514ae9b', 'differential_oil', 381254, '2025-03-14', 421254, '2027-03-14', '2026-04-12T00:00:00Z')
+VALUES ('vm-2455-differential_oil', 'd5685d4b-914f-4140-8de6-6050a514ae9b', 'differential_oil', 381254, '2025-03-14', 461254, '2029-03-14', '2026-04-12T00:00:00Z')
 ON CONFLICT(car_id, item_key) DO UPDATE SET last_km=excluded.last_km, last_date=excluded.last_date, next_km=excluded.next_km, next_date=excluded.next_date, updated_at=excluded.updated_at;
 
 -- brake_fluid: last at 381,254 km (2025-03-14) record 52
@@ -427,34 +427,24 @@ INSERT INTO vehicle_maintenance (id, car_id, item_key, last_km, last_date, next_
 VALUES ('vm-2455-brake_fluid', 'd5685d4b-914f-4140-8de6-6050a514ae9b', 'brake_fluid', 381254, '2025-03-14', 421254, '2027-03-14', '2026-04-12T00:00:00Z')
 ON CONFLICT(car_id, item_key) DO UPDATE SET last_km=excluded.last_km, last_date=excluded.last_date, next_km=excluded.next_km, next_date=excluded.next_date, updated_at=excluded.updated_at;
 
--- spark_plugs: last at 401,254 km (2026-03-28) record 56
+-- brake_pad: latest brake-pad replacement at 280,422 km (2019-10-08) record 30
 INSERT INTO vehicle_maintenance (id, car_id, item_key, last_km, last_date, next_km, next_date, updated_at)
-VALUES ('vm-2455-spark_plugs', 'd5685d4b-914f-4140-8de6-6050a514ae9b', 'spark_plugs', 401254, '2026-03-28', 501254, '2030-03-28', '2026-04-12T00:00:00Z')
-ON CONFLICT(car_id, item_key) DO UPDATE SET last_km=excluded.last_km, last_date=excluded.last_date, next_km=excluded.next_km, next_date=excluded.next_date, updated_at=excluded.updated_at;
-
--- front_brake_pads: last at 99,842 km (2013-09-02) record 11
-INSERT INTO vehicle_maintenance (id, car_id, item_key, last_km, last_date, next_km, next_date, updated_at)
-VALUES ('vm-2455-front_brake_pads', 'd5685d4b-914f-4140-8de6-6050a514ae9b', 'front_brake_pads', 99842, '2013-09-02', 139842, '2017-09-02', '2026-04-12T00:00:00Z')
-ON CONFLICT(car_id, item_key) DO UPDATE SET last_km=excluded.last_km, last_date=excluded.last_date, next_km=excluded.next_km, next_date=excluded.next_date, updated_at=excluded.updated_at;
-
--- rear_brake_pads: last at 280,422 km (2019-10-08) record 30
-INSERT INTO vehicle_maintenance (id, car_id, item_key, last_km, last_date, next_km, next_date, updated_at)
-VALUES ('vm-2455-rear_brake_pads', 'd5685d4b-914f-4140-8de6-6050a514ae9b', 'rear_brake_pads', 280422, '2019-10-08', 320422, '2023-10-08', '2026-04-12T00:00:00Z')
+VALUES ('vm-2455-brake_pad', 'd5685d4b-914f-4140-8de6-6050a514ae9b', 'brake_pad', 280422, '2019-10-08', 320422, '2021-10-08', '2026-04-12T00:00:00Z')
 ON CONFLICT(car_id, item_key) DO UPDATE SET last_km=excluded.last_km, last_date=excluded.last_date, next_km=excluded.next_km, next_date=excluded.next_date, updated_at=excluded.updated_at;
 
 -- air_filter: last at 350,141 km (2023-10-15) record 46
 INSERT INTO vehicle_maintenance (id, car_id, item_key, last_km, last_date, next_km, next_date, updated_at)
-VALUES ('vm-2455-air_filter', 'd5685d4b-914f-4140-8de6-6050a514ae9b', 'air_filter', 350141, '2023-10-15', 390141, '2025-10-15', '2026-04-12T00:00:00Z')
+VALUES ('vm-2455-air_filter', 'd5685d4b-914f-4140-8de6-6050a514ae9b', 'air_filter', 350141, '2023-10-15', 370141, '2024-10-15', '2026-04-12T00:00:00Z')
 ON CONFLICT(car_id, item_key) DO UPDATE SET last_km=excluded.last_km, last_date=excluded.last_date, next_km=excluded.next_km, next_date=excluded.next_date, updated_at=excluded.updated_at;
 
 -- timing_belt: last at 201,368 km (2016-11-29) record 20
 INSERT INTO vehicle_maintenance (id, car_id, item_key, last_km, last_date, next_km, next_date, updated_at)
-VALUES ('vm-2455-timing_belt', 'd5685d4b-914f-4140-8de6-6050a514ae9b', 'timing_belt', 201368, '2016-11-29', 301368, '2026-11-29', '2026-04-12T00:00:00Z')
+VALUES ('vm-2455-timing_belt', 'd5685d4b-914f-4140-8de6-6050a514ae9b', 'timing_belt', 201368, '2016-11-29', 351368, '2022-11-29', '2026-04-12T00:00:00Z')
 ON CONFLICT(car_id, item_key) DO UPDATE SET last_km=excluded.last_km, last_date=excluded.last_date, next_km=excluded.next_km, next_date=excluded.next_date, updated_at=excluded.updated_at;
 
--- drive_belt: last at 354,152 km (2023-12-05) record 47
+-- serpentine_belt: last at 354,152 km (2023-12-05) record 47
 INSERT INTO vehicle_maintenance (id, car_id, item_key, last_km, last_date, next_km, next_date, updated_at)
-VALUES ('vm-2455-drive_belt', 'd5685d4b-914f-4140-8de6-6050a514ae9b', 'drive_belt', 354152, '2023-12-05', 414152, '2028-12-05', '2026-04-12T00:00:00Z')
+VALUES ('vm-2455-serpentine_belt', 'd5685d4b-914f-4140-8de6-6050a514ae9b', 'serpentine_belt', 354152, '2023-12-05', 434152, '2027-12-05', '2026-04-12T00:00:00Z')
 ON CONFLICT(car_id, item_key) DO UPDATE SET last_km=excluded.last_km, last_date=excluded.last_date, next_km=excluded.next_km, next_date=excluded.next_date, updated_at=excluded.updated_at;
 
 -- injector_cleaning: last at 371,244 km (2024-09-10) record 50
