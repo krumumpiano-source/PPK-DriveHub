@@ -47,6 +47,13 @@ function buildMaintenanceSyncPayload(repairItems, itemsDetail, issueDescription)
   return payload;
 }
 
+function isScheduledMaintenanceSync(serviceType, fullText) {
+  return serviceType === 'scheduled_maintenance'
+    || fullText.includes('เช็คระยะ')
+    || fullText.includes('service interval')
+    || fullText.includes('scheduled maintenance');
+}
+
 export async function onRequest(context) {
   try {
   const { request, env } = context;
@@ -57,7 +64,7 @@ export async function onRequest(context) {
   if (!user) return error('Unauthorized', 401);
 
   // ========== Helper: sync vehicle_maintenance from repair ==========
-  async function syncMaintenanceFromRepair(carId, mileage, dateCompleted, repairItemsJson) {
+  async function syncMaintenanceFromRepair(carId, mileage, dateCompleted, repairItemsJson, serviceType) {
     if (!carId || !mileage) return;
     try {
       const settings = await dbAll(env.DB, 'SELECT * FROM maintenance_settings WHERE enabled = 1', []);
@@ -81,6 +88,7 @@ export async function onRequest(context) {
         if (partCode) partCodes.push(partCode);
       });
       const fullText = itemTexts.join(' ').toLowerCase();
+      const scheduledMaintenance = isScheduledMaintenanceSync(serviceType, fullText);
 
       const keywordMap = {
         engine_oil:           { include: ['น้ำมันเครื่อง', 'เปลี่ยนน้ำมัน', 'oil change', 'engine oil', 'ถ่ายน้ำมัน'], code: ['08880-'] },
@@ -133,7 +141,8 @@ export async function onRequest(context) {
         const matchedByText = includes.some(kw => fullText.includes(kw));
         const excluded = excludes.some(kw => fullText.includes(kw));
         const matchedByCode = codes.some(codeHint => partCodes.some(code => code.includes(codeHint)));
-        const matched = matchedByCode || (matchedByText && !excluded);
+        const matchedByScheduledRule = scheduledMaintenance && (ms.item_key === 'engine_oil' || ms.item_key === 'oil_filter');
+        const matched = matchedByCode || matchedByScheduledRule || (matchedByText && !excluded);
         if (!matched) continue;
 
         // Resolve vehicle-specific interval override first, then fall back to profiles
@@ -297,7 +306,7 @@ export async function onRequest(context) {
     if (status === 'completed') {
       const mil = body.mileage_at_repair || body.mileage_out || 0;
       const allItems = buildMaintenanceSyncPayload(body.repair_items || [], body.items_detail || [], body.issue_description || '');
-      await syncMaintenanceFromRepair(body.car_id, mil, body.date_completed || body.date_reported, allItems);
+      await syncMaintenanceFromRepair(body.car_id, mil, body.date_completed || body.date_reported, allItems, body.service_type || 'repair');
     }
 
     return success({ id, message: 'แจ้งซ่อมเรียบร้อย' }, 201);
@@ -358,7 +367,7 @@ export async function onRequest(context) {
           detailRows,
           updated.issue_description || ''
         );
-        await syncMaintenanceFromRepair(updated.car_id, mil, updated.date_completed || updated.date_reported, allItems);
+        await syncMaintenanceFromRepair(updated.car_id, mil, updated.date_completed || updated.date_reported, allItems, updated.service_type || 'repair');
       }
     }
 
@@ -550,7 +559,7 @@ export async function onRequest(context) {
         detailRows,
         completedRow.issue_description || ''
       );
-      await syncMaintenanceFromRepair(completedRow.car_id, mil, completedRow.date_completed, allItems);
+      await syncMaintenanceFromRepair(completedRow.car_id, mil, completedRow.date_completed, allItems, completedRow.service_type || 'repair');
     }
 
     return success({ message: 'บันทึกซ่อมเสร็จเรียบร้อย' });
