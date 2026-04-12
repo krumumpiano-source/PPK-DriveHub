@@ -350,6 +350,10 @@
                     <option value="">เลือกรถเพื่อกำหนดค่าเฉพาะคัน</option>
                   </select>
                 </div>
+                <div class="form-group" style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <button type="button" class="btn btn-secondary" onclick="applyInheritedToVehicleProfile()">คัดลอกค่าที่สืบทอดมา</button>
+                  <button type="button" class="btn btn-secondary" onclick="clearVehicleProfileOverrides()">ล้าง Override ทั้งหมด</button>
+                </div>
               </div>
               <div id="vehicleProfileSummary" class="help-text" style="margin-bottom:10px;"></div>
               <div id="vehicleProfileContent"></div>
@@ -701,6 +705,33 @@
           });
           html += '</tbody></table>';
           container.innerHTML = html;
+        }
+
+        function applyInheritedToVehicleProfile() {
+          if (!_activeVehicleId || !_vehicleProfileItems.length) {
+            showAlert('เลือกรถก่อน', 'error');
+            return;
+          }
+          _vehicleProfileItems.forEach(function(item) {
+            var inheritedKm = item.brand_profile_km != null ? item.brand_profile_km : item.default_km;
+            var inheritedMonths = item.brand_profile_months != null ? item.brand_profile_months : item.default_months;
+            var kmInput = document.querySelector('[data-vehicle-item="' + item.item_key + '"][data-vehicle-field="interval_km"]');
+            var monthInput = document.querySelector('[data-vehicle-item="' + item.item_key + '"][data-vehicle-field="interval_months"]');
+            if (kmInput) kmInput.value = inheritedKm != null ? inheritedKm : '';
+            if (monthInput) monthInput.value = inheritedMonths != null ? inheritedMonths : '';
+          });
+          showAlert('คัดลอกค่าที่สืบทอดมาใส่ช่อง Override แล้ว', 'success');
+        }
+
+        function clearVehicleProfileOverrides() {
+          if (!_activeVehicleId || !_vehicleProfileItems.length) {
+            showAlert('เลือกรถก่อน', 'error');
+            return;
+          }
+          if (!confirm('ต้องการล้างค่า Override ของรถคันนี้ทั้งหมดให้กลับไปใช้ค่าที่สืบทอดหรือไม่?')) return;
+          var inputs = document.querySelectorAll('[data-vehicle-item][data-vehicle-field]');
+          inputs.forEach(function(inp) { inp.value = ''; });
+          showAlert('ล้างค่า Override แล้ว กดบันทึกเพื่อยืนยัน', 'success');
         }
 
         async function loadSettings() {
