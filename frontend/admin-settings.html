@@ -327,14 +327,15 @@
               </div>
             </div>
 
-            <!-- ระยะซ่อมบำรุงตามยี่ห้อรถ -->
+            <!-- ระยะซ่อมบำรุงตามยี่ห้อ/รุ่นรถ -->
             <div class="settings-section">
-              <div class="section-title">🏭 ระยะซ่อมบำรุงตามยี่ห้อรถ</div>
+              <div class="section-title">🏭 ระยะซ่อมบำรุงตามยี่ห้อ/รุ่นรถ</div>
               <div class="help-text" style="margin-bottom:10px;">
-                แต่ละยี่ห้อมีระยะเปลี่ยนถ่ายไม่เท่ากัน — ระบบจะใช้ค่าของยี่ห้อนั้นแทนค่าเริ่มต้น
-                (กดเลือกยี่ห้อเพื่อดู/แก้ไข)
+                ระบบค้นหาค่าตามลำดับ: ➊ ค่าเฉพาะรถคัน → ➋ ยี่ห้อ+รุ่น → ➌ ยี่ห้อ(ค่ากลาง *) → ➍ ค่าเริ่มต้น<br>
+                กดเลือกยี่ห้อ แล้วเลือกรุ่นเพื่อดู/แก้ไข — ช่องว่างหมายถึง "ไม่ต้องเปลี่ยน" (เช่น โซ่ราวลิ้น)
               </div>
-              <div id="brandProfileTabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px;"></div>
+              <div id="brandProfileTabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"></div>
+              <div id="modelProfileTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:15px;"></div>
               <div id="brandProfileContent"></div>
             </div>
 
@@ -431,6 +432,8 @@
         var maintenanceItems = [];
         var _brandProfiles = [];
         var _activeBrand = null;
+        var _activeModel = null;
+        var _brandModelData = []; // [{brand, model, item_count}, ...]
         var _vehicles = [];
         var _activeVehicleId = null;
         var _vehicleProfileItems = [];
@@ -542,17 +545,21 @@
           try {
             var r = await apiCall('getMaintenanceProfileBrands', {});
             if (r && r.success && Array.isArray(r.data)) {
+              _brandModelData = r.data;
               var brands = [];
               r.data.forEach(function(row) {
                 if (brands.indexOf(row.brand) === -1) brands.push(row.brand);
               });
               tabs.innerHTML = '';
               brands.forEach(function(b) {
+                var total = 0;
+                _brandModelData.forEach(function(d) { if (d.brand === b) total += d.item_count; });
                 var btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'btn btn-secondary';
                 btn.style.cssText = 'padding:8px 16px;font-size:0.95em;';
-                btn.textContent = b;
+                btn.textContent = b + ' (' + total + ')';
+                btn.setAttribute('data-brand', b);
                 btn.onclick = function() { selectBrand(b); };
                 tabs.appendChild(btn);
               });
@@ -563,35 +570,82 @@
 
         async function selectBrand(brand) {
           _activeBrand = brand;
-          // Highlight active tab
+          _activeModel = null;
+          // Highlight active brand tab
           var tabs = document.getElementById('brandProfileTabs');
           if (tabs) {
             Array.from(tabs.children).forEach(function(btn) {
-              btn.className = btn.textContent === brand ? 'btn btn-primary' : 'btn btn-secondary';
+              btn.className = btn.getAttribute('data-brand') === brand ? 'btn btn-primary' : 'btn btn-secondary';
             });
           }
           var container = document.getElementById('brandProfileContent');
+          var modelTabs = document.getElementById('modelProfileTabs');
           if (!container) return;
           container.innerHTML = '<div style="padding:20px;color:var(--color-text-muted);">กำลังโหลด...</div>';
+          if (modelTabs) modelTabs.innerHTML = '';
           try {
             var r = await apiCall('getMaintenanceProfiles', { brand: brand });
             if (r && r.success && Array.isArray(r.data)) {
               _brandProfiles = r.data;
-              renderBrandProfiles(brand);
+              // Build model sub-tabs
+              var models = [];
+              _brandModelData.forEach(function(d) {
+                if (d.brand === brand) models.push(d);
+              });
+              if (modelTabs && models.length > 1) {
+                modelTabs.innerHTML = '';
+                models.forEach(function(m) {
+                  var btn = document.createElement('button');
+                  btn.type = 'button';
+                  btn.className = 'btn btn-secondary';
+                  btn.style.cssText = 'padding:6px 12px;font-size:0.88em;border-radius:20px;';
+                  btn.textContent = (m.model === '*' ? 'ค่ากลาง (ทุกรุ่น)' : m.model) + ' ' + m.item_count;
+                  btn.setAttribute('data-model', m.model);
+                  btn.onclick = function() { selectModel(m.model); };
+                  modelTabs.appendChild(btn);
+                });
+              } else if (modelTabs) {
+                modelTabs.innerHTML = '';
+              }
+              // Auto-select: if only one model, select it; else select wildcard first
+              if (models.length === 1) {
+                selectModel(models[0].model);
+              } else {
+                var hasWildcard = models.some(function(m) { return m.model === '*'; });
+                selectModel(hasWildcard ? '*' : models[0].model);
+              }
             }
           } catch(e) {
             container.innerHTML = '<div class="alert alert-error">โหลดข้อมูลไม่สำเร็จ</div>';
           }
         }
 
-        function renderBrandProfiles(brand) {
+        function selectModel(model) {
+          _activeModel = model;
+          var modelTabs = document.getElementById('modelProfileTabs');
+          if (modelTabs) {
+            Array.from(modelTabs.children).forEach(function(btn) {
+              btn.className = btn.getAttribute('data-model') === model
+                ? 'btn btn-primary' : 'btn btn-secondary';
+              btn.style.cssText = 'padding:6px 12px;font-size:0.88em;border-radius:20px;';
+            });
+          }
+          renderBrandProfiles();
+        }
+
+        function renderBrandProfiles() {
           var container = document.getElementById('brandProfileContent');
           if (!container) return;
-          if (!_brandProfiles.length) {
-            container.innerHTML = '<div style="padding:20px;color:var(--color-text-muted);">ยังไม่มี profile สำหรับ ' + escHtml(brand) + '</div>';
+          var filtered = _brandProfiles.filter(function(p) {
+            return p.model === _activeModel;
+          });
+          if (!filtered.length) {
+            container.innerHTML = '<div style="padding:20px;color:var(--color-text-muted);">ยังไม่มี profile สำหรับ ' + escHtml(_activeBrand) + ' ' + escHtml(_activeModel === '*' ? '(ค่ากลาง)' : _activeModel) + '</div>';
             return;
           }
-          var html = '<table style="width:100%;border-collapse:collapse;font-size:0.92em;">';
+          var modelLabel = _activeModel === '*' ? 'ค่ากลาง (ใช้กับทุกรุ่นที่ไม่มี profile เฉพาะ)' : _activeModel;
+          var html = '<div style="font-weight:600;margin-bottom:8px;color:var(--color-primary);">' + escHtml(_activeBrand) + ' — ' + escHtml(modelLabel) + '</div>';
+          html += '<table style="width:100%;border-collapse:collapse;font-size:0.92em;">';
           html += '<thead><tr style="background:var(--color-primary);color:white;">';
           html += '<th style="padding:8px;text-align:left;">รายการ</th>';
           html += '<th style="padding:8px;text-align:left;">หมวด</th>';
@@ -599,17 +653,21 @@
           html += '<th style="padding:8px;text-align:center;">ระยะเวลา (เดือน)</th>';
           html += '<th style="padding:8px;text-align:left;">หมายเหตุ</th>';
           html += '</tr></thead><tbody>';
-          _brandProfiles.forEach(function(p) {
-            html += '<tr style="border-bottom:1px solid #e9ecef;">';
-            html += '<td style="padding:8px;font-weight:600;">' + escHtml(p.item_name || p.item_key) + '</td>';
+          filtered.forEach(function(p) {
+            var isNull = p.interval_km == null && p.interval_months == null;
+            var rowStyle = isNull ? 'border-bottom:1px solid #e9ecef;background:#f8f9fa;' : 'border-bottom:1px solid #e9ecef;';
+            html += '<tr style="' + rowStyle + '">';
+            html += '<td style="padding:8px;font-weight:600;">' + escHtml(p.item_name || p.item_key);
+            if (isNull) html += ' <span style="color:#dc3545;font-size:0.85em;">⛔ ไม่ต้องเปลี่ยน</span>';
+            html += '</td>';
             html += '<td style="padding:8px;">' + escHtml(categoryLabels[p.category] || p.category || '') + '</td>';
             html += '<td style="padding:8px;text-align:center;">';
-            html += '<input type="number" data-profile-id="' + p.id + '" data-field="interval_km" value="' + (p.interval_km || 0) + '" min="0" step="1000" style="width:80px;padding:4px;text-align:center;">';
+            html += '<input type="number" data-profile-id="' + p.id + '" data-field="interval_km" value="' + (p.interval_km != null ? p.interval_km : '') + '" min="0" step="1000" placeholder="' + (isNull ? 'ไม่ต้องเปลี่ยน' : '0') + '" style="width:90px;padding:4px;text-align:center;' + (isNull ? 'background:#f8f9fa;color:#999;' : '') + '">';
             html += '</td>';
             html += '<td style="padding:8px;text-align:center;">';
-            html += '<input type="number" data-profile-id="' + p.id + '" data-field="interval_months" value="' + (p.interval_months || 0) + '" min="0" step="1" style="width:60px;padding:4px;text-align:center;">';
+            html += '<input type="number" data-profile-id="' + p.id + '" data-field="interval_months" value="' + (p.interval_months != null ? p.interval_months : '') + '" min="0" step="1" placeholder="' + (isNull ? 'ไม่ต้องเปลี่ยน' : '0') + '" style="width:70px;padding:4px;text-align:center;' + (isNull ? 'background:#f8f9fa;color:#999;' : '') + '">';
             html += '</td>';
-            html += '<td style="padding:8px;color:var(--color-text-muted);font-size:0.9em;">' + escHtml(p.notes || '') + '</td>';
+            html += '<td style="padding:8px;color:var(--color-text-muted);font-size:0.9em;max-width:200px;">' + escHtml(p.notes || '') + '</td>';
             html += '</tr>';
           });
           html += '</tbody></table>';
@@ -873,14 +931,15 @@
               await apiCall('bulkUpdateMaintenanceSettings', { items: bulkItems });
             }
 
-            // Save brand profile changes
+            // Save brand profile changes (only visible model's items)
             var profileInputs = document.querySelectorAll('[data-profile-id]');
             var profileUpdates = {};
             profileInputs.forEach(function(inp) {
               var pid = inp.getAttribute('data-profile-id');
               var field = inp.getAttribute('data-field');
               if (!profileUpdates[pid]) profileUpdates[pid] = { id: pid };
-              profileUpdates[pid][field] = parseInt(inp.value, 10) || 0;
+              var val = inp.value.trim();
+              profileUpdates[pid][field] = val === '' ? null : (parseInt(val, 10) || 0);
             });
             for (var pid in profileUpdates) {
               await apiCall('updateMaintenanceProfile', profileUpdates[pid]);
