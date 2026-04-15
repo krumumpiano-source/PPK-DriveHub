@@ -30,6 +30,47 @@ async function resolveInterval(db, brand, model, itemKey, defaultKm, defaultMont
   return { km: defaultKm, months: defaultMonths, notes: null, source: 'default' };
 }
 
+// Batch-resolve intervals for ALL items at once (3 queries total instead of N*3)
+async function batchResolveIntervals(db, brand, model, items, carId) {
+  // 1) Batch-load vehicle overrides
+  const vehicleOverrides = {};
+  if (carId) {
+    const vRows = await dbAll(db,
+      `SELECT item_key, interval_km, interval_months, notes FROM maintenance_vehicle_profiles WHERE car_id = ?`,
+      [carId]);
+    for (const r of vRows) vehicleOverrides[r.item_key] = r;
+  }
+  // 2) Batch-load brand+model profiles
+  const brandModelProfiles = {};
+  if (brand && model && model !== '*') {
+    const bRows = await dbAll(db,
+      `SELECT item_key, interval_km, interval_months, notes FROM maintenance_profiles WHERE brand = ? AND model = ?`,
+      [brand, model]);
+    for (const r of bRows) brandModelProfiles[r.item_key] = r;
+  }
+  // 3) Batch-load brand wildcard profiles
+  const brandWildcardProfiles = {};
+  if (brand) {
+    const wRows = await dbAll(db,
+      `SELECT item_key, interval_km, interval_months, notes FROM maintenance_profiles WHERE brand = ? AND model = '*'`,
+      [brand]);
+    for (const r of wRows) brandWildcardProfiles[r.item_key] = r;
+  }
+  // Resolve each item from in-memory maps
+  const results = {};
+  for (const item of items) {
+    const key = item.item_key;
+    const vo = vehicleOverrides[key];
+    if (vo) { results[key] = { km: vo.interval_km, months: vo.interval_months, notes: vo.notes, source: 'vehicle' }; continue; }
+    const bm = brandModelProfiles[key];
+    if (bm) { results[key] = { km: bm.interval_km, months: bm.interval_months, notes: bm.notes, source: `${brand} ${model}` }; continue; }
+    const bw = brandWildcardProfiles[key];
+    if (bw) { results[key] = { km: bw.interval_km, months: bw.interval_months, notes: bw.notes, source: brand }; continue; }
+    results[key] = { km: item.interval_km, months: item.interval_months, notes: null, source: 'default' };
+  }
+  return { results, vehicleOverrides, brandModelProfiles, brandWildcardProfiles };
+}
+
 export async function onRequest(context) {
   try {
   const { request, env } = context;
@@ -153,16 +194,34 @@ export async function onRequest(context) {
     const overrideMap = {};
     for (const row of overrides) overrideMap[row.item_key] = row;
 
+    // Batch-load brand profiles (2 queries instead of N*3)
+    const brandModelProfiles = {};
+    if (car.brand && car.model && car.model !== '*') {
+      const bRows = await dbAll(env.DB,
+        `SELECT item_key, interval_km, interval_months, notes FROM maintenance_profiles WHERE brand = ? AND model = ?`,
+        [car.brand, car.model]);
+      for (const r of bRows) brandModelProfiles[r.item_key] = r;
+    }
+    const brandWildcardProfiles = {};
+    if (car.brand) {
+      const wRows = await dbAll(env.DB,
+        `SELECT item_key, interval_km, interval_months, notes FROM maintenance_profiles WHERE brand = ? AND model = '*'`,
+        [car.brand]);
+      for (const r of wRows) brandWildcardProfiles[r.item_key] = r;
+    }
+
     const result = [];
     for (const item of items) {
       if (item.fuel_type_filter && car.fuel_type !== item.fuel_type_filter) continue;
-      const exactProfile = await dbFirst(env.DB,
-        `SELECT interval_km, interval_months, notes FROM maintenance_profiles WHERE brand = ? AND model = ? AND item_key = ?`,
-        [car.brand, car.model || '*', item.item_key]);
-      const brandProfile = exactProfile ? null : await dbFirst(env.DB,
-        `SELECT interval_km, interval_months, notes FROM maintenance_profiles WHERE brand = ? AND model = '*' AND item_key = ?`,
-        [car.brand, item.item_key]);
-      const resolved = await resolveInterval(env.DB, car.brand, car.model, item.item_key, item.interval_km, item.interval_months, carId);
+      const exactProfile = brandModelProfiles[item.item_key] || null;
+      const brandProfile = exactProfile ? null : (brandWildcardProfiles[item.item_key] || null);
+      // Resolve: vehicle override > brand+model > brand+* > default
+      const vo = overrideMap[item.item_key];
+      let resolved;
+      if (vo) { resolved = { km: vo.interval_km, months: vo.interval_months, source: 'vehicle' }; }
+      else if (exactProfile) { resolved = { km: exactProfile.interval_km, months: exactProfile.interval_months, source: `${car.brand} ${car.model}` }; }
+      else if (brandProfile) { resolved = { km: brandProfile.interval_km, months: brandProfile.interval_months, source: car.brand }; }
+      else { resolved = { km: item.interval_km, months: item.interval_months, source: 'default' }; }
       const override = overrideMap[item.item_key] || null;
       result.push({
         item_key: item.item_key,
@@ -288,20 +347,17 @@ export async function onRequest(context) {
        LEFT JOIN cars c ON vm.car_id = c.id
        WHERE vm.car_id = ?
        ORDER BY ms.sort_order, vm.item_key`, [carId]);
-    const overrides = await dbAll(env.DB,
-      'SELECT item_key, interval_km, interval_months FROM maintenance_vehicle_profiles WHERE car_id = ?',
-      [carId]);
-    // Resolve profiles for each record
+    // Batch-resolve all intervals (3 queries instead of N*3)
+    const { results: resolvedMap } = await batchResolveIntervals(env.DB, car?.brand, car?.model, allItems, carId);
+    // Build lookup maps
     const result = [];
     const recordMap = {};
     for (const r of records) { recordMap[r.item_key] = r; }
-    const overrideMap = {};
-    for (const row of overrides) { overrideMap[row.item_key] = row; }
     // Build full list: all applicable items (with or without records)
     for (const item of allItems) {
       // Filter by fuel type
       if (item.fuel_type_filter && car && car.fuel_type !== item.fuel_type_filter) continue;
-      const resolved = await resolveInterval(env.DB, car?.brand, car?.model, item.item_key, item.interval_km, item.interval_months, carId);
+      const resolved = resolvedMap[item.item_key] || { km: item.interval_km, months: item.interval_months, notes: null, source: 'default' };
       const rec = recordMap[item.item_key];
       result.push({
         id: rec?.id || null,
@@ -314,8 +370,8 @@ export async function onRequest(context) {
         last_date: rec?.last_date || null,
         next_km: rec?.next_km || null,
         next_date: rec?.next_date || null,
-        override_km: overrideMap[item.item_key]?.interval_km ?? null,
-        override_months: overrideMap[item.item_key]?.interval_months ?? null,
+        override_km: resolved.source === 'vehicle' ? resolved.km : null,
+        override_months: resolved.source === 'vehicle' ? resolved.months : null,
         interval_km: resolved.km,
         interval_months: resolved.months,
         profile_source: resolved.source,
