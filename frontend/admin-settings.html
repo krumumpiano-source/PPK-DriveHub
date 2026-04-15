@@ -554,11 +554,13 @@
               brands.forEach(function(b) {
                 var total = 0;
                 _brandModelData.forEach(function(d) { if (d.brand === b) total += d.item_count; });
+                var vCount = _vehicles.filter(function(v) { return v.brand === b; }).length;
                 var btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'btn btn-secondary';
                 btn.style.cssText = 'padding:8px 16px;font-size:0.95em;';
                 btn.textContent = b + ' (' + total + ')';
+                if (!vCount) btn.style.opacity = '0.5';
                 btn.setAttribute('data-brand', b);
                 btn.onclick = function() { selectBrand(b); };
                 tabs.appendChild(btn);
@@ -595,11 +597,18 @@
               if (modelTabs && models.length > 1) {
                 modelTabs.innerHTML = '';
                 models.forEach(function(m) {
+                  var matchingCars = _vehicles.filter(function(v) {
+                    return v.brand === brand && (m.model === '*' || v.model === m.model);
+                  });
+                  var carLabel = '';
+                  if (m.model !== '*' && matchingCars.length) {
+                    carLabel = ' • ' + matchingCars.map(function(c) { return c.license_plate; }).join(', ');
+                  }
                   var btn = document.createElement('button');
                   btn.type = 'button';
                   btn.className = 'btn btn-secondary';
                   btn.style.cssText = 'padding:6px 12px;font-size:0.88em;border-radius:20px;';
-                  btn.textContent = (m.model === '*' ? 'ค่ากลาง (ทุกรุ่น)' : m.model) + ' ' + m.item_count;
+                  btn.textContent = (m.model === '*' ? 'ค่ากลาง (ทุกรุ่น)' : m.model) + ' ' + m.item_count + carLabel;
                   btn.setAttribute('data-model', m.model);
                   btn.onclick = function() { selectModel(m.model); };
                   modelTabs.appendChild(btn);
@@ -886,10 +895,10 @@
 
           // Load maintenance settings from dedicated API
           await loadMaintenanceSettings();
-          // Load brand profiles
-          await loadBrandProfiles();
-          // Load vehicle-specific profiles
+          // Load vehicles first (needed for brand profile tabs)
           await loadVehicleProfiles();
+          // Load brand profiles (uses _vehicles for vehicle count)
+          await loadBrandProfiles();
           if (_activeVehicleId) await selectVehicleProfile(_activeVehicleId);
 
           showSettingsForm();
