@@ -1002,14 +1002,12 @@
         if(fc) loadMaintenancePanel(fc);
 
         if(list.length===0){
-        if(list.length===0){
           document.getElementById('hTableBody').innerHTML='<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--color-text-muted)">🔧 ไม่มีบันทึกซ่อมเสร็จ</td></tr>';
-          return;
+        } else {
+          historyData=list;
+          document.getElementById('hSearch').value='';
+          renderHistoryTable(list);
         }
-
-        historyData=list;
-        document.getElementById('hSearch').value='';
-        renderHistoryTable(list);
       }catch(e){console.error(e);document.getElementById('hTableBody').innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--color-danger)">โหลดข้อมูลไม่สำเร็จ</td></tr>'}
       finally{document.getElementById('hLoading').style.display='none'}
     }
