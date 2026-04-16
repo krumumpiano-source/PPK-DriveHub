@@ -22,6 +22,10 @@ module.exports = defineConfig({
       testMatch: /api-integration\.test\.mjs/,
     },
     {
+      name: 'qr-system',
+      testMatch: /qr-system\.test\.mjs/,
+    },
+    {
       name: 'e2e-chromium',
       testMatch: /e2e\/.*\.spec\.mjs/,
       use: { ...devices['Desktop Chrome'] },

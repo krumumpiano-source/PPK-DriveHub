@@ -1,5 +1,10 @@
 // Global setup: reset local D1 database before tests
 import { execSync } from 'child_process';
+import { existsSync, unlinkSync } from 'fs';
+
+// Clean up bootstrap flag from previous run
+const BOOTSTRAP_FLAG = 'test-results/.bootstrap-done';
+try { if (existsSync(BOOTSTRAP_FLAG)) unlinkSync(BOOTSTRAP_FLAG); } catch {}
 
 const TABLES = [
   'fuel_invoice_items', 'fuel_station_invoices', 'fuel_requests', 'fuel_log',
