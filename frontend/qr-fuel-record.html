@@ -426,20 +426,22 @@
         </button>
       </div>
 
+      <div id="modeIndicator" class="alert" style="display:none;"></div>
+      <div id="guestWarning" class="alert alert-warning" style="display:none;">⚠️ คุณยังไม่ได้เข้าสู่ระบบ — กรุณากรอกชื่อผู้เบิกเอง</div>
+
       <!-- Form -->
       <form id="fuelForm" onsubmit="handleSubmit(event); return false;" style="display: none;">
-        <!-- ผู้เบิกน้ำมัน -->
-        <div class="form-group">
-          <label for="driverSelect">ผู้เบิกน้ำมัน <span class="required">*</span></label>
-          <select id="driverSelect">
-            <option value="">-- เลือกคนขับในระบบ --</option>
-          </select>
-          <div style="margin-top: 8px;">
-            <label style="display: inline; font-weight: normal; cursor: pointer; font-size: 0.95em;">
-              <input type="checkbox" id="useManualDriver" onchange="toggleDriverManual()"> พิมพ์ชื่อผู้เบิกเอง
-            </label>
-          </div>
-          <input type="text" id="driverNameManual" placeholder="ชื่อ-นามสกุล ผู้เบิก" style="display:none; margin-top: 8px;">
+        <!-- ผู้เบิกน้ำมัน (Logged-in mode) -->
+        <div id="driverLoginSection" class="form-group" style="display:none;">
+          <label>ผู้เบิกน้ำมัน</label>
+          <div id="driverLoginName" style="padding:14px;background:var(--color-bg-light);border-radius:var(--radius-md);font-weight:600;color:var(--color-primary);border:2px solid #e0e0e0;">-</div>
+          <div class="help-text">ข้อมูลจากบัญชีผู้ใช้ของคุณ</div>
+        </div>
+        <!-- ผู้เบิกน้ำมัน (Guest mode) -->
+        <div id="driverGuestSection" class="form-group" style="display:none;">
+          <label for="driverNameManualGuest">ผู้เบิกน้ำมัน <span class="required">*</span></label>
+          <input type="text" id="driverNameManualGuest" placeholder="ชื่อ-นามสกุล ผู้เบิก">
+          <div class="help-text">กรอกชื่อผู้เบิกน้ำมัน</div>
         </div>
 
         <!-- แหล่งเบิกจ่าย -->
@@ -565,23 +567,58 @@
     var carId = null;
     var carInfo = null;
     var receiptFile = null;
+    var currentMode = 'guest';
+    var loggedInUser = null;
 
-    window.addEventListener('DOMContentLoaded', function () {
+    function detectMode() {
+      var token = API.getToken();
+      if (!token) { currentMode = 'guest'; return; }
+      var user = API.getUser();
+      if (user && user.full_name) {
+        currentMode = 'logged_in';
+        loggedInUser = user;
+      } else {
+        currentMode = 'guest';
+      }
+    }
+
+    function applyMode() {
+      if (currentMode === 'logged_in') {
+        document.getElementById('driverLoginSection').style.display = '';
+        document.getElementById('driverGuestSection').style.display = 'none';
+        document.getElementById('driverLoginName').textContent = loggedInUser.full_name || '(ไม่ระบุชื่อ)';
+        document.getElementById('modeIndicator').innerHTML = '🔐 <strong>โหมดล็อกอิน</strong> — บันทึกในชื่อบัญชีของคุณ';
+        document.getElementById('modeIndicator').className = 'alert alert-info';
+        document.getElementById('modeIndicator').style.display = '';
+        document.getElementById('guestWarning').style.display = 'none';
+      } else {
+        document.getElementById('driverLoginSection').style.display = 'none';
+        document.getElementById('driverGuestSection').style.display = '';
+        document.getElementById('modeIndicator').innerHTML = '👤 <strong>โหมดแขก</strong> — กรอกข้อมูลเองทั้งหมด';
+        document.getElementById('modeIndicator').className = 'alert alert-warning';
+        document.getElementById('modeIndicator').style.display = '';
+        document.getElementById('guestWarning').style.display = 'block';
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', async function () {
       var urlParams = new URLSearchParams(window.location.search);
       carId = urlParams.get('car');
+      detectMode();
 
       document.getElementById('loading').style.display = 'none';
       document.getElementById('fuelForm').style.display = 'block';
       loadFuelTypes();
-      loadDrivers();
       setDefaultDateTime();
 
       if (!carId) {
         document.getElementById('carInfo').style.display = 'none';
         document.getElementById('submitBtn').disabled = true;
         document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">กรุณาสแกน QR Code ที่รถเพื่อแสดงเลขทะเบียน รุ่นรถ และเปิดใช้ปุ่มบันทึก</div>';
+        applyMode();
       } else {
-        loadCarInfo();
+        await loadCarInfo();
+        applyMode();
       }
 
       setTimeout(function () {
@@ -593,7 +630,13 @@
 
     async function loadCarInfo() {
       try {
-        var result = await apiCall('getVehicle', { id: carId });
+        var result;
+        if (currentMode === 'logged_in') {
+          result = await apiCall('getVehicle', { id: carId });
+        } else {
+          var resp = await fetch(API_BASE_URL + '/api/vehicles/qr-info?car_id=' + encodeURIComponent(carId));
+          result = await resp.json();
+        }
 
         if (result.success && result.data) {
           carInfo = result.data;
@@ -648,24 +691,7 @@
       }
     }
 
-    async function loadDrivers() {
-      try {
-        var result = await apiCall('getDrivers', {});
-        if (result.success) {
-          var drivers = result.data || [];
-          if (!Array.isArray(drivers)) drivers = drivers.drivers || [];
-          var select = document.getElementById('driverSelect');
-          drivers.forEach(function (d) {
-            if (d.status === 'active') {
-              var opt = document.createElement('option');
-              opt.value = d.id;
-              opt.textContent = d.name + (d.license_number ? ' (' + d.license_number + ')' : '');
-              select.appendChild(opt);
-            }
-          });
-        }
-      } catch (err) { console.error('loadDrivers error', err); }
-    }
+
 
     function togglePurposeDetail() {
       var purpose = document.getElementById('purpose').value;
@@ -674,13 +700,7 @@
       if (purpose !== 'other') document.getElementById('purposeDetail').value = '';
     }
 
-    function toggleDriverManual() {
-      var useManual = document.getElementById('useManualDriver').checked;
-      document.getElementById('driverSelect').style.display = useManual ? 'none' : 'block';
-      document.getElementById('driverNameManual').style.display = useManual ? 'block' : 'none';
-      if (useManual) { document.getElementById('driverSelect').value = ''; }
-      else { document.getElementById('driverNameManual').value = ''; }
-    }
+
 
     function setDefaultDateTime() {
       var now = new Date();
@@ -771,9 +791,17 @@
       var purposeDetail = document.getElementById('purposeDetail').value.trim();
 
       // Driver validation
-      var useManual = document.getElementById('useManualDriver').checked;
-      var driverId = useManual ? '' : document.getElementById('driverSelect').value;
-      var driverNameManual = useManual ? document.getElementById('driverNameManual').value.trim() : '';
+      var driverId = '';
+      var driverNameManual = '';
+      if (currentMode === 'logged_in' && loggedInUser) {
+        if (loggedInUser.driver_id) {
+          driverId = loggedInUser.driver_id;
+        } else {
+          driverNameManual = loggedInUser.full_name || '';
+        }
+      } else {
+        driverNameManual = (document.getElementById('driverNameManualGuest').value || '').trim();
+      }
 
       if (!driverId && !driverNameManual) {
         document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">กรุณาระบุผู้เบิกน้ำมัน</div>';

@@ -17,11 +17,11 @@ export async function onRequest(context) {
     const car_id = url.searchParams.get('car_id');
     if (!car_id) return error('กรุณาระบุ car_id');
     const car = await dbFirst(env.DB,
-      `SELECT id, license_plate, brand, model, status, vehicle_images FROM cars WHERE id = ? AND status != 'inactive'`, [car_id]
+      `SELECT id, license_plate, brand, model, fuel_type, status, vehicle_images FROM cars WHERE id = ? AND status != 'inactive'`, [car_id]
     );
     if (!car) {
       const carByPlate = await dbFirst(env.DB,
-        `SELECT id, license_plate, brand, model, status, vehicle_images FROM cars WHERE license_plate = ? AND status != 'inactive'`, [car_id]
+        `SELECT id, license_plate, brand, model, fuel_type, status, vehicle_images FROM cars WHERE license_plate = ? AND status != 'inactive'`, [car_id]
       );
       return carByPlate ? success(carByPlate) : error('ไม่พบยานพาหนะ', 404);
     }

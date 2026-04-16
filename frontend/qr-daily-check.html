@@ -592,6 +592,9 @@
     <div class="content">
       <div class="alert" id="alert"></div>
 
+      <div id="modeIndicator" class="alert" style="display:none;"></div>
+      <div id="guestWarning" class="alert alert-warning" style="display:none;">⚠️ คุณยังไม่ได้เข้าสู่ระบบ — กรุณากรอกชื่อผู้ตรวจเอง</div>
+
       <div class="car-info" id="carInfo" style="display: none;">
         <h2 id="carLicensePlate">-</h2>
         <div class="car-details" id="carBrandModel">-</div>
@@ -601,12 +604,17 @@
       </div>
 
       <form id="dailyCheckForm" onsubmit="event.preventDefault(); submitDailyCheck();">
-        <div class="form-group">
-          <label>ชื่อผู้ตรวจ <span class="required">*</span></label>
-          <select id="inspectorName" required>
-            <option value="">-- เลือกชื่อผู้ตรวจ --</option>
-          </select>
-          <div class="help-text">เลือกจากรายชื่อพนักงานขับรถ แอดมิน หรือผู้ที่แอดมินแต่งตั้ง</div>
+        <!-- ชื่อผู้ตรวจ (Logged-in mode) -->
+        <div id="inspectorLoginSection" class="form-group" style="display:none;">
+          <label>ชื่อผู้ตรวจ</label>
+          <div id="inspectorLoginName" style="padding:14px;background:var(--color-bg-light);border-radius:var(--radius-md);font-weight:600;color:var(--color-primary);border:2px solid #e0e0e0;">-</div>
+          <div class="help-text">ข้อมูลจากบัญชีผู้ใช้ของคุณ</div>
+        </div>
+        <!-- ชื่อผู้ตรวจ (Guest mode) -->
+        <div id="inspectorGuestSection" class="form-group" style="display:none;">
+          <label for="inspectorNameGuest">ชื่อผู้ตรวจ <span class="required">*</span></label>
+          <input type="text" id="inspectorNameGuest" placeholder="ชื่อ-นามสกุล ผู้ตรวจ">
+          <div class="help-text">กรอกชื่อผู้ที่ทำการตรวจเช็ค</div>
         </div>
 
         <div class="form-group">
@@ -1150,7 +1158,8 @@
     var carId = null;
     var vehicleData = null;
     var checkImageFile = null;
-    var inspectors = [];
+    var currentMode = 'guest';
+    var loggedInUser = null;
 
     // Get vehicle ID from URL parameter (QR ใช้ ?car= ตามคู่มือ)
     // Supports: ?car=xxx | ?vehicleId=xxx | ?car_id=xxx | ?id=xxx
@@ -1159,146 +1168,59 @@
       return params.get('car') || params.get('vehicleId') || params.get('car_id') || params.get('id');
     }
 
-    function loadInspectors() {
-      var select = document.getElementById('inspectorName');
-      select.innerHTML = '<option value="">-- เลือกชื่อผู้ตรวจ --</option>';
-
-      apiCall('getDrivers', { status: 'active' }).then(function (response) {
-        if (response.success && response.data && response.data.drivers) {
-          response.data.drivers.forEach(function (driver) {
-            inspectors.push({
-              id: driver.driver_id,
-              name: driver.full_name || (driver.first_name + ' ' + driver.last_name),
-              type: 'driver'
-            });
-          });
-        }
-
-        apiCall('getAllUsers', { includeInactive: false }).then(function (userResponse) {
-          if (userResponse.success && userResponse.data && userResponse.data.users) {
-            userResponse.data.users.forEach(function (user) {
-              // Include admins and users with permissions (admin-appointed)
-              if (user.role === 'admin' || user.role === 'super_admin' ||
-                (user.permissions && Object.keys(user.permissions).length > 0)) {
-                var exists = inspectors.some(function (insp) {
-                  return insp.id === user.id || insp.name === user.full_name;
-                });
-                if (!exists) {
-                  inspectors.push({
-                    id: user.id,
-                    name: user.full_name || (user.first_name + ' ' + user.last_name),
-                    type: user.role === 'admin' || user.role === 'super_admin' ? 'admin' : 'appointed'
-                  });
-                }
-              }
-            });
-          }
-
-          // Populate dropdown
-          populateInspectors();
-        }).catch(function (err) {
-          console.error('Error loading users:', err);
-          populateInspectors(); // Still populate with drivers if available
-        });
-      }).catch(function (err) {
-        console.error('Error loading drivers:', err);
-        // Try to load users anyway
-        apiCall('getAllUsers', { includeInactive: false }).then(function (userResponse) {
-          if (userResponse.success && userResponse.data && userResponse.data.users) {
-            userResponse.data.users.forEach(function (user) {
-              if (user.role === 'admin' || user.role === 'super_admin' ||
-                (user.permissions && Object.keys(user.permissions).length > 0)) {
-                inspectors.push({
-                  id: user.id,
-                  name: user.full_name || (user.first_name + ' ' + user.last_name),
-                  type: user.role === 'admin' || user.role === 'super_admin' ? 'admin' : 'appointed'
-                });
-              }
-            });
-          }
-          populateInspectors();
-        }).catch(function (err2) {
-          console.error('Error loading users:', err2);
-          populateInspectors(); // Show empty list if both fail
-        });
-      });
+    function detectMode() {
+      var token = API.getToken();
+      if (!token) { currentMode = 'guest'; return; }
+      var user = API.getUser();
+      if (user && user.full_name) {
+        currentMode = 'logged_in';
+        loggedInUser = user;
+      } else {
+        currentMode = 'guest';
+      }
     }
 
-    function populateInspectors() {
-      var select = document.getElementById('inspectorName');
-      select.innerHTML = '<option value="">-- เลือกชื่อผู้ตรวจ --</option>';
-
-      // Sort by name
-      inspectors.sort(function (a, b) {
-        return a.name.localeCompare(b.name, 'th');
-      });
-
-      // Group by type for better organization
-      var drivers = inspectors.filter(function (i) { return i.type === 'driver'; });
-      var admins = inspectors.filter(function (i) { return i.type === 'admin'; });
-      var appointed = inspectors.filter(function (i) { return i.type === 'appointed'; });
-
-      if (drivers.length > 0) {
-        var optGroup = document.createElement('optgroup');
-        optGroup.label = 'พนักงานขับรถ';
-        drivers.forEach(function (inspector) {
-          var option = document.createElement('option');
-          option.value = inspector.name;
-          option.textContent = inspector.name;
-          optGroup.appendChild(option);
-        });
-        select.appendChild(optGroup);
-      }
-
-      if (admins.length > 0) {
-        var optGroup = document.createElement('optgroup');
-        optGroup.label = 'แอดมิน';
-        admins.forEach(function (inspector) {
-          var option = document.createElement('option');
-          option.value = inspector.name;
-          option.textContent = inspector.name;
-          optGroup.appendChild(option);
-        });
-        select.appendChild(optGroup);
-      }
-
-      if (appointed.length > 0) {
-        var optGroup = document.createElement('optgroup');
-        optGroup.label = 'ผู้ที่แอดมินแต่งตั้ง';
-        appointed.forEach(function (inspector) {
-          var option = document.createElement('option');
-          option.value = inspector.name;
-          option.textContent = inspector.name;
-          optGroup.appendChild(option);
-        });
-        select.appendChild(optGroup);
-      }
-
-      // If no groups, add all as flat list
-      if (drivers.length === 0 && admins.length === 0 && appointed.length === 0) {
-        inspectors.forEach(function (inspector) {
-          var option = document.createElement('option');
-          option.value = inspector.name;
-          option.textContent = inspector.name;
-          select.appendChild(option);
-        });
+    function applyMode() {
+      if (currentMode === 'logged_in') {
+        document.getElementById('inspectorLoginSection').style.display = '';
+        document.getElementById('inspectorGuestSection').style.display = 'none';
+        document.getElementById('inspectorLoginName').textContent = loggedInUser.full_name || '(ไม่ระบุชื่อ)';
+        document.getElementById('modeIndicator').innerHTML = '🔐 <strong>โหมดล็อกอิน</strong> — บันทึกในชื่อบัญชีของคุณ';
+        document.getElementById('modeIndicator').className = 'alert alert-info';
+        document.getElementById('modeIndicator').style.display = '';
+        document.getElementById('guestWarning').style.display = 'none';
+      } else {
+        document.getElementById('inspectorLoginSection').style.display = 'none';
+        document.getElementById('inspectorGuestSection').style.display = '';
+        document.getElementById('modeIndicator').innerHTML = '👤 <strong>โหมดแขก</strong> — กรอกข้อมูลเองทั้งหมด';
+        document.getElementById('modeIndicator').className = 'alert alert-warning';
+        document.getElementById('modeIndicator').style.display = '';
+        document.getElementById('guestWarning').style.display = 'block';
       }
     }
 
     function loadVehicleData() {
       carId = getVehicleIdFromURL();
+      detectMode();
       setDefaultDateTime();
       setupStatusHandlers();
-      loadInspectors(); // Load inspectors list
 
       if (!carId) {
         document.getElementById('carInfo').style.display = 'none';
         document.getElementById('submitBtn').disabled = true;
         showAlert('กรุณาสแกน QR Code ที่รถเพื่อแสดงเลขทะเบียน รุ่นรถ และเปิดใช้ปุ่มบันทึก', 'error');
+        applyMode();
         return;
       }
 
-      apiCall('getVehicle', { id: carId }).then(function (response) {
+      var loadCar;
+      if (currentMode === 'logged_in') {
+        loadCar = apiCall('getVehicle', { id: carId });
+      } else {
+        loadCar = fetch(API_BASE_URL + '/api/vehicles/qr-info?car_id=' + encodeURIComponent(carId)).then(function(r) { return r.json(); });
+      }
+
+      loadCar.then(function (response) {
         if (response.success && response.data) {
           vehicleData = response.data;
           displayVehicleInfo();
@@ -1311,10 +1233,12 @@
           document.getElementById('submitBtn').disabled = true;
           showAlert('ไม่พบข้อมูลรถ', 'error');
         }
+        applyMode();
       }).catch(function (error) {
         document.getElementById('carInfo').style.display = 'none';
         document.getElementById('submitBtn').disabled = true;
         showAlert('เกิดข้อผิดพลาดในการโหลดข้อมูลรถ', 'error');
+        applyMode();
       });
     }
 
@@ -1514,13 +1438,20 @@
 
       var formData = {
         car_id: carId,
-        inspector_name: document.getElementById('inspectorName').value,
+        inspector_name: currentMode === 'logged_in' && loggedInUser ? (loggedInUser.full_name || '') : (document.getElementById('inspectorNameGuest').value || '').trim(),
         date: document.getElementById('checkDate').value,
         time: document.getElementById('checkTime').value,
         overall_status: document.getElementById('overallStatus').value,
         notes: document.getElementById('notes').value,
         checks: {}
       };
+
+      if (!formData.inspector_name) {
+        showAlert('กรุณาระบุชื่อผู้ตรวจ', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'บันทึกผลการตรวจเช็ค';
+        return;
+      }
 
       // Collect all radio button values
       document.querySelectorAll('input[type="radio"]:checked').forEach(function (radio) {
