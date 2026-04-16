@@ -4,6 +4,17 @@ import {
   parseBody, requirePermission, extractParam, notifyAllAdmins
 } from '../../_helpers.js';
 
+// Penalty points deducted per auto-heal event (auto_departure or auto_return)
+const SCORE_DEDUCT_AUTO = 1;
+
+async function deductScore(db, driverId) {
+  if (!driverId) return;
+  await dbRun(db,
+    `UPDATE drivers SET discipline_score = MAX(0, COALESCE(discipline_score, 100) - ?) WHERE id = ?`,
+    [SCORE_DEDUCT_AUTO, driverId]
+  );
+}
+
 // ============================================================
 // AUTO-HEAL: Detects and auto-creates missing usage records
 // ============================================================
@@ -39,6 +50,7 @@ async function autoHeal(db, newRecord) {
          ts]
       );
       healed.push({ type: 'auto_return', id: autoReturnId, for_departure: lastRecord.id });
+      await deductScore(db, lastRecord.driver_id);
 
       // Detect gap
       if (autoMileage && lastRecord.mileage) {
@@ -80,6 +92,7 @@ async function autoHeal(db, newRecord) {
          ts]
       );
       healed.push({ type: 'auto_departure', id: autoDepId, for_return: newRecord.id });
+      await deductScore(db, newRecord.driver_id);
 
       // Gap detection
       if (newRecord.mileage && lastRecord.mileage) {
@@ -135,15 +148,21 @@ export async function onRequest(context) {
       return error('เลขไมล์ต้องเป็นค่าบวก');
     }
 
+    // ต้องมี driver_id หรือ driver_name_manual อย่างน้อยหนึ่งอย่าง
+    if (!body.driver_id && !body.driver_name_manual) {
+      return error('กรุณาระบุ driver_id หรือ driver_name_manual');
+    }
+
     const id = generateUUID();
     const ts = now();
     await dbRun(env.DB,
-      `INSERT INTO usage_records (id, car_id, driver_id, record_type, datetime, mileage, location, notes, queue_id, data_quality, requester_name, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'normal', ?, ?)`,
+      `INSERT INTO usage_records (id, car_id, driver_id, record_type, datetime, mileage, location, notes, queue_id, data_quality, requester_name, record_source, purpose, destination, driver_name_manual, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'normal', ?, 'qr_manual', ?, ?, ?, ?)`,
       [id, body.car_id, body.driver_id || null, body.record_type,
        body.datetime || ts, body.mileage || null,
        body.location || '', body.notes || '', body.queue_id || null,
-       body.requester_name || null, ts]
+       body.requester_name || null,
+       body.purpose || null, body.destination || null, body.driver_name_manual || null, ts]
     );
     // Update car mileage if provided
     if (body.mileage && body.mileage > 0) {
@@ -157,6 +176,25 @@ export async function onRequest(context) {
     const healed = await autoHeal(env.DB, { id, car_id: body.car_id, driver_id: body.driver_id || null, record_type: body.record_type, datetime: body.datetime || ts, mileage: body.mileage || null, queue_id: body.queue_id || null });
 
     return success({ id, message: 'บันทึกการใช้งานเรียบร้อย', auto_healed: healed }, 201);
+  }
+
+  // PUBLIC — ดึงสถานะล่าสุดของรถ (ใช้โดยหน้า QR ไม่ต้อง login)
+  if (path === '/api/usage/latest-status' && method === 'GET') {
+    const car_id = url.searchParams.get('car_id');
+    if (!car_id) return error('กรุณาระบุ car_id');
+    const lastRecord = await dbFirst(env.DB,
+      `SELECT record_type, datetime, mileage FROM usage_records
+       WHERE car_id = ? AND record_type IN ('departure', 'return') AND data_quality != 'gap_record'
+       ORDER BY datetime DESC LIMIT 1`,
+      [car_id]
+    );
+    if (!lastRecord) return success({ status: 'unknown', mileage: null, datetime: null });
+    return success({
+      status: lastRecord.record_type === 'departure' ? 'out' : 'in',
+      last_record_type: lastRecord.record_type,
+      mileage: lastRecord.mileage,
+      datetime: lastRecord.datetime
+    });
   }
 
   if (!user) return error('Unauthorized', 401);
@@ -179,7 +217,7 @@ export async function onRequest(context) {
     if (queueId) { where.push('ur.queue_id = ?'); params.push(queueId); }
     if (dataQuality) { where.push('ur.data_quality = ?'); params.push(dataQuality); }
     const rows = await dbAll(env.DB,
-      `SELECT ur.*, c.license_plate, c.brand, d.name AS driver_name
+      `SELECT ur.*, c.license_plate, c.brand, COALESCE(d.name, ur.driver_name_manual) AS driver_name
        FROM usage_records ur
        LEFT JOIN cars c ON ur.car_id = c.id
        LEFT JOIN drivers d ON ur.driver_id = d.id
@@ -195,7 +233,7 @@ export async function onRequest(context) {
     try { requirePermission(user, 'usage', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = extractParam(path, '/api/usage/');
     const row = await dbFirst(env.DB,
-      `SELECT ur.*, c.license_plate, c.brand, d.name AS driver_name
+      `SELECT ur.*, c.license_plate, c.brand, COALESCE(d.name, ur.driver_name_manual) AS driver_name
        FROM usage_records ur
        LEFT JOIN cars c ON ur.car_id = c.id
        LEFT JOIN drivers d ON ur.driver_id = d.id
@@ -217,12 +255,14 @@ export async function onRequest(context) {
     const id = generateUUID();
     const ts = now();
     await dbRun(env.DB,
-      `INSERT INTO usage_records (id, car_id, driver_id, record_type, datetime, mileage, location, notes, queue_id, data_quality, requester_name, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'normal', ?, ?)`,
+      `INSERT INTO usage_records (id, car_id, driver_id, record_type, datetime, mileage, location, notes, queue_id, data_quality, requester_name, record_source, purpose, destination, driver_name_manual, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'normal', ?, ?, ?, ?, ?, ?)`,
       [id, body.car_id, body.driver_id || null, body.record_type,
        body.datetime || ts, body.mileage || null,
        body.location || '', body.notes || '', body.queue_id || null,
-       body.requester_name || null, ts]
+       body.requester_name || null,
+       body.record_source || 'qr_logged_in',
+       body.purpose || null, body.destination || null, body.driver_name_manual || null, ts]
     );
     if (body.mileage && body.mileage > 0) {
       await dbRun(env.DB,

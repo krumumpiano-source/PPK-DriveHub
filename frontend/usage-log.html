@@ -580,12 +580,13 @@
         date: dep ? dep.datetime.substring(0, 10) : ret.datetime.substring(0, 10),
         departure_time: dep ? dep.datetime.substring(11, 16) : null,
         return_time: (ret && status !== 'inferred') ? ret.datetime.substring(11, 16) : null,
-        destination: (dep && dep.location) || (ret && ret.location) || '',
+        destination: (dep && dep.destination) || (dep && dep.location) || (ret && ret.destination) || (ret && ret.location) || '',
         requester_name: (dep && dep.requester_name) || (ret && ret.requester_name) || '',
         mileage_start: dep ? dep.mileage : null,
         mileage_end: ret ? ret.mileage : null,
         distance: dist,
         data_quality: dep ? dep.data_quality : ret.data_quality,
+        record_source: (dep && dep.record_source) || (ret && ret.record_source) || '',
         sort_key: dep ? dep.datetime : ret.datetime,
         status: status
       };
@@ -674,6 +675,9 @@
             statusBadge = '<span class="badge badge-warning">🟡 ยังไม่กลับ</span>';
           } else if (trip.status === 'no_departure') {
             statusBadge = '<span class="badge badge-info">🔵 ไม่มีบันทึกออก</span>';
+          }
+          if (trip.record_source === 'qr_manual') {
+            statusBadge += ' <span class="badge badge-warning" title="บันทึกโดยผู้ไม่มีบัญชี">👤 Manual</span>';
           }
 
           html += '<tr>';

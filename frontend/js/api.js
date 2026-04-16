@@ -174,6 +174,9 @@ const ACTION_MAP = {
   'getUsageItem':        (d) => API.get(`/api/usage/${d.id}`),
   'createUsage':         (d) => API.post('/api/usage', d),
   'updateUsage':         (d) => API.put(`/api/usage/${d.id}`, d),
+  'createUsagePublic':   (d) => API.post('/api/usage/record', d),
+  'getUsageLatestStatus':(d) => API.get('/api/usage/latest-status' + _q(d)),
+  'getUsageRecords':     (d) => API.get('/api/usage' + _q(d)),
 
   // Daily Check
   'getCheckLog':         (d) => API.get('/api/check/log' + _q(d)),

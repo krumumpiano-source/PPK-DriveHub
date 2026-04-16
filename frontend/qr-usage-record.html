@@ -447,6 +447,9 @@
         <div class="car-status" id="carStatus">-</div>
       </div>
 
+      <!-- Latest Trip Status Hint -->
+      <div id="latestStatusHint" class="alert alert-info" style="display:none; margin-bottom:16px; border-left:4px solid #1976d2; padding:12px 15px; font-size:0.9em;"></div>
+
       <!-- Success Message -->
       <div id="successMessage">
         <div style="font-size: 3em; margin-bottom: 15px;">✅</div>
@@ -459,23 +462,37 @@
 
       <!-- Form -->
       <form id="usageForm" onsubmit="handleSubmit(event); return false;" style="display: none;">
-        <div class="form-group">
-          <label for="driver_id">ชื่อพนักงานขับรถ <span class="required">*</span></label>
-          <select id="driver_id" name="driver_id" required>
-            <option value="">-- เลือกพนักงานขับรถ --</option>
-          </select>
+
+        <!-- Mode indicator -->
+        <div id="modeIndicator" class="alert alert-info" style="margin-bottom:16px; font-size:0.9em;"></div>
+
+        <!-- Guest warning -->
+        <div id="guestWarning" class="alert alert-warning" style="display:none; margin-bottom:16px; font-size:0.85em;">
+          <strong>⚠️ หมายเหตุ:</strong> คุณกำลังบันทึกในโหมดแขก ข้อมูลที่กรอกถือเป็นความรับผิดชอบของผู้กรอก กรุณากรอกให้ถูกต้องและครบถ้วน
+        </div>
+
+        <!-- Driver: dual-mode -->
+        <div id="driverLoginSection" class="form-group" style="display:none;">
+          <label>พนักงานขับรถ</label>
+          <div id="driverLoginName" style="padding:14px;background:var(--color-bg-light);border-radius:var(--radius-md);font-weight:600;color:var(--color-primary);border:2px solid #e0e0e0;">-</div>
+          <div class="help-text">ข้อมูลจากบัญชีผู้ใช้ของคุณ</div>
+        </div>
+        <div id="driverGuestSection" class="form-group" style="display:none;">
+          <label for="driver_name_manual">ชื่อพนักงานขับรถ <span class="required">*</span></label>
+          <input type="text" id="driver_name_manual" name="driver_name_manual" placeholder="ชื่อ-นามสกุล คนขับ">
+          <div class="help-text">กรอกชื่อคนขับที่รับผิดชอบรถคันนี้</div>
         </div>
 
         <div class="form-group">
           <label>สถานะ <span class="required">*</span></label>
           <div class="status-buttons" style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button type="button" id="statusBeforeTrip" class="status-btn" onclick="selectStatus('before_trip')"
+            <button type="button" id="statusDeparture" class="status-btn" onclick="selectStatus('departure')"
               style="flex: 1; min-width: 150px; padding: 14px; border: 2px solid var(--color-primary); border-radius: var(--radius-md); background: white; color: var(--color-primary); font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-              🚗 ก่อนออกเดินทาง
+              🚗 ออกเดินทาง
             </button>
-            <button type="button" id="statusAfterTrip" class="status-btn" onclick="selectStatus('after_trip')"
-              style="flex: 1; min-width: 150px; padding: 14px; border: 2px solid var(--color-primary); border-radius: var(--radius-md); background: white; color: var(--color-primary); font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-              🏠 กลับมาจากเดินทาง
+            <button type="button" id="statusReturn" class="status-btn" onclick="selectStatus('return')"
+              style="flex: 1; min-width: 150px; padding: 14px; border: 2px solid var(--color-success); border-radius: var(--radius-md); background: white; color: var(--color-secondary-dark); font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+              🏠 กลับจากเดินทาง
             </button>
           </div>
           <input type="hidden" id="record_type" name="record_type" required>
@@ -505,13 +522,23 @@
         </div>
 
         <div class="form-group">
-          <label for="requested_by">ผู้ขอใช้รถ <span class="required">*</span></label>
-          <input type="text" id="requested_by" name="requested_by" required placeholder="ชื่อผู้ขอใช้รถ">
+          <label for="requester_name">ผู้ขอใช้รถ <span class="required">*</span></label>
+          <input type="text" id="requester_name" name="requester_name" required placeholder="ชื่อผู้ขอใช้รถ">
         </div>
 
         <div class="form-group">
           <label for="destination">จุดหมายปลายทาง <span class="required">*</span></label>
           <input type="text" id="destination" name="destination" required placeholder="ระบุจุดหมายปลายทาง">
+        </div>
+
+        <div class="form-group">
+          <label for="purpose">วัตถุประสงค์ <span class="required">*</span></label>
+          <select id="purpose" name="purpose" required>
+            <option value="">-- เลือกวัตถุประสงค์ --</option>
+            <option value="school_passenger">ภารกิจโดยสารของโรงเรียน</option>
+            <option value="official_document">รับส่งเอกสารทางราชการ</option>
+            <option value="other">อื่นๆ</option>
+          </select>
         </div>
 
         <div class="form-group">
@@ -541,208 +568,129 @@
   <script>
     var carId = null;
     var carInfo = null;
-    var drivers = [];
+    var currentMode = 'unknown'; // 'logged_in' | 'guest'
+    var loggedInDriverId = null;
+    var loggedInDriverName = '';
     var lastMileage = 0;
-    var hasBeforeTrip = false;
+    var latestStatus = null;
+    var submitLock = false;
 
-    // QR Usage Record page does NOT require authentication
-    // Anyone can scan QR and record usage
+    function getCarIdFromURL() {
+      var p = new URLSearchParams(window.location.search);
+      return p.get('car') || p.get('qr') || p.get('car_id');
+    }
 
-    function getQRDataFromURL() {
-      var urlParams = new URLSearchParams(window.location.search);
-      var qrData = urlParams.get('car') || urlParams.get('qr');
-      return qrData ? { car_id: qrData } : null;
+    function detectMode() {
+      var token = API.getToken();
+      if (!token) { currentMode = 'guest'; return; }
+      var user = API.getUser();
+      if (user && user.driver_id) {
+        currentMode = 'logged_in';
+        loggedInDriverId = user.driver_id;
+        loggedInDriverName = user.full_name || user.name || user.display_name || user.username || '';
+      } else {
+        currentMode = 'guest';
+      }
+    }
+
+    async function loadCarInfo() {
+      try {
+        var resp = await fetch('/api/vehicles/qr-info?car_id=' + encodeURIComponent(carId));
+        var result = await resp.json();
+        if (result.success && result.data) {
+          carInfo = result.data;
+          document.getElementById('carLicensePlate').textContent = carInfo.license_plate || carId;
+          document.getElementById('carBrandModel').textContent = ((carInfo.brand || '') + ' ' + (carInfo.model || '')).trim() || '-';
+          var statusEl = document.getElementById('carStatus');
+          var status = carInfo.status || 'available';
+          if (status === 'unavailable' || status === 'repair') {
+            statusEl.textContent = '⚠️ รถงดใช้';
+            statusEl.className = 'car-status unavailable';
+            document.getElementById('alert-container').innerHTML = '<div class="alert alert-warning"><strong>⚠️ คำเตือน:</strong> รถคันนี้อยู่ในสถานะงดใช้ กรุณาตรวจสอบก่อนใช้งาน</div>';
+          } else {
+            statusEl.textContent = '✅ พร้อมใช้งาน';
+            statusEl.className = 'car-status available';
+          }
+          document.getElementById('carInfo').style.display = 'block';
+        } else {
+          document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">ไม่พบรถคันนี้ในระบบ กรุณาตรวจสอบ QR Code</div>';
+          document.getElementById('submitBtn').disabled = true;
+        }
+      } catch (e) {
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">ไม่สามารถโหลดข้อมูลรถได้</div>';
+        document.getElementById('submitBtn').disabled = true;
+      }
+    }
+
+    async function loadLatestStatus() {
+      try {
+        var resp = await fetch('/api/usage/latest-status?car_id=' + encodeURIComponent(carId));
+        var result = await resp.json();
+        if (result.success && result.data) {
+          latestStatus = result.data;
+          var hint = document.getElementById('latestStatusHint');
+          if (latestStatus.status === 'out') {
+            hint.innerHTML = '🚗 <strong>สถานะล่าสุด:</strong> ออกเดินทางแล้ว — คาดว่ารถยังไม่กลับ ควรกด <strong>กลับจากเดินทาง</strong>';
+            hint.style.borderColor = '#f57c00';
+            hint.style.background = 'var(--color-bg-warning)';
+            hint.style.color = '#f57c00';
+          } else if (latestStatus.status === 'in') {
+            hint.innerHTML = '🏠 <strong>สถานะล่าสุด:</strong> กลับแล้ว — คาดว่ารถอยู่ในโรงรถ ควรกด <strong>ออกเดินทาง</strong>';
+            hint.style.borderColor = '#388e3c';
+            hint.style.background = 'var(--color-bg-success)';
+            hint.style.color = 'var(--color-secondary-dark)';
+          } else {
+            hint.innerHTML = 'ℹ️ <strong>สถานะล่าสุด:</strong> ไม่พบประวัติล่าสุด — ควรกด <strong>ออกเดินทาง</strong>';
+          }
+          hint.style.display = 'block';
+          if (latestStatus.mileage) {
+            lastMileage = latestStatus.mileage;
+            document.getElementById('lastMileage').textContent = lastMileage.toLocaleString() + ' กม.';
+          }
+        }
+      } catch (e) { /* ไม่แสดง hint ถ้าโหลดไม่ได้ */ }
+    }
+
+    function applyMode() {
+      if (currentMode === 'logged_in') {
+        document.getElementById('driverLoginSection').style.display = '';
+        document.getElementById('driverGuestSection').style.display = 'none';
+        document.getElementById('driverLoginName').textContent = loggedInDriverName || '(ไม่ระบุชื่อ)';
+        document.getElementById('modeIndicator').innerHTML = '🔐 <strong>โหมดล็อกอิน</strong> — บันทึกในชื่อบัญชีของคุณ';
+        document.getElementById('modeIndicator').className = 'alert alert-info';
+        document.getElementById('guestWarning').style.display = 'none';
+      } else {
+        document.getElementById('driverLoginSection').style.display = 'none';
+        document.getElementById('driverGuestSection').style.display = '';
+        document.getElementById('modeIndicator').innerHTML = '👤 <strong>โหมดแขก</strong> — กรอกข้อมูลเองทั้งหมด';
+        document.getElementById('modeIndicator').className = 'alert alert-warning';
+        document.getElementById('guestWarning').style.display = 'block';
+      }
     }
 
     async function loadData() {
-      try {
-        var qrData = getQRDataFromURL();
-        document.getElementById('loading').style.display = 'none';
-        showForm();
-
-        if (!qrData) {
-          document.getElementById('carInfo').style.display = 'none';
-          document.getElementById('submitBtn').disabled = true;
-          document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">กรุณาสแกน QR Code ที่รถเพื่อแสดงเลขทะเบียน รุ่นรถ และเปิดใช้ปุ่มบันทึก</div>';
-          return;
-        }
-
-        carId = qrData.car_id;
-
-        var carResult = await apiCall('getVehicle', { id: carId });
-
-        if (carResult.success && carResult.data) {
-          carInfo = carResult.data;
-
-          try {
-            var driversResult = await apiCall('getDrivers', { status: 'active' });
-            drivers = (driversResult.success && driversResult.data) ? (driversResult.data.drivers || (Array.isArray(driversResult.data) ? driversResult.data : [])) : [];
-          } catch (e) {
-            drivers = [];
-          }
-
-          displayCarInfo();
-          populateDrivers();
-          await autoFillDriverFromQueue();
-          loadLastMileage();
-          document.getElementById('submitBtn').disabled = false;
-          document.getElementById('alert-container').innerHTML = '';
-        } else {
-          document.getElementById('carInfo').style.display = 'none';
-          document.getElementById('submitBtn').disabled = true;
-          document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">' + result.message + '</div>';
-        }
-      } catch (error) {
-        document.getElementById('carInfo').style.display = 'none';
-        document.getElementById('submitBtn').disabled = true;
-        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">' + handleError(error) + '</div>';
-      }
-    }
-
-    function displayCarInfo() {
-      if (carInfo) {
-        document.getElementById('carLicensePlate').textContent = carInfo.license_plate || carId;
-        document.getElementById('carBrandModel').textContent = (carInfo.brand || '') + ' ' + (carInfo.model || '');
-
-        var statusEl = document.getElementById('carStatus');
-        var status = carInfo.status || 'available';
-        var statusText = '';
-        var statusClass = 'available';
-
-        if (status === 'unavailable' || status === 'repair') {
-          statusText = '⚠️ รถงดใช้';
-          statusClass = 'unavailable';
-        } else if (status === 'in_use') {
-          statusText = '🚗 กำลังใช้งาน';
-          statusClass = 'available';
-        } else {
-          statusText = '✅ พร้อมใช้งาน';
-          statusClass = 'available';
-        }
-
-        statusEl.textContent = statusText;
-        statusEl.className = 'car-status ' + statusClass;
-
-        if (status === 'unavailable' || status === 'repair') {
-          var alertContainer = document.getElementById('alert-container');
-          alertContainer.innerHTML = '<div class="alert alert-warning"><strong>⚠️ คำเตือน:</strong> รถคันนี้อยู่ในสถานะงดใช้ กรุณาตรวจสอบก่อนใช้งาน</div>';
-        }
-
-        document.getElementById('carInfo').style.display = 'block';
-      }
-    }
-
-    function populateDrivers() {
-      var select = document.getElementById('driver_id');
-      select.innerHTML = '<option value="">-- เลือกพนักงานขับรถ --</option>';
-
-      drivers.forEach(function (driver) {
-        var option = document.createElement('option');
-        option.value = driver.driver_id;
-        option.textContent = driver.full_name;
-        select.appendChild(option);
-      });
-    }
-
-    async function autoFillDriverFromQueue() {
-      try {
-        var today = new Date().toISOString().slice(0, 10);
-        var result = await apiCall('getQueue', { car_id: carId, date: today, status: 'approved' });
-        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
-          var queue = result.data[0];
-          if (queue.driver_id) {
-            var select = document.getElementById('driver_id');
-            select.value = queue.driver_id;
-          }
-        }
-      } catch (e) { /* ignore — user can select manually */ }
-    }
-
-    async function loadLastMileage() {
-      try {
-        var result = await apiCall('getUsageLog', {
-          car_id: carId,
-          limit: 1,
-          sort: 'desc'
-        });
-
-        if (result.success && result.data) {
-          var records = Array.isArray(result.data) ? result.data : [];
-          if (records.length > 0) {
-            var latestRecord = records[0];
-            lastMileage = latestRecord.mileage || 0;
-            document.getElementById('lastMileage').textContent = lastMileage.toLocaleString();
-
-            var today = formatDate(new Date());
-            var todayRecords = records.filter(function (r) {
-              return r.date === today && r.record_type === 'before_trip';
-            });
-            hasBeforeTrip = todayRecords.length > 0;
-          } else {
-            document.getElementById('lastMileage').textContent = 'ไม่มีข้อมูล';
-          }
-        }
-      } catch (error) {
-        console.error('Error loading last mileage:', error);
-        document.getElementById('lastMileage').textContent = 'ไม่สามารถโหลดได้';
-      }
-    }
-
-    function showForm() {
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('usageForm').style.display = 'block';
-
-      var now = new Date();
-      document.getElementById('date').value = formatDate(now);
-      var timeInput = document.getElementById('time');
-      timeInput.value = formatTime(now);
-
-      setTimeout(function () {
-        if (typeof initAllThaiDateTimePickers === 'function') {
-          initAllThaiDateTimePickers();
-        }
-      }, 100);
-    }
-
-    // Use current time button handler
-    function useCurrentTime(timeInputId) {
-      var now = new Date();
-      var timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-      var timeInput = document.getElementById(timeInputId);
-      if (timeInput) {
-        timeInput.value = timeStr;
-        // Trigger change event for Flatpickr if initialized
-        if (timeInput._flatpickr) {
-          timeInput._flatpickr.setDate(timeStr, false);
-        }
-      }
+      // kept for backward compat — logic moved to DOMContentLoaded
     }
 
     function selectStatus(status) {
       var recordTypeInput = document.getElementById('record_type');
       var helpText = document.getElementById('recordTypeHelp');
-      var beforeBtn = document.getElementById('statusBeforeTrip');
-      var afterBtn = document.getElementById('statusAfterTrip');
+      var depBtn = document.getElementById('statusDeparture');
+      var retBtn = document.getElementById('statusReturn');
 
-      beforeBtn.classList.remove('selected');
-      afterBtn.classList.remove('selected');
+      depBtn.classList.remove('selected');
+      retBtn.classList.remove('selected');
 
       recordTypeInput.value = status;
 
-      if (status === 'before_trip') {
-        beforeBtn.classList.add('selected');
-        helpText.textContent = 'บันทึกก่อนออกเดินทาง';
-        helpText.style.color = '#666';
-      } else if (status === 'after_trip') {
-        afterBtn.classList.add('selected');
-
-        if (!hasBeforeTrip) {
-          helpText.textContent = '⚠️ ยังไม่มีบันทึก "ก่อนออกเดินทาง" สำหรับวันนี้';
-          helpText.style.color = '#f57c00';
-        } else {
-          helpText.textContent = 'บันทึกการกลับมาจากเดินทาง';
-          helpText.style.color = '#666';
-        }
+      if (status === 'departure') {
+        depBtn.classList.add('selected');
+        helpText.textContent = '✈️ บันทึกการออกเดินทาง';
+        helpText.style.color = 'var(--color-primary)';
+      } else if (status === 'return') {
+        retBtn.classList.add('selected');
+        helpText.textContent = '🏠 บันทึกการกลับจากเดินทาง';
+        helpText.style.color = 'var(--color-secondary-dark)';
       }
     }
 
@@ -761,7 +709,7 @@
       if (lastMileage > 0 && mileage < lastMileage) {
         formGroup.classList.add('error');
         var difference = lastMileage - mileage;
-        errorText.innerHTML = '⚠️ <strong>คำเตือน:</strong> เลขไมล์ที่กรอก (' + mileage.toLocaleString() + ') น้อยกว่าเลขไมล์ล่าสุดที่บันทึก (' + lastMileage.toLocaleString() + ') อยู่ ' + difference.toLocaleString() + ' ไมล์<br>กรุณาตรวจสอบเลขไมล์อีกครั้ง';
+        errorText.innerHTML = '⚠️ <strong>คำเตือน:</strong> เลขไมล์ที่กรอก (' + mileage.toLocaleString() + ') น้อยกว่าเลขไมล์ล่าสุดที่บันทึก (' + lastMileage.toLocaleString() + ') อยู่ ' + difference.toLocaleString() + ' กม. กรุณาตรวจสอบ';
         errorText.style.color = '#c62828';
         errorText.style.fontWeight = '600';
         return false;
@@ -787,78 +735,91 @@
       return hours + ':' + minutes;
     }
 
+    function useCurrentTime(timeInputId) {
+      var el = document.getElementById(timeInputId);
+      if (el) el.value = formatTime(new Date());
+    }
+
     async function handleSubmit(event) {
       event.preventDefault();
+      if (submitLock) return;
 
       var recordType = document.getElementById('record_type').value;
-
-      // Validate status is selected
       if (!recordType) {
-        var alertContainer = document.getElementById('alert-container');
-        alertContainer.innerHTML = '<div class="alert alert-error">กรุณาเลือกสถานะ (ก่อนออกเดินทาง หรือ กลับมาจากเดินทาง)</div>';
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">กรุณาเลือกประเภทการบันทึก (ออกเดินทาง หรือ กลับจากเดินทาง)</div>';
         return;
       }
 
-      var date = document.getElementById('date').value;
-      var time = document.getElementById('time').value;
-      var datetime = date + ' ' + time;
+      if (!validateMileage()) return;
 
-      // Validate mileage
-      if (!validateMileage()) {
-        return;
+      // Validate driver info
+      var driverId = null;
+      var driverNameManual = '';
+      if (currentMode === 'logged_in') {
+        driverId = loggedInDriverId;
+      } else {
+        driverNameManual = (document.getElementById('driver_name_manual').value || '').trim();
+        if (!driverNameManual) {
+          document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">กรุณากรอกชื่อพนักงานขับรถ</div>';
+          return;
+        }
       }
 
-      // Validate: if after_trip, check if there's a before_trip
-      if (recordType === 'after_trip' && !hasBeforeTrip) {
-        var alertContainer = document.getElementById('alert-container');
-        alertContainer.innerHTML = '<div class="alert alert-warning">⚠️ ยังไม่มีบันทึก "ก่อนออกเดินทาง" สำหรับวันนี้ กรุณาบันทึกก่อนออกเดินทางก่อน</div>';
+      var dateVal = document.getElementById('date').value;
+      var timeVal = document.getElementById('time').value;
+      var datetime = dateVal + ' ' + timeVal;
+      var mileageRaw = document.getElementById('mileage').value.replace(/[^0-9]/g, '');
+
+      if (!mileageRaw) {
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">กรุณากรอกเลขไมล์</div>';
         return;
       }
 
       var recordData = {
         car_id: carId,
-        driver_id: document.getElementById('driver_id').value,
         record_type: recordType,
         datetime: datetime,
-        requested_by: document.getElementById('requested_by').value.trim(),
-        destination: document.getElementById('destination').value.trim(),
-        mileage: document.getElementById('mileage').value.replace(/\s/g, ''),
+        mileage: parseInt(mileageRaw),
+        requester_name: (document.getElementById('requester_name').value || '').trim() || undefined,
+        destination: (document.getElementById('destination').value || '').trim() || undefined,
+        purpose: document.getElementById('purpose').value || undefined,
         notes: ''
       };
+
+      if (driverId) recordData.driver_id = driverId;
+      if (driverNameManual) recordData.driver_name_manual = driverNameManual;
 
       var submitBtn = document.getElementById('submitBtn');
       var alertContainer = document.getElementById('alert-container');
 
-      // Validate mileage
-      if (!/^\d+$/.test(recordData.mileage)) {
-        alertContainer.innerHTML = '<div class="alert alert-error">เลขไมล์ต้องเป็นตัวเลขเท่านั้น</div>';
-        return;
-      }
-
+      submitLock = true;
       submitBtn.disabled = true;
       submitBtn.textContent = 'กำลังบันทึก...';
       alertContainer.innerHTML = '';
 
       try {
-        var result = await apiCall('createUsage', recordData);
+        var result;
+        if (currentMode === 'logged_in') {
+          recordData.record_source = 'qr_logged_in';
+          result = await apiCall('createUsage', recordData);
+        } else {
+          recordData.record_source = 'qr_manual';
+          result = await API.post('/api/usage/record', recordData);
+        }
 
-        if (result.success) {
+        if (result && result.success) {
           document.getElementById('usageForm').style.display = 'none';
           document.getElementById('successMessage').classList.add('show');
-
-          if (recordType === 'before_trip') {
-            hasBeforeTrip = true;
-          }
-
-          // Auto clear form after 3 seconds (optional)
-          // setTimeout(resetForm, 3000);
+          lastMileage = parseInt(mileageRaw) || lastMileage;
         } else {
-          alertContainer.innerHTML = '<div class="alert alert-error">' + result.message + '</div>';
+          alertContainer.innerHTML = '<div class="alert alert-error">' + ((result && result.message) || 'เกิดข้อผิดพลาด') + '</div>';
+          submitLock = false;
           submitBtn.disabled = false;
           submitBtn.textContent = '💾 บันทึก';
         }
-      } catch (error) {
-        alertContainer.innerHTML = '<div class="alert alert-error">' + handleError(error) + '</div>';
+      } catch (err) {
+        alertContainer.innerHTML = '<div class="alert alert-error">' + (err.message || 'เกิดข้อผิดพลาด') + '</div>';
+        submitLock = false;
         submitBtn.disabled = false;
         submitBtn.textContent = '💾 บันทึก';
       }
@@ -869,8 +830,10 @@
       document.getElementById('usageForm').style.display = 'block';
       document.getElementById('usageForm').reset();
 
-      document.getElementById('statusBeforeTrip').classList.remove('selected');
-      document.getElementById('statusAfterTrip').classList.remove('selected');
+      var depBtn = document.getElementById('statusDeparture');
+      var retBtn = document.getElementById('statusReturn');
+      if (depBtn) depBtn.classList.remove('selected');
+      if (retBtn) retBtn.classList.remove('selected');
       document.getElementById('record_type').value = '';
       document.getElementById('recordTypeHelp').textContent = '';
 
@@ -878,19 +841,35 @@
       document.getElementById('date').value = formatDate(now);
       document.getElementById('time').value = formatTime(now);
 
-      // Reload last mileage
-      loadLastMileage();
-
       document.getElementById('alert-container').innerHTML = '';
+      submitLock = false;
     }
 
-    // This page is public - anyone can scan QR and record usage
-    // No navigation - QR page only
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', loadData);
-    } else {
-      loadData();
-    }
+    window.addEventListener('DOMContentLoaded', async function () {
+      carId = getCarIdFromURL();
+      detectMode();
+
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('usageForm').style.display = 'block';
+
+      var now = new Date();
+      document.getElementById('date').value = formatDate(now);
+      document.getElementById('time').value = formatTime(now);
+
+      setTimeout(function () {
+        if (typeof initAllThaiDateTimePickers === 'function') initAllThaiDateTimePickers();
+      }, 100);
+
+      if (!carId) {
+        document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">กรุณาสแกน QR Code ที่รถเพื่อเปิดใช้หน้านี้</div>';
+        document.getElementById('submitBtn').disabled = true;
+        applyMode();
+        return;
+      }
+
+      await Promise.all([loadCarInfo(), loadLatestStatus()]);
+      applyMode();
+    });
   </script>
 
   <div id="navigation"></div>
