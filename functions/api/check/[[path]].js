@@ -30,29 +30,44 @@ export async function onRequest(context) {
     const id = generateUUID();
     const ts = now();
 
-    // Build checks_data JSON from individual check fields
+    // Build checks_data JSON — merge all possible keys from frontend
     const checksData = JSON.stringify({
       tire: body.tire_condition || 'ok',
       brake: body.brake_condition || 'ok',
       light: body.light_condition || 'ok',
       fuel_level: body.fuel_level || '',
       mileage: body.mileage || 0,
+      ...(body.checks || {}),
       ...(body.checklist || {}),
       ...(body.checks_data || {})
     });
 
-    // Determine overall_status
-    let overallStatus = 'ok';
-    if (body.issues_found || body.overall_status === 'critical') overallStatus = 'critical';
-    else if (body.overall_status === 'warning') overallStatus = 'warning';
+    // Determine overall_status (also auto-detect from checks values)
+    let overallStatus = body.overall_status || 'ok';
+    if (!['ok','warning','critical'].includes(overallStatus)) overallStatus = 'ok';
+    if (body.issues_found) overallStatus = 'critical';
 
     const notes = [body.notes || '', body.issue_description || ''].filter(Boolean).join('; ');
 
+    // inspector: frontend sends inspector_name
+    const inspector = body.inspector_name || body.checker_name || body.inspector || 'QR';
+
+    // datetime: use submitted date+time if provided, else server now()
+    const submittedAt = (body.date && body.time) ? (body.date + ' ' + body.time + ':00') : ts;
+
+    // Upload check image if provided
+    let checkImage = null;
+    if (body.check_image_base64) {
+      checkImage = await uploadToR2(env, body.check_image_base64,
+        body.check_image_name || 'check.jpg', `check/${id}`,
+        body.check_image_mime || 'image/jpeg');
+    }
+
     await dbRun(env.DB,
-      `INSERT INTO check_log (id, car_id, inspector, check_type, overall_status, checks_data, notes, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, car.id, body.checker_name || body.inspector || 'QR',
-       body.check_type || 'daily', overallStatus, checksData, notes, ts]
+      `INSERT INTO check_log (id, car_id, inspector, check_type, overall_status, checks_data, notes, check_image, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, car.id, inspector,
+       body.check_type || 'daily', overallStatus, checksData, notes, checkImage, submittedAt]
     );
 
     // Auto-create inspection alert if issues found

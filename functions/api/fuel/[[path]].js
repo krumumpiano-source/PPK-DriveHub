@@ -92,6 +92,10 @@ export async function onRequest(context) {
     let receiptImage = body.receipt_image || null;
     if (body.receipt_image_file) {
       receiptImage = await uploadToR2(env, body.receipt_image_file, `fuel/${id}`);
+    } else if (body.receipt_image_base64) {
+      receiptImage = await uploadToR2(env, body.receipt_image_base64,
+        body.receipt_image_name || 'receipt.jpg', `fuel/${id}`,
+        body.receipt_image_mime || 'image/jpeg');
     }
     let receiptPdf = body.receipt_pdf || null;
 
