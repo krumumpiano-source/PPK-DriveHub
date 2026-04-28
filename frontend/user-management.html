@@ -886,9 +886,9 @@
         html += '<div class="perm-row-label"><span>' + m.icon + '</span> ' + m.label + '</div>';
         html += '<select data-module="' + m.key + '"' + (isLocked ? ' disabled' : '') + '>';
         html += '<option value="view"' + (currentLevel === 'view' ? ' selected' : '') + '>👁️ ดูอย่างเดียว</option>';
-        html += '<option value="create"' + (currentLevel === 'create' ? ' selected' : '') + '>➕ สร้าง</option>';
-        html += '<option value="edit"' + (currentLevel === 'edit' ? ' selected' : '') + '>✏️ แก้ไข</option>';
-        html += '<option value="delete"' + (currentLevel === 'delete' ? ' selected' : '') + '>🗑️ ลบ</option>';
+        html += '<option value="create"' + (currentLevel === 'create' ? ' selected' : '') + '>➕ สร้างอย่างเดียว</option>';
+        html += '<option value="edit"' + (currentLevel === 'edit' ? ' selected' : '') + '>➕✏️ สร้าง + แก้ไข</option>';
+        html += '<option value="delete"' + (currentLevel === 'delete' ? ' selected' : '') + '>🗑️ ทุกสิทธิ์ (รวมลบ)</option>';
         html += '</select>';
         html += '</div>';
       }
@@ -1037,9 +1037,9 @@
         html += '<div class="perm-row-label"><span>' + m.icon + '</span> ' + m.label + '</div>';
         html += '<select data-module="' + m.key + '"' + (isLocked ? ' disabled' : '') + '>';
         html += '<option value="view"' + (currentLevel === 'view' ? ' selected' : '') + '>👁️ ดูอย่างเดียว</option>';
-        html += '<option value="create"' + (currentLevel === 'create' ? ' selected' : '') + '>➕ สร้าง</option>';
-        html += '<option value="edit"' + (currentLevel === 'edit' ? ' selected' : '') + '>✏️ แก้ไข</option>';
-        html += '<option value="delete"' + (currentLevel === 'delete' ? ' selected' : '') + '>🗑️ ลบ</option>';
+        html += '<option value="create"' + (currentLevel === 'create' ? ' selected' : '') + '>➕ สร้างอย่างเดียว</option>';
+        html += '<option value="edit"' + (currentLevel === 'edit' ? ' selected' : '') + '>➕✏️ สร้าง + แก้ไข</option>';
+        html += '<option value="delete"' + (currentLevel === 'delete' ? ' selected' : '') + '>🗑️ ทุกสิทธิ์ (รวมลบ)</option>';
         html += '</select>';
         html += '</div>';
       }

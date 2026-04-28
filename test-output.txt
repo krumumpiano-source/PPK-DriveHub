@@ -1,0 +1,69 @@
+[global-setup] Resetting local D1 database...
+[global-setup] Database reset complete.
+
+Running 48 tests using 1 worker
+
+  ✓   1 [qr-system] › tests\qr-system.test.mjs:111:3 › 0. Bootstrap Test Data › Setup admin account (3.5s)
+   Vehicles: QR-D-0001 (diesel), QR-G-0002 (gasoline_95), QR-E-0003 (electric)
+  ✓   2 [qr-system] › tests\qr-system.test.mjs:131:3 › 0. Bootstrap Test Data › Create 3 test vehicles (diesel, gasoline, EV) (1.7s)
+  ✓   3 [qr-system] › tests\qr-system.test.mjs:152:3 › 0. Bootstrap Test Data › Create 3 drivers (regular, reserve, adhoc) (1.6s)
+   Register reg@test.com: 200 OK
+   Register res@test.com: 200 OK
+   Register adhoc@test.com: 200 OK
+   Pending requests: 3
+   Approve reg@test.com: 200 OK
+   Approve res@test.com: 200 OK
+   Approve adhoc@test.com: 200 OK
+   Login reg@test.com: 200 OK
+   Login res@test.com: 200 OK
+   Login adhoc@test.com: 200 OK
+   Driver Regular: OK
+   Driver Reserve: OK
+   Driver Adhoc: OK
+  ✓   4 [qr-system] › tests\qr-system.test.mjs:183:3 › 0. Bootstrap Test Data › Create user accounts linked to drivers (3.4s)
+  ✓   5 [qr-system] › tests\qr-system.test.mjs:255:3 › 1. QR Vehicle Info (Public Endpoint) › GET /api/vehicles/qr-info — returns vehicle data for each car (1.5s)
+  ✓   6 [qr-system] › tests\qr-system.test.mjs:266:3 › 1. QR Vehicle Info (Public Endpoint) › QR-info includes fuel_type (needed for daily-check) (1.6s)
+  ✓   7 [qr-system] › tests\qr-system.test.mjs:274:3 › 1. QR Vehicle Info (Public Endpoint) › QR-info by license plate fallback (1.6s)
+  ✓   8 [qr-system] › tests\qr-system.test.mjs:282:3 › 1. QR Vehicle Info (Public Endpoint) › QR-info with invalid car_id returns 404 (1.7s)
+  ✓   9 [qr-system] › tests\qr-system.test.mjs:287:3 › 1. QR Vehicle Info (Public Endpoint) › QR-info without car_id returns error (1.6s)
+  ✓  10 [qr-system] › tests\qr-system.test.mjs:298:3 › 2. QR URL Patterns › QR URLs are correctly formed for each vehicle × function (1.8s)
+  ✓  11 [qr-system] › tests\qr-system.test.mjs:317:3 › 2. QR URL Patterns › QR scan page is accessible (1.5s)
+  ✓  12 [qr-system] › tests\qr-system.test.mjs:324:3 › 2. QR URL Patterns › QR manage page is accessible (auth required for data) (1.5s)
+  ✓  13 [qr-system] › tests\qr-system.test.mjs:335:3 › 3. QR Usage Record › Guest mode — submit usage for each vehicle (1.6s)
+  ✓  14 [qr-system] › tests\qr-system.test.mjs:353:3 › 3. QR Usage Record › Guest mode — return trip (1.6s)
+  ✓  15 [qr-system] › tests\qr-system.test.mjs:371:3 › 3. QR Usage Record › Logged-in driver (regular) — submit usage via auth API (1.6s)
+  ✓  16 [qr-system] › tests\qr-system.test.mjs:389:3 › 3. QR Usage Record › Logged-in driver (reserve) — submit usage (1.5s)
+  ✓  17 [qr-system] › tests\qr-system.test.mjs:407:3 › 3. QR Usage Record › Logged-in driver (adhoc) — submit usage (1.5s)
+  ✓  18 [qr-system] › tests\qr-system.test.mjs:425:3 › 3. QR Usage Record › GET /api/usage/latest-status — verify status after departure (1.5s)
+  ✓  19 [qr-system] › tests\qr-system.test.mjs:441:3 › 4. QR Fuel Record › Guest mode — submit fuel for diesel vehicle (1.5s)
+  ✓  20 [qr-system] › tests\qr-system.test.mjs:465:3 › 4. QR Fuel Record › Guest mode — submit fuel for gasoline vehicle (1.5s)
+  ✓  21 [qr-system] › tests\qr-system.test.mjs:489:3 › 4. QR Fuel Record › Guest mode — fuel without receipt should FAIL (1.5s)
+  ✓  22 [qr-system] › tests\qr-system.test.mjs:511:3 › 4. QR Fuel Record › Guest mode — fuel without mileage should FAIL (1.5s)
+  ✓  23 [qr-system] › tests\qr-system.test.mjs:534:3 › 4. QR Fuel Record › Guest mode — fuel without driver name should FAIL (1.5s)
+  ✓  24 [qr-system] › tests\qr-system.test.mjs:557:3 › 4. QR Fuel Record › Logged-in driver (regular) — submit fuel with driver_id (1.6s)
+  ✓  25 [qr-system] › tests\qr-system.test.mjs:581:3 › 4. QR Fuel Record › Logged-in admin — submit fuel with driver_name_manual (no driver_id) (1.6s)
+  ✓  26 [qr-system] › tests\qr-system.test.mjs:605:3 › 4. QR Fuel Record › GET /api/fuel/types — public fuel type list (1.6s)
+  ✓  27 [qr-system] › tests\qr-system.test.mjs:620:3 › 5. QR Daily Check › Guest mode — check diesel vehicle (all normal) (1.5s)
+  ✓  28 [qr-system] › tests\qr-system.test.mjs:647:3 › 5. QR Daily Check › Guest mode — check gasoline vehicle (with warning) (1.5s)
+  ✓  29 [qr-system] › tests\qr-system.test.mjs:675:3 › 5. QR Daily Check › Guest mode — check EV vehicle (with abnormal) (1.5s)
+  ✓  30 [qr-system] › tests\qr-system.test.mjs:701:3 › 5. QR Daily Check › Guest mode — check without inspector_name should FAIL (1.6s)
+  ✓  31 [qr-system] › tests\qr-system.test.mjs:722:3 › 5. QR Daily Check › Guest mode — check with image (1.5s)
+  ✓  32 [qr-system] › tests\qr-system.test.mjs:740:3 › 5. QR Daily Check › Logged-in driver (regular) — daily check (4.2s)
+  ✓  33 [qr-system] › tests\qr-system.test.mjs:761:3 › 5. QR Daily Check › Logged-in driver (reserve) — daily check (1.5s)
+  ✓  34 [qr-system] › tests\qr-system.test.mjs:776:3 › 5. QR Daily Check › Logged-in driver (adhoc) — daily check (1.5s)
+  ✓  35 [qr-system] › tests\qr-system.test.mjs:791:3 › 5. QR Daily Check › Logged-in admin — daily check (1.5s)
+  ✓  36 [qr-system] › tests\qr-system.test.mjs:812:3 › 6. Repair (Auth Required) › Unauthenticated repair should FAIL (401) (1.6s)
+  ✓  37 [qr-system] › tests\qr-system.test.mjs:822:3 › 6. Repair (Auth Required) › Logged-in driver — create repair request (1.6s)
+  ✓  38 [qr-system] › tests\qr-system.test.mjs:833:3 › 6. Repair (Auth Required) › Logged-in reserve driver — create repair request (1.6s)
+  ✓  39 [qr-system] › tests\qr-system.test.mjs:844:3 › 6. Repair (Auth Required) › Logged-in adhoc driver — create repair request (1.5s)
+  ✓  40 [qr-system] › tests\qr-system.test.mjs:855:3 › 6. Repair (Auth Required) › Admin — create repair request (1.5s)
+  ✓  41 [qr-system] › tests\qr-system.test.mjs:873:3 › 7. Cross-Vehicle Data Verification › Verify fuel log has records for test vehicles (1.5s)
+  ✓  42 [qr-system] › tests\qr-system.test.mjs:883:3 › 7. Cross-Vehicle Data Verification › Verify check log has records for all vehicles (1.5s)
+  ✓  43 [qr-system] › tests\qr-system.test.mjs:895:3 › 7. Cross-Vehicle Data Verification › Verify usage records exist for all vehicles (1.5s)
+  ✓  44 [qr-system] › tests\qr-system.test.mjs:901:3 › 7. Cross-Vehicle Data Verification › Verify repair log has records (1.6s)
+  ✓  45 [qr-system] › tests\qr-system.test.mjs:913:3 › 8. Edge Cases › Usage record with nonexistent car_id (1.6s)
+  ✓  46 [qr-system] › tests\qr-system.test.mjs:925:3 › 8. Edge Cases › Fuel record without car_id (1.6s)
+  ✓  47 [qr-system] › tests\qr-system.test.mjs:944:3 › 8. Edge Cases › Daily check without car_id (1.6s)
+  ✓  48 [qr-system] › tests\qr-system.test.mjs:956:3 › 8. Edge Cases › Usage record without required fields (1.5s)
+
+  48 passed (1.4m)
