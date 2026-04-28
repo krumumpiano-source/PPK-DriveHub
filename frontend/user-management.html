@@ -885,10 +885,9 @@
         html += '<div class="perm-row' + (isLocked ? ' locked' : '') + '">';
         html += '<div class="perm-row-label"><span>' + m.icon + '</span> ' + m.label + '</div>';
         html += '<select data-module="' + m.key + '"' + (isLocked ? ' disabled' : '') + '>';
-        html += '<option value="view"' + (currentLevel === 'view' ? ' selected' : '') + '>👁️ ดูอย่างเดียว</option>';
-        html += '<option value="create"' + (currentLevel === 'create' ? ' selected' : '') + '>➕ สร้างอย่างเดียว</option>';
-        html += '<option value="edit"' + (currentLevel === 'edit' ? ' selected' : '') + '>➕✏️ สร้าง + แก้ไข</option>';
-        html += '<option value="delete"' + (currentLevel === 'delete' ? ' selected' : '') + '>🗑️ ทุกสิทธิ์ (รวมลบ)</option>';
+        var isWork = currentLevel === 'edit' || currentLevel === 'create' || currentLevel === 'delete';
+        html += '<option value="view"' + (!isWork ? ' selected' : '') + '>👁️ ดูอย่างเดียว</option>';
+        html += '<option value="edit"' + (isWork ? ' selected' : '') + '>✅ ทำงาน (สร้าง + แก้ไข)</option>';
         html += '</select>';
         html += '</div>';
       }
@@ -1036,10 +1035,9 @@
         html += '<div class="perm-row' + (isLocked ? ' locked' : '') + '">';
         html += '<div class="perm-row-label"><span>' + m.icon + '</span> ' + m.label + '</div>';
         html += '<select data-module="' + m.key + '"' + (isLocked ? ' disabled' : '') + '>';
-        html += '<option value="view"' + (currentLevel === 'view' ? ' selected' : '') + '>👁️ ดูอย่างเดียว</option>';
-        html += '<option value="create"' + (currentLevel === 'create' ? ' selected' : '') + '>➕ สร้างอย่างเดียว</option>';
-        html += '<option value="edit"' + (currentLevel === 'edit' ? ' selected' : '') + '>➕✏️ สร้าง + แก้ไข</option>';
-        html += '<option value="delete"' + (currentLevel === 'delete' ? ' selected' : '') + '>🗑️ ทุกสิทธิ์ (รวมลบ)</option>';
+        var isWork = currentLevel === 'edit' || currentLevel === 'create' || currentLevel === 'delete';
+        html += '<option value="view"' + (!isWork ? ' selected' : '') + '>👁️ ดูอย่างเดียว</option>';
+        html += '<option value="edit"' + (isWork ? ' selected' : '') + '>✅ ทำงาน (สร้าง + แก้ไข)</option>';
         html += '</select>';
         html += '</div>';
       }
