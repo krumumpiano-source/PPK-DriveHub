@@ -8,9 +8,16 @@ import { execSync } from 'child_process';
 
 const BASE = 'http://localhost:8788';
 
+const TEST_ADMIN_PASS = process.env.TEST_ADMIN_PASS;
+const TEST_ADMIN_PASS_ALT = process.env.TEST_ADMIN_PASS_ALT;
+const TEST_DRIVER_PASS = process.env.TEST_DRIVER_PASS;
+const TEST_DRIVER_PASS_NEW = process.env.TEST_DRIVER_PASS_NEW;
+const TEST_DRIVER_PASS_ALT = process.env.TEST_DRIVER_PASS_ALT;
+const TEST_ROLE_ADMIN_PASS = process.env.TEST_ROLE_ADMIN_PASS;
+
 const DRIVER_USER = {
   email: 'driver_test@ppk.ac.th',
-  password: 'Driver@Test1',
+  password: TEST_DRIVER_PASS,
   first_name: 'ทดสอบ',
   last_name: 'พนักงานขับ',
   role: 'driver',
@@ -78,10 +85,10 @@ test.beforeAll(async () => {
 
   // 1. ได้ admin token
   for (const cred of [
-    { username: 'testadmin', password: 'Admin@5678' },
-    { username: 'testadmin', password: 'Admin@1234' },
-    { username: 'admin@test.com', password: 'Admin@1234' },
-    { username: 'role_admin@test.com', password: 'Role@Admin1' },
+    { username: 'testadmin', password: TEST_ADMIN_PASS_ALT },
+    { username: 'testadmin', password: TEST_ADMIN_PASS },
+    { username: 'admin@test.com', password: TEST_ADMIN_PASS },
+    { username: 'role_admin@test.com', password: TEST_ROLE_ADMIN_PASS },
   ]) {
     const r = await apiPost('/api/auth/login', cred);
     if (r?.data?.token) { ctx.adminToken = r.data.token; break; }
@@ -94,11 +101,11 @@ test.beforeAll(async () => {
     if (check?.data?.needs_setup) {
       await apiPost('/api/setup', {
         username: 'testadmin',
-        password: 'Admin@5678',
+        password: TEST_ADMIN_PASS_ALT,
         first_name: 'Test', last_name: 'Admin', email: 'testadmin@ppk.test',
       });
       clearRateLimits();
-      const r = await apiPost('/api/auth/login', { username: 'testadmin', password: 'Admin@5678' });
+      const r = await apiPost('/api/auth/login', { username: 'testadmin', password: TEST_ADMIN_PASS_ALT });
       if (r?.data?.token) ctx.adminToken = r.data.token;
     }
   }
@@ -109,7 +116,7 @@ test.beforeAll(async () => {
   // ลอง password หลายอัน เผื่อ test ก่อนหน้าเปลี่ยน password ค้างไว้
   clearRateLimits();
   let existing = null;
-  for (const tryPwd of [DRIVER_USER.password, 'Driver@New99', 'Driver@Test3']) {
+  for (const tryPwd of [DRIVER_USER.password, TEST_DRIVER_PASS_NEW, TEST_DRIVER_PASS_ALT]) {
     const r = await apiPost('/api/auth/login', { username: DRIVER_USER.email, password: tryPwd });
     if (r?.data?.token) { existing = r; break; }
     clearRateLimits();
@@ -453,7 +460,7 @@ test.describe('6. โปรไฟล์ส่วนตัว — Profile & Accou
     // เปลี่ยนเป็นรหัสใหม่
     const r1 = await apiPost('/api/auth/change-password', {
       old_password: DRIVER_USER.password,
-      new_password: 'Driver@New99',
+      new_password: TEST_DRIVER_PASS_NEW,
     }, ctx.driverToken);
     expect(r1?.success).toBe(true);
 
@@ -461,15 +468,15 @@ test.describe('6. โปรไฟล์ส่วนตัว — Profile & Accou
     clearRateLimits();
     const r2 = await apiPost('/api/auth/login', {
       username: DRIVER_USER.email,
-      password: 'Driver@New99',
+      password: TEST_DRIVER_PASS_NEW,
     });
     expect(r2?.data?.token).toBeTruthy();
 
     // เปลี่ยนเป็นรหัสที่ 3 (ห้ามใช้รหัสเดิมเพราะอยู่ใน password_history)
     clearRateLimits();
     const r3 = await apiPost('/api/auth/change-password', {
-      old_password: 'Driver@New99',
-      new_password: 'Driver@Test3',
+      old_password: TEST_DRIVER_PASS_NEW,
+      new_password: TEST_DRIVER_PASS_ALT,
     }, r2.data.token);
     expect(r3?.success).toBe(true);
     clearRateLimits();
