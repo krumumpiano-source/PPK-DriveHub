@@ -117,7 +117,7 @@
   <script>
     var vehicles=[],drivers=[],editingId=null,resolvingId=null;
     var TYPE_LABELS={accident:'อุบัติเหตุ',traffic_violation:'ฝ่าฝืนจราจร',damage:'ความเสียหาย',other:'อื่นๆ'};
-    var STATUS_LABELS={reported:'รายงานแล้ว',investigating:'กำลังสืบสวน',resolved:'แก้ไขแล้ว',closed:'ปิดเรื่อง'};
+    var STATUS_LABELS={reported:'รายงานแล้ว',investigating:'กำลังสืบสวน',under_review:'รอพิจารณา',resolved:'แก้ไขแล้ว',closed:'ปิดเรื่อง'};
 
     function waitForCommon(){return new Promise(function(resolve){if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){resolve();return}var c=0;var t=setInterval(function(){c++;if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){clearInterval(t);resolve()}else if(c>50){clearInterval(t);resolve()}},100)})}
 
@@ -143,7 +143,7 @@
       try{var r=await apiCall('getDrivers',{status:'active'});if(r.success&&r.data&&r.data.drivers){drivers=r.data.drivers;var sel=document.getElementById('f_driver_id');drivers.forEach(function(d){var o=document.createElement('option');o.value=d.driver_id;o.textContent=(d.title||'')+' '+(d.first_name||'')+' '+(d.last_name||'');sel.appendChild(o)})}}catch(e){console.error(e)}
     }
 
-    function vLabel(id){var v=vehicles.find(function(x){return x.car_id===id});return v?(v.license_plate+' '+(v.brand||'')).trim():(id||'-')}
+    function vLabel(id){var v=vehicles.find(function(x){return (x.id||x.car_id)===id});return v?(v.license_plate+' '+(v.brand||'')).trim():(id||'-')}
     function dLabel(id){var d=drivers.find(function(x){return x.driver_id===id});return d?((d.title||'')+' '+(d.first_name||'')+' '+(d.last_name||'')).trim():(id||'-')}
     function fmtDate(s){if(!s)return'-';try{var p=s.split(/[T ]/)[0].split('-');var m=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];return parseInt(p[2])+' '+m[parseInt(p[1])-1]+' '+(parseInt(p[0])+543)}catch(e){return s}}
     function showAlert(msg,type){var c=document.getElementById('alertContainer');c.innerHTML='<div class="alert alert-'+type+'">'+msg+'</div>';setTimeout(function(){c.innerHTML=''},5000)}

@@ -1005,6 +1005,9 @@
       if (typeof apiCall === 'undefined') {
         return;
       }
+      // Driver role has no permission to list all drivers — skip silently
+      var user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+      if (user && (user.role === 'driver' || !user.driver_id)) return;
 
       try {
         var result = await apiCall('getDrivers', { status: 'active' });
