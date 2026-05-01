@@ -200,6 +200,18 @@ export async function onRequest(context) {
 
   // --- GET /api/repair/log ---
   if (path === '/api/repair/log' && method === 'GET') {
+    // Driver role: allow viewing own repair requests
+    if (user.role === 'driver') {
+      const rows = await dbAll(env.DB,
+        `SELECT rl.*, c.license_plate, c.brand
+         FROM repair_log rl
+         LEFT JOIN cars c ON rl.car_id = c.id
+         WHERE rl.reporter_id = ? OR rl.requested_by_driver_id = ?
+         ORDER BY rl.date_reported DESC LIMIT 100`,
+        [user.id, user.driver_id || user.id]
+      );
+      return success(rows);
+    }
     try { requirePermission(user, 'repair', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const carId = url.searchParams.get('car_id');
     const status = url.searchParams.get('status');

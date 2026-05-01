@@ -442,6 +442,7 @@
     }
 
     // Init
+    function waitForCommon(){return new Promise(function(r){if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){r();return}var c=0;var t=setInterval(function(){c++;if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){clearInterval(t);r()}else if(c>50){clearInterval(t);r()}},100)})}
     document.addEventListener('DOMContentLoaded', async function() {
       await waitForCommon();
       if (typeof requireAuth === 'function') { if (!requireAuth()) { window.location.href = 'login.html'; return; } }

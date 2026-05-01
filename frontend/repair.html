@@ -455,7 +455,7 @@
       var user=getCurrentUser();
       if(!user) return;
       var hasRepairPerm = (typeof hasModulePermission==='function' && hasModulePermission('repair','view')) || (user.role==='admin');
-      if(!hasRepairPerm && user.driver_id){
+      if(!hasRepairPerm && (user.driver_id || user.role==='driver')){
         isDriverMode=true;
         document.getElementById('summaryCards').style.display='none';
         document.querySelector('.tabs').style.display='none';
@@ -544,6 +544,13 @@
     }
 
     async function loadDrivers(){
+      var user=getCurrentUser();
+      // Driver role: skip list fetch, auto-fill own driver_id
+      if(user&&(user.role==='driver'||user.driver_id)){
+        var sel=document.getElementById('rpt_driver');
+        if(sel&&user.driver_id){var o=document.createElement('option');o.value=user.driver_id;o.textContent=(user.display_name||'ตัวเอง');o.selected=true;sel.appendChild(o)}
+        return;
+      }
       try{
         var r=await apiCall('getDrivers',{status:'active'});
         if(r.success&&r.data&&r.data.drivers) drivers=r.data.drivers;

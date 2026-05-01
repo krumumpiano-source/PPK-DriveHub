@@ -31,6 +31,13 @@ export async function onRequest(context) {
   if (!user) return error('Unauthorized', 401);
 
   if (path === '/api/vehicles' && method === 'GET') {
+    // Driver role: allow basic vehicle list for form dropdowns (limited fields)
+    if (user.role === 'driver') {
+      const vehicles = await dbAll(env.DB,
+        `SELECT id, license_plate, brand, model, fuel_type, status FROM cars WHERE status != 'inactive' ORDER BY license_plate ASC`, []
+      );
+      return success({ vehicles });
+    }
     try { requirePermission(user, 'vehicles', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const status = url.searchParams.get('status');
     const params = [];
