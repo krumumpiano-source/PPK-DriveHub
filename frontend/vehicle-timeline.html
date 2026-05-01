@@ -150,7 +150,7 @@
       var d=ev.data;
       switch(ev.type){
         case 'queue':return(d.destination||'ไม่ระบุปลายทาง')+' — '+(d.driver_name||'');
-        case 'usage':return(d.record_type==='departure'?'🚗 ออก':'🏁 กลับ')+' เลขไมล์ '+(d.mileage_start||d.mileage_end||'-');
+        case 'usage':return(d.record_type==='departure'?'🚗 ออก':'🏁 กลับ')+' เลขไมล์ '+(d.mileage||'-');
         case 'fuel':return'เติม '+(d.liters||0)+' ลิตร — '+fmt$(d.amount);
         case 'repair':return(d.description||'ซ่อมบำรุง').substring(0,60);
         case 'check':return'ผลตรวจ: '+(d.overall_status==='good'?'✅ ปกติ':d.overall_status==='warning'?'⚠️ เฝ้าระวัง':'❌ วิกฤต');
