@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   salt TEXT NOT NULL,
-  role TEXT NOT NULL DEFAULT 'viewer' CHECK(role IN ('admin','super_admin','vehicle','fuel','repair','viewer')),
+  role TEXT NOT NULL DEFAULT 'viewer' CHECK(role IN ('admin','super_admin','vehicle','fuel','repair','viewer','manager','driver','staff')),
   permissions TEXT NOT NULL DEFAULT '{}',         -- JSON: {queue:'view', fuel:'create', ...}
   title TEXT,
   first_name TEXT NOT NULL,
