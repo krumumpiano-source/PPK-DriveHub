@@ -1,4 +1,15 @@
 ﻿// @ts-check
+// Load test credentials from .env.test (gitignored — never committed to repo)
+const { readFileSync } = require('fs');
+try {
+  readFileSync('.env.test', 'utf8').split('\n').forEach(line => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) return;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx > 0) process.env[trimmed.slice(0, eqIdx).trim()] ??= trimmed.slice(eqIdx + 1).trim();
+  });
+} catch { /* .env.test not found — rely on env vars set externally */ }
+
 const { defineConfig, devices } = require('@playwright/test');
 
 module.exports = defineConfig({

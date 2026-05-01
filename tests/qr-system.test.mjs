@@ -7,6 +7,8 @@ import { execSync } from 'child_process';
 import { existsSync, writeFileSync } from 'fs';
 
 const BASE = process.env.BASE_URL || 'http://localhost:8788';
+const ADMIN_PASS     = process.env.TEST_ADMIN_PASS;
+const ADMIN_PASS_ALT = process.env.TEST_ADMIN_PASS_ALT;
 
 // ── HTTP Helpers ──
 async function post(path, body = {}, token = '') {
@@ -56,7 +58,7 @@ async function recoverState() {
 
   // 1) Recover admin token (max 2 login attempts)
   if (!adminToken) {
-    for (const pw of ['Admin@1234', 'Admin@5678']) {
+    for (const pw of [ADMIN_PASS, ADMIN_PASS_ALT]) {
       const r = await post('/api/auth/login', { username: 'qr_admin', password: pw });
       if (r.status === 200 && r.data?.data?.token) { adminToken = r.data.data.token; break; }
     }
@@ -113,16 +115,16 @@ test.describe.serial('0. Bootstrap Test Data', () => {
     const check = await get('/api/setup');
     if (check.data?.data?.needs_setup) {
       await post('/api/setup', {
-        username: 'qr_admin', password: 'Admin@1234',
+        username: 'qr_admin', password: ADMIN_PASS,
         first_name: 'QR', last_name: 'Admin', email: 'qradmin@test.com',
       });
     }
     // Login — try known passwords and usernames (handles full-suite DB state)
     for (const cred of [
-      { username: 'qr_admin',  password: 'Admin@1234' },
-      { username: 'qr_admin',  password: 'Admin@5678' },
-      { username: 'testadmin', password: 'Admin@1234' },
-      { username: 'testadmin', password: 'Admin@5678' },
+      { username: 'qr_admin',  password: ADMIN_PASS },
+      { username: 'qr_admin',  password: ADMIN_PASS_ALT },
+      { username: 'testadmin', password: ADMIN_PASS },
+      { username: 'testadmin', password: ADMIN_PASS_ALT },
     ]) {
       const r = await post('/api/auth/login', { username: cred.username, password: cred.password });
       if (r.status === 200 && r.data?.data?.token) {

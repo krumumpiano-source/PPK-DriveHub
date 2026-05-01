@@ -6,6 +6,8 @@ import { test, expect } from '@playwright/test';
 import { execSync } from 'child_process';
 
 const BASE = process.env.BASE_URL || 'http://localhost:8788';
+const ADMIN_PASS     = process.env.TEST_ADMIN_PASS;
+const ADMIN_PASS_ALT = process.env.TEST_ADMIN_PASS_ALT;
 
 /** Utility: POST JSON */
 async function post(path, body = {}, token = '') {
@@ -66,12 +68,12 @@ test.beforeEach(async () => {
   const check = await get('/api/setup');
   if (check.data?.data?.needs_setup) {
     await post('/api/setup', {
-      username: 'testadmin', password: 'Admin@1234',
+      username: 'testadmin', password: ADMIN_PASS,
       first_name: 'Test', last_name: 'Admin', email: 'testadmin@test.com',
     });
   }
   // Try login with both possible passwords
-  for (const pw of ['Admin@1234', 'Admin@5678']) {
+  for (const pw of [ADMIN_PASS, ADMIN_PASS_ALT]) {
     const r = await post('/api/auth/login', { username: 'testadmin', password: pw });
     if (r.status === 200 && r.data?.data?.token) {
       adminToken = r.data.data.token;
@@ -113,7 +115,7 @@ test.describe.serial('1. Setup', () => {
     }
     const r = await post('/api/setup', {
       username: 'testadmin',
-      password: 'Admin@1234',
+      password: ADMIN_PASS,
       first_name: 'Test',
       last_name: 'Admin',
       email: 'testadmin@test.com',
@@ -133,7 +135,7 @@ test.describe.serial('2. Auth', () => {
     if (check.data.data && check.data.data.needs_setup) {
       await post('/api/setup', {
         username: 'testadmin',
-        password: 'Admin@1234',
+        password: ADMIN_PASS,
         first_name: 'Test',
         last_name: 'Admin',
         email: 'testadmin@test.com',
@@ -144,7 +146,7 @@ test.describe.serial('2. Auth', () => {
   test('POST /api/auth/login — เข้าสู่ระบบสำเร็จ', async () => {
     const r = await post('/api/auth/login', {
       username: 'testadmin',
-      password: 'Admin@1234',
+      password: ADMIN_PASS,
     });
     expect(r.status).toBe(200);
     expect(r.data.success).toBe(true);
@@ -189,24 +191,24 @@ test.describe.serial('2. Auth', () => {
 
   test('POST /api/auth/change-password — เปลี่ยนรหัสผ่าน', async () => {
     const r = await post('/api/auth/change-password', {
-      old_password: 'Admin@1234',
-      new_password: 'Admin@5678',
+      old_password: ADMIN_PASS,
+      new_password: ADMIN_PASS_ALT,
     }, adminToken);
     expect(r.status).toBe(200);
     expect(r.data.success).toBe(true);
     // Re-login with new password to confirm & update token
     const login = await post('/api/auth/login', {
       username: 'testadmin',
-      password: 'Admin@5678',
+      password: ADMIN_PASS_ALT,
     });
     expect(login.status).toBe(200);
     adminToken = login.data.data.token;
     // Restore password back to original so subsequent test suites work consistently
     await post('/api/auth/change-password', {
-      old_password: 'Admin@5678',
-      new_password: 'Admin@1234',
+      old_password: ADMIN_PASS_ALT,
+      new_password: ADMIN_PASS,
     }, adminToken);
-    const relg = await post('/api/auth/login', { username: 'testadmin', password: 'Admin@1234' });
+    const relg = await post('/api/auth/login', { username: 'testadmin', password: ADMIN_PASS });
     if (relg.data?.data?.token) adminToken = relg.data.data.token;
   });
 
@@ -980,7 +982,7 @@ test.describe.serial('18. Incidents', () => {
   test('Setup — สร้างรถและคนขับสำหรับ Incident test', async () => {
     // Re-login (token expired after logout)
     try { execSync('npx wrangler d1 execute ppk-drivehub-db --local --command "DELETE FROM rate_limits"', { timeout: 10000, stdio: 'pipe' }); } catch {}
-    for (const pw of ['Admin@1234', 'Admin@5678']) {
+    for (const pw of [ADMIN_PASS, ADMIN_PASS_ALT]) {
       const r = await post('/api/auth/login', { username: 'testadmin', password: pw });
       if (r.status === 200 && r.data?.data?.token) {
         adminToken = r.data.data.token;

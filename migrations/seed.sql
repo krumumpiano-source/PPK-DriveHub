@@ -49,5 +49,5 @@ INSERT OR IGNORE INTO maintenance_settings (id, item_key, item_name, interval_km
 -- ============================================================
 -- NOTE: First admin user is created via POST /api/setup
 -- Run: POST https://your-domain/api/setup
--- Body: { "username": "admin", "password": "Admin@1234", "first_name": "Admin", "last_name": "PPK", "email": "admin@ppk.ac.th" }
+-- Body: { "username": "admin", "password": "<your-strong-password>", "first_name": "Admin", "last_name": "PPK", "email": "admin@ppk.ac.th" }
 -- ============================================================
