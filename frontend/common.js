@@ -157,7 +157,7 @@ function renderNavigation() {
     // ── 1. คิวและการใช้รถ ──
     var hasQueue = hasModulePermission('queue', 'edit') || hasPermission(['admin']);
     var hasUsage = hasModulePermission('usage_log', 'view') || hasPermission(['admin']);
-    var hasHistory = user.driver_id || hasPermission(['admin']);
+    var hasHistory = user.driver_id || user.role === 'driver' || hasPermission(['admin']);
     if (true) {
         nav += _sidebarSection('คิวและการใช้รถ');
         nav += _sidebarItem('vehicle-request.html', 'vehicle-request', '📝', 'ขอใช้รถ');
@@ -177,7 +177,7 @@ function renderNavigation() {
     // ── 3. ระบบซ่อม ──
     var hasRepair = hasModulePermission('repair', 'view') || hasPermission(['admin']);
     var hasTax = hasModulePermission('vehicles', 'view') || hasPermission(['admin']);
-    var isDriver = !!user.driver_id;
+    var isDriver = user.role === 'driver' || !!user.driver_id;
     if (hasRepair || hasTax || isDriver) {
         nav += _sidebarSection('ระบบซ่อมและตรวจสภาพ');
         if (hasRepair) nav += _sidebarItem('repair.html', 'repair', '🔧', 'บันทึกการซ่อม');

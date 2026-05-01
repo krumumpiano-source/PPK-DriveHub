@@ -502,7 +502,13 @@
               document.getElementById('driverUpcomingQueue').innerHTML=h2;
             }
             document.getElementById('driverDashboard').style.display='block';
-          }catch(e){console.error(e);document.getElementById('driverDashboard').innerHTML='<p style="color:var(--color-danger)">โหลดข้อมูลไม่สำเร็จ</p>';document.getElementById('driverDashboard').style.display='block';}
+          }catch(e){
+            console.error(e);
+            document.getElementById('driverKpi').innerHTML='<p style="color:var(--color-text-muted);text-align:center;padding:20px">ไม่พบข้อมูลคิวในขณะนี้</p>';
+            document.getElementById('driverTodayQueue').innerHTML='';
+            document.getElementById('driverUpcomingQueue').innerHTML='';
+            document.getElementById('driverDashboard').style.display='block';
+          }
           finally{document.getElementById('loading').style.display='none'}
         }
 

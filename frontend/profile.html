@@ -713,6 +713,12 @@
           var roleText = '';
           if (user.role === 'admin' || user.role === 'super_admin') {
             roleText = user.role === 'super_admin' ? 'ผู้ดูแลระบบสูงสุด (Super Admin)' : 'ผู้ดูแลระบบ (Admin)';
+          } else if (user.role === 'manager') {
+            roleText = 'ผู้จัดการ (Manager)';
+          } else if (user.role === 'driver') {
+            roleText = 'พนักงานขับรถ (Driver)';
+          } else if (user.role === 'staff') {
+            roleText = 'เจ้าหน้าที่ (Staff)';
           } else {
             roleText = 'ผู้ใช้ทั่วไป';
           }
@@ -770,7 +776,11 @@
               permissionsList.appendChild(badge);
             }
           } else {
-            permissionsList.innerHTML = '<span style="color: var(--color-text-muted);">ไม่มีสิทธิ์พิเศษ</span>';
+            var roleDefaultMsg = user.role === 'driver' ? 'พนักงานขับรถ — เข้าถึงระบบขอใช้รถและคิวได้' :
+              user.role === 'manager' ? 'ผู้จัดการ — ดูข้อมูลและอนุมัติได้' :
+              user.role === 'staff' ? 'เจ้าหน้าที่ — สิทธิ์ตามที่กำหนด' :
+              'ไม่มีสิทธิ์พิเศษ';
+            permissionsList.innerHTML = '<span style="color: var(--color-text-muted);">' + roleDefaultMsg + '</span>';
           }
 
         }

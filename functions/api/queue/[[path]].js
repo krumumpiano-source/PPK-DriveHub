@@ -16,15 +16,23 @@ export async function onRequest(context) {
 
   // --- GET /api/queue ---
   if (path === '/api/queue' && method === 'GET') {
-    try { requirePermission(user, 'queue', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    if (user.role !== 'driver') {
+      try { requirePermission(user, 'queue', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    }
     const status = url.searchParams.get('status');
     const date = url.searchParams.get('date');
     const carId = url.searchParams.get('car_id');
+    const dateFrom = url.searchParams.get('date_from');
+    const dateTo = url.searchParams.get('date_to');
+    const driverIdParam = url.searchParams.get('driver_id');
     const where = [];
     const params = [];
     if (status) { where.push('q.status = ?'); params.push(status); }
     if (date) { where.push('q.date = ?'); params.push(date); }
     if (carId) { where.push('q.car_id = ?'); params.push(carId); }
+    if (dateFrom) { where.push('q.date >= ?'); params.push(dateFrom); }
+    if (dateTo) { where.push('q.date <= ?'); params.push(dateTo); }
+    if (driverIdParam) { where.push('q.driver_id = ?'); params.push(driverIdParam); }
     const rows = await dbAll(env.DB,
       `SELECT q.*, c.license_plate, c.brand, c.model,
        d.name AS driver_name, bd.name AS backup_driver_name,
