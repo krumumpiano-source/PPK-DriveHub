@@ -125,6 +125,14 @@
       showResult('QR Code ไม่ถูกต้อง กรุณาสแกนใหม่','error');
     }
 
+    // ซ่อนปุ่มแบบประเมินสำหรับพนักงานขับรถ (survey เป็นของผู้โดยสาร)
+    (function hideSurveyForDriver(){
+      try{
+        var u=JSON.parse(localStorage.getItem('ppk_user')||'{}');
+        if(u&&u.role==='driver') document.querySelectorAll('.type-btn').forEach(function(b){if(b.textContent.includes('ประเมิน')) b.style.display='none';});
+      }catch(e){}
+    })();
+
     function goManual(type,carId){
       var url=TYPE_MAP[type]||'qr-usage-record.html';
       if(carId) url+='?car='+encodeURIComponent(carId);
