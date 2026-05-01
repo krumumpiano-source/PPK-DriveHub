@@ -117,9 +117,14 @@ test.describe.serial('0. Bootstrap Test Data', () => {
         first_name: 'QR', last_name: 'Admin', email: 'qradmin@test.com',
       });
     }
-    // Login — try known passwords (max 2 attempts)
-    for (const pw of ['Admin@1234', 'Admin@5678']) {
-      const r = await post('/api/auth/login', { username: 'qr_admin', password: pw });
+    // Login — try known passwords and usernames (handles full-suite DB state)
+    for (const cred of [
+      { username: 'qr_admin',  password: 'Admin@1234' },
+      { username: 'qr_admin',  password: 'Admin@5678' },
+      { username: 'testadmin', password: 'Admin@1234' },
+      { username: 'testadmin', password: 'Admin@5678' },
+    ]) {
+      const r = await post('/api/auth/login', { username: cred.username, password: cred.password });
       if (r.status === 200 && r.data?.data?.token) {
         adminToken = r.data.data.token;
         break;

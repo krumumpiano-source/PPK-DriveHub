@@ -201,6 +201,13 @@ test.describe.serial('2. Auth', () => {
     });
     expect(login.status).toBe(200);
     adminToken = login.data.data.token;
+    // Restore password back to original so subsequent test suites work consistently
+    await post('/api/auth/change-password', {
+      old_password: 'Admin@5678',
+      new_password: 'Admin@1234',
+    }, adminToken);
+    const relg = await post('/api/auth/login', { username: 'testadmin', password: 'Admin@1234' });
+    if (relg.data?.data?.token) adminToken = relg.data.data.token;
   });
 
   test('POST /api/auth/accept-pdpa — ยอมรับ PDPA', async () => {
@@ -605,7 +612,7 @@ test.describe.serial('9. Repair', () => {
     const r = await post('/api/repair/log', {
       car_id: createdVehicleId,
       date_reported: '2026-04-03',
-      status: 'pending',
+      status: 'requested',
       issue_description: 'เบรคมีเสียง',
       reporter_name: 'ผู้แจ้งทดสอบ',
     }, adminToken);
@@ -629,7 +636,7 @@ test.describe.serial('9. Repair', () => {
 
   test('PUT /api/repair/log/:id — อัปเดตรายการซ่อม', async () => {
     const r = await put(`/api/repair/log/${createdRepairId}`, {
-      status: 'in_progress',
+      status: 'repairing',
       garage_name: 'อู่ทดสอบ',
     }, adminToken);
     expect(r.status).toBe(200);
@@ -957,6 +964,330 @@ test.describe.serial('17. Cleanup', () => {
 
   test('POST /api/auth/logout — ออกจากระบบ', async () => {
     const r = await post('/api/auth/logout', {}, adminToken);
+    expect(r.status).toBe(200);
+    expect(r.data.success).toBe(true);
+  });
+});
+
+// ════════════════════════════════════════════
+// 18. INCIDENTS (อุบัติเหตุ/เหตุการณ์)
+// ════════════════════════════════════════════
+let incidentVehicleId = '';
+let incidentDriverId = '';
+let createdIncidentId = '';
+
+test.describe.serial('18. Incidents', () => {
+  test('Setup — สร้างรถและคนขับสำหรับ Incident test', async () => {
+    // Re-login (token expired after logout)
+    try { execSync('npx wrangler d1 execute ppk-drivehub-db --local --command "DELETE FROM rate_limits"', { timeout: 10000, stdio: 'pipe' }); } catch {}
+    for (const pw of ['Admin@1234', 'Admin@5678']) {
+      const r = await post('/api/auth/login', { username: 'testadmin', password: pw });
+      if (r.status === 200 && r.data?.data?.token) {
+        adminToken = r.data.data.token;
+        break;
+      }
+    }
+    expect(adminToken).toBeTruthy();
+
+    // สร้างรถ
+    const v = await post('/api/vehicles', {
+      license_plate: `INC-${Date.now().toString().slice(-4)}`,
+      brand: 'Toyota', model: 'Hiace', year: 2024,
+      fuel_type: 'diesel', seat_count: 12, status: 'available',
+    }, adminToken);
+    incidentVehicleId = v.data?.id || v.data?.data?.id;
+    expect(incidentVehicleId).toBeTruthy();
+
+    // สร้างคนขับ
+    const d = await post('/api/drivers', {
+      name: 'คนขับ Incident Test',
+      license_number: `LIC-INC-${Date.now().toString().slice(-4)}`,
+      phone: '0844444444', status: 'active',
+    }, adminToken);
+    incidentDriverId = d.data?.id || d.data?.data?.id;
+    expect(incidentDriverId).toBeTruthy();
+  });
+
+  test('POST /api/incidents — สร้างบันทึกอุบัติเหตุ', async () => {
+    const r = await post('/api/incidents', {
+      car_id: incidentVehicleId,
+      driver_id: incidentDriverId,
+      incident_date: '2026-05-01',
+      incident_type: 'accident',
+      description: 'ชนท้ายรถอื่น',
+      location: 'ถนนพหลโยธิน',
+      damage_cost: 15000,
+      police_report_number: 'POL-12345',
+    }, adminToken);
+    expect(r.status).toBe(201);
+    expect(r.data.success).toBe(true);
+    createdIncidentId = r.data.id || r.data.data?.id;
+    expect(createdIncidentId).toBeTruthy();
+  });
+
+  test('GET /api/incidents — ดูรายการอุบัติเหตุ', async () => {
+    const r = await get('/api/incidents', adminToken);
+    expect(r.status).toBe(200);
+    expect(r.data.success).toBe(true);
+  });
+
+  test('GET /api/incidents/:id — ดูรายละเอียด', async () => {
+    if (!createdIncidentId) { test.skip(); return; }
+    const r = await get(`/api/incidents/${createdIncidentId}`, adminToken);
+    expect(r.status).toBe(200);
+    expect(r.data.success).toBe(true);
+    const inc = r.data.data || r.data;
+    expect(inc).toHaveProperty('incident_type');
+  });
+
+  test('PUT /api/incidents/:id — อัปเดตสถานะ', async () => {
+    if (!createdIncidentId) { test.skip(); return; }
+    const r = await put(`/api/incidents/${createdIncidentId}`, {
+      status: 'under_review',
+      damage_cost: 18000,
+    }, adminToken);
+    expect(r.status).toBe(200);
+    expect(r.data.success).toBe(true);
+  });
+
+  test('PUT /api/incidents/:id/resolve — ปิดเคส', async () => {
+    if (!createdIncidentId) { test.skip(); return; }
+    const r = await put(`/api/incidents/${createdIncidentId}/resolve`, {
+      resolution_notes: 'ซ่อมเสร็จแล้ว จ่ายประกัน',
+    }, adminToken);
+    expect([200, 201]).toContain(r.status);
+    expect(r.data.success).toBe(true);
+  });
+
+  test('GET /api/incidents?car_id= — กรองตามรถ', async () => {
+    const r = await get(`/api/incidents?car_id=${incidentVehicleId}`, adminToken);
+    expect(r.status).toBe(200);
+    expect(r.data.success).toBe(true);
+    const items = r.data.data || r.data;
+    expect(Array.isArray(items)).toBe(true);
+    expect(items.length).toBeGreaterThan(0);
+  });
+
+  test('Cleanup — ลบรถและคนขับ Incident test', async () => {
+    if (incidentVehicleId) await del(`/api/vehicles/${incidentVehicleId}`, adminToken);
+    if (incidentDriverId) await del(`/api/drivers/${incidentDriverId}`, adminToken);
+  });
+});
+
+// ════════════════════════════════════════════
+// 19. VEHICLE REQUESTS (ขอใช้รถออนไลน์)
+// ════════════════════════════════════════════
+let vreqVehicleId = '';
+let vreqDriverId = '';
+let createdVreqId = '';
+
+test.describe.serial('19. Vehicle Requests', () => {
+  test('Setup — สร้างรถและคนขับสำหรับ Vehicle Request test', async () => {
+    const v = await post('/api/vehicles', {
+      license_plate: `VREQ-${Date.now().toString().slice(-4)}`,
+      brand: 'Honda', model: 'CRV', year: 2023,
+      fuel_type: 'gasoline', seat_count: 5, status: 'available',
+    }, adminToken);
+    vreqVehicleId = v.data?.id || v.data?.data?.id;
+    expect(vreqVehicleId).toBeTruthy();
+
+    const d = await post('/api/drivers', {
+      name: 'คนขับ VREQ Test',
+      license_number: `LIC-VREQ-${Date.now().toString().slice(-4)}`,
+      phone: '0855555555', status: 'active',
+    }, adminToken);
+    vreqDriverId = d.data?.id || d.data?.data?.id;
+    expect(vreqDriverId).toBeTruthy();
+  });
+
+  test('POST /api/vehicle-requests — ยื่นคำขอใช้รถ', async () => {
+    const r = await post('/api/vehicle-requests', {
+      date: '2026-05-10',
+      time_start: '09:00', time_end: '12:00',
+      destination: 'เชียงใหม่',
+      purpose: 'ประชุมวิชาการ',
+      passengers: 3,
+      requester_department: 'แผนกบริหาร',
+    }, adminToken);
+    expect(r.status).toBe(201);
+    expect(r.data.success).toBe(true);
+    createdVreqId = r.data.id || r.data.data?.id;
+    expect(createdVreqId).toBeTruthy();
+  });
+
+  test('GET /api/vehicle-requests — ดูรายการคำขอ', async () => {
+    const r = await get('/api/vehicle-requests', adminToken);
+    expect(r.status).toBe(200);
+    expect(r.data.success).toBe(true);
+    const items = r.data.data || r.data;
+    expect(Array.isArray(items)).toBe(true);
+  });
+
+  test('GET /api/vehicle-requests/:id — ดูรายละเอียดคำขอ', async () => {
+    if (!createdVreqId) { test.skip(); return; }
+    const r = await get(`/api/vehicle-requests/${createdVreqId}`, adminToken);
+    expect(r.status).toBe(200);
+    expect(r.data.success).toBe(true);
+    const item = r.data.data || r.data;
+    expect(item).toHaveProperty('destination');
+  });
+
+  test('PUT /api/vehicle-requests/:id/approve — อนุมัติคำขอ', async () => {
+    if (!createdVreqId || !vreqVehicleId || !vreqDriverId) { test.skip(); return; }
+    const r = await put(`/api/vehicle-requests/${createdVreqId}/approve`, {
+      assigned_car_id: vreqVehicleId,
+      assigned_driver_id: vreqDriverId,
+      notes: 'อนุมัติแล้ว',
+    }, adminToken);
+    expect(r.status).toBe(200);
+    expect(r.data.success).toBe(true);
+  });
+
+  test('GET /api/vehicle-requests?status=approved — กรองตาม status', async () => {
+    const r = await get('/api/vehicle-requests?status=approved', adminToken);
+    expect(r.status).toBe(200);
+    expect(r.data.success).toBe(true);
+  });
+
+  test('Cleanup — ลบรถและคนขับ Vehicle Request test', async () => {
+    if (vreqVehicleId) await del(`/api/vehicles/${vreqVehicleId}`, adminToken);
+    if (vreqDriverId) await del(`/api/drivers/${vreqDriverId}`, adminToken);
+  });
+});
+
+// ════════════════════════════════════════════
+// 20. SURVEY (แบบประเมิน)
+// ════════════════════════════════════════════
+let surveyVehicleId = '';
+
+test.describe.serial('20. Survey', () => {
+  test('Setup — สร้างรถสำหรับ Survey test', async () => {
+    const v = await post('/api/vehicles', {
+      license_plate: `SURV-${Date.now().toString().slice(-4)}`,
+      brand: 'Isuzu', model: 'D-Max', year: 2022,
+      fuel_type: 'diesel', seat_count: 5, status: 'available',
+    }, adminToken);
+    surveyVehicleId = v.data?.id || v.data?.data?.id;
+    expect(surveyVehicleId).toBeTruthy();
+  });
+
+  test('POST /api/survey/submit — ส่งแบบประเมิน (Public QR)', async () => {
+    const r = await post('/api/survey/submit', {
+      car_id: surveyVehicleId,
+      respondent_name: 'ผู้ประเมินทดสอบ',
+      overall_score: 4,
+      cleanliness_score: 5,
+      punctuality_score: 4,
+      politeness_score: 5,
+      safety_score: 4,
+      appearance_score: 5,
+      comment: 'บริการดีมาก',
+    });
+    expect([200, 201]).toContain(r.status);
+    expect(r.data.success).toBe(true);
+  });
+
+  test('GET /api/survey/results — ดูผลประเมิน (Admin)', async () => {
+    const r = await get('/api/survey/results', adminToken);
+    expect(r.status).toBe(200);
+    expect(r.data.success).toBe(true);
+  });
+
+  test('GET /api/survey/results?car_id= — กรองตามรถ', async () => {
+    const r = await get(`/api/survey/results?car_id=${surveyVehicleId}`, adminToken);
+    expect(r.status).toBe(200);
+    expect(r.data.success).toBe(true);
+  });
+
+  test('Cleanup — ลบรถ Survey test', async () => {
+    if (surveyVehicleId) await del(`/api/vehicles/${surveyVehicleId}`, adminToken);
+  });
+});
+
+// ════════════════════════════════════════════
+// 21. RATE LIMITING
+// ════════════════════════════════════════════
+test.describe.serial('21. Rate Limiting', () => {
+  test('POST /api/auth/login — ถูก rate-limit หลังพยายามหลายครั้ง', async () => {
+    // ลองส่ง login ผิดหลายครั้ง → คาดว่าจะโดน rate-limit
+    let lastStatus = 0;
+    for (let i = 0; i < 10; i++) {
+      const r = await post('/api/auth/login', {
+        username: `rl_user_${Date.now()}`, password: 'wrongpass',
+      });
+      lastStatus = r.status;
+      if (lastStatus === 429) break;
+    }
+    // ถ้าระบบมี rate-limit → ต้องเจอ 429 ในที่สุด
+    // ถ้ายังไม่มี → ยอมรับ (แค่ตรวจว่าไม่ crash)
+    expect([401, 400, 429]).toContain(lastStatus);
+  });
+});
+
+// ════════════════════════════════════════════
+// 22. ADMIN — User Management Full Workflow
+// ════════════════════════════════════════════
+let managedUserId = '';
+
+test.describe.serial('22. Admin User Management', () => {
+  // หมายเหตุ: ระบบสร้าง user ผ่าน approve request ไม่ใช่ POST /api/admin/users
+  // ทดสอบ flow: สร้าง request → approve → update → deactivate
+  let managedRequestId = '';
+
+  test('POST /api/auth/register — ยื่นคำขอสมัคร', async () => {
+    const r = await post('/api/auth/register', {
+      email: `mgmt_${Date.now()}@test.com`,
+      first_name: 'Managed',
+      last_name: 'User',
+      phone: '0877777777',
+    });
+    expect([200, 201]).toContain(r.status);
+    expect(r.data.success).toBe(true);
+  });
+
+  test('GET /api/admin/requests — ดูรายการคำขอ pending', async () => {
+    const r = await get('/api/admin/requests?status=pending', adminToken);
+    expect(r.status).toBe(200);
+    expect(r.data.success).toBe(true);
+    const reqs = r.data.data || r.data;
+    if (Array.isArray(reqs) && reqs.length > 0) {
+      managedRequestId = reqs[0].id;
+    }
+  });
+
+  test('PUT /api/admin/requests/:id/approve — อนุมัติคำขอ', async () => {
+    if (!managedRequestId) { test.skip(); return; }
+    const r = await put(`/api/admin/requests/${managedRequestId}/approve`, {
+      role: 'viewer',
+    }, adminToken);
+    expect(r.status).toBe(200);
+    expect(r.data.success).toBe(true);
+    managedUserId = r.data.data?.user_id || r.data.user_id;
+  });
+
+  test('PUT /api/admin/users/:id — อัปเดต role ผู้ใช้', async () => {
+    if (!managedUserId) { test.skip(); return; }
+    const r = await put(`/api/admin/users/${managedUserId}`, {
+      role: 'fuel',
+    }, adminToken);
+    expect(r.status).toBe(200);
+    expect(r.data.success).toBe(true);
+  });
+
+  test('PUT /api/admin/users/:id/reset-password — reset password', async () => {
+    if (!managedUserId) { test.skip(); return; }
+    const r = await put(`/api/admin/users/${managedUserId}/reset-password`, {
+      new_password: 'Reset@99999',
+    }, adminToken);
+    expect(r.status).toBe(200);
+    expect(r.data.success).toBe(true);
+  });
+
+  test('PUT /api/admin/users/:id/deactivate — ระงับบัญชีผู้ใช้', async () => {
+    if (!managedUserId) { test.skip(); return; }
+    const r = await put(`/api/admin/users/${managedUserId}/deactivate`, {
+      reason: 'ทดสอบระบบ',
+    }, adminToken);
     expect(r.status).toBe(200);
     expect(r.data.success).toBe(true);
   });

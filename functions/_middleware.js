@@ -12,6 +12,8 @@ const PUBLIC_PATHS = [
   '/api/fuel/record',           // QR เติมน้ำมัน
   '/api/fuel/types',            // QR โชว์ประเภทน้ำมัน (ไม่ต้อง login)
   '/api/vehicles/qr-info',      // QR โหลดข้อมูลรถ (ไม่ต้อง login)
+  '/api/survey/submit',         // QR แบบประเมิน (ไม่ต้อง login)
+  '/api/survey/car-info',       // QR ข้อมูลรถสำหรับแบบประเมิน
 ];
 
 // Rate-limited paths: max attempts per window
