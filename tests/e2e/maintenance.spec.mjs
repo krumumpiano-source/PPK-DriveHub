@@ -124,7 +124,7 @@ test.describe.serial('Maintenance API', () => {
 
   test('PUT bulk settings → update หลาย setting พร้อมกัน', async () => {
     const r = await apiPut('/api/maintenance/settings/bulk', {
-      settings: [{ id: ctx.settingId, interval_km: 12000 }],
+      items: [{ id: ctx.settingId, interval_km: 12000 }],
     }, ctx.adminToken);
     // 200 หรือ 404 ถ้า endpoint ไม่มี bulk
     expect([200, 404, 405]).toContain(r.status);
@@ -206,6 +206,7 @@ test.describe.serial('Maintenance API', () => {
   // ──────────────────────────────────────────
   test('สร้าง setting priority: low', async () => {
     const r = await apiPost('/api/maintenance/settings', {
+      item_key: 'TIRE_PRESSURE',
       item_name: 'เช็คแรงดันลม',
       interval_km: 5000,
       priority: 'low',
@@ -215,6 +216,7 @@ test.describe.serial('Maintenance API', () => {
 
   test('สร้าง setting priority: critical', async () => {
     const r = await apiPost('/api/maintenance/settings', {
+      item_key: 'BRAKE_CHECK',
       item_name: 'ตรวจเบรค',
       interval_km: 30000,
       priority: 'critical',

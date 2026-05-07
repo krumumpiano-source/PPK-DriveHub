@@ -191,15 +191,17 @@ export async function onRequest(context) {
   // --- POST /api/tax-insurance/inspections ---
   if (path === '/api/tax-insurance/inspections' && method === 'POST') {
     const body = await parseBody(request);
-    if (!body?.car_id || !body?.inspection_date || !body?.expiry_date) return error('กรุณาระบุรถ วันตรวจ และวันหมดอายุ');
+    if (!body?.car_id || !body?.expiry_date) return error('กรุณาระบุรถและวันหมดอายุ');
     const id = generateUUID();
     const ts = now();
+    const inspectionDate = body.inspection_date || new Date().toISOString().slice(0, 10);
+    const inspectionCenter = body.inspection_center || body.center || '';
     await dbRun(env.DB,
       `INSERT INTO inspection_records (id, car_id, inspection_date, expiry_date,
         inspection_center, result, cost, certificate_image, notes, created_by, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, body.car_id, body.inspection_date, body.expiry_date,
-       body.inspection_center || '', body.result || 'passed',
+      [id, body.car_id, inspectionDate, body.expiry_date,
+       inspectionCenter, body.result || 'passed',
        body.cost || 0, body.certificate_image || '',
        body.notes || '', user.id, ts]
     );
