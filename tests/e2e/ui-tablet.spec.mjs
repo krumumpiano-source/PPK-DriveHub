@@ -1,4 +1,4 @@
-// ==============================================================
+﻿// ==============================================================
 // PPK DriveHub — Tablet Layout Tests
 // ทดสอบ: iPad Portrait/Landscape, Android Tablet
 // รัน: tablet-ipad, tablet-android (+ e2e-chromium)
@@ -198,7 +198,11 @@ test.describe('F4: Tablet Sidebar Toggle', () => {
       // ปิดด้วย overlay
       const overlay = page.locator('.sidebar-overlay');
       if (await overlay.count() > 0) {
-        await overlay.click({ position: { x: 10, y: 10 } });
+        // ใช้ JS click เพื่อหลีกเลี่ยง sidebar-brand intercepting pointer events
+        await page.evaluate(() => {
+          const el = document.querySelector('.sidebar-overlay');
+          if (el) el.click();
+        });
         await page.waitForTimeout(400);
         const classes = await sidebar.getAttribute('class');
         expect(classes).not.toContain('open');

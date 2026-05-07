@@ -1,4 +1,4 @@
-// ==============================================================
+﻿// ==============================================================
 // PPK DriveHub — Reports API Tests
 // ทดสอบ: Dashboard, Basic Reports, Fuel, Usage, Data Quality,
 //         Vehicle Timeline, Vehicle Cost, Driver Performance
@@ -84,14 +84,18 @@ test.describe.serial('Reports API', () => {
   });
 
   test('Bootstrap: สร้าง fuel log', async () => {
-    const r = await apiPost('/api/fuel', {
+    const r = await apiPost('/api/fuel/record', {
       car_id: ctx.carId,
+      driver_id: ctx.driverId,
       liters: 50,
       price_per_liter: 35.5,
       total_cost: 1775,
-      mileage: 50000,
+      mileage_after: 50000,
+      mileage_before: 49500,
       station: 'ปั๊มทดสอบ',
       fuel_date: TODAY,
+      purpose: 'official',
+      receipt_image_base64: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
     }, ctx.adminToken);
     expect([200, 201]).toContain(r.status);
   });

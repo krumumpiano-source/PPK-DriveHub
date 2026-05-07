@@ -1,4 +1,4 @@
-// ==============================================================
+﻿// ==============================================================
 // PPK DriveHub — Tax & Insurance API Tests
 // ทดสอบ: Tax CRUD, Insurance CRUD, Inspections/ตรอ., Expiry Filter
 // ==============================================================
@@ -153,8 +153,8 @@ test.describe.serial('Tax & Insurance API', () => {
   test('POST /api/tax-insurance/insurance → สร้าง insurance record', async () => {
     const r = await apiPost('/api/tax-insurance/insurance', {
       car_id: ctx.carId,
-      insurance_type: 'class3',
-      company: 'บริษัทประกันทดสอบ',
+      insurance_type: 'voluntary',
+      insurance_company: 'บริษัทประกันทดสอบ',
       amount: 15000,
       start_date: '2025-01-01',
       expiry_date: FAR_FUTURE,
@@ -169,13 +169,13 @@ test.describe.serial('Tax & Insurance API', () => {
     const items = r.data?.data || [];
     const found = items.find((i) => i.id === ctx.insuranceId || i.id === Number(ctx.insuranceId));
     expect(found).toBeTruthy();
-    expect(found.company).toBe('บริษัทประกันทดสอบ');
+    expect(found.insurance_company).toBe('บริษัทประกันทดสอบ');
   });
 
   test('PUT /api/tax-insurance/insurance/:id → แก้ไข', async () => {
     const r = await apiPut(`/api/tax-insurance/insurance/${ctx.insuranceId}`, {
       car_id: ctx.carId,
-      insurance_type: 'class3',
+      insurance_type: 'voluntary',
       company: 'บริษัทประกันแก้ไข',
       amount: 18000,
       start_date: '2025-01-01',

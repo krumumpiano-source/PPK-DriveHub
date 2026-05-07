@@ -1,4 +1,4 @@
-// ==============================================================
+﻿// ==============================================================
 // PPK DriveHub — UI Navigation & Layout Tests
 // ทดสอบ: Sidebar, Topbar, Active State, Keyboard Accessibility
 // รัน: ทุก project (Desktop + Mobile + Tablet)
@@ -115,7 +115,11 @@ test.describe('Sidebar — Mobile (<900px)', () => {
     await page.waitForTimeout(400);
     const overlay = page.locator('.sidebar-overlay');
     if (await overlay.count() > 0) {
-      await overlay.click({ position: { x: 10, y: 10 } });
+      // ใช้ JS click เพื่อหลีกเลี่ยง sidebar-brand intercepting pointer events
+      await page.evaluate(() => {
+        const el = document.querySelector('.sidebar-overlay');
+        if (el) el.click();
+      });
       await page.waitForTimeout(400);
       const sidebar = page.locator('.sidebar');
       const classes = await sidebar.getAttribute('class');

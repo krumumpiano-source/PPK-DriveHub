@@ -1,4 +1,4 @@
-// ==============================================================
+﻿// ==============================================================
 // PPK DriveHub — Maintenance API Tests
 // ทดสอบ: Settings CRUD, Vehicle Overrides, Profiles, Alerts, Priority
 // ==============================================================
@@ -93,6 +93,7 @@ test.describe.serial('Maintenance API', () => {
 
   test('POST /api/maintenance/settings → สร้าง setting ใหม่', async () => {
     const r = await apiPost('/api/maintenance/settings', {
+      item_key: 'test_oil_change_' + Date.now(),
       item_name: 'เปลี่ยนน้ำมันเครื่อง',
       interval_km: 10000,
       interval_months: 6,
