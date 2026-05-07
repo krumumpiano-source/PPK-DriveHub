@@ -25,9 +25,11 @@ module.exports = defineConfig({
     baseURL: process.env.BASE_URL || 'http://localhost:8788',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
     locale: 'th-TH',
   },
   projects: [
+    // ── API / Functional tests (Chromium only) ───────────────────────
     {
       name: 'api-integration',
       testMatch: /api-integration\.test\.mjs/,
@@ -36,10 +38,57 @@ module.exports = defineConfig({
       name: 'qr-system',
       testMatch: /qr-system\.test\.mjs/,
     },
+    // Runs ALL e2e specs (including ui-*.spec.mjs) on Desktop Chrome
     {
       name: 'e2e-chromium',
       testMatch: /e2e\/.*\.spec\.mjs/,
       use: { ...devices['Desktop Chrome'] },
+    },
+
+    // ── Desktop cross-browser (UI tests only) ────────────────────────
+    {
+      name: 'desktop-firefox',
+      testMatch: /e2e\/ui-.*\.spec\.mjs/,
+      use: { ...devices['Desktop Firefox'] },
+    },
+    {
+      name: 'desktop-edge',
+      testMatch: /e2e\/ui-.*\.spec\.mjs/,
+      use: { ...devices['Desktop Edge'] },
+    },
+    {
+      name: 'desktop-safari',
+      testMatch: /e2e\/ui-.*\.spec\.mjs/,
+      use: { ...devices['Desktop Safari'] },
+    },
+
+    // ── Mobile devices ────────────────────────────────────────────────
+    {
+      name: 'mobile-android',
+      testMatch: /e2e\/ui-.*\.spec\.mjs/,
+      use: { ...devices['Pixel 7'] },
+    },
+    {
+      name: 'mobile-iphone',
+      testMatch: /e2e\/ui-.*\.spec\.mjs/,
+      use: { ...devices['iPhone 15'] },
+    },
+    {
+      name: 'mobile-iphone-se',
+      testMatch: /e2e\/ui-.*\.spec\.mjs/,
+      use: { ...devices['iPhone SE'] },
+    },
+
+    // ── Tablet devices ────────────────────────────────────────────────
+    {
+      name: 'tablet-ipad',
+      testMatch: /e2e\/ui-.*\.spec\.mjs/,
+      use: { ...devices['iPad Pro 11'] },
+    },
+    {
+      name: 'tablet-android',
+      testMatch: /e2e\/ui-.*\.spec\.mjs/,
+      use: { ...devices['Galaxy Tab S4'] },
     },
   ],
   webServer: {
