@@ -293,6 +293,7 @@ export async function onRequest(context) {
     if (body.items_detail && Array.isArray(body.items_detail) && body.items_detail.length) {
       for (let i = 0; i < body.items_detail.length; i++) {
         const it = body.items_detail[i];
+        if (!it.description) continue;
         await dbRun(env.DB,
           `INSERT INTO repair_items (id, repair_id, part_code, description, brand_condition,
             quantity, unit_price, discount_percent, discount_amount, net_amount,
