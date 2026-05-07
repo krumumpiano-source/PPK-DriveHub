@@ -6,49 +6,21 @@
 
 # Test info
 
-- Name: e2e\tax-insurance.spec.mjs >> Tax & Insurance API >> GET /api/tax-insurance/insurance — มี record ที่สร้าง
-- Location: tests\e2e\tax-insurance.spec.mjs:167:3
+- Name: e2e\tax-insurance.spec.mjs >> Tax & Insurance API >> GET /api/tax-insurance/inspections → list
+- Location: tests\e2e\tax-insurance.spec.mjs:198:3
 
 # Error details
 
 ```
-Error: expect(received).toBe(expected) // Object.is equality
+Error: expect(received).toContain(expected) // indexOf
 
-Expected: "บริษัทประกันทดสอบ"
-Received: undefined
+Expected value: 500
+Received array: [200, 404]
 ```
 
 # Test source
 
 ```ts
-  72  |       if (r.data?.data?.token) { ctx.adminToken = r.data.data.token; break; }
-  73  |       clearRateLimits();
-  74  |     }
-  75  |     expect(ctx.adminToken).toBeTruthy();
-  76  |   });
-  77  | 
-  78  |   test('Bootstrap: สร้าง test vehicle', async () => {
-  79  |     const r = await apiPost('/api/vehicles', {
-  80  |       license_plate: `TAX-${Date.now().toString().slice(-6)}`,
-  81  |       brand: 'Isuzu', model: 'D-MAX', year: 2022,
-  82  |       fuel_type: 'diesel', vehicle_type: 'pickup',
-  83  |     }, ctx.adminToken);
-  84  |     expect([200, 201]).toContain(r.status);
-  85  |     ctx.carId = r.data?.data?.id || r.data?.data?.car_id;
-  86  |     expect(ctx.carId).toBeTruthy();
-  87  |   });
-  88  | 
-  89  |   // ──────────────────────────────────────────
-  90  |   // Tax (ภาษีรถ) CRUD
-  91  |   // ──────────────────────────────────────────
-  92  |   test('GET /api/tax-insurance/tax → list (อาจว่าง)', async () => {
-  93  |     const r = await apiGet('/api/tax-insurance/tax', ctx.adminToken);
-  94  |     expect(r.status).toBe(200);
-  95  |     expect(Array.isArray(r.data?.data)).toBe(true);
-  96  |   });
-  97  | 
-  98  |   test('POST /api/tax-insurance/tax → สร้าง tax record', async () => {
-  99  |     const r = await apiPost('/api/tax-insurance/tax', {
   100 |       car_id: ctx.carId,
   101 |       amount: 1500,
   102 |       expiry_date: FAR_FUTURE,
@@ -106,7 +78,7 @@ Received: undefined
   154 |     const r = await apiPost('/api/tax-insurance/insurance', {
   155 |       car_id: ctx.carId,
   156 |       insurance_type: 'voluntary',
-  157 |       company: 'บริษัทประกันทดสอบ',
+  157 |       insurance_company: 'บริษัทประกันทดสอบ',
   158 |       amount: 15000,
   159 |       start_date: '2025-01-01',
   160 |       expiry_date: FAR_FUTURE,
@@ -121,8 +93,7 @@ Received: undefined
   169 |     const items = r.data?.data || [];
   170 |     const found = items.find((i) => i.id === ctx.insuranceId || i.id === Number(ctx.insuranceId));
   171 |     expect(found).toBeTruthy();
-> 172 |     expect(found.company).toBe('บริษัทประกันทดสอบ');
-      |                           ^ Error: expect(received).toBe(expected) // Object.is equality
+  172 |     expect(found.insurance_company).toBe('บริษัทประกันทดสอบ');
   173 |   });
   174 | 
   175 |   test('PUT /api/tax-insurance/insurance/:id → แก้ไข', async () => {
@@ -150,7 +121,8 @@ Received: undefined
   197 |   // ──────────────────────────────────────────
   198 |   test('GET /api/tax-insurance/inspections → list', async () => {
   199 |     const r = await apiGet('/api/tax-insurance/inspections', ctx.adminToken);
-  200 |     expect([200, 404]).toContain(r.status);
+> 200 |     expect([200, 404]).toContain(r.status);
+      |                        ^ Error: expect(received).toContain(expected) // indexOf
   201 |     if (r.status === 200) {
   202 |       expect(Array.isArray(r.data?.data)).toBe(true);
   203 |     }
@@ -223,4 +195,23 @@ Received: undefined
   270 |     expect([401, 403]).toContain(r.status);
   271 |   });
   272 | 
+  273 |   test('POST /api/tax-insurance/insurance ไม่มี token → 401', async () => {
+  274 |     const r = await apiPost('/api/tax-insurance/insurance', { car_id: ctx.carId });
+  275 |     expect([401, 403]).toContain(r.status);
+  276 |   });
+  277 | 
+  278 |   // ──────────────────────────────────────────
+  279 |   // Cleanup
+  280 |   // ──────────────────────────────────────────
+  281 |   test('DELETE /api/tax-insurance/tax/:id → ลบได้', async () => {
+  282 |     const r = await apiDelete(`/api/tax-insurance/tax/${ctx.taxId}`, ctx.adminToken);
+  283 |     expect([200, 204]).toContain(r.status);
+  284 |   });
+  285 | 
+  286 |   test('DELETE /api/tax-insurance/insurance/:id → ลบได้', async () => {
+  287 |     const r = await apiDelete(`/api/tax-insurance/insurance/${ctx.insuranceId}`, ctx.adminToken);
+  288 |     expect([200, 204]).toContain(r.status);
+  289 |   });
+  290 | });
+  291 | 
 ```
