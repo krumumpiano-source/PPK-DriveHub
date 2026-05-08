@@ -284,8 +284,36 @@
       outline: none;
       border-color: var(--color-primary);
     }
-    .perm-row.locked { opacity: 0.6; }
-    .perm-row.locked select { pointer-events: none; background: var(--color-bg-lighter); }
+    /* ── Preset Buttons ── */
+    .preset-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .preset-btn {
+      padding: 6px 14px;
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: white;
+      font-family: inherit;
+      font-size: 0.84em;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-weight: 500;
+    }
+    .preset-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .preset-btn.active { border-color: var(--color-primary); background: var(--color-primary); color: white; }
+
+    /* ── Permission Summary ── */
+    .perm-summary {
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      font-size: 0.84em;
+      color: #166534;
+      margin-top: 10px;
+      line-height: 1.7;
+    }
+
+    /* ── Role Badges (เพิ่ม staff) ── */
+    .role-staff { background: #d1fae5; color: #065f46; }
 
     .admin-note {
       background: var(--color-bg-info);
@@ -453,12 +481,17 @@
           </select>
         </div>
 
-        <div class="form-section-title" id="permSectionTitle">🔑 สิทธิ์การเข้าถึง</div>
+        <div class="form-section-title" id="permSectionTitle">🔑 สิทธิ์การเข้าถึงรายเมนู</div>
         <div id="permSection">
+          <div class="preset-btns" id="editPresetBtns"></div>
           <div class="perm-grid" id="permGrid"></div>
+          <div class="perm-summary" id="editPermSummary"></div>
         </div>
         <div class="admin-note" id="adminPermNote" style="display:none;">
-          ✅ แอดมินมีสิทธิ์เข้าถึงทุกเมนูอัตโนมัติ ไม่ต้องตั้งค่าเพิ่มเติม
+          ⚙️ ผู้ดูแลระบบมีสิทธิ์เข้าถึงทุกเมนูโดยอัตโนมัติ ไม่ต้องตั้งค่าเพิ่มเติม
+        </div>
+        <div class="admin-note" id="viewerPermNote" style="display:none;">
+          👁️ ผู้ชมเห็นทุกเมนูแบบดูอย่างเดียว ไม่สามารถสร้างหรือแก้ไขข้อมูลได้
         </div>
 
         <div class="danger-zone" id="dangerZone">
@@ -502,12 +535,17 @@
           </select>
         </div>
 
-        <div class="form-section-title" id="approvePermTitle">🔑 สิทธิ์การเข้าถึง</div>
+        <div class="form-section-title" id="approvePermTitle">🔑 สิทธิ์การเข้าถึงรายเมนู</div>
         <div id="approvePermSection">
+          <div class="preset-btns" id="approvePresetBtns"></div>
           <div class="perm-grid" id="approvePermGrid"></div>
+          <div class="perm-summary" id="approvePermSummary"></div>
         </div>
         <div class="admin-note" id="approveAdminPermNote" style="display:none;">
-          ✅ แอดมินมีสิทธิ์เข้าถึงทุกเมนูอัตโนมัติ ไม่ต้องตั้งค่าเพิ่มเติม
+          ⚙️ ผู้ดูแลระบบมีสิทธิ์เข้าถึงทุกเมนูโดยอัตโนมัติ ไม่ต้องตั้งค่าเพิ่มเติม
+        </div>
+        <div class="admin-note" id="approveViewerPermNote" style="display:none;">
+          👁️ ผู้ชมเห็นทุกเมนูแบบดูอย่างเดียว ไม่สามารถสร้างหรือแก้ไขข้อมูลได้
         </div>
       </div>
       <div class="modal-footer">
@@ -568,12 +606,22 @@
       { key: 'reports',   icon: '📊', label: 'รายงาน' }
     ];
 
-    // Default permissions per role (ทุกคนมี view ทุกเมนู, edit เฉพาะเมนูตัวเอง)
+    // Default permissions per role
     var ROLE_DEFAULT_PERMS = {
-      vehicle: { queue: 'edit', usage_log: 'edit', vehicles: 'view', fuel: 'view', repair: 'view', drivers: 'view', reports: 'view' },
-      fuel:    { queue: 'view', usage_log: 'view', vehicles: 'view', fuel: 'edit', repair: 'view', drivers: 'view', reports: 'view' },
-      repair:  { queue: 'view', usage_log: 'view', vehicles: 'view', fuel: 'view', repair: 'edit', drivers: 'view', reports: 'view' },
+      staff:   { queue: 'view', usage_log: 'view', vehicles: 'view', fuel: 'view', repair: 'view', drivers: 'view', reports: 'view' },
+      vehicle: { queue: 'edit', usage_log: 'edit', vehicles: 'view', fuel: 'view', repair: 'view', drivers: 'view', reports: 'view' },  // legacy
+      fuel:    { queue: 'view', usage_log: 'view', vehicles: 'view', fuel: 'edit', repair: 'view', drivers: 'view', reports: 'view' },  // legacy
+      repair:  { queue: 'view', usage_log: 'view', vehicles: 'view', fuel: 'view', repair: 'edit', drivers: 'view', reports: 'view' }, // legacy
       viewer:  { queue: 'view', usage_log: 'view', vehicles: 'view', fuel: 'view', repair: 'view', drivers: 'view', reports: 'view' }
+    };
+
+    // Presets for staff role
+    var PRESETS = {
+      queue:  { queue: 'edit', usage_log: 'edit', vehicles: 'view', fuel: 'view', repair: 'view', drivers: 'view', reports: 'view' },
+      fuel:   { queue: 'view', usage_log: 'view', vehicles: 'view', fuel: 'edit', repair: 'view', drivers: 'view', reports: 'view' },
+      repair: { queue: 'view', usage_log: 'view', vehicles: 'view', fuel: 'view', repair: 'edit', drivers: 'view', reports: 'view' },
+      full:   { queue: 'edit', usage_log: 'edit', vehicles: 'edit', fuel: 'edit', repair: 'edit', drivers: 'edit', reports: 'edit' },
+      custom: { queue: 'view', usage_log: 'view', vehicles: 'view', fuel: 'view', repair: 'view', drivers: 'view', reports: 'view' }
     };
 
     var _allUsers = [];
@@ -652,11 +700,12 @@
       html += '<input type="text" id="searchBox" placeholder="🔍 ค้นหาชื่อ / username..." oninput="filterUsers()">';
       html += '<select id="roleFilter" onchange="filterUsers()">';
       html += '<option value="">ทุกบทบาท</option>';
-      html += '<option value="admin">🔧 แอดมิน</option>';
-      html += '<option value="vehicle">🚗 ผู้บันทึกคิว</option>';
-      html += '<option value="fuel">⛽ บันทึกน้ำมัน</option>';
-      html += '<option value="repair">🔧 บันทึกซ่อม</option>';
-      html += '<option value="viewer">👁️ ผู้ดูอย่างเดียว</option>';
+      html += '<option value="admin">⚙️ ผู้ดูแลระบบ</option>';
+      html += '<option value="staff">👷 คณะทำงาน</option>';
+      html += '<option value="viewer">👁️ ผู้ชม</option>';
+      html += '<option value="vehicle">🚗 ผู้บันทึกคิว (เดิม)</option>';
+      html += '<option value="fuel">⛽ บันทึกน้ำมัน (เดิม)</option>';
+      html += '<option value="repair">🔧 บันทึกซ่อม (เดิม)</option>';
       html += '</select>';
       html += '</div>';
       html += '<div class="table-wrap">';
@@ -819,7 +868,10 @@
       document.getElementById('editLastName').value = user.last_name || '';
       document.getElementById('editPhone').value = user.phone || '';
       document.getElementById('editEmail').value = user.email || '';
-      document.getElementById('editRole').value = user.role || 'viewer';
+      // Map legacy roles → staff for the dropdown
+      var displayRole = user.role || 'viewer';
+      if (displayRole === 'vehicle' || displayRole === 'fuel' || displayRole === 'repair') displayRole = 'staff';
+      document.getElementById('editRole').value = displayRole;
 
       var isActive = user.active == 1 || user.active === true;
       var btn = document.getElementById('toggleActiveBtn');
@@ -846,10 +898,16 @@
     function onRoleChange() {
       var role = document.getElementById('editRole').value;
       var isAdmin = role === 'admin' || role === 'super_admin';
+      var isViewer = role === 'viewer';
+      var isStaff = role === 'staff';
 
       var permSection = document.getElementById('permSection');
       var adminNote = document.getElementById('adminPermNote');
+      var viewerNote = document.getElementById('viewerPermNote');
       var permTitle = document.getElementById('permSectionTitle');
+
+      adminNote.style.display = 'none';
+      viewerNote.style.display = 'none';
 
       if (isAdmin) {
         permSection.style.display = 'none';
@@ -857,45 +915,36 @@
         permTitle.style.display = 'none';
         return;
       }
+      if (isViewer) {
+        permSection.style.display = 'none';
+        viewerNote.style.display = 'block';
+        permTitle.style.display = 'none';
+        return;
+      }
 
       permSection.style.display = 'block';
-      adminNote.style.display = 'none';
       permTitle.style.display = 'block';
 
-      // Get current user permissions or use role defaults
+      // Get current user permissions
       var perms = {};
       if (_editUser) {
         try { perms = typeof _editUser.permissions === 'string' ? JSON.parse(_editUser.permissions) : (_editUser.permissions || {}); } catch(e) {}
       }
 
-      // If role changed and not the original role, use defaults for the new role
-      if (_editUser && role !== _editUser.role && ROLE_DEFAULT_PERMS[role]) {
-        perms = JSON.parse(JSON.stringify(ROLE_DEFAULT_PERMS[role]));
+      // If role changed to staff from a legacy role, keep existing permissions (they're already correct)
+      // If role changed and no existing perms, use defaults
+      var origRole = _editUser ? _editUser.role : null;
+      var isLegacyToStaff = (origRole === 'vehicle' || origRole === 'fuel' || origRole === 'repair') && isStaff;
+      if (!isLegacyToStaff && Object.keys(perms).length === 0) {
+        perms = JSON.parse(JSON.stringify(ROLE_DEFAULT_PERMS.staff));
       }
 
-      renderPermGrid(perms, role);
+      renderPresetBtns('editPresetBtns', 'edit');
+      _renderPermGrid(perms, 'permGrid', 'editPermSummary');
     }
 
     function renderPermGrid(perms, role) {
-      var defaults = ROLE_DEFAULT_PERMS[role] || {};
-      var html = '';
-      for (var i = 0; i < MODULES.length; i++) {
-        var m = MODULES[i];
-        var currentLevel = perms[m.key] || defaults[m.key] || 'view';
-        var defaultLevel = defaults[m.key] || 'view';
-        // If the default for this role is 'edit', lock it to at least edit
-        var isLocked = defaultLevel === 'edit';
-
-        html += '<div class="perm-row' + (isLocked ? ' locked' : '') + '">';
-        html += '<div class="perm-row-label"><span>' + m.icon + '</span> ' + m.label + '</div>';
-        html += '<select data-module="' + m.key + '"' + (isLocked ? ' disabled' : '') + '>';
-        var isWork = currentLevel === 'edit' || currentLevel === 'create' || currentLevel === 'delete';
-        html += '<option value="view"' + (!isWork ? ' selected' : '') + '>👁️ ดูอย่างเดียว</option>';
-        html += '<option value="edit"' + (isWork ? ' selected' : '') + '>✅ ทำงาน (สร้าง + แก้ไข)</option>';
-        html += '</select>';
-        html += '</div>';
-      }
-      document.getElementById('permGrid').innerHTML = html;
+      _renderPermGrid(perms, 'permGrid', 'editPermSummary');
     }
 
     async function saveUser() {
@@ -907,18 +956,10 @@
 
       // Build permissions
       var permissions = {};
-      if (!isAdmin) {
+      if (!isAdmin && role !== 'viewer') {
         var selects = document.querySelectorAll('#permGrid select[data-module]');
-        var defaults = ROLE_DEFAULT_PERMS[role] || {};
         selects.forEach(function(sel) {
-          var mod = sel.dataset.module;
-          // For locked modules, use the default (which is edit)
-          var defaultLevel = defaults[mod] || 'view';
-          if (sel.disabled && defaultLevel === 'edit') {
-            permissions[mod] = 'edit';
-          } else {
-            permissions[mod] = sel.value;
-          }
+          permissions[sel.dataset.module] = sel.value;
         });
       }
 
@@ -1035,9 +1076,16 @@
     function onApproveRoleChange() {
       var role = document.getElementById('approveRole').value;
       var isAdmin = role === 'admin' || role === 'super_admin';
+      var isViewer = role === 'viewer';
+      var isStaff = role === 'staff';
+
       var permSection = document.getElementById('approvePermSection');
       var adminNote = document.getElementById('approveAdminPermNote');
+      var viewerNote = document.getElementById('approveViewerPermNote');
       var permTitle = document.getElementById('approvePermTitle');
+
+      adminNote.style.display = 'none';
+      viewerNote.style.display = 'none';
 
       if (isAdmin) {
         permSection.style.display = 'none';
@@ -1045,33 +1093,23 @@
         permTitle.style.display = 'none';
         return;
       }
+      if (isViewer) {
+        permSection.style.display = 'none';
+        viewerNote.style.display = 'block';
+        permTitle.style.display = 'none';
+        return;
+      }
+
       permSection.style.display = 'block';
-      adminNote.style.display = 'none';
       permTitle.style.display = 'block';
 
-      var perms = ROLE_DEFAULT_PERMS[role] || {};
-      renderApprovePermGrid(perms, role);
+      var perms = JSON.parse(JSON.stringify(ROLE_DEFAULT_PERMS.staff));
+      renderPresetBtns('approvePresetBtns', 'approve');
+      _renderPermGrid(perms, 'approvePermGrid', 'approvePermSummary');
     }
 
     function renderApprovePermGrid(perms, role) {
-      var defaults = ROLE_DEFAULT_PERMS[role] || {};
-      var html = '';
-      for (var i = 0; i < MODULES.length; i++) {
-        var m = MODULES[i];
-        var currentLevel = perms[m.key] || defaults[m.key] || 'view';
-        var defaultLevel = defaults[m.key] || 'view';
-        var isLocked = defaultLevel === 'edit';
-
-        html += '<div class="perm-row' + (isLocked ? ' locked' : '') + '">';
-        html += '<div class="perm-row-label"><span>' + m.icon + '</span> ' + m.label + '</div>';
-        html += '<select data-module="' + m.key + '"' + (isLocked ? ' disabled' : '') + '>';
-        var isWork = currentLevel === 'edit' || currentLevel === 'create' || currentLevel === 'delete';
-        html += '<option value="view"' + (!isWork ? ' selected' : '') + '>👁️ ดูอย่างเดียว</option>';
-        html += '<option value="edit"' + (isWork ? ' selected' : '') + '>✅ ทำงาน (สร้าง + แก้ไข)</option>';
-        html += '</select>';
-        html += '</div>';
-      }
-      document.getElementById('approvePermGrid').innerHTML = html;
+      _renderPermGrid(perms, 'approvePermGrid', 'approvePermSummary');
     }
 
     async function confirmApprove() {
@@ -1080,17 +1118,10 @@
       var isAdmin = role === 'admin' || role === 'super_admin';
 
       var permissions = {};
-      if (!isAdmin) {
+      if (!isAdmin && role !== 'viewer') {
         var selects = document.querySelectorAll('#approvePermGrid select[data-module]');
-        var defaults = ROLE_DEFAULT_PERMS[role] || {};
         selects.forEach(function(sel) {
-          var mod = sel.dataset.module;
-          var defaultLevel = defaults[mod] || 'view';
-          if (sel.disabled && defaultLevel === 'edit') {
-            permissions[mod] = 'edit';
-          } else {
-            permissions[mod] = sel.value;
-          }
+          permissions[sel.dataset.module] = sel.value;
         });
       }
 
@@ -1132,6 +1163,74 @@
       } catch (e) {
         showToast('ปฏิเสธไม่สำเร็จ: ' + e.message, 'error');
       }
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  Preset & Permission Helpers
+    // ══════════════════════════════════════════════════════════
+    function renderPresetBtns(btnsId, ctx) {
+      var list = [
+        { key: 'queue',  label: '🚗 ทีมคิวรถ' },
+        { key: 'fuel',   label: '⛽ ทีมเชื้อเพลิง' },
+        { key: 'repair', label: '🔧 ทีมซ่อมบำรุง' },
+        { key: 'full',   label: '🌟 เต็มสิทธิ์' },
+        { key: 'custom', label: '✏️ กำหนดเอง' }
+      ];
+      var html = '';
+      for (var i = 0; i < list.length; i++) {
+        html += '<button class="preset-btn" onclick="applyPreset(\'' + list[i].key + '\', \'' + ctx + '\', this)">' + list[i].label + '</button>';
+      }
+      document.getElementById(btnsId).innerHTML = html;
+    }
+
+    function applyPreset(presetKey, ctx, btn) {
+      var perms = JSON.parse(JSON.stringify(PRESETS[presetKey] || PRESETS.custom));
+      var gridId = ctx === 'approve' ? 'approvePermGrid' : 'permGrid';
+      var summaryId = ctx === 'approve' ? 'approvePermSummary' : 'editPermSummary';
+      var btnsId = ctx === 'approve' ? 'approvePresetBtns' : 'editPresetBtns';
+      _renderPermGrid(perms, gridId, summaryId);
+      var allBtns = document.querySelectorAll('#' + btnsId + ' .preset-btn');
+      allBtns.forEach(function(b) { b.classList.remove('active'); });
+      if (btn) btn.classList.add('active');
+    }
+
+    function _renderPermGrid(perms, gridId, summaryId) {
+      var html = '';
+      for (var i = 0; i < MODULES.length; i++) {
+        var m = MODULES[i];
+        var current = perms[m.key] || 'view';
+        if (current === 'create' || current === 'delete') current = 'edit';
+        html += '<div class="perm-row">';
+        html += '<div class="perm-row-label"><span>' + m.icon + '</span> ' + m.label + '</div>';
+        html += '<select data-module="' + m.key + '" onchange="updatePermSummary(\'' + summaryId + '\')">'
+        html += '<option value="none"' + (current === 'none' ? ' selected' : '') + '>❌ ปิดเมนู</option>';
+        html += '<option value="view"' + (current === 'view' ? ' selected' : '') + '>👁️ ดูอย่างเดียว</option>';
+        html += '<option value="edit"' + (current === 'edit' ? ' selected' : '') + '>✅ บันทึก + แก้ไข</option>';
+        html += '</select>';
+        html += '</div>';
+      }
+      document.getElementById(gridId).innerHTML = html;
+      updatePermSummary(summaryId);
+    }
+
+    function updatePermSummary(summaryId) {
+      var el = document.getElementById(summaryId);
+      if (!el) return;
+      var gridId = summaryId === 'approvePermSummary' ? 'approvePermGrid' : 'permGrid';
+      var selects = document.querySelectorAll('#' + gridId + ' select[data-module]');
+      var canDo = [], canView = [], isOff = [];
+      selects.forEach(function(sel) {
+        var m = MODULES.find(function(x) { return x.key === sel.dataset.module; });
+        if (!m) return;
+        if (sel.value === 'edit') canDo.push(m.icon + '\u00a0' + m.label);
+        else if (sel.value === 'view') canView.push(m.icon + '\u00a0' + m.label);
+        else isOff.push(m.icon + '\u00a0' + m.label);
+      });
+      var lines = [];
+      if (canDo.length)  lines.push('✅ <strong>บันทึก+แก้ไข:</strong> ' + canDo.join(', '));
+      if (canView.length) lines.push('👁️ <strong>ดูอย่างเดียว:</strong> ' + canView.join(', '));
+      if (isOff.length)  lines.push('❌ <strong>ปิดเมนู:</strong> ' + isOff.join(', '));
+      el.innerHTML = lines.length ? lines.join('<br>') : '';
     }
 
     // ══════════════════════════════════════════════════════════
