@@ -574,7 +574,34 @@ initLoadingSpinnerStyle();
 
 function initThaiDatePicker(selector, options) {
     if (typeof flatpickr === 'undefined') return null;
-    return flatpickr(selector, Object.assign({ dateFormat: 'Y-m-d', allowInput: true }, options || {}));
+    var thaiMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+    var baseOpts = {
+        dateFormat: 'Y-m-d',
+        allowInput: true,
+        altInput: true,
+        altFormat: 'THAI',
+        formatDate: function(date, format) {
+            if (format === 'Y-m-d') {
+                var y = date.getFullYear(), m = date.getMonth()+1, d = date.getDate();
+                return y + '-' + (m < 10 ? '0' : '') + m + '-' + (d < 10 ? '0' : '') + d;
+            }
+            return date.getDate() + ' ' + thaiMonths[date.getMonth()] + ' ' + (date.getFullYear() + 543);
+        },
+        parseDate: function(dateStr, format) {
+            if (!dateStr) return null;
+            var iso = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (iso) return new Date(parseInt(iso[1]), parseInt(iso[2])-1, parseInt(iso[3]));
+            var parts = dateStr.trim().split(' ');
+            if (parts.length === 3) {
+                var day = parseInt(parts[0]);
+                var month = thaiMonths.indexOf(parts[1]);
+                var year = parseInt(parts[2]) - 543;
+                if (!isNaN(day) && month >= 0 && !isNaN(year)) return new Date(year, month, day);
+            }
+            return null;
+        }
+    };
+    return flatpickr(selector, Object.assign(baseOpts, options || {}));
 }
 
 function initThaiTimePicker(selector, options) {

@@ -631,16 +631,20 @@
       });
 
       // วันจดทะเบียน / หมดอายุ / ครอบครอง — แสดงเดือนไทย และปี พ.ศ. (ค่าที่ส่ง backend ยังเป็น Y-m-d ค.ศ.)
-      var thaiMonthsShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+      var thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
       flatpickr('.date-picker-thai', {
         locale: 'th',
         dateFormat: 'Y-m-d',
         altInput: true,
-        altFormat: 'd M Y',
+        altFormat: 'THAI',
         defaultDate: null,
         formatDate: function (date, format) {
+          if (format === 'Y-m-d') {
+            var y = date.getFullYear(), mo = date.getMonth()+1, d = date.getDate();
+            return y + '-' + (mo < 10 ? '0' : '') + mo + '-' + (d < 10 ? '0' : '') + d;
+          }
           var d = date.getDate();
-          var m = thaiMonthsShort[date.getMonth()];
+          var m = thaiMonths[date.getMonth()];
           var y = date.getFullYear() + 543;
           return d + ' ' + m + ' ' + y;
         },
@@ -648,7 +652,7 @@
           var match = dateStr && dateStr.match(/(\d{1,2})\s+(\S+)\s+(\d{4})/);
           if (!match) return null;
           var day = parseInt(match[1], 10);
-          var monthMap = {}; thaiMonthsShort.forEach(function (name, i) { monthMap[name] = i; });
+          var monthMap = {}; thaiMonths.forEach(function (name, i) { monthMap[name] = i; });
           var month = monthMap[match[2]];
           if (month === undefined) return null;
           var beYear = parseInt(match[3], 10);
@@ -1132,7 +1136,11 @@
           result.data.vehicles.forEach(function (v) {
             var deactivatedDate = '';
             if (v.deactivated_at) {
-              try { deactivatedDate = new Date(v.deactivated_at).toLocaleDateString('th-TH'); } catch(e) { deactivatedDate = v.deactivated_at; }
+              try {
+                var _d = new Date(v.deactivated_at);
+                var _mn = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+                deactivatedDate = _d.getDate() + ' ' + _mn[_d.getMonth()] + ' ' + (_d.getFullYear() + 543);
+              } catch(e) { deactivatedDate = v.deactivated_at; }
             }
             html += '<div class="vehicle-card" style="border-color:#fecaca;">';
             html += '<div class="vehicle-card-header" style="background:#fef2f2;">';

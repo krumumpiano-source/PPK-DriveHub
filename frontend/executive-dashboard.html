@@ -149,7 +149,7 @@
         // Get last 6 months queue data
         var months=[];var now=new Date();
         for(var i=5;i>=0;i--){var d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push(d.toISOString().substr(0,7))}
-        var labels=months.map(function(m){var p=m.split('-');var mn=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];return mn[parseInt(p[1])-1]+' '+(parseInt(p[0])+543).toString().substr(2)});
+        var labels=months.map(function(m){var p=m.split('-');var mn=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];return mn[parseInt(p[1])-1]+' '+(parseInt(p[0])+543)});
 
         // Get usage report for last 6 months
         var dateFrom=months[0]+'-01';

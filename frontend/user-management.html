@@ -685,7 +685,7 @@
       for (var i = 0; i < _requests.length; i++) {
         var r = _requests[i];
         var name = (r.name || '').trim() || r.email || '—';
-        var date = r.created_at ? new Date(r.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+        var date = r.created_at ? (function(s){ var _d=new Date(s); var _mn=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม']; return _d.getDate()+' '+_mn[_d.getMonth()]+' '+(_d.getFullYear()+543); })(r.created_at) : '';
         html += '<div class="request-card">';
         html += '<div class="request-info">';
         html += '<div class="request-name">' + escHtml(name) + '</div>';

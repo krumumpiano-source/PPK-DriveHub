@@ -491,8 +491,9 @@
     function formatDateThai(dateStr) {
       if (!dateStr) return '-';
       try {
-        var d = new Date(dateStr);
-        return d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+        var d = new Date(dateStr + 'T00:00:00');
+        var months = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+        return d.getDate() + ' ' + months[d.getMonth()] + ' ' + (d.getFullYear() + 543);
       } catch (e) { return dateStr; }
     }
 

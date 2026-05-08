@@ -88,7 +88,7 @@
       try{var r=await apiCall('getVehicles',{});if(r.success&&r.data&&r.data.vehicles){vehicles=r.data.vehicles;var sel=document.getElementById('filterCar');vehicles.forEach(function(v){var o=document.createElement('option');o.value=v.car_id;o.textContent=v.license_plate+' '+(v.brand||'')+' '+(v.model||'');sel.appendChild(o)})}}catch(e){console.error(e)}
     }
 
-    function fmtDate(s){if(!s)return'-';try{var p=s.split(/[T ]/)[0].split('-');var m=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];return parseInt(p[2])+' '+m[parseInt(p[1])-1]+' '+(parseInt(p[0])+543)}catch(e){return s}}
+    function fmtDate(s){if(!s)return'-';try{var p=s.split(/[T ]/)[0].split('-');var m=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];return parseInt(p[2])+' '+m[parseInt(p[1])-1]+' '+(parseInt(p[0])+543)}catch(e){return s}}
     function fmt$(n){return n?Number(n).toLocaleString()+' บาท':'-'}
 
     var _tlData=[];
