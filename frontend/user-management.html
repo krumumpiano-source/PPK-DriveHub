@@ -473,11 +473,9 @@
         <div class="form-group">
           <label>บทบาทในระบบ</label>
           <select id="editRole" onchange="onRoleChange()">
-            <option value="admin">🔧 แอดมิน</option>
-            <option value="vehicle">� ผู้บันทึกคิว</option>
-            <option value="fuel">⛽ บันทึกน้ำมัน</option>
-            <option value="repair">🔧 บันทึกซ่อม</option>
-            <option value="viewer">👁️ ผู้ดูอย่างเดียว</option>
+            <option value="admin">⚙️ ผู้ดูแลระบบ — เข้าถึงทุกอย่าง</option>
+            <option value="staff">👷 คณะทำงาน — กำหนดสิทธิ์เองได้</option>
+            <option value="viewer">👁️ ผู้ชม — ดูอย่างเดียวทุกเมนู</option>
           </select>
         </div>
 
@@ -527,11 +525,9 @@
         <div class="form-group">
           <label>กำหนดบทบาท</label>
           <select id="approveRole" onchange="onApproveRoleChange()">
-            <option value="viewer">👁️ ผู้ดูอย่างเดียว</option>
-            <option value="vehicle">� ผู้บันทึกคิว</option>
-            <option value="fuel">⛽ บันทึกน้ำมัน</option>
-            <option value="repair">🔧 บันทึกซ่อม</option>
-            <option value="admin">🔧 แอดมิน</option>
+            <option value="viewer">👁️ ผู้ชม — ดูอย่างเดียวทุกเมนู</option>
+            <option value="staff">👷 คณะทำงาน — กำหนดสิทธิ์เองได้</option>
+            <option value="admin">⚙️ ผู้ดูแลระบบ — เข้าถึงทุกอย่าง</option>
           </select>
         </div>
 
@@ -588,12 +584,13 @@
     //  Constants
     // ══════════════════════════════════════════════════════════
     var ROLE_CONFIG = {
-      admin:       { label: '🔧 แอดมิน',       css: 'role-admin' },
-      super_admin: { label: '⚡ ซูเปอร์แอดมิน', css: 'role-super_admin' },
-      vehicle:     { label: ' ผู้บันทึกคิว',  css: 'role-vehicle' },
-      fuel:        { label: '⛽ บันทึกน้ำมัน',   css: 'role-fuel' },
-      repair:      { label: '🔧 บันทึกซ่อม',    css: 'role-repair' },
-      viewer:      { label: '�️ ผู้ดูอย่างเดียว', css: 'role-viewer' }
+      admin:       { label: '⚙️ ผู้ดูแลระบบ',    css: 'role-admin' },
+      super_admin: { label: '⚡ ซูเปอร์แอดมิน',  css: 'role-super_admin' },
+      staff:       { label: '👷 คณะทำงาน',        css: 'role-staff' },
+      vehicle:     { label: '🚗 ผู้บันทึกคิว',    css: 'role-vehicle' },
+      fuel:        { label: '⛽ บันทึกน้ำมัน',    css: 'role-fuel' },
+      repair:      { label: '🔧 บันทึกซ่อม',      css: 'role-repair' },
+      viewer:      { label: '👁️ ผู้ชม',           css: 'role-viewer' }
     };
 
     var MODULES = [
@@ -1067,7 +1064,10 @@
       var name = (req.title ? req.title : '') + (rawName || req.email || '—');
       document.getElementById('approveReqId').value = req.id;
       document.getElementById('approveUserName').value = name;
-      document.getElementById('approveRole').value = req.requested_role || 'viewer';
+      // Map legacy requested roles → staff
+      var reqRole = req.requested_role || 'viewer';
+      if (reqRole === 'vehicle' || reqRole === 'fuel' || reqRole === 'repair') reqRole = 'staff';
+      document.getElementById('approveRole').value = reqRole;
       onApproveRoleChange();
       document.getElementById('approveModal').classList.add('active');
     }
