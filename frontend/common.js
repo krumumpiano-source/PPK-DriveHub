@@ -726,10 +726,10 @@ function initThaiDateTimePicker(selector, options) {
 
 function initAllThaiDateTimePickers() {
     if (typeof flatpickr === 'undefined') return;
-    document.querySelectorAll('input[type="date"]:not([data-flatpickr-initialized])').forEach(function (el) {
+    document.querySelectorAll('input[type="date"]:not([data-flatpickr-initialized]), input.thai-datepicker:not([data-flatpickr-initialized])').forEach(function (el) {
         try { initThaiDatePicker(el); el.setAttribute('data-flatpickr-initialized', 'true'); } catch (e) {}
     });
-    document.querySelectorAll('input[type="time"]:not([data-flatpickr-initialized])').forEach(function (el) {
+    document.querySelectorAll('input[type="time"]:not([data-flatpickr-initialized]), input.thai-timepicker:not([data-flatpickr-initialized])').forEach(function (el) {
         try { initThaiTimePicker(el); el.setAttribute('data-flatpickr-initialized', 'true'); } catch (e) {}
     });
 }

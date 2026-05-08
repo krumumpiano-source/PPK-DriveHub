@@ -10,190 +10,373 @@
   <link rel="stylesheet" href="common.css">
   <script src="js/api.js"></script><script src="common.js"></script>
   <style>
-    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:1.5rem}
-    .kpi{background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:1rem;text-align:center}
-    .kpi-val{font-size:1.8rem;font-weight:700;color:var(--color-primary)}
-    .kpi-label{font-size:.82rem;color:var(--color-text-muted);margin-top:4px}
-    .kpi-sub{font-size:.78rem;color:var(--color-text-light)}
+    /* ── KPI ── */
+    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;margin-bottom:1rem}
+    .kpi{background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:.9rem;text-align:center}
+    .kpi.kpi-good{border-left:4px solid #16a34a}
+    .kpi.kpi-warn{border-left:4px solid #d97706}
+    .kpi.kpi-bad{border-left:4px solid #dc2626}
+    .kpi-val{font-size:1.7rem;font-weight:700;color:var(--color-primary);line-height:1.15}
+    .kpi-label{font-size:.8rem;color:var(--color-text-muted);margin-top:4px}
+    .kpi-sub{font-size:.75rem;color:var(--color-text-light);margin-top:2px}
+    .kpi-trend{font-size:.73rem;font-weight:600;margin-top:4px}
+    .tr-up-g{color:#16a34a}.tr-dn-g{color:#16a34a}
+    .tr-up-b{color:#dc2626}.tr-dn-b{color:#dc2626}
+    .tr-eq{color:#6b7280}
+    .kpi-sec{font-size:.84rem;font-weight:700;color:var(--color-text-muted);margin:.25rem 0 .55rem;padding:.35rem .75rem;background:var(--color-bg-light);border-radius:var(--radius-sm)}
+    /* ── Charts ── */
     .chart-card{background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:1rem;margin-bottom:1rem}
-    .chart-card h3{font-size:1rem;margin-bottom:.75rem}
-    .chart-wrap{max-height:300px}
-    .rank-table{width:100%;border-collapse:collapse;font-size:.85rem}
-    .rank-table th,.rank-table td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--color-border)}
-    .rank-table th{background:var(--color-bg-light);font-weight:600}
-    .alert-list{display:flex;flex-direction:column;gap:6px}
-    .alert-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius-md);font-size:.85rem}
-    .alert-item.danger{background:#fee2e2;color:#991b1b}
-    .alert-item.warning{background:#fef3c7;color:#92400e}
+    .chart-card h3{font-size:.92rem;margin:0 0 .7rem}
+    .chart-wrap{height:210px;position:relative}
+    /* ── Tables ── */
+    .rtable{width:100%;border-collapse:collapse;font-size:.83rem}
+    .rtable th,.rtable td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--color-border)}
+    .rtable th{background:var(--color-bg-light);font-weight:600}
+    .rtable tr:last-child td{border-bottom:none}
+    .rtable td.num{text-align:right}
+    .sbadge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:.75rem;font-weight:600}
+    .sb-g{background:#dcfce7;color:#166534}.sb-y{background:#fef9c3;color:#854d0e}.sb-r{background:#fee2e2;color:#991b1b}
+    .ibadge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:.74rem;font-weight:600}
+    .ib-acc{background:#fee2e2;color:#991b1b}.ib-trf{background:#fef3c7;color:#92400e}
+    .ib-dmg{background:#ffedd5;color:#9a3412}.ib-oth{background:#f3f4f6;color:#374151}
+    /* ── Alerts ── */
+    .al-list{display:flex;flex-direction:column;gap:6px}
+    .al{display:flex;align-items:flex-start;gap:8px;padding:8px 12px;border-radius:var(--radius-md);font-size:.83rem;line-height:1.4}
+    .al-danger{background:#fee2e2;color:#991b1b}.al-warning{background:#fef3c7;color:#92400e}
+    .al-info{background:#dbeafe;color:#1e40af}.al-ok{background:#dcfce7;color:#166534}
+    /* ── Layout ── */
     .two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
-    @media(max-width:768px){.two-col{grid-template-columns:1fr}}
+    .three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+    @media(max-width:900px){.three-col{grid-template-columns:1fr 1fr}}
+    @media(max-width:640px){.two-col,.three-col{grid-template-columns:1fr}}
+    /* ── Period bar ── */
+    .period-bar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:1.2rem;background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:.65rem 1rem}
+    .period-bar label{font-size:.83rem;font-weight:600;color:var(--color-text-muted)}
+    .pbtn{padding:4px 12px;border-radius:16px;border:1px solid var(--color-border);background:transparent;cursor:pointer;font-size:.81rem;transition:background .15s}
+    .pbtn:hover{background:var(--color-bg-light)}
+    .pbtn.active{background:var(--color-primary);color:#fff;border-color:var(--color-primary)}
+    .pdate{padding:4px 8px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:.81rem;width:112px}
+    .pdate:focus{outline:none;border-color:var(--color-primary)}
+    /* ── Header ── */
+    .hdr-row{display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;flex-wrap:wrap}
+    .btn-print{padding:5px 14px;border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-bg-white);cursor:pointer;font-size:.82rem}
+    .btn-print:hover{background:var(--color-bg-light)}
+    /* ── Print ── */
+    @media print{
+      .period-bar,.btn-print,#navigation,.header{display:none!important}
+      .kpi-grid{grid-template-columns:repeat(4,1fr)!important}
+      .three-col{grid-template-columns:repeat(3,1fr)!important}
+      .chart-wrap{height:160px}
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>📈 Dashboard ผู้บริหาร</h1>
-      <p>ระบบจัดการยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+      <div class="hdr-row">
+        <div>
+          <h1>📈 Dashboard ผู้บริหาร</h1>
+          <p>ระบบจัดการยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+        </div>
+        <button class="btn-print" onclick="window.print()">🖨️ พิมพ์รายงาน</button>
+      </div>
     </div>
     <div id="navigation"></div>
     <div class="content">
       <div id="alertContainer"></div>
+
+      <!-- Period filter -->
+      <div class="period-bar">
+        <label>ช่วงเวลา:</label>
+        <button class="pbtn active" onclick="selPreset(this,'month')">เดือนนี้</button>
+        <button class="pbtn" onclick="selPreset(this,'3m')">3 เดือน</button>
+        <button class="pbtn" onclick="selPreset(this,'6m')">6 เดือน</button>
+        <button class="pbtn" onclick="selPreset(this,'year')">ปีนี้</button>
+        <button class="pbtn" onclick="selPreset(this,'academic')">ปีการศึกษา</button>
+        <input type="date" class="pdate" id="dateFrom" onchange="onCustDate()">
+        <span style="font-size:.81rem">ถึง</span>
+        <input type="date" class="pdate" id="dateTo" onchange="onCustDate()">
+      </div>
+
       <div id="loading" class="loading" style="display:none">กำลังโหลด...</div>
-      <div id="kpiSection"></div>
-      <div class="two-col">
+
+      <!-- KPI: real-time -->
+      <div class="kpi-sec">📌 สถานะปัจจุบัน (ณ วันนี้)</div>
+      <div id="kpiNow"></div>
+
+      <!-- KPI: period -->
+      <div class="kpi-sec">📊 สรุปในช่วงที่เลือก: <span id="periodLabel" style="color:var(--color-primary)"></span></div>
+      <div id="kpiPeriod"></div>
+
+      <!-- Charts 3-col -->
+      <div class="three-col">
         <div class="chart-card"><h3>📊 เที่ยวรถรายเดือน</h3><div class="chart-wrap"><canvas id="tripChart"></canvas></div></div>
-        <div class="chart-card"><h3>⛽ ค่าน้ำมันรายเดือน</h3><div class="chart-wrap"><canvas id="fuelChart"></canvas></div></div>
+        <div class="chart-card"><h3>⛽ ค่าน้ำมัน (฿) รายเดือน</h3><div class="chart-wrap"><canvas id="fuelChart"></canvas></div></div>
+        <div class="chart-card"><h3>🔧 ค่าซ่อม (฿) รายเดือน</h3><div class="chart-wrap"><canvas id="repairChart"></canvas></div></div>
       </div>
+
+      <!-- Driver ranking -->
       <div class="two-col">
-        <div class="chart-card"><h3>🏆 Top 5 พนักงาน</h3><div id="topDrivers"></div></div>
-        <div class="chart-card"><h3>⚠️ Bottom 5 พนักงาน</h3><div id="bottomDrivers"></div></div>
+        <div class="chart-card"><h3>🏆 Top 5 พนักงานยอดเยี่ยม</h3><div id="topDrivers"></div></div>
+        <div class="chart-card"><h3>📋 5 พนักงานที่ต้องพัฒนา</h3><div id="bottomDrivers"></div></div>
       </div>
-      <div class="chart-card"><h3>🚗 ค่าใช้จ่ายรายคัน</h3><div id="vehicleCosts"></div></div>
-      <div class="chart-card"><h3>🔔 แจ้งเตือน</h3><div id="alertsList" class="alert-list"></div></div>
+
+      <!-- Vehicle costs -->
+      <div class="chart-card"><h3>🚗 ประสิทธิภาพและค่าใช้จ่ายรายคัน</h3><div id="vehicleCosts"></div></div>
+
+      <!-- Incidents + Alerts -->
+      <div class="two-col">
+        <div class="chart-card"><h3>🚨 อุบัติเหตุ / เหตุการณ์ผิดปกติ</h3><div id="incidentsList"></div></div>
+        <div class="chart-card"><h3>🔔 แจ้งเตือนภาษีและประกันภัย (60 วัน)</h3><div id="alertsList" class="al-list"></div></div>
+      </div>
     </div>
   </div>
   <div style="background:var(--color-bg-light);padding:20px;text-align:center;color:var(--color-text-muted);font-size:.9em;margin-top:20px">
     <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
   </div>
   <script>
-    var tripChart,fuelChart;
+  var _ch={trip:null,fuel:null,repair:null};
+  var _df='',_dt='';
+  var MNS=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
-    function waitForCommon(){return new Promise(function(r){if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){r();return}var c=0;var t=setInterval(function(){c++;if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){clearInterval(t);r()}else if(c>50){clearInterval(t);r()}},100)})}
+  function waitForCommon(){return new Promise(function(r){if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){r();return}var c=0;var t=setInterval(function(){c++;if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){clearInterval(t);r()}else if(c>50){clearInterval(t);r()}},100)})}
 
-    document.addEventListener('DOMContentLoaded',async function(){
-      await waitForCommon();
-      if(typeof requireAuth==='function'&&!requireAuth())return;
-      loadAll();
+  document.addEventListener('DOMContentLoaded',async function(){
+    await waitForCommon();
+    if(typeof requireAuth==='function'&&!requireAuth())return;
+    selPreset(document.querySelector('.pbtn.active'),'month');
+  });
+
+  function pad2(n){return String(n).padStart(2,'0')}
+  function fmtD(d){return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())}
+  function thDate(s){if(!s)return'-';var p=s.substr(0,10).split('-');return p[2]+'/'+p[1]+'/'+(parseInt(p[0])+543)}
+  function fmt$(n){return n?Number(n).toLocaleString('th-TH'):'-'}
+  function fmtN(n){return(n!=null&&n!=='')?Number(n).toLocaleString('th-TH'):'-'}
+
+  function getPreset(p){
+    var now=new Date(),y=now.getFullYear(),m=now.getMonth();
+    if(p==='month')return{from:y+'-'+pad2(m+1)+'-01',to:fmtD(new Date(y,m+1,0))};
+    if(p==='3m')return{from:fmtD(new Date(y,m-2,1)),to:fmtD(new Date(y,m+1,0))};
+    if(p==='6m')return{from:fmtD(new Date(y,m-5,1)),to:fmtD(new Date(y,m+1,0))};
+    if(p==='year')return{from:y+'-01-01',to:y+'-12-31'};
+    if(p==='academic'){var ay=m>=4?y:y-1;return{from:ay+'-05-01',to:(ay+1)+'-03-31'};}
+    return{from:y+'-'+pad2(m+1)+'-01',to:fmtD(new Date(y,m+1,0))};
+  }
+
+  function prevRange(from,to){
+    var f=new Date(from),t=new Date(to),diff=t-f+86400000;
+    return{from:fmtD(new Date(+f-diff)),to:fmtD(new Date(+t-diff))};
+  }
+
+  var _presetLbl={month:'เดือนนี้','3m':'3 เดือนล่าสุด','6m':'6 เดือนล่าสุด',year:'ปีนี้',academic:'ปีการศึกษา'};
+
+  function selPreset(btn,p){
+    document.querySelectorAll('.pbtn').forEach(function(b){b.classList.remove('active')});
+    if(btn)btn.classList.add('active');
+    var d=getPreset(p);_df=d.from;_dt=d.to;
+    document.getElementById('dateFrom').value=_df;
+    document.getElementById('dateTo').value=_dt;
+    document.getElementById('periodLabel').textContent=(_presetLbl[p]||p)+' ('+_df+' – '+_dt+')';
+    loadAll();
+  }
+
+  function onCustDate(){
+    var f=document.getElementById('dateFrom').value,t=document.getElementById('dateTo').value;
+    if(!f||!t||f>t)return;
+    document.querySelectorAll('.pbtn').forEach(function(b){b.classList.remove('active')});
+    _df=f;_dt=t;
+    document.getElementById('periodLabel').textContent=_df+' – '+_dt;
+    loadAll();
+  }
+
+  async function loadAll(){
+    document.getElementById('loading').style.display='block';
+    try{
+      var prev=prevRange(_df,_dt);
+      var [dash,perf,vehicles,expiry,incidents,fuelCurr,fuelPrev,repCurr,repPrev]=await Promise.all([
+        API.get('/api/reports/dashboard'),
+        API.get('/api/reports/driver-performance?date_from='+_df+'&date_to='+_dt),
+        API.get('/api/reports/vehicles'),
+        API.get('/api/reports/expiry?days=60'),
+        API.get('/api/incidents'),
+        API.get('/api/reports/fuel?date_from='+_df+'&date_to='+_dt),
+        API.get('/api/reports/fuel?date_from='+prev.from+'&date_to='+prev.to),
+        API.get('/api/reports/repairs?date_from='+_df+'&date_to='+_dt),
+        API.get('/api/reports/repairs?date_from='+prev.from+'&date_to='+prev.to)
+      ]);
+      renderKpiNow(dash);
+      renderKpiPeriod(fuelCurr,fuelPrev,repCurr,repPrev,perf);
+      renderCharts(fuelCurr,repCurr);
+      renderDriverRanking(perf);
+      renderVehicleCosts(vehicles);
+      renderIncidents(incidents);
+      renderAlerts(expiry);
+    }catch(e){console.error(e);}
+    finally{document.getElementById('loading').style.display='none';}
+  }
+
+  function trendHtml(curr,prev,lowerBetter){
+    if(!prev||prev===0)return'';
+    var pct=Math.round(((curr-prev)/Math.abs(prev))*100);
+    if(Math.abs(pct)<1)return'<div class="kpi-trend tr-eq">→ เท่าเดิม</div>';
+    var up=pct>0,good=lowerBetter?!up:up;
+    var cls=good?(up?'tr-up-g':'tr-dn-g'):(up?'tr-up-b':'tr-dn-b');
+    return'<div class="kpi-trend '+cls+'">'+(up?'↑':'↓')+' '+Math.abs(pct)+'% จากช่วงก่อน</div>';
+  }
+
+  function renderKpiNow(dash){
+    if(!dash.success)return;
+    var d=dash.data;
+    var vA=d.vehicles?.active||0,vT=d.vehicles?.total||0,vM=d.vehicles?.in_maintenance||0;
+    var vPct=vT?Math.round(vA/vT*100):0;
+    var dA=d.drivers?.active||0,dF=d.drivers?.fatigued||0;
+    var qT=d.queue_today?.total||0,qD=d.queue_today?.completed||0;
+    var rA=d.repairs_active?.total||0,rIP=d.repairs_active?.in_progress||0;
+    var alN=d.alerts_unresolved||0;
+    var h='<div class="kpi-grid">';
+    h+='<div class="kpi '+(qT>0&&qD<qT?'kpi-warn':'')+'"><div class="kpi-val">'+qT+'</div><div class="kpi-label">เที่ยววันนี้</div><div class="kpi-sub">เสร็จแล้ว '+qD+' เที่ยว</div></div>';
+    h+='<div class="kpi '+(vPct>=80?'kpi-good':vPct>=50?'kpi-warn':'kpi-bad')+'"><div class="kpi-val">'+vA+'/'+vT+'</div><div class="kpi-label">รถพร้อมใช้งาน</div><div class="kpi-sub">ซ่อมอยู่ '+vM+' คัน | พร้อม '+vPct+'%</div></div>';
+    h+='<div class="kpi '+(dF>0?'kpi-warn':'kpi-good')+'"><div class="kpi-val">'+dA+'</div><div class="kpi-label">พนักงานพร้อมปฏิบัติงาน</div><div class="kpi-sub">'+(dF>0?'⚠️ เหนื่อยล้า '+dF+' คน':'✅ ทุกคนพร้อม')+'</div></div>';
+    h+='<div class="kpi '+(rA>3?'kpi-warn':'')+'"><div class="kpi-val">'+rA+'</div><div class="kpi-label">งานซ่อมค้าง</div><div class="kpi-sub">กำลังดำเนินการ '+rIP+' รายการ</div></div>';
+    h+='<div class="kpi '+(alN>0?'kpi-bad':'kpi-good')+'"><div class="kpi-val">'+alN+'</div><div class="kpi-label">แจ้งเตือนค้าง</div><div class="kpi-sub">'+(alN===0?'✅ ไม่มีค้าง':'⚠️ รอดำเนินการ')+'</div></div>';
+    h+='</div>';
+    document.getElementById('kpiNow').innerHTML=h;
+  }
+
+  function renderKpiPeriod(fuelCurr,fuelPrev,repCurr,repPrev,perf){
+    var fA=fuelCurr.success?fuelCurr.data?.summary?.total_amount||0:0;
+    var fL=fuelCurr.success?fuelCurr.data?.summary?.total_liters||0:0;
+    var fAno=fuelCurr.success?fuelCurr.data?.summary?.anomaly_count||0:0;
+    var fPA=fuelPrev.success?fuelPrev.data?.summary?.total_amount||0:0;
+    var rA=repCurr.success?repCurr.data?.summary?.total_cost||0:0;
+    var rCnt=repCurr.success?repCurr.data?.summary?.total||0:0;
+    var rPA=repPrev.success?repPrev.data?.summary?.total_cost||0:0;
+    var tot=fA+rA,totP=fPA+rPA;
+    var pList=Array.isArray(perf?.data)?perf.data:[];
+    var avgS=pList.length?pList.reduce(function(s,x){return s+(x.avg_score||0)},0)/pList.length:0;
+    var sCls=avgS>=4?'kpi-good':avgS>=3?'kpi-warn':'kpi-bad';
+    var h='<div class="kpi-grid">';
+    h+='<div class="kpi"><div class="kpi-val">'+fmt$(fA)+'</div><div class="kpi-label">ค่าน้ำมัน (฿)</div><div class="kpi-sub">'+fL.toFixed(0)+' ลิตร</div>'+trendHtml(fA,fPA,true)+'</div>';
+    h+='<div class="kpi"><div class="kpi-val">'+fmt$(rA)+'</div><div class="kpi-label">ค่าซ่อมบำรุง (฿)</div><div class="kpi-sub">'+rCnt+' รายการ</div>'+trendHtml(rA,rPA,true)+'</div>';
+    h+='<div class="kpi '+(tot>totP*1.1?'kpi-warn':'kpi-good')+'"><div class="kpi-val">'+fmt$(tot)+'</div><div class="kpi-label">รวมค่าใช้จ่าย (฿)</div><div class="kpi-sub">น้ำมัน + ซ่อม</div>'+trendHtml(tot,totP,true)+'</div>';
+    h+='<div class="kpi '+(fAno>0?'kpi-warn':'')+'"><div class="kpi-val">'+fAno+'</div><div class="kpi-label">น้ำมันผิดปกติ</div><div class="kpi-sub">'+(fAno?'⚠️ ควรตรวจสอบ':'✅ ปกติทั้งหมด')+'</div></div>';
+    h+='<div class="kpi '+sCls+'"><div class="kpi-val">'+avgS.toFixed(2)+'/5</div><div class="kpi-label">คะแนนเฉลี่ยพนักงาน</div><div class="kpi-sub">จาก '+pList.length+' คน (9 มิติ)</div></div>';
+    h+='</div>';
+    document.getElementById('kpiPeriod').innerHTML=h;
+  }
+
+  function renderDriverRanking(perf){
+    if(!perf.success)return;
+    var list=Array.isArray(perf.data)?perf.data:[];
+    list.sort(function(a,b){return(b.avg_score||0)-(a.avg_score||0)});
+    document.getElementById('topDrivers').innerHTML=rankTable(list.slice(0,5),true);
+    document.getElementById('bottomDrivers').innerHTML=rankTable(list.slice(-5).reverse(),false);
+  }
+
+  function rankTable(list,top){
+    if(!list.length)return'<p style="color:var(--color-text-muted);font-size:.83rem">ไม่มีข้อมูล</p>';
+    var medals=['🥇','🥈','🥉','4','5'];
+    var h='<table class="rtable"><thead><tr><th>#</th><th>ชื่อ-สกุล</th><th>คะแนน</th></tr></thead><tbody>';
+    list.forEach(function(d,i){
+      var s=d.avg_score||0,cls=s>=4?'sb-g':s>=3?'sb-y':'sb-r';
+      h+='<tr><td>'+(top?medals[i]:'⚠️')+'</td><td>'+d.driver_name+'</td><td><span class="sbadge '+cls+'">'+s.toFixed(2)+'/5</span></td></tr>';
     });
+    return h+'</tbody></table>';
+  }
 
-    function fmt$(n){return n?Number(n).toLocaleString():'-'}
+  function renderVehicleCosts(vehicles){
+    if(!vehicles.success)return;
+    var vList=Array.isArray(vehicles.data)?vehicles.data:[];
+    vList.sort(function(a,b){return((b.total_fuel_cost||0)+(b.total_repair_cost||0))-((a.total_fuel_cost||0)+(a.total_repair_cost||0))});
+    var sLbl={'active':'✅ ใช้งาน','maintenance':'🔧 ซ่อม','inactive':'❌ ปลดระวาง'};
+    var h='<div style="overflow-x:auto"><table class="rtable"><thead><tr><th>ทะเบียน</th><th>รุ่น</th><th>สถานะ</th><th class="num">เที่ยว</th><th class="num">ค่าน้ำมัน</th><th class="num">ค่าซ่อม</th><th class="num">รวม</th><th class="num">ต้นทุน/เที่ยว</th></tr></thead><tbody>';
+    vList.forEach(function(v){
+      var tot=(v.total_fuel_cost||0)+(v.total_repair_cost||0);
+      var cpt=v.trip_count>0?Math.round(tot/v.trip_count):0;
+      h+='<tr><td><strong>'+v.license_plate+'</strong></td><td>'+(v.brand||'')+' '+(v.model||'')+'</td><td>'+(sLbl[v.status]||v.status)+'</td><td class="num">'+fmtN(v.trip_count)+'</td><td class="num">'+fmt$(v.total_fuel_cost)+'</td><td class="num">'+fmt$(v.total_repair_cost)+'</td><td class="num"><strong>'+fmt$(tot)+'</strong></td><td class="num">'+(cpt?fmt$(cpt)+' ฿':'-')+'</td></tr>';
+    });
+    h+='</tbody></table></div>';
+    document.getElementById('vehicleCosts').innerHTML=h;
+  }
 
-    async function loadAll(){
-      document.getElementById('loading').style.display='block';
-      try{
-        var [dash,perf,vehicles,expiry]=await Promise.all([
-          API.get('/api/reports/dashboard'),
-          API.get('/api/reports/driver-performance'),
-          API.get('/api/reports/vehicles'),
-          API.get('/api/reports/expiry?days=30')
-        ]);
-        
-        // KPIs
-        if(dash.success){
-          var d=dash.data;
-          var h='<div class="kpi-grid">';
-          h+='<div class="kpi"><div class="kpi-val">'+(d.queue_today?.total||0)+'</div><div class="kpi-label">เที่ยววันนี้</div><div class="kpi-sub">เสร็จ '+(d.queue_today?.completed||0)+'</div></div>';
-          h+='<div class="kpi"><div class="kpi-val">'+(d.vehicles?.active||0)+'/'+(d.vehicles?.total||0)+'</div><div class="kpi-label">รถพร้อมใช้</div><div class="kpi-sub">ซ่อม '+(d.vehicles?.in_maintenance||0)+'</div></div>';
-          h+='<div class="kpi"><div class="kpi-val">'+(d.drivers?.active||0)+'</div><div class="kpi-label">พนักงาน active</div><div class="kpi-sub">ล้า '+(d.drivers?.fatigued||0)+'</div></div>';
-          h+='<div class="kpi"><div class="kpi-val">'+fmt$(d.fuel_month?.total_amount)+'</div><div class="kpi-label">ค่าน้ำมันเดือนนี้</div><div class="kpi-sub">'+(d.fuel_month?.total_liters||0).toFixed(0)+' ลิตร</div></div>';
-          h+='<div class="kpi"><div class="kpi-val">'+(d.repairs_active?.total||0)+'</div><div class="kpi-label">งานซ่อมค้าง</div><div class="kpi-sub">รายงาน '+(d.repairs_active?.reported||0)+'</div></div>';
-          h+='<div class="kpi"><div class="kpi-val">'+(d.alerts_unresolved||0)+'</div><div class="kpi-label">แจ้งเตือนค้าง</div></div>';
-          h+='</div>';
-          document.getElementById('kpiSection').innerHTML=h;
-        }
-
-        // Driver performance ranking
-        if(perf.success){
-          var list=Array.isArray(perf.data)?perf.data:[];
-          list.sort(function(a,b){return b.avg_score-a.avg_score});
-          var top5=list.slice(0,5);
-          var bot5=list.slice(-5).reverse();
-          document.getElementById('topDrivers').innerHTML=renderRankTable(top5,'🥇');
-          document.getElementById('bottomDrivers').innerHTML=renderRankTable(bot5,'⚠️');
-
-          // Calculate avg score across all
-          if(list.length>0){
-            var avg=list.reduce(function(s,d){return s+d.avg_score},0)/list.length;
-            var kpiGrid=document.querySelector('.kpi-grid');
-            if(kpiGrid) kpiGrid.innerHTML+='<div class="kpi"><div class="kpi-val">'+avg.toFixed(2)+'/5</div><div class="kpi-label">คะแนนเฉลี่ย</div></div>';
-          }
-        }
-
-        // Vehicle costs
-        if(vehicles.success){
-          var vList=Array.isArray(vehicles.data)?vehicles.data:[];
-          var vh='<div style="overflow-x:auto"><table class="rank-table"><thead><tr><th>ทะเบียน</th><th>รุ่น</th><th>เที่ยว</th><th>น้ำมัน</th><th>ซ่อม</th><th>รวม</th></tr></thead><tbody>';
-          vList.forEach(function(v){
-            var total=(v.total_fuel_cost||0)+(v.total_repair_cost||0);
-            vh+='<tr><td>'+v.license_plate+'</td><td>'+(v.brand||'')+' '+(v.model||'')+'</td><td>'+v.trip_count+'</td><td>'+fmt$(v.total_fuel_cost)+'</td><td>'+fmt$(v.total_repair_cost)+'</td><td><strong>'+fmt$(total)+'</strong></td></tr>';
-          });
-          vh+='</tbody></table></div>';
-          document.getElementById('vehicleCosts').innerHTML=vh;
-        }
-
-        // Alerts
-        if(expiry.success){
-          var alerts=[];
-          (expiry.data?.tax_expiring||[]).forEach(function(t){alerts.push({text:'📋 ภาษี '+t.license_plate+' หมด '+t.expiry_date,type:'warning'})});
-          (expiry.data?.insurance_expiring||[]).forEach(function(i){alerts.push({text:'🛡️ ประกัน '+i.license_plate+' หมด '+i.expiry_date,type:'danger'})});
-          var ah=alerts.length?'':'<p style="color:var(--color-text-muted);font-size:.85rem">ไม่มีแจ้งเตือน</p>';
-          alerts.forEach(function(a){ah+='<div class="alert-item '+a.type+'">'+a.text+'</div>'});
-          document.getElementById('alertsList').innerHTML=ah;
-        }
-
-        // Charts: monthly trips + fuel (last 6 months)
-        loadMonthlyCharts();
-      }catch(e){console.error(e)}
-      finally{document.getElementById('loading').style.display='none'}
+  function renderIncidents(incidents){
+    if(!incidents.success){document.getElementById('incidentsList').innerHTML='<p style="color:var(--color-text-muted);font-size:.83rem">ไม่สามารถโหลดข้อมูลได้</p>';return;}
+    var all=Array.isArray(incidents.data)?incidents.data:[];
+    var period=all.filter(function(i){return i.incident_date>=_df&&i.incident_date<=_dt});
+    var tLbl={accident:'อุบัติเหตุ',traffic_violation:'ฝ่าฝืนจราจร',damage:'ความเสียหาย',other:'อื่นๆ'};
+    var tCls={accident:'ib-acc',traffic_violation:'ib-trf',damage:'ib-dmg',other:'ib-oth'};
+    var sum={accident:0,traffic_violation:0,damage:0,other:0};
+    period.forEach(function(i){sum[i.incident_type]=(sum[i.incident_type]||0)+1});
+    var h='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.7rem;align-items:center">';
+    h+='<span style="font-size:.84rem;font-weight:600">ช่วงนี้: <span style="color:'+(period.length>0?'#dc2626':'#16a34a')+'">'+period.length+' เหตุการณ์</span></span>';
+    Object.keys(sum).forEach(function(k){if(sum[k])h+='<span class="ibadge '+tCls[k]+'">'+tLbl[k]+' ('+sum[k]+')</span>'});
+    h+='</div>';
+    if(!period.length){
+      h+='<div class="al al-ok">✅ ไม่มีเหตุการณ์ผิดปกติในช่วงนี้</div>';
+    }else{
+      h+='<table class="rtable"><thead><tr><th>วันที่</th><th>ทะเบียน</th><th>ประเภท</th><th>สถานที่</th></tr></thead><tbody>';
+      period.slice(0,8).forEach(function(i){
+        h+='<tr><td>'+thDate(i.incident_date)+'</td><td>'+(i.license_plate||'-')+'</td><td><span class="ibadge '+tCls[i.incident_type]+'">'+tLbl[i.incident_type]+'</span></td><td>'+(i.location||'-')+'</td></tr>';
+      });
+      h+='</tbody></table>';
+      if(period.length>8)h+='<p style="font-size:.76rem;color:var(--color-text-muted);margin-top:.5rem">แสดง 8 รายการล่าสุด (ทั้งหมด '+period.length+' รายการ)</p>';
     }
+    document.getElementById('incidentsList').innerHTML=h;
+  }
 
-    function renderRankTable(list,icon){
-      if(!list.length)return'<p style="color:var(--color-text-muted);font-size:.85rem">ไม่มีข้อมูล</p>';
-      var h='<table class="rank-table"><thead><tr><th>#</th><th>ชื่อ</th><th>คะแนน</th></tr></thead><tbody>';
-      list.forEach(function(d,i){h+='<tr><td>'+icon+'</td><td>'+d.driver_name+'</td><td><strong>'+d.avg_score.toFixed(2)+'</strong>/5</td></tr>'});
-      return h+'</tbody></table>';
+  function renderAlerts(expiry){
+    if(!expiry.success)return;
+    var alerts=[];
+    (expiry.data?.tax_expiring||[]).forEach(function(t){
+      var dl=Math.ceil((new Date(t.expiry_date)-new Date())/86400000);
+      alerts.push({text:'📋 ภาษีรถ '+t.license_plate+' หมดอายุ '+thDate(t.expiry_date)+' (อีก '+dl+' วัน)',cls:dl<=15?'al-danger':'al-warning'});
+    });
+    (expiry.data?.insurance_expiring||[]).forEach(function(i){
+      var dl=Math.ceil((new Date(i.expiry_date)-new Date())/86400000);
+      alerts.push({text:'🛡️ ประกันภัย '+i.license_plate+' หมดอายุ '+thDate(i.expiry_date)+' (อีก '+dl+' วัน)',cls:dl<=15?'al-danger':'al-warning'});
+    });
+    alerts.sort(function(a,b){return(a.cls==='al-danger'?0:1)-(b.cls==='al-danger'?0:1)});
+    var h=alerts.length?'':'<div class="al al-ok">✅ ไม่มีรายการใกล้หมดอายุใน 60 วัน</div>';
+    alerts.forEach(function(a){h+='<div class="al '+a.cls+'">'+a.text+'</div>'});
+    document.getElementById('alertsList').innerHTML=h;
+  }
+
+  function renderCharts(fuelRes,repRes){
+    var months=[],cur=new Date(_df.substr(0,7)+'-01'),end=new Date(_dt.substr(0,7)+'-01');
+    while(cur<=end){months.push(cur.toISOString().substr(0,7));cur=new Date(cur.getFullYear(),cur.getMonth()+1,1);}
+    if(!months.length)return;
+    var labels=months.map(function(m){var p=m.split('-');return MNS[parseInt(p[1])-1]+' '+(parseInt(p[0])+543)});
+
+    var fuelC=months.map(function(){return 0});
+    if(fuelRes.success&&fuelRes.data?.records){
+      fuelRes.data.records.forEach(function(r){var idx=months.indexOf(r.date?.substr(0,7));if(idx>=0)fuelC[idx]+=(r.amount||0);});
     }
-
-    async function loadMonthlyCharts(){
-      try{
-        // Get last 6 months queue data
-        var months=[];var now=new Date();
-        for(var i=5;i>=0;i--){var d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push(d.toISOString().substr(0,7))}
-        var labels=months.map(function(m){var p=m.split('-');var mn=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];return mn[parseInt(p[1])-1]+' '+(parseInt(p[0])+543)});
-
-        // Get usage report for last 6 months
-        var dateFrom=months[0]+'-01';
-        var dateTo=months[5]+'-31';
-        var [usageRes,fuelRes]=await Promise.all([
-          API.get('/api/reports/usage?date_from='+dateFrom+'&date_to='+dateTo),
-          API.get('/api/reports/fuel?date_from='+dateFrom+'&date_to='+dateTo)
-        ]);
-
-        // Count trips per month
-        var tripCounts=months.map(function(){return 0});
-        if(usageRes.success&&usageRes.data?.records){
-          usageRes.data.records.forEach(function(r){
-            if(r.record_type!=='departure')return;
-            var m=r.datetime?.substr(0,7);
-            var idx=months.indexOf(m);
-            if(idx>=0)tripCounts[idx]++;
-          });
-        }
-
-        // Fuel cost per month
-        var fuelCosts=months.map(function(){return 0});
-        if(fuelRes.success&&fuelRes.data?.records){
-          fuelRes.data.records.forEach(function(r){
-            var m=r.date?.substr(0,7);
-            var idx=months.indexOf(m);
-            if(idx>=0)fuelCosts[idx]+=(r.amount||0);
-          });
-        }
-
-        // Trip chart
-        var ctx1=document.getElementById('tripChart');
-        if(ctx1){
-          if(tripChart)tripChart.destroy();
-          tripChart=new Chart(ctx1,{type:'bar',data:{labels:labels,datasets:[{label:'จำนวนเที่ยว',data:tripCounts,backgroundColor:'#6366f1'}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
-        }
-        // Fuel chart
-        var ctx2=document.getElementById('fuelChart');
-        if(ctx2){
-          if(fuelChart)fuelChart.destroy();
-          fuelChart=new Chart(ctx2,{type:'line',data:{labels:labels,datasets:[{label:'ค่าน้ำมัน (บาท)',data:fuelCosts,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.1)',fill:true,tension:.3}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
-        }
-      }catch(e){console.error(e)}
+    var repC=months.map(function(){return 0});
+    if(repRes.success&&repRes.data?.records){
+      repRes.data.records.forEach(function(r){var idx=months.indexOf(r.date_reported?.substr(0,7));if(idx>=0)repC[idx]+=(r.cost||0);});
     }
+    drawChart('fuelChart','fuel','line',labels,fuelC,'ค่าน้ำมัน (฿)','#f59e0b','rgba(245,158,11,0.12)');
+    drawChart('repairChart','repair','line',labels,repC,'ค่าซ่อม (฿)','#ef4444','rgba(239,68,68,0.1)');
+
+    API.get('/api/reports/usage?date_from='+_df+'&date_to='+_dt).then(function(r){
+      var trips=months.map(function(){return 0});
+      if(r.success&&r.data?.records){
+        r.data.records.forEach(function(x){if(x.record_type!=='departure')return;var idx=months.indexOf(x.datetime?.substr(0,7));if(idx>=0)trips[idx]++;});
+      }
+      drawChart('tripChart','trip','bar',labels,trips,'เที่ยว','#6366f1','#6366f1');
+    });
+  }
+
+  function drawChart(id,key,type,labels,data,label,color,bg){
+    var ctx=document.getElementById(id);if(!ctx)return;
+    if(_ch[key])_ch[key].destroy();
+    _ch[key]=new Chart(ctx,{
+      type:type,
+      data:{labels:labels,datasets:[{label:label,data:data,backgroundColor:type==='bar'?color:bg,borderColor:color,fill:type==='line',tension:.3,borderWidth:2,pointRadius:3}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{y:{beginAtZero:true,ticks:{callback:function(v){return v>=10000?(v/1000).toFixed(0)+'K':v.toLocaleString()}}}}}
+    });
+  }
   </script>
 </body>
 </html>
