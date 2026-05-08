@@ -895,7 +895,7 @@
     }
 
     async function saveUser() {
-      var id = parseInt(document.getElementById('editUserId').value);
+      var id = document.getElementById('editUserId').value;
       if (!id) return;
 
       var role = document.getElementById('editRole').value;
