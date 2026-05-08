@@ -634,10 +634,10 @@ function initThaiDatePicker(selector, options) {
             }
             return null;
         },
-        onReady: function(selDates, dStr, inst) { _patchBEYear(inst); },
+        onReady: function(selDates, dStr, inst) { _patchBEYear(inst); _attachScrollClose(inst); },
         onMonthChange: function(selDates, dStr, inst) { _patchBEYear(inst); },
         onYearChange: function(selDates, dStr, inst) { _patchBEYear(inst); },
-        onOpen: function(selDates, dStr, inst) { _patchBEYear(inst); }
+        onOpen: function(selDates, dStr, inst) { _patchBEYear(inst); _attachScrollClose(inst); }
     };
     return flatpickr(selector, Object.assign(baseOpts, options || {}));
 }
@@ -652,10 +652,23 @@ function initThaiTimePicker(selector, options) {
         allowInput: true,
         minuteIncrement: 1,
         locale: getThaiLocale(),
-        onReady: function(selDates, dStr, inst) { _attachTimeWheel(inst); },
-        onOpen: function(selDates, dStr, inst) { _attachTimeWheel(inst); }
+        onReady: function(selDates, dStr, inst) { _attachTimeWheel(inst); _attachScrollClose(inst); },
+        onOpen: function(selDates, dStr, inst) { _attachTimeWheel(inst); _attachScrollClose(inst); }
     }, options || {}));
     return fp;
+}
+
+// Close picker when user scrolls outside the picker (so popup doesn't stick on screen)
+function _attachScrollClose(inst) {
+    if (!inst || inst._scrollCloseAttached) return;
+    inst._scrollCloseAttached = true;
+    var handler = function(e) {
+        if (!inst.isOpen) return;
+        if (inst.calendarContainer && inst.calendarContainer.contains(e.target)) return;
+        inst.close();
+    };
+    inst._scrollCloseHandler = handler;
+    window.addEventListener('scroll', handler, true);
 }
 
 // Make mouse wheel scroll change hour/minute on flatpickr time picker
@@ -704,10 +717,10 @@ function initThaiDateTimePicker(selector, options) {
             var hh = date.getHours(), mm = date.getMinutes();
             return date.getDate()+' '+THAI_MONTHS_FULL[date.getMonth()]+' '+(date.getFullYear()+543)+' '+(hh<10?'0':'')+hh+':'+(mm<10?'0':'')+mm;
         },
-        onReady: function(s,d,inst){ _patchBEYear(inst); },
+        onReady: function(s,d,inst){ _patchBEYear(inst); _attachScrollClose(inst); },
         onMonthChange: function(s,d,inst){ _patchBEYear(inst); },
         onYearChange: function(s,d,inst){ _patchBEYear(inst); },
-        onOpen: function(s,d,inst){ _patchBEYear(inst); }
+        onOpen: function(s,d,inst){ _patchBEYear(inst); _attachScrollClose(inst); }
     }, options || {}));
 }
 
