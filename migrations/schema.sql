@@ -53,6 +53,10 @@ CREATE TABLE IF NOT EXISTS user_requests (
   reviewed_at TEXT,
   initial_password_hash TEXT,
   salt TEXT,
+  title TEXT,
+  department TEXT,
+  phone TEXT,
+  reason TEXT,
   created_at TEXT NOT NULL
 );
 

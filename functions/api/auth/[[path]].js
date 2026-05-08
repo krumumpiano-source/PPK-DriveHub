@@ -66,16 +66,13 @@ export async function onRequest(context) {
     const fullName = String(body.full_name || body.fullName || body.name || '').trim();
     const firstName = String(body.first_name || '').trim();
     const lastName = String(body.last_name || '').trim();
+    const title = String(body.title || '').trim();
+    const department = String(body.department || '').trim();
+    const phone = String(body.phone || '').trim();
+    const reason = String(body.reason || '').trim();
 
-    let displayName = hasFirstLast ? `${firstName} ${lastName}`.trim() : fullName;
-    const legacyBits = [];
-    if (body.title) legacyBits.push(String(body.title).trim());
-    if (body.department) legacyBits.push(`แผนก:${String(body.department).trim()}`);
-    if (body.phone) legacyBits.push(`โทร:${String(body.phone).trim()}`);
-    if (body.reason) legacyBits.push(`เหตุผล:${String(body.reason).trim()}`);
-    if (legacyBits.length) {
-      displayName = `${displayName} (${legacyBits.join(' | ')})`;
-    }
+    // Clean name only — extra fields go to dedicated columns
+    const cleanName = hasFirstLast ? `${firstName} ${lastName}`.trim() : fullName;
 
     const existing = await dbFirst(env.DB, 'SELECT id FROM user_requests WHERE email = ?', [email]);
     if (existing) return error('email นี้มีคำขอสมัครรอการอนุมัติแล้ว', 409);
@@ -93,17 +90,20 @@ export async function onRequest(context) {
     }
 
     await dbRun(env.DB,
-      `INSERT INTO user_requests (id, name, email, requested_role, initial_permissions, status, initial_password_hash, salt, created_at)
-       VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
-      [generateUUID(), displayName, email,
+      `INSERT INTO user_requests (id, name, email, requested_role, initial_permissions, status, initial_password_hash, salt, title, department, phone, reason, created_at)
+       VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)`,
+      [generateUUID(), cleanName, email,
        body.role || 'viewer', body.permissions ? JSON.stringify(body.permissions) : '{}',
-       pwHash, pwSalt, now()]
+       pwHash, pwSalt,
+       title || null, department || null, phone || null, reason || null,
+       now()]
     );
 
+    const displayForNotify = title ? `${title}${cleanName}` : cleanName;
     await notifyAllAdmins(env.DB, 'system', 'ผู้ใช้ใหม่ลงทะเบียน',
-      `${displayName} (${email}) สมัครเข้าใช้งาน รอการอนุมัติ`);
+      `${displayForNotify} (${email}) สมัครเข้าใช้งาน รอการอนุมัติ`);
     await sendTelegramMessage(env,
-      `👤 <b>ผู้ใช้ใหม่ลงทะเบียน</b>\n📛 ${displayName}\n📧 ${email}\n⏳ รอการอนุมัติจากผู้ดูแล`);
+      `👤 <b>ผู้ใช้ใหม่ลงทะเบียน</b>\n📛 ${displayForNotify}\n📧 ${email}\n🏢 ${department || '-'}\n📞 ${phone || '-'}\n📝 ${reason || '-'}\n⏳ รอการอนุมัติจากผู้ดูแล`);
 
     return success({ message: 'ส่งคำขอสมัครสมาชิกเรียบร้อย รอการอนุมัติจากผู้ดูแลระบบ' });
   }

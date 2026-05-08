@@ -1111,3 +1111,10 @@ body.qr-page .content { padding: clamp(14px, 3vw, 20px); }
   margin-top: 24px;
   line-height: 1.6;
 }
+
+/* ── FLATPICKR (Thai BE year fix) ──────────────────────────── */
+.flatpickr-current-month { padding: 7px 0 0 0 !important; height: 34px !important; }
+.flatpickr-current-month .numInputWrapper { width: 7ch !important; }
+.flatpickr-current-month input.cur-year { font-weight: 600 !important; padding: 0 0.5ch !important; }
+.flatpickr-current-month .flatpickr-monthDropdown-months { font-weight: 600 !important; }
+.flatpickr-monthDropdown-months { padding: 0 4px !important; }

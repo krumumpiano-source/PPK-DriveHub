@@ -97,6 +97,27 @@ export async function onRequest(context) {
     const reqs = await dbAll(env.DB,
       'SELECT * FROM user_requests WHERE status = ? ORDER BY created_at DESC', [status]
     );
+    // Parse legacy "(แผนก:... | โทร:... | เหตุผล:...)" payloads from name column
+    // so the UI can show clean values for older requests.
+    for (const r of reqs) {
+      const raw = String(r.name || '').trim();
+      const m = raw.match(/^(.*?)\s*\(([^)]*)\)\s*$/);
+      if (m && /(แผนก|โทร|เหตุผล)[:：]/.test(m[2])) {
+        r.name = m[1].trim();
+        const bits = m[2].split('|').map(s => s.trim());
+        for (const b of bits) {
+          const mm = b.match(/^(แผนก|โทร|เหตุผล)[:：]\s*(.*)$/);
+          if (mm) {
+            const v = mm[2].trim();
+            if (mm[1] === 'แผนก' && !r.department) r.department = v;
+            else if (mm[1] === 'โทร' && !r.phone) r.phone = v;
+            else if (mm[1] === 'เหตุผล' && !r.reason) r.reason = v;
+          } else if (b && !r.title) {
+            r.title = b;
+          }
+        }
+      }
+    }
     return success(reqs);
   }
 
@@ -107,10 +128,32 @@ export async function onRequest(context) {
     if (!req) return error('ไม่พบคำขอ', 404);
     if (req.status !== 'pending') return error('คำขอนี้ถูกดำเนินการแล้ว');
 
+    // Strip legacy "(แผนก:... | โทร:... | เหตุผล:...)" suffix from older requests
+    // that stored everything in the name column.
+    let cleanName = String(req.name || '').trim();
+    let legacyTitle = '', legacyPhone = '';
+    const legacyMatch = cleanName.match(/^(.*?)\s*\(([^)]*)\)\s*$/);
+    if (legacyMatch && /(แผนก|โทร|เหตุผล)[:：]/.test(legacyMatch[2])) {
+      cleanName = legacyMatch[1].trim();
+      const bits = legacyMatch[2].split('|').map(s => s.trim());
+      for (const b of bits) {
+        const m = b.match(/^(แผนก|โทร|เหตุผล)[:：]\s*(.*)$/);
+        if (m) {
+          if (m[1] === 'โทร') legacyPhone = m[2].trim();
+        } else if (b && !legacyTitle) {
+          legacyTitle = b;
+        }
+      }
+    }
+
+    const title = (req.title || legacyTitle || '').trim();
+    const phone = (req.phone || legacyPhone || '').trim();
+
     // Create actual user account
-    const nameParts = req.name.split(' ');
-    const firstName = nameParts[0] || req.name;
+    const nameParts = cleanName.split(/\s+/);
+    const firstName = nameParts[0] || cleanName;
     const lastName = nameParts.slice(1).join(' ') || '';
+    const displayName = (title ? title : '') + cleanName;
     const userId = generateUUID();
     const ts = now();
 
@@ -129,11 +172,11 @@ export async function onRequest(context) {
     }
 
     await dbRun(env.DB,
-      `INSERT INTO users (id, username, email, password_hash, salt, role, permissions, first_name, last_name, display_name, active, pdpa_accepted, must_change_password, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?, ?)`,
+      `INSERT INTO users (id, username, email, password_hash, salt, role, permissions, title, first_name, last_name, display_name, phone, active, pdpa_accepted, must_change_password, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?, ?)`,
       [userId, req.email, req.email, hash, salt,
        body.role || req.requested_role, body.permissions ? JSON.stringify(body.permissions) : (req.initial_permissions || '{}'),
-       firstName, lastName, req.name, mustChange, ts, ts]
+       title || null, firstName, lastName, displayName, phone || null, mustChange, ts, ts]
     );
 
     await dbRun(env.DB,
