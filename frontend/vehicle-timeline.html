@@ -74,18 +74,21 @@
 
     function waitForCommon(){return new Promise(function(r){if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){r();return}var c=0;var t=setInterval(function(){c++;if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){clearInterval(t);r()}else if(c>50){clearInterval(t);r()}},100)})}
 
+    function fmtLocalDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+
     document.addEventListener('DOMContentLoaded',async function(){
       await waitForCommon();
       if(typeof requireAuth==='function'&&!requireAuth())return;
       await loadVehicles();
-      var now=new Date();var y1=new Date(now.getFullYear(),0,1);
-      document.getElementById('dateFrom').value=y1.toISOString().substr(0,10);
-      document.getElementById('dateTo').value=now.toISOString().substr(0,10);
+      var now=new Date();
+      document.getElementById('dateFrom').value=now.getFullYear()+'-01-01';
+      document.getElementById('dateTo').value=fmtLocalDate(now);
       setTimeout(function(){if(typeof initAllThaiDateTimePickers==='function')initAllThaiDateTimePickers()},500);
+      document.getElementById('filterCar').addEventListener('change',function(){if(this.value)loadTimeline()});
     });
 
     async function loadVehicles(){
-      try{var r=await apiCall('getVehicles',{});if(r.success&&r.data&&r.data.vehicles){vehicles=r.data.vehicles;var sel=document.getElementById('filterCar');vehicles.forEach(function(v){var o=document.createElement('option');o.value=v.car_id;o.textContent=v.license_plate+' '+(v.brand||'')+' '+(v.model||'');sel.appendChild(o)})}}catch(e){console.error(e)}
+      try{var r=await apiCall('getVehicles',{});if(r.success&&r.data&&r.data.vehicles){vehicles=r.data.vehicles;var sel=document.getElementById('filterCar');vehicles.forEach(function(v){var o=document.createElement('option');o.value=v.id;o.textContent=v.license_plate+' '+(v.brand||'')+' '+(v.model||'');sel.appendChild(o)})}}catch(e){console.error(e)}
     }
 
     function fmtDate(s){if(!s)return'-';try{var p=s.split(/[T ]/)[0].split('-');var m=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];return parseInt(p[2])+' '+m[parseInt(p[1])-1]+' '+(parseInt(p[0])+543)}catch(e){return s}}
