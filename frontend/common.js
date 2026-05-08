@@ -572,55 +572,113 @@ function initLoadingSpinnerStyle() {
 }
 initLoadingSpinnerStyle();
 
+var THAI_MONTHS_FULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+var THAI_MONTHS_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+var THAI_WEEKDAYS_SHORT = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+var THAI_WEEKDAYS_LONG = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+
+function getThaiLocale() {
+    return {
+        weekdays: { shorthand: THAI_WEEKDAYS_SHORT, longhand: THAI_WEEKDAYS_LONG },
+        months: { shorthand: THAI_MONTHS_SHORT, longhand: THAI_MONTHS_FULL },
+        firstDayOfWeek: 0,
+        rangeSeparator: ' ถึง ',
+        weekAbbreviation: 'สัปดาห์',
+        scrollTitle: 'เลื่อนเพื่อเปลี่ยน',
+        toggleTitle: 'คลิกเพื่อสลับ'
+    };
+}
+
+// Update flatpickr year input to show BE year (year + 543)
+function _patchBEYear(fpInstance) {
+    if (!fpInstance || !fpInstance.calendarContainer) return;
+    var yearEls = fpInstance.calendarContainer.querySelectorAll('.cur-year');
+    yearEls.forEach(function (el) {
+        var ce = parseInt(el.value, 10);
+        if (!isNaN(ce) && ce < 2500) {
+            el.value = ce + 543;
+            el.setAttribute('data-ce-year', ce);
+            // Disable arrow inputs to avoid corruption (BE display is read-only)
+        }
+    });
+}
+
 function initThaiDatePicker(selector, options) {
     if (typeof flatpickr === 'undefined') return null;
-    var thaiMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
     var baseOpts = {
         dateFormat: 'Y-m-d',
-        allowInput: true,
+        allowInput: false,
         altInput: true,
-        altFormat: 'THAI',
+        altFormat: 'j F Y',
+        locale: getThaiLocale(),
         formatDate: function(date, format) {
             if (format === 'Y-m-d') {
                 var y = date.getFullYear(), m = date.getMonth()+1, d = date.getDate();
                 return y + '-' + (m < 10 ? '0' : '') + m + '-' + (d < 10 ? '0' : '') + d;
             }
-            return date.getDate() + ' ' + thaiMonths[date.getMonth()] + ' ' + (date.getFullYear() + 543);
+            // any other format (altFormat) → full Thai date with BE year
+            return date.getDate() + ' ' + THAI_MONTHS_FULL[date.getMonth()] + ' ' + (date.getFullYear() + 543);
         },
         parseDate: function(dateStr, format) {
             if (!dateStr) return null;
-            var iso = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            var iso = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
             if (iso) return new Date(parseInt(iso[1]), parseInt(iso[2])-1, parseInt(iso[3]));
-            var parts = dateStr.trim().split(' ');
+            var parts = dateStr.trim().split(/\s+/);
             if (parts.length === 3) {
                 var day = parseInt(parts[0]);
-                var month = thaiMonths.indexOf(parts[1]);
-                var year = parseInt(parts[2]) - 543;
-                if (!isNaN(day) && month >= 0 && !isNaN(year)) return new Date(year, month, day);
+                var month = THAI_MONTHS_FULL.indexOf(parts[1]);
+                if (month < 0) month = THAI_MONTHS_SHORT.indexOf(parts[1]);
+                var yr = parseInt(parts[2]);
+                if (!isNaN(yr) && yr > 2400) yr -= 543;
+                if (!isNaN(day) && month >= 0 && !isNaN(yr)) return new Date(yr, month, day);
             }
             return null;
-        }
+        },
+        onReady: function(selDates, dStr, inst) { _patchBEYear(inst); },
+        onMonthChange: function(selDates, dStr, inst) { _patchBEYear(inst); },
+        onYearChange: function(selDates, dStr, inst) { _patchBEYear(inst); },
+        onOpen: function(selDates, dStr, inst) { _patchBEYear(inst); }
     };
     return flatpickr(selector, Object.assign(baseOpts, options || {}));
 }
 
 function initThaiTimePicker(selector, options) {
     if (typeof flatpickr === 'undefined') return null;
-    return flatpickr(selector, Object.assign({ enableTime: true, noCalendar: true, dateFormat: 'H:i', time_24hr: true, allowInput: true }, options || {}));
+    return flatpickr(selector, Object.assign({ enableTime: true, noCalendar: true, dateFormat: 'H:i', time_24hr: true, allowInput: true, locale: getThaiLocale() }, options || {}));
 }
 
 function initThaiDateTimePicker(selector, options) {
     if (typeof flatpickr === 'undefined') return null;
-    return flatpickr(selector, Object.assign({ enableTime: true, dateFormat: 'Y-m-d H:i', time_24hr: true, allowInput: true }, options || {}));
+    return flatpickr(selector, Object.assign({
+        enableTime: true,
+        dateFormat: 'Y-m-d H:i',
+        time_24hr: true,
+        allowInput: false,
+        altInput: true,
+        altFormat: 'j F Y H:i',
+        locale: getThaiLocale(),
+        formatDate: function(date, format) {
+            if (format === 'Y-m-d H:i') {
+                var y=date.getFullYear(),m=date.getMonth()+1,d=date.getDate(),h=date.getHours(),mn=date.getMinutes();
+                return y+'-'+(m<10?'0':'')+m+'-'+(d<10?'0':'')+d+' '+(h<10?'0':'')+h+':'+(mn<10?'0':'')+mn;
+            }
+            var hh = date.getHours(), mm = date.getMinutes();
+            return date.getDate()+' '+THAI_MONTHS_FULL[date.getMonth()]+' '+(date.getFullYear()+543)+' '+(hh<10?'0':'')+hh+':'+(mm<10?'0':'')+mm;
+        },
+        onReady: function(s,d,inst){ _patchBEYear(inst); },
+        onMonthChange: function(s,d,inst){ _patchBEYear(inst); },
+        onYearChange: function(s,d,inst){ _patchBEYear(inst); },
+        onOpen: function(s,d,inst){ _patchBEYear(inst); }
+    }, options || {}));
 }
 
 function initAllThaiDateTimePickers() {
     if (typeof flatpickr === 'undefined') return;
     document.querySelectorAll('input[type="date"]:not([data-flatpickr-initialized])').forEach(function (el) {
-        if (el.offsetParent !== null) { try { initThaiDatePicker(el); el.setAttribute('data-flatpickr-initialized', 'true'); } catch (e) {} }
+        try { initThaiDatePicker(el); el.setAttribute('data-flatpickr-initialized', 'true'); } catch (e) {}
     });
     document.querySelectorAll('input[type="time"]:not([data-flatpickr-initialized])').forEach(function (el) {
-        if (el.offsetParent !== null) { try { initThaiTimePicker(el); el.setAttribute('data-flatpickr-initialized', 'true'); } catch (e) {} }
+        try { initThaiTimePicker(el); el.setAttribute('data-flatpickr-initialized', 'true'); } catch (e) {}
     });
 }
 
