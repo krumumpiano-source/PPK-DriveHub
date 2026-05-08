@@ -57,11 +57,15 @@ export async function onRequest(context) {
 
   // Static files — pass through with security headers
   if (!url.pathname.startsWith('/api/')) {
-    const response = await next();
-    const headers = new Headers(response.headers);
-    headers.set('Content-Security-Policy', CSP);
-    addSecurityHeaders(headers);
-    return new Response(response.body, { status: response.status, headers });
+    try {
+      const response = await next();
+      const headers = new Headers(response.headers);
+      headers.set('Content-Security-Policy', CSP);
+      addSecurityHeaders(headers);
+      return new Response(response.body, { status: response.status, headers });
+    } catch (e) {
+      return new Response('Not Found', { status: 404 });
+    }
   }
 
   // Rate limiting for sensitive endpoints
