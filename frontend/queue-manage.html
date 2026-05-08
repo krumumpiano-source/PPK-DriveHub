@@ -1328,6 +1328,13 @@
       return year + '-' + month + '-' + day;
     }
 
+    function _fpSetDate(id, val) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      if (el._flatpickr) { el._flatpickr.setDate(val || null, false); }
+      else { el.value = val || ''; }
+    }
+
     async function loadQueueManagement() {
       try {
         var loadingEl = document.getElementById('loading');
@@ -1737,6 +1744,7 @@
 
     function openCreateModal() {
       document.getElementById('createModal').classList.add('show');
+      if (typeof initAllThaiDateTimePickers === 'function') initAllThaiDateTimePickers();
       resetCreateForm();
     }
 
@@ -1761,13 +1769,13 @@
       document.getElementById('createQueueForm').reset();
       var today = new Date();
       var dateStr = formatDate(today);
-      document.getElementById('create_date').value = dateStr;
-      document.getElementById('create_date_from').value = dateStr;
-      document.getElementById('create_date_to').value = dateStr;
-      document.getElementById('weekly_date_from').value = dateStr;
+      _fpSetDate('create_date', dateStr);
+      _fpSetDate('create_date_from', dateStr);
+      _fpSetDate('create_date_to', dateStr);
+      _fpSetDate('weekly_date_from', dateStr);
       var nextWeek = new Date(today);
       nextWeek.setDate(nextWeek.getDate() + 7);
-      document.getElementById('weekly_date_to').value = formatDate(nextWeek);
+      _fpSetDate('weekly_date_to', formatDate(nextWeek));
       var now = new Date();
       var timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
       document.getElementById('create_time_start').value = timeStr;
@@ -2233,7 +2241,7 @@
             return;
           }
 
-          document.getElementById('edit_date').value = editingQueueData.date || '';
+          _fpSetDate('edit_date', editingQueueData.date || '');
           document.getElementById('edit_time_start').value = editingQueueData.time_start || '';
           document.getElementById('edit_time_end').value = editingQueueData.time_end || '';
           document.getElementById('edit_car_id').value = editingQueueData.car_id || '';
@@ -2249,6 +2257,7 @@
           }, 500);
 
           document.getElementById('editModal').classList.add('show');
+          if (typeof initAllThaiDateTimePickers === 'function') initAllThaiDateTimePickers();
         } else {
           showAlert('ไม่พบข้อมูลคิว', 'error');
         }
