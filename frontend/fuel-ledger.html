@@ -877,11 +877,11 @@
         '<th>เลขไมล์</th><th>สถานีบริการ</th>' +
         '</tr></thead><tbody>';
       (d.records || []).forEach(function(r, i) {
-        var thMo = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+        var thMo = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
         var dd = r.date ? r.date.substr(8,2) : '';
         var mm = r.date ? parseInt(r.date.substr(5,2)) : 0;
         var yy = r.date ? (parseInt(r.date.substr(0,4))+543) : '';
-        var dateStr = dd + ' ' + thMo[mm] + ' ' + yy;
+        var dateStr = parseInt(dd) + ' ' + thMo[mm] + ' ' + yy;
         var ppl = r.price_per_liter ? r.price_per_liter.toFixed(2) : '-';
         var mileage = r.mileage_before ? r.mileage_before.toLocaleString() : 'ผู้เบิกไม่บันทึกเลขไมล์';
         html += '<tr>' +
@@ -953,11 +953,11 @@
         '</tr></thead><tbody>';
       var totalA = 0, totalL = 0;
       (d.records || []).forEach(function(r, i) {
-        var thMo = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+        var thMo = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
         var dd = r.date ? r.date.substr(8,2) : '';
         var mm = r.date ? parseInt(r.date.substr(5,2)) : 0;
         var yy = r.date ? (parseInt(r.date.substr(0,4))+543) : '';
-        var dateStr = dd + ' ' + thMo[mm] + ' ' + yy;
+        var dateStr = parseInt(dd) + ' ' + thMo[mm] + ' ' + yy;
         var ppl = r.price_per_liter ? r.price_per_liter.toFixed(2) : '-';
         var mileage = r.mileage_before ? r.mileage_before.toLocaleString() : 'ผู้เบิกไม่บันทึกเลขไมล์';
         totalA += (r.amount||0); totalL += (r.liters||0);
