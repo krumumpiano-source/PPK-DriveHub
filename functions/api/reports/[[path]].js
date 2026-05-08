@@ -427,20 +427,23 @@ export async function onRequest(context) {
       const rt = await dbFirst(env.DB, `SELECT AVG(JULIANDAY(COALESCE(date_completed,date_reported))-JULIANDAY(date_reported)) AS avg_days FROM repair_log WHERE car_id IN (SELECT car_id FROM queue WHERE driver_id=? AND date>=? AND date<=?) AND date_reported>=?`, [did, dpDateFrom, dpDateTo, dpDateFrom]);
 
       const dims=[];
-      dims.push({name:'survey',score:Math.min(sv?.avg_score||0,5),count:sv?.cnt||0});
-      dims.push({name:'usage_quality',score:uAll?.total>0?((uGood?.cnt||0)/uAll.total)*5:0,count:uAll?.total||0});
-      dims.push({name:'daily_check',score:dd?.cnt>0?Math.min(((cd?.cnt||0)/dd.cnt)*5,5):0,count:dd?.cnt||0});
-      dims.push({name:'punctuality',score:qs.length>0?(ot/qs.length)*5:0,count:qs.length});
+      dims.push({name:'survey',score:Math.min(sv?.avg_score||0,5),count:sv?.cnt||0,hasData:(sv?.cnt||0)>0});
+      dims.push({name:'usage_quality',score:uAll?.total>0?((uGood?.cnt||0)/uAll.total)*5:0,count:uAll?.total||0,hasData:(uAll?.total||0)>0});
+      dims.push({name:'daily_check',score:dd?.cnt>0?Math.min(((cd?.cnt||0)/dd.cnt)*5,5):0,count:dd?.cnt||0,hasData:(dd?.cnt||0)>0});
+      dims.push({name:'punctuality',score:qs.length>0?(ot/qs.length)*5:0,count:qs.length,hasData:qs.length>0});
       const cpk=(tk?.km||0)>0?(rc?.tc||0)/tk.km:0;
-      dims.push({name:'vehicle_care',score:Math.min(cpk===0?5:Math.max(5-cpk,0),5)});
-      dims.push({name:'fuel_records',score:fa?.total>0?((fg?.cnt||0)/fa.total)*5:0,count:fa?.total||0});
+      const vcHas=(tk?.km||0)>0||(rc?.cnt||0)>0;
+      dims.push({name:'vehicle_care',score:vcHas?Math.min(cpk===0?5:Math.max(5-cpk,0),5):0,hasData:vcHas});
+      dims.push({name:'fuel_records',score:fa?.total>0?((fg?.cnt||0)/fa.total)*5:0,count:fa?.total||0,hasData:(fa?.total||0)>0});
       const er=fe?.avg_rate||0;
-      dims.push({name:'fuel_efficiency',score:er>0?Math.min((er/8)*5,5):0});
-      dims.push({name:'repair_reporting',score:al?.cnt>0?Math.min(((rf?.cnt||0)/al.cnt)*5,5):(rf?.cnt>0?5:0)});
+      dims.push({name:'fuel_efficiency',score:er>0?Math.min((er/8)*5,5):0,hasData:er>0});
+      const rrHas=(al?.cnt||0)>0||(rf?.cnt||0)>0;
+      dims.push({name:'repair_reporting',score:al?.cnt>0?Math.min(((rf?.cnt||0)/al.cnt)*5,5):(rf?.cnt>0?5:0),hasData:rrHas});
       const atd=rt?.avg_days||0;
-      dims.push({name:'repair_turnaround',score:rc?.cnt>0?(atd<=1?5:atd<=3?4:atd<=7?3:atd<=14?2:1):0});
-      const avg=dims.reduce((s,d)=>s+d.score,0)/9;
-      dpResults.push({driver_id:drv.id,driver_name:drv.name,driver_status:drv.status,avg_score:Math.round(avg*100)/100,dimensions:dims,date_from:dpDateFrom,date_to:dpDateTo});
+      dims.push({name:'repair_turnaround',score:rc?.cnt>0?(atd<=1?5:atd<=3?4:atd<=7?3:atd<=14?2:1):0,hasData:(rc?.cnt||0)>0});
+      const dimsWithData=dims.filter(d=>d.hasData);
+      const avg=dimsWithData.length>0?dimsWithData.reduce((s,d)=>s+d.score,0)/dimsWithData.length:null;
+      dpResults.push({driver_id:drv.id,driver_name:drv.name,driver_status:drv.status,avg_score:avg===null?null:Math.round(avg*100)/100,dimensions_with_data:dimsWithData.length,dimensions:dims,date_from:dpDateFrom,date_to:dpDateTo});
     }
     return success(dpResults);
   }
@@ -470,19 +473,22 @@ export async function onRequest(context) {
     const rf=await dbFirst(env.DB,`SELECT COUNT(*) AS cnt FROM repair_log WHERE reporter_name LIKE ? AND date_reported>=? AND date_reported<=?`,['%'+(dpDrv.name||'').split(' ')[0]+'%',dpDF,dpDT]);
     const rtd=await dbFirst(env.DB,`SELECT AVG(JULIANDAY(COALESCE(date_completed,date_reported))-JULIANDAY(date_reported)) AS avg_days FROM repair_log WHERE car_id IN (SELECT car_id FROM queue WHERE driver_id=? AND date>=? AND date<=?) AND date_reported>=?`,[did,dpDF,dpDT,dpDF]);
     const dims=[];
-    dims.push({name:'survey',score:Math.min(sv?.avg_score||0,5),count:sv?.cnt||0});
-    dims.push({name:'usage_quality',score:uAll?.total>0?((uGood?.cnt||0)/uAll.total)*5:0});
-    dims.push({name:'daily_check',score:dd?.cnt>0?Math.min(((cd?.cnt||0)/dd.cnt)*5,5):0});
-    dims.push({name:'punctuality',score:qs.length>0?(ot/qs.length)*5:0});
+    dims.push({name:'survey',score:Math.min(sv?.avg_score||0,5),count:sv?.cnt||0,hasData:(sv?.cnt||0)>0});
+    dims.push({name:'usage_quality',score:uAll?.total>0?((uGood?.cnt||0)/uAll.total)*5:0,hasData:(uAll?.total||0)>0});
+    dims.push({name:'daily_check',score:dd?.cnt>0?Math.min(((cd?.cnt||0)/dd.cnt)*5,5):0,hasData:(dd?.cnt||0)>0});
+    dims.push({name:'punctuality',score:qs.length>0?(ot/qs.length)*5:0,hasData:qs.length>0});
     const cpk2=(tk?.km||0)>0?(rc?.tc||0)/tk.km:0;
-    dims.push({name:'vehicle_care',score:Math.min(cpk2===0?5:Math.max(5-cpk2,0),5)});
-    dims.push({name:'fuel_records',score:fa?.total>0?((fg?.cnt||0)/fa.total)*5:0});
-    dims.push({name:'fuel_efficiency',score:(fe?.avg_rate||0)>0?Math.min((fe.avg_rate/8)*5,5):0});
-    dims.push({name:'repair_reporting',score:al?.cnt>0?Math.min(((rf?.cnt||0)/al.cnt)*5,5):(rf?.cnt>0?5:0)});
+    const vcHas2=(tk?.km||0)>0||(rc?.cnt||0)>0;
+    dims.push({name:'vehicle_care',score:vcHas2?Math.min(cpk2===0?5:Math.max(5-cpk2,0),5):0,hasData:vcHas2});
+    dims.push({name:'fuel_records',score:fa?.total>0?((fg?.cnt||0)/fa.total)*5:0,hasData:(fa?.total||0)>0});
+    dims.push({name:'fuel_efficiency',score:(fe?.avg_rate||0)>0?Math.min((fe.avg_rate/8)*5,5):0,hasData:(fe?.avg_rate||0)>0});
+    const rrHas2=(al?.cnt||0)>0||(rf?.cnt||0)>0;
+    dims.push({name:'repair_reporting',score:al?.cnt>0?Math.min(((rf?.cnt||0)/al.cnt)*5,5):(rf?.cnt>0?5:0),hasData:rrHas2});
     const atd2=rtd?.avg_days||0;
-    dims.push({name:'repair_turnaround',score:rc?.cnt>0?(atd2<=1?5:atd2<=3?4:atd2<=7?3:atd2<=14?2:1):0});
-    const avg2=dims.reduce((s,d)=>s+d.score,0)/9;
-    return success({driver_id:dpDrv.id,driver_name:dpDrv.name,driver_status:dpDrv.status,avg_score:Math.round(avg2*100)/100,dimensions:dims,date_from:dpDF,date_to:dpDT});
+    dims.push({name:'repair_turnaround',score:rc?.cnt>0?(atd2<=1?5:atd2<=3?4:atd2<=7?3:atd2<=14?2:1):0,hasData:(rc?.cnt||0)>0});
+    const dimsWithData2=dims.filter(d=>d.hasData);
+    const avg2=dimsWithData2.length>0?dimsWithData2.reduce((s,d)=>s+d.score,0)/dimsWithData2.length:null;
+    return success({driver_id:dpDrv.id,driver_name:dpDrv.name,driver_status:dpDrv.status,avg_score:avg2===null?null:Math.round(avg2*100)/100,dimensions_with_data:dimsWithData2.length,dimensions:dims,date_from:dpDF,date_to:dpDT});
   }
 
   // ========== Vehicle Timeline ==========

@@ -254,21 +254,22 @@
     var rPA=repPrev.success?repPrev.data?.summary?.total_cost||0:0;
     var tot=fA+rA,totP=fPA+rPA;
     var pList=Array.isArray(perf?.data)?perf.data:[];
-    var avgS=pList.length?pList.reduce(function(s,x){return s+(x.avg_score||0)},0)/pList.length:0;
-    var sCls=avgS>=4?'kpi-good':avgS>=3?'kpi-warn':'kpi-bad';
+    var scored=pList.filter(function(x){return x.avg_score!==null&&x.avg_score!==undefined});
+    var avgS=scored.length?scored.reduce(function(s,x){return s+(x.avg_score||0)},0)/scored.length:null;
+    var sCls=avgS===null?'':(avgS>=4?'kpi-good':avgS>=3?'kpi-warn':'kpi-bad');
     var h='<div class="kpi-grid">';
     h+='<div class="kpi"><div class="kpi-val">'+fmt$(fA)+'</div><div class="kpi-label">ค่าน้ำมัน (฿)</div><div class="kpi-sub">'+fL.toFixed(0)+' ลิตร</div>'+trendHtml(fA,fPA,true)+'</div>';
     h+='<div class="kpi"><div class="kpi-val">'+fmt$(rA)+'</div><div class="kpi-label">ค่าซ่อมบำรุง (฿)</div><div class="kpi-sub">'+rCnt+' รายการ</div>'+trendHtml(rA,rPA,true)+'</div>';
     h+='<div class="kpi '+(tot>totP*1.1?'kpi-warn':'kpi-good')+'"><div class="kpi-val">'+fmt$(tot)+'</div><div class="kpi-label">รวมค่าใช้จ่าย (฿)</div><div class="kpi-sub">น้ำมัน + ซ่อม</div>'+trendHtml(tot,totP,true)+'</div>';
     h+='<div class="kpi '+(fAno>0?'kpi-warn':'')+'"><div class="kpi-val">'+fAno+'</div><div class="kpi-label">น้ำมันผิดปกติ</div><div class="kpi-sub">'+(fAno?'⚠️ ควรตรวจสอบ':'✅ ปกติทั้งหมด')+'</div></div>';
-    h+='<div class="kpi '+sCls+'"><div class="kpi-val">'+avgS.toFixed(2)+'/5</div><div class="kpi-label">คะแนนเฉลี่ยพนักงาน</div><div class="kpi-sub">จาก '+pList.length+' คน (9 มิติ)</div></div>';
+    h+='<div class="kpi '+sCls+'"><div class="kpi-val">'+(avgS===null?'—':avgS.toFixed(2)+'/5')+'</div><div class="kpi-label">คะแนนเฉลี่ยพนักงาน</div><div class="kpi-sub">'+(avgS===null?'ยังไม่มีข้อมูล':'จาก '+scored.length+' คน (9 มิติ)')+'</div></div>';
     h+='</div>';
     document.getElementById('kpiPeriod').innerHTML=h;
   }
 
   function renderDriverRanking(perf){
     if(!perf.success)return;
-    var list=Array.isArray(perf.data)?perf.data:[];
+    var list=(Array.isArray(perf.data)?perf.data:[]).filter(function(x){return x.avg_score!==null&&x.avg_score!==undefined});
     list.sort(function(a,b){return(b.avg_score||0)-(a.avg_score||0)});
     document.getElementById('topDrivers').innerHTML=rankTable(list.slice(0,5),true);
     document.getElementById('bottomDrivers').innerHTML=rankTable(list.slice(-5).reverse(),false);
