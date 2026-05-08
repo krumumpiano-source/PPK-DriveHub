@@ -465,6 +465,7 @@
           <h4>⚠️ การดำเนินการพิเศษ</h4>
           <button class="btn btn-warning btn-sm" onclick="resetPassword()">🔑 รีเซ็ตรหัสผ่าน</button>
           <button class="btn btn-danger btn-sm" id="toggleActiveBtn" onclick="toggleUserActive()">🚫 ระงับบัญชี</button>
+          <button class="btn btn-danger btn-sm" id="deleteUserBtn" onclick="deleteUser()" style="background:#7f1d1d; margin-top:8px;">🗑️ ลบผู้ใช้ถาวร</button>
         </div>
       </div>
       <div class="modal-footer">
@@ -936,6 +937,31 @@
         await loadAll();
       } catch (e) {
         showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error');
+      }
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  Delete User
+    // ══════════════════════════════════════════════════════════
+    async function deleteUser() {
+      if (!_editUser) return;
+      var name = ((_editUser.first_name || '') + ' ' + (_editUser.last_name || '')).trim() || _editUser.username;
+      var username = _editUser.username || '';
+      var confirmed = confirm(
+        '⚠️ ลบผู้ใช้ถาวร\n\n' +
+        'ชื่อ: ' + name + '\n' +
+        'username: ' + username + '\n\n' +
+        'ข้อมูลนี้จะถูกลบออกจากระบบถาวร และไม่สามารถกู้คืนได้\n' +
+        'ยืนยันการลบ?'
+      );
+      if (!confirmed) return;
+      try {
+        await apiCall('deleteUser', { id: _editUser.id });
+        showToast('ลบผู้ใช้เรียบร้อย', 'success');
+        closeEditModal();
+        await loadAll();
+      } catch (e) {
+        showToast('ลบไม่สำเร็จ: ' + e.message, 'error');
       }
     }
 

@@ -228,6 +228,7 @@ const ACTION_MAP = {
   'getUsers':            (d) => API.get('/api/admin/users' + _q(d)),
   'updateUser':          (d) => API.put(`/api/admin/users/${d.id}`, d),
   'deactivateUser':      (d) => API.put(`/api/admin/users/${d.id}/deactivate`, d),
+  'deleteUser':          (d) => API.del(`/api/admin/users/${d.id}`),
   'adminResetPassword':  (d) => API.put(`/api/admin/users/${d.id}/reset-password`, d),
   'getUserRequests':     (d) => API.get('/api/admin/requests' + _q(d)),
   'approveUserRequest':  (d) => API.put(`/api/admin/requests/${d.id}/approve`, d),

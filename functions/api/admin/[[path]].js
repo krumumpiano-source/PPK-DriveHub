@@ -290,6 +290,31 @@ export async function onRequest(context) {
     return success({ message: 'หยุดสวมรอยเรียบร้อย' });
   }
 
+  // ── Delete User (hard delete) ──
+  if (path.match(/^\/api\/admin\/users\/[^/]+$/) && method === 'DELETE') {
+    const id = path.split('/').pop();
+
+    // Cannot delete yourself
+    if (id === user.id) return error('ไม่สามารถลบบัญชีของตัวเองได้', 400);
+
+    const targetUser = await dbFirst(env.DB, 'SELECT id, username, role, first_name, last_name, display_name FROM users WHERE id = ?', [id]);
+    if (!targetUser) return error('ไม่พบผู้ใช้', 404);
+
+    // Only super_admin can delete another super_admin or admin
+    if (targetUser.role === 'super_admin') return error('ไม่สามารถลบผู้ดูแลสูงสุดได้', 403);
+    if (targetUser.role === 'admin' && user.role !== 'super_admin') return error('ต้องเป็น super_admin ถึงจะลบแอดมินได้', 403);
+
+    const targetName = targetUser.display_name || ((targetUser.first_name || '') + ' ' + (targetUser.last_name || '')).trim() || targetUser.username;
+
+    // Remove sessions first
+    await dbRun(env.DB, 'DELETE FROM sessions WHERE user_id = ?', [id]);
+    // Delete the user
+    await dbRun(env.DB, 'DELETE FROM users WHERE id = ?', [id]);
+
+    await writeAuditLog(env.DB, user.id, user.displayName, 'delete_user', 'admin', id, { username: targetUser.username, name: targetName });
+    return success({ message: 'ลบผู้ใช้ "' + targetName + '" เรียบร้อยแล้ว' });
+  }
+
   return error('Not Found', 404);
   } catch (e) {
     console.error('API Error:', e);
