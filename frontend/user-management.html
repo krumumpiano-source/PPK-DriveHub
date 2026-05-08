@@ -446,7 +446,7 @@
           <label>บทบาทในระบบ</label>
           <select id="editRole" onchange="onRoleChange()">
             <option value="admin">🔧 แอดมิน</option>
-            <option value="vehicle">🚗 ผู้บันทึกคิว</option>
+            <option value="vehicle">� ผู้บันทึกคิว</option>
             <option value="fuel">⛽ บันทึกน้ำมัน</option>
             <option value="repair">🔧 บันทึกซ่อม</option>
             <option value="viewer">👁️ ผู้ดูอย่างเดียว</option>
@@ -495,7 +495,7 @@
           <label>กำหนดบทบาท</label>
           <select id="approveRole" onchange="onApproveRoleChange()">
             <option value="viewer">👁️ ผู้ดูอย่างเดียว</option>
-            <option value="vehicle">🚗 ผู้บันทึกคิว</option>
+            <option value="vehicle">� ผู้บันทึกคิว</option>
             <option value="fuel">⛽ บันทึกน้ำมัน</option>
             <option value="repair">🔧 บันทึกซ่อม</option>
             <option value="admin">🔧 แอดมิน</option>
@@ -552,10 +552,10 @@
     var ROLE_CONFIG = {
       admin:       { label: '🔧 แอดมิน',       css: 'role-admin' },
       super_admin: { label: '⚡ ซูเปอร์แอดมิน', css: 'role-super_admin' },
-      vehicle:     { label: '🚗 ผู้บันทึกคิว',  css: 'role-vehicle' },
+      vehicle:     { label: ' ผู้บันทึกคิว',  css: 'role-vehicle' },
       fuel:        { label: '⛽ บันทึกน้ำมัน',   css: 'role-fuel' },
       repair:      { label: '🔧 บันทึกซ่อม',    css: 'role-repair' },
-      viewer:      { label: '👁️ ผู้ดูอย่างเดียว', css: 'role-viewer' }
+      viewer:      { label: '�️ ผู้ดูอย่างเดียว', css: 'role-viewer' }
     };
 
     var MODULES = [
@@ -1111,7 +1111,8 @@
     function openRejectModal(reqId) {
       var req = _requests.find(function(r) { return String(r.id) === String(reqId); });
       if (!req) return;
-      var name = (req.name || '').trim() || req.email || '—';
+      var rawName = (req.name || '').trim();
+      var name = (req.title ? req.title : '') + (rawName || req.email || '—');
       document.getElementById('rejectReqId').value = req.id;
       document.getElementById('rejectUserName').value = name;
       document.getElementById('rejectReason').value = '';
