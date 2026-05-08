@@ -685,15 +685,18 @@
       var html = '';
       for (var i = 0; i < _requests.length; i++) {
         var r = _requests[i];
-        var name = (r.name || '').trim() || r.email || '—';
+        var rawName = (r.name || '').trim();
+        var nameWithTitle = (r.title ? r.title : '') + (rawName || r.email || '—');
         var date = r.created_at ? (function(s){ var _d=new Date(s); var _mn=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม']; return _d.getDate()+' '+_mn[_d.getMonth()]+' '+(_d.getFullYear()+543); })(r.created_at) : '';
         html += '<div class="request-card">';
         html += '<div class="request-info">';
-        html += '<div class="request-name">' + escHtml(name) + '</div>';
+        html += '<div class="request-name">' + escHtml(nameWithTitle) + '</div>';
         html += '<div class="request-detail">';
         if (r.email) html += '📧 ' + escHtml(r.email) + ' ';
         if (r.phone) html += '📞 ' + escHtml(r.phone) + ' ';
+        if (r.department) html += '🏢 ' + escHtml(r.department) + ' ';
         if (date) html += '📅 ' + date;
+        if (r.reason) html += '<div style="margin-top:4px;">📝 ' + escHtml(r.reason) + '</div>';
         html += '</div></div>';
         html += '<div class="request-actions">';
         html += '<button class="btn btn-success btn-sm" onclick="openApproveModal(\'' + r.id + '\')">✅ อนุมัติ</button>';
@@ -1019,7 +1022,8 @@
     function openApproveModal(reqId) {
       var req = _requests.find(function(r) { return String(r.id) === String(reqId); });
       if (!req) return;
-      var name = (req.name || '').trim() || req.email || '—';
+      var rawName = (req.name || '').trim();
+      var name = (req.title ? req.title : '') + (rawName || req.email || '—');
       document.getElementById('approveReqId').value = req.id;
       document.getElementById('approveUserName').value = name;
       document.getElementById('approveRole').value = req.requested_role || 'viewer';
