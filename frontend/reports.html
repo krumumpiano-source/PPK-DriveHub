@@ -290,7 +290,8 @@
       if (!s) return '-';
       var d = new Date(s);
       if (isNaN(d)) return String(s);
-      return d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+      var m = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+      return d.getDate() + ' ' + m[d.getMonth()] + ' ' + (d.getFullYear() + 543);
     }
     function daysUntil(dateStr) {
       return Math.ceil((new Date(dateStr) - Date.now()) / 86400000);

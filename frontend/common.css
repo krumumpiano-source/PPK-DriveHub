@@ -747,6 +747,14 @@ table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.88rem;
+}
+/* min-width only when table is inside a horizontal-scroll wrapper,
+   so tables placed in narrow grid columns don't force the layout to overflow */
+.table-wrap table,
+.table-container table,
+[class*="table-wrap"] table,
+.repairs-table-wrap table,
+.vehicles-table-wrap table {
   min-width: 500px;
 }
 
@@ -1039,7 +1047,11 @@ body.qr-page .content { padding: clamp(14px, 3vw, 20px); }
 
   .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
 
-  table { min-width: 420px; }
+  .table-wrap table,
+  .table-container table,
+  [class*="table-wrap"] table,
+  .repairs-table-wrap table,
+  .vehicles-table-wrap table { min-width: 420px; }
 }
 
 @media (max-width: 600px) {
@@ -1076,7 +1088,11 @@ body.qr-page .content { padding: clamp(14px, 3vw, 20px); }
 
   th { padding: 0.5rem; font-size: 0.72rem; }
   td { padding: 0.5rem; font-size: 0.82rem; }
-  table { min-width: 360px; }
+  .table-wrap table,
+  .table-container table,
+  [class*="table-wrap"] table,
+  .repairs-table-wrap table,
+  .vehicles-table-wrap table { min-width: 360px; }
 
   .nav-btn { padding: 8px 12px; font-size: 0.82em; min-height: 40px; }
   .nav { padding: 8px 10px; gap: 6px; }

@@ -48,6 +48,8 @@
     /* ── Layout ── */
     .two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
     .three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+    .two-col>*,.three-col>*{min-width:0}
+    .chart-card{min-width:0}
     @media(max-width:900px){.three-col{grid-template-columns:1fr 1fr}}
     @media(max-width:640px){.two-col,.three-col{grid-template-columns:1fr}}
     /* ── Period bar ── */
