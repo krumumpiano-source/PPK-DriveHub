@@ -644,7 +644,46 @@ function initThaiDatePicker(selector, options) {
 
 function initThaiTimePicker(selector, options) {
     if (typeof flatpickr === 'undefined') return null;
-    return flatpickr(selector, Object.assign({ enableTime: true, noCalendar: true, dateFormat: 'H:i', time_24hr: true, allowInput: true, locale: getThaiLocale() }, options || {}));
+    var fp = flatpickr(selector, Object.assign({
+        enableTime: true,
+        noCalendar: true,
+        dateFormat: 'H:i',
+        time_24hr: true,
+        allowInput: true,
+        minuteIncrement: 1,
+        locale: getThaiLocale(),
+        onReady: function(selDates, dStr, inst) { _attachTimeWheel(inst); },
+        onOpen: function(selDates, dStr, inst) { _attachTimeWheel(inst); }
+    }, options || {}));
+    return fp;
+}
+
+// Make mouse wheel scroll change hour/minute on flatpickr time picker
+function _attachTimeWheel(inst) {
+    if (!inst || !inst.calendarContainer || inst._wheelAttached) return;
+    inst._wheelAttached = true;
+    var hourEl = inst.hourElement, minEl = inst.minuteElement;
+    function bindWheel(el, isHour) {
+        if (!el) return;
+        el.addEventListener('wheel', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var dir = e.deltaY < 0 ? 1 : -1;
+            var cur = parseInt(el.value, 10) || 0;
+            var max = isHour ? 23 : 59;
+            var next = cur + dir;
+            if (next < 0) next = max;
+            if (next > max) next = 0;
+            el.value = (next < 10 ? '0' : '') + next;
+            // trigger flatpickr to recalc
+            var ev = new Event('input', { bubbles: true });
+            el.dispatchEvent(ev);
+            var changeEv = new Event('change', { bubbles: true });
+            el.dispatchEvent(changeEv);
+        }, { passive: false });
+    }
+    bindWheel(hourEl, true);
+    bindWheel(minEl, false);
 }
 
 function initThaiDateTimePicker(selector, options) {
