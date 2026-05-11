@@ -71,15 +71,16 @@
           </div>
           <div class="form-row">
             <div class="form-group"><label>วันที่เกิดเหตุ *</label><input type="text" id="f_date" class="thai-datepicker" required></div>
-            <div class="form-group"><label>ประเภท *</label>
-              <select id="f_type" required>
-                <option value="">เลือกประเภท</option>
-                <option value="accident">อุบัติเหตุ</option>
-                <option value="traffic_violation">ฝ่าฝืนจราจร</option>
-                <option value="damage">ความเสียหาย</option>
-                <option value="other">อื่นๆ</option>
-              </select>
-            </div>
+            <div class="form-group"><label>เวลา</label><input type="text" id="f_time" class="thai-timepicker" placeholder="--:--"></div>
+          </div>
+          <div class="form-group"><label>ประเภท *</label>
+            <select id="f_type" required>
+              <option value="">เลือกประเภท</option>
+              <option value="accident">อุบัติเหตุ</option>
+              <option value="traffic_violation">ฝ่าฝืนจราจร</option>
+              <option value="damage">ความเสียหาย</option>
+              <option value="other">อื่นๆ</option>
+            </select>
           </div>
           <div class="form-group"><label>รายละเอียด *</label><textarea id="f_desc" rows="3" required placeholder="อธิบายเหตุการณ์"></textarea></div>
           <div class="form-row">
@@ -88,6 +89,7 @@
           </div>
           <div class="form-group"><label>เลขที่บันทึกประจำวัน (ตร.)</label><input type="text" id="f_police" placeholder="ถ้ามี"></div>
           <div class="form-group"><label>เลขเคลม</label><input type="text" id="f_claim" placeholder="ถ้ามี"></div>
+          <div class="form-group"><label>หมายเหตุ</label><textarea id="f_notes" rows="2" placeholder="ข้อมูลเพิ่มเติม (ถ้ามี)"></textarea></div>
           <button type="submit" class="btn btn-primary" id="submitBtn" style="width:100%">💾 บันทึก</button>
         </form>
       </div>
@@ -164,7 +166,7 @@
           var isCrit=inc.incident_type==='accident';
           var isRes=inc.status==='resolved'||inc.status==='closed';
           html+='<div class="incident-card'+(isCrit?' critical':'')+(isRes?' resolved':'')+'">';
-          html+='<div class="inc-header"><div class="inc-title">'+vLabel(inc.car_id)+' — '+fmtDate(inc.incident_date)+'</div>';
+          html+='<div class="inc-header"><div class="inc-title">'+vLabel(inc.car_id)+' — '+fmtDate(inc.incident_date)+(inc.incident_time?' '+inc.incident_time:'')+'</div>';
           html+='<div><span class="inc-badge type-'+inc.incident_type+'">'+(TYPE_LABELS[inc.incident_type]||inc.incident_type)+'</span> ';
           html+='<span class="inc-badge st-'+inc.status+'">'+(STATUS_LABELS[inc.status]||inc.status)+'</span></div></div>';
           html+='<div class="inc-body">';
@@ -173,6 +175,7 @@
           if(inc.location) html+='<p>📍 '+inc.location+'</p>';
           if(inc.damage_cost) html+='<p>💰 '+Number(inc.damage_cost).toLocaleString()+' บาท</p>';
           if(inc.police_report_number) html+='<p>📋 บันทึก ตร.: '+inc.police_report_number+'</p>';
+          if(inc.notes) html+='<p>📝 '+inc.notes+'</p>';
           if(inc.resolution_notes) html+='<p>✅ '+inc.resolution_notes+'</p>';
           html+='</div>';
           var user=getCurrentUser();
@@ -190,7 +193,7 @@
 
     function _buildQ(obj){if(!obj)return'';var p=new URLSearchParams();for(var k in obj){if(obj[k])p.append(k,obj[k])}var s=p.toString();return s?'?'+s:''}
 
-    function openAddModal(){editingId=null;document.getElementById('modalTitle').textContent='⚠️ เพิ่มบันทึกอุบัติเหตุ';document.getElementById('incForm').reset();document.getElementById('addModal').classList.add('show');setTimeout(function(){if(typeof initAllThaiDateTimePickers==='function') initAllThaiDateTimePickers()},100)}
+    function openAddModal(){editingId=null;document.getElementById('modalTitle').textContent='⚠️ เพิ่มบันทึกอุบัติเหตุ';document.getElementById('incForm').reset();document.getElementById('addModal').classList.add('show');setTimeout(function(){var d=document.getElementById('f_date');var t=document.getElementById('f_time');if(d&&d._flatpickr){try{d._flatpickr.destroy()}catch(e){}d.removeAttribute('data-flatpickr-initialized')}if(t&&t._flatpickr){try{t._flatpickr.destroy()}catch(e){}t.removeAttribute('data-flatpickr-initialized')}if(typeof initThaiDatePicker==='function'&&d){try{initThaiDatePicker(d);d.setAttribute('data-flatpickr-initialized','true')}catch(e){console.error(e)}}if(typeof initThaiTimePicker==='function'&&t){try{initThaiTimePicker(t);t.setAttribute('data-flatpickr-initialized','true')}catch(e){console.error(e)}}},150)}
     function closeModal(){document.getElementById('addModal').classList.remove('show')}
     function openResolve(id){resolvingId=id;document.getElementById('resolveForm').reset();document.getElementById('resolveModal').classList.add('show')}
     function closeResolve(){document.getElementById('resolveModal').classList.remove('show')}
@@ -199,7 +202,7 @@
       e.preventDefault();
       var btn=document.getElementById('submitBtn');btn.disabled=true;btn.textContent='กำลังบันทึก...';
       try{
-        var data={car_id:document.getElementById('f_car_id').value,driver_id:document.getElementById('f_driver_id').value||null,incident_date:document.getElementById('f_date').value,incident_type:document.getElementById('f_type').value,description:document.getElementById('f_desc').value.trim(),location:document.getElementById('f_location').value.trim(),damage_cost:parseFloat(document.getElementById('f_cost').value)||0,police_report_number:document.getElementById('f_police').value.trim(),insurance_claim:document.getElementById('f_claim').value.trim()};
+        var data={car_id:document.getElementById('f_car_id').value,driver_id:document.getElementById('f_driver_id').value||null,incident_date:document.getElementById('f_date').value,incident_time:document.getElementById('f_time').value||null,incident_type:document.getElementById('f_type').value,description:document.getElementById('f_desc').value.trim(),location:document.getElementById('f_location').value.trim(),damage_cost:parseFloat(document.getElementById('f_cost').value)||0,police_report_number:document.getElementById('f_police').value.trim(),insurance_claim:document.getElementById('f_claim').value.trim(),notes:document.getElementById('f_notes').value.trim()||null};
         var r=await API.post('/api/incidents',data);
         if(r.success){showAlert('บันทึกสำเร็จ','success');closeModal();loadIncidents()}
         else showAlert(r.message||r.error||'ไม่สำเร็จ','error');

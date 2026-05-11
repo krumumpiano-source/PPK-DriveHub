@@ -62,14 +62,14 @@ export async function onRequest(context) {
     const id = generateUUID();
     const ts = now();
     await dbRun(env.DB,
-      `INSERT INTO incidents (id, car_id, driver_id, incident_date, incident_type,
+      `INSERT INTO incidents (id, car_id, driver_id, incident_date, incident_time, incident_type,
         description, location, damage_cost, photos, police_report_number,
-        insurance_claim, status, created_by, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'reported', ?, ?, ?)`,
-      [id, body.car_id, body.driver_id || null, body.incident_date, body.incident_type,
+        insurance_claim, notes, status, created_by, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'reported', ?, ?, ?)`,
+      [id, body.car_id, body.driver_id || null, body.incident_date, body.incident_time || null, body.incident_type,
        body.description || '', body.location || '', body.damage_cost || 0,
        JSON.stringify(body.photos || []), body.police_report_number || '',
-       body.insurance_claim || '', user.id, ts, ts]
+       body.insurance_claim || '', body.notes || null, user.id, ts, ts]
     );
     const car = await dbFirst(env.DB, 'SELECT license_plate, brand FROM cars WHERE id = ?', [body.car_id]);
     const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : body.car_id;
@@ -89,9 +89,9 @@ export async function onRequest(context) {
     const body = await parseBody(request);
     const sets = [];
     const params = [];
-    const fields = ['car_id','driver_id','incident_date','incident_type',
+    const fields = ['car_id','driver_id','incident_date','incident_time','incident_type',
       'description','location','damage_cost','police_report_number',
-      'insurance_claim','status'];
+      'insurance_claim','notes','status'];
     for (const f of fields) {
       if (body[f] !== undefined) { sets.push(`${f} = ?`); params.push(body[f]); }
     }
