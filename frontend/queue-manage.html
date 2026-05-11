@@ -262,6 +262,13 @@
       color: #00695c;
     }
 
+    /* Drag-to-select highlight */
+    .calendar-day.selecting {
+      background: #fff3cd !important;
+      box-shadow: inset 0 0 0 2px #ffb300 !important;
+    }
+    .calendar-day[data-date] { user-select: none; }
+
     .queue-item {
       font-size: 0.7em;
       padding: 3px 5px;
@@ -1731,7 +1738,7 @@
           }
         }
 
-        html += '<div class="calendar-day ' + statusClass + '">';
+        html += '<div class="calendar-day ' + statusClass + '" data-date="' + dateStr + '">';
         html += '<div class="calendar-day-number">' + day + '</div>';
 
         dayQueues.forEach(function (queue) {
@@ -1761,6 +1768,109 @@
       if (containerEl) {
         containerEl.style.display = 'block';
       }
+
+      attachCalendarDaySelection();
+    }
+
+    // ===== Click / Drag-to-select on calendar to add queue =====
+    var _calDrag = { active: false, start: null, current: null, moved: false };
+
+    function _calDayCells() {
+      var grid = document.getElementById('calendarGrid');
+      if (!grid) return [];
+      return Array.prototype.slice.call(grid.querySelectorAll('.calendar-day[data-date]'));
+    }
+
+    function _calClearSelection() {
+      _calDayCells().forEach(function (el) { el.classList.remove('selecting'); });
+    }
+
+    function _calHighlight(fromStr, toStr) {
+      if (!fromStr || !toStr) return;
+      var lo = fromStr < toStr ? fromStr : toStr;
+      var hi = fromStr < toStr ? toStr : fromStr;
+      _calDayCells().forEach(function (el) {
+        var d = el.getAttribute('data-date');
+        if (d >= lo && d <= hi) el.classList.add('selecting');
+        else el.classList.remove('selecting');
+      });
+    }
+
+    function attachCalendarDaySelection() {
+      var grid = document.getElementById('calendarGrid');
+      if (!grid) return;
+
+      grid.onmousedown = function (e) {
+        if (e.button !== 0) return;
+        if (e.target.closest('.queue-item')) return;
+        var cell = e.target.closest('.calendar-day[data-date]');
+        if (!cell) return;
+        e.preventDefault();
+        _calDrag.active = true;
+        _calDrag.moved = false;
+        _calDrag.start = cell.getAttribute('data-date');
+        _calDrag.current = _calDrag.start;
+        _calClearSelection();
+        cell.classList.add('selecting');
+      };
+
+      grid.onmousemove = function (e) {
+        if (!_calDrag.active) return;
+        var cell = e.target.closest('.calendar-day[data-date]');
+        if (!cell) return;
+        var d = cell.getAttribute('data-date');
+        if (d === _calDrag.current) return;
+        _calDrag.current = d;
+        if (d !== _calDrag.start) _calDrag.moved = true;
+        _calHighlight(_calDrag.start, _calDrag.current);
+      };
+    }
+
+    document.addEventListener('mouseup', function (e) {
+      if (!_calDrag.active) return;
+      var startD = _calDrag.start;
+      var endD = _calDrag.current || startD;
+      var moved = _calDrag.moved;
+      _calDrag.active = false;
+      _calDrag.start = null;
+      _calDrag.current = null;
+      _calDrag.moved = false;
+      setTimeout(_calClearSelection, 50);
+      if (!startD) return;
+      if (!moved || startD === endD) {
+        openCreateModalWithDates(startD, startD);
+      } else {
+        var lo = startD < endD ? startD : endD;
+        var hi = startD < endD ? endD : startD;
+        openCreateModalWithDates(lo, hi);
+      }
+    });
+
+    function openCreateModalWithDates(fromStr, toStr) {
+      openCreateModal();
+      // openCreateModal calls resetCreateForm which sets defaults; override after
+      setTimeout(function () {
+        if (fromStr === toStr) {
+          _setDateTypeProgrammatic('single');
+          _fpSetDate('create_date', fromStr);
+        } else {
+          _setDateTypeProgrammatic('range');
+          _fpSetDate('create_date_from', fromStr);
+          _fpSetDate('create_date_to', toStr);
+          if (typeof updateDateRangePreview === 'function') updateDateRangePreview();
+        }
+      }, 0);
+    }
+
+    function _setDateTypeProgrammatic(type) {
+      createDateType = type;
+      var btns = document.querySelectorAll('.date-type-btn');
+      btns.forEach(function (btn) { btn.classList.remove('active'); });
+      var idx = type === 'single' ? 0 : (type === 'range' ? 1 : 2);
+      if (btns[idx]) btns[idx].classList.add('active');
+      document.getElementById('singleDateGroup').style.display = type === 'single' ? 'block' : 'none';
+      document.getElementById('dateRangeGroup').style.display = type === 'range' ? 'block' : 'none';
+      document.getElementById('weeklyGroup').style.display = type === 'weekly' ? 'block' : 'none';
     }
 
     function changeMonth(delta) {
