@@ -399,10 +399,49 @@
       document.getElementById('dateFrom').value = formatDate(lastMonth);
       document.getElementById('dateTo').value = formatDate(today);
 
+      initThaiDatePickers();
+
       loadVehicles();
       loadDrivers();
       loadRecords();
     });
+
+    function initThaiDatePickers() {
+      if (typeof flatpickr === 'undefined') return;
+      var thaiShortMonths = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+      var thaiLongMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+      var thaiWeekdays = { shorthand: ['อา','จ','อ','พ','พฤ','ศ','ส'], longhand: ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'] };
+      var ids = ['dateFrom','dateTo'];
+      ids.forEach(function (id) {
+        var el = document.getElementById(id);
+        if (!el || el._flatpickr) return;
+        try {
+          flatpickr(el, {
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'thai',
+            allowInput: false,
+            locale: {
+              months: { shorthand: thaiShortMonths, longhand: thaiLongMonths },
+              weekdays: thaiWeekdays,
+              firstDayOfWeek: 1,
+              rangeSeparator: ' ถึง '
+            },
+            formatDate: function (date, format) {
+              if (format === 'thai') {
+                return date.getDate() + ' ' + thaiShortMonths[date.getMonth()] + ' ' + (date.getFullYear() + 543);
+              }
+              var y = date.getFullYear();
+              var m = String(date.getMonth() + 1).padStart(2, '0');
+              var d = String(date.getDate()).padStart(2, '0');
+              return y + '-' + m + '-' + d;
+            }
+          });
+        } catch (e) {
+          console.warn('flatpickr init failed for', id, e);
+        }
+      });
+    }
 
     function formatDate(date) {
       var year = date.getFullYear();
