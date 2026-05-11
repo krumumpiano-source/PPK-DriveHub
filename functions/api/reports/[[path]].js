@@ -608,6 +608,181 @@ export async function onRequest(context) {
     });
   }
 
+  // ========== รายงานการใช้รถรายเที่ยว (สำหรับตรวจสอบ) ==========
+  if (path === '/api/reports/trips' && method === 'GET') {
+    try { requirePermission(user, 'reports', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const dateFrom = url.searchParams.get('date_from');
+    const dateTo = url.searchParams.get('date_to');
+    const carId = url.searchParams.get('car_id');
+    const driverId = url.searchParams.get('driver_id');
+    const where = [];
+    const params = [];
+    if (dateFrom) { where.push('q.date >= ?'); params.push(dateFrom); }
+    if (dateTo) { where.push('q.date <= ?'); params.push(dateTo); }
+    if (carId) { where.push('q.car_id = ?'); params.push(carId); }
+    if (driverId) { where.push('q.driver_id = ?'); params.push(driverId); }
+    const rows = await dbAll(env.DB,
+      `SELECT q.id, q.date, q.time_start, q.time_end, q.status,
+       q.mission, q.destination, q.passengers, q.notes, q.cancel_reason,
+       q.requested_by, q.requester_id,
+       c.license_plate, c.brand, c.model,
+       d.name AS driver_name,
+       bd.name AS backup_driver_name,
+       u.display_name AS requester_display_name,
+       uc.display_name AS created_by_name,
+       uu.display_name AS updated_by_name,
+       q.created_at, q.updated_at,
+       dep.datetime AS actual_departure,
+       dep.mileage AS mileage_start,
+       dep.data_quality AS dep_quality,
+       ret.datetime AS actual_return,
+       ret.mileage AS mileage_end,
+       ret.data_quality AS ret_quality,
+       (CASE WHEN dep.mileage IS NOT NULL AND ret.mileage IS NOT NULL AND ret.mileage > dep.mileage
+             THEN ret.mileage - dep.mileage ELSE NULL END) AS km_used
+       FROM queue q
+       LEFT JOIN cars c ON q.car_id = c.id
+       LEFT JOIN drivers d ON q.driver_id = d.id
+       LEFT JOIN drivers bd ON q.backup_driver_id = bd.id
+       LEFT JOIN users u ON q.requester_id = u.id
+       LEFT JOIN users uc ON q.created_by = uc.id
+       LEFT JOIN users uu ON q.updated_by = uu.id
+       LEFT JOIN usage_records dep ON dep.queue_id = q.id AND dep.record_type = 'departure'
+       LEFT JOIN usage_records ret ON ret.queue_id = q.id AND ret.record_type = 'return'
+       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+       ORDER BY q.date DESC, q.time_start ASC
+       LIMIT 2000`,
+      params
+    );
+    const summary = await dbFirst(env.DB,
+      `SELECT COUNT(*) AS total,
+       SUM(CASE WHEN q.status='completed' THEN 1 ELSE 0 END) AS completed,
+       SUM(CASE WHEN q.status='cancelled' THEN 1 ELSE 0 END) AS cancelled,
+       SUM(CASE WHEN q.status IN ('scheduled','ongoing') THEN 1 ELSE 0 END) AS pending,
+       SUM(CASE WHEN dep.mileage IS NOT NULL AND ret.mileage IS NOT NULL AND ret.mileage > dep.mileage
+                THEN ret.mileage - dep.mileage ELSE 0 END) AS total_km
+       FROM queue q
+       LEFT JOIN usage_records dep ON dep.queue_id = q.id AND dep.record_type = 'departure'
+       LEFT JOIN usage_records ret ON ret.queue_id = q.id AND ret.record_type = 'return'
+       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}`,
+      params
+    );
+    return success({ records: rows, summary });
+  }
+
+  // ========== รายงานค่าใช้จ่ายรวม (ตามช่วงเวลา/รถ) ==========
+  if (path === '/api/reports/expenses' && method === 'GET') {
+    try { requirePermission(user, 'reports', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const dateFrom = url.searchParams.get('date_from') || '2020-01-01';
+    const dateTo = url.searchParams.get('date_to') || now().substr(0, 10);
+    const carId = url.searchParams.get('car_id');
+    const carWhere = carId ? 'AND car_id = ?' : '';
+    const carParam = carId ? [carId] : [];
+    const cars = await dbAll(env.DB,
+      `SELECT c.id, c.license_plate, c.brand, c.model, c.year, c.status,
+       f.total_fuel, f.fuel_count,
+       r.total_repair, r.repair_count,
+       tx.total_tax,
+       ins.total_insurance,
+       insp.total_inspection,
+       (COALESCE(f.total_fuel,0)+COALESCE(r.total_repair,0)+COALESCE(tx.total_tax,0)+COALESCE(ins.total_insurance,0)+COALESCE(insp.total_inspection,0)) AS grand_total,
+       km.total_km
+       FROM cars c
+       LEFT JOIN (SELECT car_id, SUM(amount) AS total_fuel, COUNT(*) AS fuel_count FROM fuel_log WHERE date>=? AND date<=? AND deleted_at IS NULL ${carWhere} GROUP BY car_id) f ON f.car_id=c.id
+       LEFT JOIN (SELECT car_id, SUM(cost) AS total_repair, COUNT(*) AS repair_count FROM repair_log WHERE date_reported>=? AND date_reported<=? ${carWhere} GROUP BY car_id) r ON r.car_id=c.id
+       LEFT JOIN (SELECT car_id, SUM(amount) AS total_tax FROM tax_records ${carWhere ? 'WHERE car_id=?' : ''} GROUP BY car_id) tx ON tx.car_id=c.id
+       LEFT JOIN (SELECT car_id, SUM(amount) AS total_insurance FROM insurance_records ${carWhere ? 'WHERE car_id=?' : ''} GROUP BY car_id) ins ON ins.car_id=c.id
+       LEFT JOIN (SELECT car_id, SUM(cost) AS total_inspection FROM inspection_records ${carWhere ? 'WHERE car_id=?' : ''} GROUP BY car_id) insp ON insp.car_id=c.id
+       LEFT JOIN (SELECT ret.car_id, COALESCE(SUM(ret.mileage - dep.mileage),0) AS total_km FROM usage_records ret LEFT JOIN usage_records dep ON dep.queue_id=ret.queue_id AND dep.record_type='departure' WHERE ret.record_type='return' AND ret.datetime>=? AND ret.datetime<=? AND dep.mileage IS NOT NULL AND ret.mileage > dep.mileage GROUP BY ret.car_id) km ON km.car_id=c.id
+       ${carId ? 'WHERE c.id=?' : ''}
+       ORDER BY grand_total DESC`,
+      [dateFrom, dateTo, ...carParam, dateFrom, dateTo, ...carParam,
+       ...(carId ? [carId] : []), ...(carId ? [carId] : []), ...(carId ? [carId] : []),
+       dateFrom, dateTo + ' 23:59:59', ...(carId ? [carId] : [])]
+    );
+    const grand = cars.reduce((acc, c) => {
+      acc.total_fuel += c.total_fuel || 0;
+      acc.total_repair += c.total_repair || 0;
+      acc.total_tax += c.total_tax || 0;
+      acc.total_insurance += c.total_insurance || 0;
+      acc.total_inspection += c.total_inspection || 0;
+      acc.grand_total += c.grand_total || 0;
+      acc.total_km += c.total_km || 0;
+      return acc;
+    }, { total_fuel: 0, total_repair: 0, total_tax: 0, total_insurance: 0, total_inspection: 0, grand_total: 0, total_km: 0 });
+    return success({ cars, grand_total: grand, date_from: dateFrom, date_to: dateTo });
+  }
+
+  // ========== รายงานนอกเวลาราชการ (before 07:00 / after 20:00 / weekend) ==========
+  if (path === '/api/reports/offhours' && method === 'GET') {
+    try { requirePermission(user, 'reports', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const dateFrom = url.searchParams.get('date_from');
+    const dateTo = url.searchParams.get('date_to');
+    const where = ['q.status IN (\'completed\',\'ongoing\',\'scheduled\')'];
+    const params = [];
+    if (dateFrom) { where.push('q.date >= ?'); params.push(dateFrom); }
+    if (dateTo) { where.push('q.date <= ?'); params.push(dateTo); }
+    // Before 07:00 or after 18:00 or weekend (strftime %w: 0=Sun, 6=Sat)
+    where.push('(q.time_start < \'07:00\' OR q.time_start >= \'18:00\' OR CAST(strftime(\'%w\', q.date) AS INTEGER) IN (0,6))');
+    const rows = await dbAll(env.DB,
+      `SELECT q.id, q.date, q.time_start, q.time_end, q.mission, q.destination,
+       q.passengers, q.status, q.notes, q.requested_by,
+       c.license_plate, c.brand,
+       d.name AS driver_name,
+       u.display_name AS requester_display_name,
+       dep.datetime AS actual_departure, dep.mileage AS mileage_start,
+       ret.datetime AS actual_return, ret.mileage AS mileage_end,
+       CAST(strftime('%w', q.date) AS INTEGER) AS weekday,
+       CASE CAST(strftime('%w', q.date) AS INTEGER)
+         WHEN 0 THEN 'อาทิตย์' WHEN 1 THEN 'จันทร์' WHEN 2 THEN 'อังคาร'
+         WHEN 3 THEN 'พุธ' WHEN 4 THEN 'พฤหัส' WHEN 5 THEN 'ศุกร์' WHEN 6 THEN 'เสาร์'
+       END AS weekday_th
+       FROM queue q
+       LEFT JOIN cars c ON q.car_id = c.id
+       LEFT JOIN drivers d ON q.driver_id = d.id
+       LEFT JOIN users u ON q.requester_id = u.id
+       LEFT JOIN usage_records dep ON dep.queue_id = q.id AND dep.record_type = 'departure'
+       LEFT JOIN usage_records ret ON ret.queue_id = q.id AND ret.record_type = 'return'
+       WHERE ${where.join(' AND ')}
+       ORDER BY q.date DESC, q.time_start ASC`,
+      params
+    );
+    return success({ records: rows, count: rows.length });
+  }
+
+  // ========== Audit Log export (สำหรับตรวจสอบการแก้ไข) ==========
+  if (path === '/api/reports/audit-export' && method === 'GET') {
+    try { requirePermission(user, 'admin', 'view'); } catch { return error('ไม่มีสิทธิ์ (admin เท่านั้น)', 403); }
+    const dateFrom = url.searchParams.get('date_from');
+    const dateTo = url.searchParams.get('date_to');
+    const targetTable = url.searchParams.get('table');
+    const where = [];
+    const params = [];
+    if (dateFrom) { where.push('al.created_at >= ?'); params.push(dateFrom); }
+    if (dateTo) { where.push('al.created_at <= ?'); params.push(dateTo + ' 23:59:59'); }
+    if (targetTable) { where.push('al.table_name = ?'); params.push(targetTable); }
+    const rows = await dbAll(env.DB,
+      `SELECT al.id, al.created_at, al.table_name, al.record_id, al.action,
+       al.changed_fields, al.old_values, al.new_values, al.ip_address,
+       u.display_name AS actor_name, u.username AS actor_username
+       FROM audit_log al
+       LEFT JOIN users u ON al.user_id = u.id
+       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+       ORDER BY al.created_at DESC
+       LIMIT 5000`,
+      params
+    );
+    const summary = await dbFirst(env.DB,
+      `SELECT COUNT(*) AS total,
+       COUNT(DISTINCT al.user_id) AS unique_users,
+       COUNT(DISTINCT al.table_name) AS tables_affected
+       FROM audit_log al
+       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}`,
+      params
+    );
+    return success({ records: rows, summary });
+  }
+
   return error('Not Found', 404);
   } catch (e) {
     console.error('API Error:', e);

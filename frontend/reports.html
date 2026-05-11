@@ -206,6 +206,10 @@
         <button class="tab" onclick="switchTab('quality', this)">📊 คุณภาพข้อมูล</button>
         <button class="tab" onclick="switchTab('scores', this)">⭐ คะแนนคนขับ</button>
         <button class="tab" onclick="switchTab('alerts', this)">⚠️ แจ้งเตือน</button>
+        <button class="tab" onclick="switchTab('trips', this)">📋 รายเที่ยว</button>
+        <button class="tab" onclick="switchTab('expenses', this)">💰 ค่าใช้จ่ายรวม</button>
+        <button class="tab" onclick="switchTab('offhours', this)">🌙 นอกเวลา</button>
+        <button class="tab" onclick="switchTab('audit', this)">🔍 ประวัติแก้ไข</button>
       </div>
 
       <div class="filters">
@@ -241,6 +245,19 @@
           <label>เดือน</label>
           <input type="month" id="filterMonth" onchange="loadReport()">
         </div>
+        <div class="filter-group" id="fg-table" style="display:none">
+          <label>ตาราง</label>
+          <select id="filterTable" onchange="loadReport()">
+            <option value="">ทั้งหมด</option>
+            <option value="queue">คิวรถ</option>
+            <option value="fuel_log">น้ำมัน</option>
+            <option value="repair_log">ซ่อมบำรุง</option>
+            <option value="usage_records">บันทึกใช้งาน</option>
+            <option value="drivers">คนขับ</option>
+            <option value="cars">ยานพาหนะ</option>
+            <option value="users">ผู้ใช้งาน</option>
+          </select>
+        </div>
       </div>
 
       <div class="actions-bar">
@@ -252,6 +269,15 @@
         </button>
         <button class="btn btn-secondary" id="btnPrint" onclick="printFuelReport()" style="display:none">
           🖨️ พิมพ์รายงาน
+        </button>
+        <button class="btn btn-primary" id="btnExportTrips" onclick="exportTrips()" style="display:none">
+          💾 Export รายเที่ยว
+        </button>
+        <button class="btn btn-primary" id="btnExportExpenses" onclick="exportExpenses()" style="display:none">
+          💾 Export ค่าใช้จ่าย
+        </button>
+        <button class="btn btn-primary" id="btnExportAudit" onclick="exportAudit()" style="display:none">
+          💾 Export ประวัติแก้ไข
         </button>
       </div>
 
@@ -339,18 +365,23 @@
     }
 
     function updateFilterVisibility() {
-      var showDate = ['fuel', 'repairs', 'quality'].includes(currentTab);
-      var showCar = currentTab === 'fuel';
-      var showDriver = currentTab === 'fuel';
+      var showDate = ['fuel', 'repairs', 'quality', 'trips', 'expenses', 'offhours', 'audit'].includes(currentTab);
+      var showCar = ['fuel', 'trips', 'expenses'].includes(currentTab);
+      var showDriver = ['fuel', 'trips'].includes(currentTab);
       var showExpense = currentTab === 'fuel';
       var showMonth = currentTab === 'scores';
+      var showTable = currentTab === 'audit';
       document.getElementById('fg-date-from').style.display = showDate ? '' : 'none';
       document.getElementById('fg-date-to').style.display = showDate ? '' : 'none';
       document.getElementById('fg-car').style.display = showCar ? '' : 'none';
       document.getElementById('fg-driver').style.display = showDriver ? '' : 'none';
       document.getElementById('fg-expense').style.display = showExpense ? '' : 'none';
       document.getElementById('fg-month').style.display = showMonth ? '' : 'none';
+      document.getElementById('fg-table').style.display = showTable ? '' : 'none';
       document.getElementById('btnPrint').style.display = (currentTab === 'fuel') ? '' : 'none';
+      document.getElementById('btnExportTrips').style.display = (currentTab === 'trips') ? '' : 'none';
+      document.getElementById('btnExportExpenses').style.display = (currentTab === 'expenses') ? '' : 'none';
+      document.getElementById('btnExportAudit').style.display = (currentTab === 'audit') ? '' : 'none';
     }
 
     function switchTab(tab, el) {
@@ -411,6 +442,10 @@
           case 'quality':  html = await renderQuality(dateFrom, dateTo); break;
           case 'scores':   html = await renderScores(); break;
           case 'alerts':   html = await renderAlerts(); break;
+          case 'trips':    html = await renderTrips(); break;
+          case 'expenses': html = await renderExpenses(); break;
+          case 'offhours': html = await renderOffhours(); break;
+          case 'audit':    html = await renderAudit(); break;
           default:         html = await renderOverview();
         }
         document.getElementById('reportContent').innerHTML = html;
@@ -919,6 +954,333 @@
       }
 
       return html;
+    }
+
+    var _lastTripsPayload = null;
+    var _lastExpensesPayload = null;
+    var _lastAuditPayload = null;
+
+    var _statusTH = {
+      'scheduled': 'นัดหมาย', 'ongoing': 'กำลังไป', 'completed': 'เสร็จแล้ว',
+      'cancelled': 'ยกเลิก', 'active': 'ใช้งาน', 'inactive': 'ไม่ใช้งาน',
+      'maintenance': 'ซ่อมบำรุง'
+    };
+    var _qualityTH = {
+      'normal': '<span class="score-badge score-excellent">ปกติ</span>',
+      'auto_departure': '<span class="score-badge score-normal">บันทึกอัตโนมัติ-ออก</span>',
+      'auto_return': '<span class="score-badge score-normal">บันทึกอัตโนมัติ-กลับ</span>',
+      'late_return': '<span class="score-badge score-poor">กลับล่าช้า</span>',
+      'gap_record': '<span class="score-badge score-poor">ช่องว่าง</span>',
+      'departure_only': '<span class="score-badge score-poor">ขาดบันทึกกลับ</span>'
+    };
+
+    // ========== Tab: รายเที่ยว ==========
+    async function renderTrips() {
+      var dateFrom = document.getElementById('dateFrom').value;
+      var dateTo = document.getElementById('dateTo').value;
+      var carId = document.getElementById('filterCar').value;
+      var driverId = document.getElementById('filterDriver').value;
+      var params = buildQuery({ date_from: dateFrom, date_to: dateTo, car_id: carId || undefined, driver_id: driverId || undefined });
+      var r = await API.get('/api/reports/trips' + params);
+      var payload = (r && r.data) ? r.data : (r || {});
+      var records = payload.records || [];
+      var summary = payload.summary || {};
+      _lastTripsPayload = payload;
+
+      var html = '<div class="stats-grid">';
+      html += statCard('📋 คิวทั้งหมด', fmtNum(summary.total || 0), 'รายการ', 'เสร็จ ' + fmtNum(summary.completed || 0) + ' | ยกเลิก ' + fmtNum(summary.cancelled || 0));
+      html += statCard('🛣️ ระยะทางรวม', fmtNum(summary.total_km || 0), 'กม.', '');
+      html += '</div>';
+
+      if (records.length === 0) {
+        html += emptyState('📋', 'ไม่พบข้อมูลในช่วงเวลาที่เลือก');
+        return html;
+      }
+
+      html += '<div class="report-section">';
+      html += '<div class="report-section-title">📋 รายงานการใช้รถรายเที่ยว</div>';
+      html += '<div style="overflow-x:auto"><table class="report-table">';
+      html += '<thead><tr>' +
+        '<th>วันที่</th><th>วัน</th><th>เวลา</th><th>ทะเบียนรถ</th><th>คนขับ</th>' +
+        '<th>ภารกิจ</th><th>จุดหมาย</th><th>ผู้โดยสาร</th>' +
+        '<th>ออกจริง</th><th>กลับจริง</th><th>ไมล์เริ่ม</th><th>ไมล์จบ</th><th>กม.</th>' +
+        '<th>คุณภาพ</th><th>สถานะ</th><th>ผู้ขอ</th>' +
+        '</tr></thead><tbody>';
+      var weekdays = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+      records.forEach(function (rec) {
+        var d = new Date(rec.date);
+        var wd = isNaN(d) ? '' : weekdays[d.getDay()];
+        var wdStyle = (d.getDay()===0||d.getDay()===6) ? 'color:#c0392b;font-weight:700' : '';
+        var earlyLate = (!isNaN(d) && (rec.time_start < '07:00' || rec.time_start >= '18:00')) ? ' ⏰' : '';
+        var qualCell = (_qualityTH[rec.dep_quality] || '') + (_qualityTH[rec.ret_quality] || '');
+        if (!rec.dep_quality && !rec.ret_quality) qualCell = '-';
+        html += '<tr>';
+        html += '<td>' + fmtDateTH(rec.date) + '</td>';
+        html += '<td style="' + wdStyle + '">' + wd + earlyLate + '</td>';
+        html += '<td>' + htmlEsc((rec.time_start || '') + (rec.time_end ? '–' + rec.time_end : '')) + '</td>';
+        html += '<td><strong>' + htmlEsc(rec.license_plate || '-') + '</strong></td>';
+        html += '<td>' + htmlEsc(rec.driver_name || '-') + (rec.backup_driver_name ? '<br><small>' + htmlEsc(rec.backup_driver_name) + '</small>' : '') + '</td>';
+        html += '<td style="max-width:160px">' + htmlEsc(rec.mission || '-') + '</td>';
+        html += '<td style="max-width:140px">' + htmlEsc(rec.destination || '-') + '</td>';
+        html += '<td>' + htmlEsc(rec.passengers || '-') + '</td>';
+        html += '<td>' + (rec.actual_departure ? rec.actual_departure.substr(11,5) : '-') + '</td>';
+        html += '<td>' + (rec.actual_return ? rec.actual_return.substr(11,5) : '-') + '</td>';
+        html += '<td>' + (rec.mileage_start ? fmtNum(rec.mileage_start) : '-') + '</td>';
+        html += '<td>' + (rec.mileage_end ? fmtNum(rec.mileage_end) : '-') + '</td>';
+        html += '<td>' + (rec.km_used !== null && rec.km_used !== undefined ? fmtNum(rec.km_used) : '-') + '</td>';
+        html += '<td style="font-size:0.8em">' + qualCell + '</td>';
+        html += '<td>' + statusBadge(rec.status) + (rec.cancel_reason ? '<br><small>' + htmlEsc(rec.cancel_reason) + '</small>' : '') + '</td>';
+        html += '<td>' + htmlEsc(rec.requester_display_name || rec.requested_by || '-') + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table></div>';
+      html += '<div class="kpi-note">⏰ = เวลานอกราชการ | 🔴 = วัน อา./ส.</div>';
+      html += '</div>';
+      return html;
+    }
+
+    function exportTrips() {
+      if (!_lastTripsPayload) return;
+      var records = _lastTripsPayload.records || [];
+      if (records.length === 0) { alert('ไม่มีข้อมูล'); return; }
+      var weekdays = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+      var headers = ['วันที่','วัน','เวลาเริ่ม','เวลาจบ','ทะเบียนรถ','ยี่ห้อ/รุ่น','คนขับ','ภารกิจ','จุดหมาย','ผู้โดยสาร','ออกจริง','กลับจริง','ไมล์เริ่ม','ไมล์จบ','กม.','คุณภาพออก','คุณภาพกลับ','สถานะ','เหตุยกเลิก','ผู้ขอ','บันทึก'];
+      function csvVal(v) { var s = String(v==null?'':v); return (s.includes(',')||s.includes('"')||s.includes('\n'))?'"'+s.replace(/"/g,'""')+'"':s; }
+      var lines = [headers.map(csvVal).join(',')];
+      records.forEach(function(r) {
+        var d = new Date(r.date);
+        lines.push([
+          r.date||'', isNaN(d)?'':weekdays[d.getDay()],
+          r.time_start||'', r.time_end||'',
+          r.license_plate||'', (r.brand||'')+' '+(r.model||''),
+          r.driver_name||'', r.mission||'', r.destination||'', r.passengers||'',
+          r.actual_departure||'', r.actual_return||'',
+          r.mileage_start||'', r.mileage_end||'', r.km_used||'',
+          r.dep_quality||'', r.ret_quality||'',
+          _statusTH[r.status]||r.status||'', r.cancel_reason||'',
+          r.requester_display_name||r.requested_by||'', r.notes||''
+        ].map(csvVal).join(','));
+      });
+      var dateFrom = document.getElementById('dateFrom').value || 'all';
+      var dateTo = document.getElementById('dateTo').value || 'all';
+      var blob = new Blob(['\ufeff' + lines.join('\r\n')], {type:'text/csv;charset=utf-8;'});
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'รายงานการใช้รถรายเที่ยว_' + dateFrom + '_' + dateTo + '.csv';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
+
+    // ========== Tab: ค่าใช้จ่ายรวม ==========
+    async function renderExpenses() {
+      var dateFrom = document.getElementById('dateFrom').value;
+      var dateTo = document.getElementById('dateTo').value;
+      var carId = document.getElementById('filterCar').value;
+      var params = buildQuery({ date_from: dateFrom, date_to: dateTo, car_id: carId || undefined });
+      var r = await API.get('/api/reports/expenses' + params);
+      var payload = (r && r.data) ? r.data : (r || {});
+      var cars = payload.cars || [];
+      var grand = payload.grand_total || {};
+      _lastExpensesPayload = payload;
+
+      var html = '<div class="stats-grid">';
+      html += statCard('⛽ ค่าน้ำมันรวม', fmtMoney(grand.total_fuel || 0), 'บาท', '');
+      html += statCard('🔧 ค่าซ่อมรวม', fmtMoney(grand.total_repair || 0), 'บาท', '');
+      html += statCard('📄 ภาษีรวม', fmtMoney(grand.total_tax || 0), 'บาท', '');
+      html += statCard('🛡️ ประกันรวม', fmtMoney(grand.total_insurance || 0), 'บาท', '');
+      html += statCard('🔎 ตรวจสภาพรวม', fmtMoney(grand.total_inspection || 0), 'บาท', '');
+      html += statCard('💰 รวมค่าใช้จ่ายทั้งหมด', fmtMoney(grand.grand_total || 0), 'บาท', 'ระยะทาง ' + fmtNum(grand.total_km || 0) + ' กม.');
+      html += '</div>';
+
+      if (cars.length === 0) { html += emptyState('💰', 'ไม่พบข้อมูล'); return html; }
+
+      html += '<div class="report-section">';
+      html += '<div class="report-section-title">💰 ค่าใช้จ่ายรายคัน</div>';
+      html += '<div style="overflow-x:auto"><table class="report-table">';
+      html += '<thead><tr><th>ทะเบียน</th><th>ยี่ห้อ/รุ่น</th><th>ค่าน้ำมัน (บาท)</th><th>ค่าซ่อม (บาท)</th><th>ภาษี (บาท)</th><th>ประกัน (บาท)</th><th>ตรวจสภาพ (บาท)</th><th>รวม (บาท)</th><th>ระยะทาง (กม.)</th><th>บาท/กม.</th><th>สถานะ</th></tr></thead><tbody>';
+      cars.forEach(function (c) {
+        var cpkm = (c.total_km || 0) > 0 ? ((c.grand_total || 0) / c.total_km).toFixed(2) : '-';
+        html += '<tr>';
+        html += '<td><strong>' + htmlEsc(c.license_plate || '-') + '</strong></td>';
+        html += '<td>' + htmlEsc((c.brand || '') + ' ' + (c.model || '') + (c.year ? ' (' + c.year + ')' : '')) + '</td>';
+        html += '<td>' + fmtMoney(c.total_fuel || 0) + '<br><small>' + fmtNum(c.fuel_count || 0) + ' ครั้ง</small></td>';
+        html += '<td>' + fmtMoney(c.total_repair || 0) + '<br><small>' + fmtNum(c.repair_count || 0) + ' ครั้ง</small></td>';
+        html += '<td>' + fmtMoney(c.total_tax || 0) + '</td>';
+        html += '<td>' + fmtMoney(c.total_insurance || 0) + '</td>';
+        html += '<td>' + fmtMoney(c.total_inspection || 0) + '</td>';
+        html += '<td><strong>' + fmtMoney(c.grand_total || 0) + '</strong></td>';
+        html += '<td>' + fmtNum(c.total_km || 0) + '</td>';
+        html += '<td>' + cpkm + '</td>';
+        html += '<td>' + statusBadge(c.status) + '</td>';
+        html += '</tr>';
+      });
+      html += '<tr style="background:#f0f4ff;font-weight:700">';
+      html += '<td colspan="2">รวมทั้งหมด</td>';
+      html += '<td>' + fmtMoney(grand.total_fuel || 0) + '</td>';
+      html += '<td>' + fmtMoney(grand.total_repair || 0) + '</td>';
+      html += '<td>' + fmtMoney(grand.total_tax || 0) + '</td>';
+      html += '<td>' + fmtMoney(grand.total_insurance || 0) + '</td>';
+      html += '<td>' + fmtMoney(grand.total_inspection || 0) + '</td>';
+      html += '<td>' + fmtMoney(grand.grand_total || 0) + '</td>';
+      html += '<td>' + fmtNum(grand.total_km || 0) + '</td>';
+      html += '<td>' + ((grand.total_km || 0) > 0 ? ((grand.grand_total || 0) / grand.total_km).toFixed(2) : '-') + '</td>';
+      html += '<td></td></tr>';
+      html += '</tbody></table></div></div>';
+      return html;
+    }
+
+    function exportExpenses() {
+      if (!_lastExpensesPayload) return;
+      var cars = _lastExpensesPayload.cars || [];
+      if (cars.length === 0) { alert('ไม่มีข้อมูล'); return; }
+      var headers = ['ทะเบียน','ยี่ห้อ','รุ่น','ปี','ค่าน้ำมัน(บาท)','จำนวนเติม','ค่าซ่อม(บาท)','จำนวนซ่อม','ภาษี(บาท)','ประกัน(บาท)','ตรวจสภาพ(บาท)','รวม(บาท)','ระยะทาง(กม.)','บาท/กม.','สถานะ'];
+      function csvVal(v) { var s = String(v==null?'':v); return (s.includes(',')||s.includes('"'))?'"'+s.replace(/"/g,'""')+'"':s; }
+      var lines = [headers.map(csvVal).join(',')];
+      cars.forEach(function(c) {
+        var cpkm = (c.total_km||0)>0?((c.grand_total||0)/c.total_km).toFixed(2):'';
+        lines.push([c.license_plate||'',c.brand||'',c.model||'',c.year||'',
+          c.total_fuel||0, c.fuel_count||0, c.total_repair||0, c.repair_count||0,
+          c.total_tax||0, c.total_insurance||0, c.total_inspection||0, c.grand_total||0,
+          c.total_km||0, cpkm, _statusTH[c.status]||c.status||''
+        ].map(csvVal).join(','));
+      });
+      var g = _lastExpensesPayload.grand_total || {};
+      var gkm = (g.total_km||0)>0?((g.grand_total||0)/g.total_km).toFixed(2):'';
+      lines.push(['รวมทั้งหมด','','','',g.total_fuel||0,'',g.total_repair||0,'',g.total_tax||0,g.total_insurance||0,g.total_inspection||0,g.grand_total||0,g.total_km||0,gkm,''].map(csvVal).join(','));
+      var dateFrom = document.getElementById('dateFrom').value || 'all';
+      var dateTo = document.getElementById('dateTo').value || 'all';
+      var blob = new Blob(['\ufeff' + lines.join('\r\n')], {type:'text/csv;charset=utf-8;'});
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'ค่าใช้จ่ายรวม_' + dateFrom + '_' + dateTo + '.csv';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
+
+    // ========== Tab: นอกเวลาราชการ ==========
+    async function renderOffhours() {
+      var dateFrom = document.getElementById('dateFrom').value;
+      var dateTo = document.getElementById('dateTo').value;
+      var params = buildQuery({ date_from: dateFrom, date_to: dateTo });
+      var r = await API.get('/api/reports/offhours' + params);
+      var payload = (r && r.data) ? r.data : (r || {});
+      var records = payload.records || [];
+
+      if (records.length === 0) {
+        return emptyState('🌙', 'ไม่พบการใช้รถนอกเวลาราชการในช่วงเวลาที่เลือก');
+      }
+
+      var weekends = records.filter(function(rec) { return rec.weekday === 0 || rec.weekday === 6; });
+      var earlyLate = records.filter(function(rec) { return (rec.weekday !== 0 && rec.weekday !== 6) && (rec.time_start < '07:00' || rec.time_start >= '18:00'); });
+
+      var html = '<div class="stats-grid">';
+      html += statCard('🌙 นอกเวลารวม', fmtNum(records.length), 'รายการ', '');
+      html += statCard('📅 วันหยุดสัปดาห์', fmtNum(weekends.length), 'รายการ', 'เสาร์-อาทิตย์');
+      html += statCard('⏰ ก่อน07:00/หลัง18:00', fmtNum(earlyLate.length), 'รายการ', 'วันทำการ');
+      html += '</div>';
+
+      html += '<div class="report-section">';
+      html += '<div class="report-section-title">🌙 รายการใช้รถนอกเวลาราชการ</div>';
+      html += '<div class="kpi-note" style="margin-bottom:12px">⚠️ วันทำการ = จันทร์-ศุกร์ 07:00–18:00 | นอกเวลา = ก่อน 07:00 / หลัง 18:00 / เสาร์-อาทิตย์</div>';
+      html += '<div style="overflow-x:auto"><table class="report-table">';
+      html += '<thead><tr><th>วันที่</th><th>วัน</th><th>เวลา</th><th>ทะเบียน</th><th>คนขับ</th><th>ภารกิจ</th><th>จุดหมาย</th><th>ผู้โดยสาร</th><th>ออกจริง</th><th>กลับจริง</th><th>ผู้ขอ</th><th>สถานะ</th></tr></thead><tbody>';
+      records.forEach(function (rec) {
+        var isWeekend = (rec.weekday === 0 || rec.weekday === 6);
+        var rowStyle = isWeekend ? 'background:rgba(231,76,60,0.07)' : 'background:rgba(230,126,34,0.07)';
+        html += '<tr style="' + rowStyle + '">';
+        html += '<td>' + fmtDateTH(rec.date) + '</td>';
+        html += '<td style="font-weight:700;color:' + (isWeekend ? '#c0392b' : '#e67e22') + '">' + htmlEsc(rec.weekday_th || '') + '</td>';
+        html += '<td>' + htmlEsc((rec.time_start || '') + (rec.time_end ? '–' + rec.time_end : '')) + '</td>';
+        html += '<td><strong>' + htmlEsc(rec.license_plate || '-') + '</strong></td>';
+        html += '<td>' + htmlEsc(rec.driver_name || '-') + '</td>';
+        html += '<td>' + htmlEsc(rec.mission || '-') + '</td>';
+        html += '<td>' + htmlEsc(rec.destination || '-') + '</td>';
+        html += '<td>' + htmlEsc(rec.passengers || '-') + '</td>';
+        html += '<td>' + (rec.actual_departure ? rec.actual_departure.substr(11,5) : '-') + '</td>';
+        html += '<td>' + (rec.actual_return ? rec.actual_return.substr(11,5) : '-') + '</td>';
+        html += '<td>' + htmlEsc(rec.requester_display_name || '-') + '</td>';
+        html += '<td>' + statusBadge(rec.status) + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table></div></div>';
+      return html;
+    }
+
+    // ========== Tab: ประวัติการแก้ไข (Audit) ==========
+    async function renderAudit() {
+      var dateFrom = document.getElementById('dateFrom').value;
+      var dateTo = document.getElementById('dateTo').value;
+      var table = document.getElementById('filterTable').value;
+      var params = buildQuery({ date_from: dateFrom, date_to: dateTo, table: table || undefined });
+      var r = await API.get('/api/reports/audit-export' + params);
+      var payload = (r && r.data) ? r.data : (r || {});
+      var records = payload.records || [];
+      var summary = payload.summary || {};
+      _lastAuditPayload = payload;
+
+      var html = '<div class="stats-grid">';
+      html += statCard('📝 การแก้ไขทั้งหมด', fmtNum(summary.total || 0), 'รายการ', '');
+      html += statCard('👤 ผู้ใช้ที่เกี่ยวข้อง', fmtNum(summary.unique_users || 0), 'คน', '');
+      html += statCard('🗄️ ตารางที่ถูกแก้ไข', fmtNum(summary.tables_affected || 0), 'ตาราง', '');
+      html += '</div>';
+
+      if (records.length === 0) { html += emptyState('🔍', 'ไม่พบประวัติการแก้ไขในช่วงเวลาที่เลือก'); return html; }
+
+      var _actionTH = { 'INSERT': '➕ เพิ่ม', 'UPDATE': '✏️ แก้ไข', 'DELETE': '🗑️ ลบ' };
+      var _tableTH = { 'queue': 'คิวรถ', 'fuel_log': 'น้ำมัน', 'repair_log': 'ซ่อมบำรุง', 'usage_records': 'บันทึกใช้งาน', 'drivers': 'คนขับ', 'cars': 'รถ', 'users': 'ผู้ใช้', 'tax_records': 'ภาษี', 'insurance_records': 'ประกัน' };
+
+      html += '<div class="report-section">';
+      html += '<div class="report-section-title">🔍 ประวัติการแก้ไขข้อมูล</div>';
+      html += '<div style="overflow-x:auto"><table class="report-table">';
+      html += '<thead><tr><th>วันเวลา</th><th>ผู้กระทำ</th><th>การกระทำ</th><th>ตาราง</th><th>ID รายการ</th><th>รายละเอียดการเปลี่ยนแปลง</th><th>IP</th></tr></thead><tbody>';
+      records.forEach(function (rec) {
+        var actionCls = rec.action === 'DELETE' ? 'score-poor' : rec.action === 'INSERT' ? 'score-excellent' : 'score-good';
+        var changed = '';
+        try {
+          var oldV = rec.old_values ? JSON.parse(rec.old_values) : {};
+          var newV = rec.new_values ? JSON.parse(rec.new_values) : {};
+          var changedFields = rec.changed_fields ? JSON.parse(rec.changed_fields) : Object.keys(newV);
+          var parts = changedFields.slice(0, 5).map(function(k) {
+            var o = oldV[k] !== undefined ? String(oldV[k]).substr(0,30) : '';
+            var n = newV[k] !== undefined ? String(newV[k]).substr(0,30) : '';
+            return htmlEsc(k) + ': ' + (o ? '<del>' + htmlEsc(o) + '</del> → ' : '') + htmlEsc(n);
+          });
+          changed = parts.join(' | ');
+          if (changedFields.length > 5) changed += ' <em>+' + (changedFields.length - 5) + ' อื่นๆ</em>';
+        } catch(e) {
+          changed = htmlEsc(rec.changed_fields || rec.new_values || '-');
+        }
+        html += '<tr>';
+        html += '<td style="white-space:nowrap">' + htmlEsc((rec.created_at || '').replace('T', ' ').substr(0, 19)) + '</td>';
+        html += '<td>' + htmlEsc(rec.actor_name || rec.actor_username || '-') + '</td>';
+        html += '<td><span class="score-badge ' + actionCls + '">' + (_actionTH[rec.action] || rec.action || '-') + '</span></td>';
+        html += '<td>' + htmlEsc(_tableTH[rec.table_name] || rec.table_name || '-') + '</td>';
+        html += '<td style="font-size:0.85em">' + htmlEsc(rec.record_id || '-') + '</td>';
+        html += '<td style="font-size:0.85em;max-width:320px">' + changed + '</td>';
+        html += '<td style="font-size:0.8em">' + htmlEsc(rec.ip_address || '-') + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table></div></div>';
+      return html;
+    }
+
+    function exportAudit() {
+      if (!_lastAuditPayload) return;
+      var records = _lastAuditPayload.records || [];
+      if (records.length === 0) { alert('ไม่มีข้อมูล'); return; }
+      var headers = ['วันเวลา','ผู้กระทำ','username','การกระทำ','ตาราง','ID รายการ','รายละเอียด','IP'];
+      function csvVal(v) { var s = String(v==null?'':v); return (s.includes(',')||s.includes('"')||s.includes('\n'))?'"'+s.replace(/"/g,'""')+'"':s; }
+      var lines = [headers.map(csvVal).join(',')];
+      records.forEach(function(r) {
+        var detail = '';
+        try { detail = JSON.stringify(JSON.parse(r.new_values || '{}')); } catch(e) { detail = r.changed_fields || ''; }
+        lines.push([(r.created_at||'').replace('T',' ').substr(0,19),r.actor_name||'',r.actor_username||'',r.action||'',r.table_name||'',r.record_id||'',detail,r.ip_address||''].map(csvVal).join(','));
+      });
+      var dateFrom = document.getElementById('dateFrom').value || 'all';
+      var dateTo = document.getElementById('dateTo').value || 'all';
+      var blob = new Blob(['\ufeff' + lines.join('\r\n')], {type:'text/csv;charset=utf-8;'});
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'ประวัติการแก้ไข_' + dateFrom + '_' + dateTo + '.csv';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
     }
 
     async function renderScores() {
