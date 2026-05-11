@@ -58,6 +58,8 @@ function normalizeDriverName(raw) {
   if (!raw) return '';
   // strip " (เฉพาะกิจ พัสดุ)", "(สำรอง4)" เป็นต้น
   let n = String(raw).replace(/\s*\([^)]*\)\s*/g, ' ').trim();
+  // เติม "นาย" ให้ชื่อที่ขาดคำนำหน้า (เช่น "กฤศ วงค์เรือง" → "นายกฤศ วงค์เรือง")
+  if (n && !n.match(/^(นาย|นาง|น\.ส\.|นางสาว|ว่าที่|ดร\.|รอง)/)) n = 'นาย' + n;
   // collapse multiple spaces
   n = n.replace(/\s+/g, ' ');
   return n;
