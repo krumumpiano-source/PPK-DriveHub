@@ -939,6 +939,12 @@
           }
         });
 
+        // ผู้บันทึก / ผู้แก้ไข
+        if(typeof renderAuditMeta==='function'){
+          html+='<hr style="margin:1rem 0;border-color:var(--color-border)">';
+          html+=renderAuditMeta(rp);
+        }
+
         body.innerHTML=html;
       }catch(e){body.innerHTML='<p style="color:var(--color-danger)">เกิดข้อผิดพลาด</p>'}
     }
