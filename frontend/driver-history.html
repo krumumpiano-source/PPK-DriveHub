@@ -983,7 +983,7 @@
         if (result.success && result.data && result.data.vehicles) {
           vehicles = result.data.vehicles || [];
           vehicles.forEach(function (v) {
-            vehiclesMap[v.car_id] = v;
+            vehiclesMap[v.id || v.car_id] = v;
           });
 
           // Populate filter dropdown
@@ -1186,8 +1186,8 @@
         displayQueues.forEach(function (queue) {
           var vehicle = vehiclesMap[queue.car_id];
           var driver = driversMap[queue.driver_id];
-          var plate = vehicle ? vehicle.license_plate : (queue.car_id ? queue.car_id.substring(0, 8) : '-');
-          var driverName = driver ? (driver.full_name || driver.first_name + ' ' + driver.last_name) : (queue.driver_id ? queue.driver_id.substring(0, 8) : '-');
+          var plate = queue.license_plate || (vehicle && vehicle.license_plate) || (queue.car_id ? queue.car_id.substring(0, 8) : '-');
+          var driverName = queue.driver_name || (driver && (driver.full_name || (driver.first_name && (driver.first_name + ' ' + (driver.last_name || ''))) || driver.name)) || (queue.driver_id ? queue.driver_id.substring(0, 8) : '-');
           var destination = queue.destination || queue.mission || '-';
 
           html += '<div class="queue-item">';
@@ -1233,8 +1233,8 @@
       dayQueues.forEach(function (queue) {
         var vehicle = vehiclesMap[queue.car_id];
         var driver = driversMap[queue.driver_id];
-        var plate = vehicle ? vehicle.license_plate : (queue.car_id ? queue.car_id.substring(0, 8) : '-');
-        var driverName = driver ? (driver.full_name || driver.first_name + ' ' + driver.last_name) : (queue.driver_id ? queue.driver_id.substring(0, 8) : '-');
+        var plate = queue.license_plate || (vehicle && vehicle.license_plate) || (queue.car_id ? queue.car_id.substring(0, 8) : '-');
+        var driverName = queue.driver_name || (driver && (driver.full_name || (driver.first_name && (driver.first_name + ' ' + (driver.last_name || ''))) || driver.name)) || (queue.driver_id ? queue.driver_id.substring(0, 8) : '-');
         var destination = queue.destination || queue.mission || '-';
         var requester = queue.requested_by || queue.requester || '-';
         var passengerCount = queue.passenger_count || '-';
@@ -1324,8 +1324,8 @@
           dateQueues.forEach(function (queue) {
             var vehicle = vehiclesMap[queue.car_id];
             var driver = driversMap[queue.driver_id];
-            var plate = vehicle ? vehicle.license_plate : (queue.car_id ? queue.car_id.substring(0, 8) : '-');
-            var driverName = driver ? (driver.full_name || driver.first_name + ' ' + driver.last_name) : (queue.driver_id ? queue.driver_id.substring(0, 8) : '-');
+            var plate = queue.license_plate || (vehicle && vehicle.license_plate) || (queue.car_id ? queue.car_id.substring(0, 8) : '-');
+            var driverName = queue.driver_name || (driver && (driver.full_name || (driver.first_name && (driver.first_name + ' ' + (driver.last_name || ''))) || driver.name)) || (queue.driver_id ? queue.driver_id.substring(0, 8) : '-');
             var destination = queue.destination || queue.mission || '-';
             var timeStart = queue.time_start || '-';
             var timeEnd = queue.time_end || '-';

@@ -437,7 +437,29 @@ else renderNav();
 
 /* ── PWA: register service worker + inject manifest ── */
 (function(){
-  if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(e){console.warn('SW registration failed',e)})}
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('/sw.js').then(function(reg){
+      // When a new SW takes control (after our v8→v9 cache strategy upgrade or any future update),
+      // reload once so the page picks up fresh JS/CSS immediately on mobile.
+      var refreshed=false;
+      navigator.serviceWorker.addEventListener('controllerchange',function(){
+        if(refreshed)return;
+        refreshed=true;
+        window.location.reload();
+      });
+      // If a waiting worker exists, tell it to activate immediately
+      if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
+      reg.addEventListener('updatefound',function(){
+        var nw=reg.installing;
+        if(!nw)return;
+        nw.addEventListener('statechange',function(){
+          if(nw.state==='installed'&&navigator.serviceWorker.controller){
+            nw.postMessage({type:'SKIP_WAITING'});
+          }
+        });
+      });
+    }).catch(function(e){console.warn('SW registration failed',e)});
+  }
   if(!document.querySelector('link[rel="manifest"]')){var l=document.createElement('link');l.rel='manifest';l.href='/manifest.json';document.head.appendChild(l)}
   if(!document.querySelector('meta[name="theme-color"]')){var m=document.createElement('meta');m.name='theme-color';m.content='#6366f1';document.head.appendChild(m)}
 })();
