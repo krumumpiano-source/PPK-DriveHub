@@ -18,169 +18,247 @@
   <style>
     * { box-sizing: border-box; }
 
-    body { }
-
-    .container { }
-
-    .stat-card {
-      background: var(--gradient-primary);
-      color: white;
-      padding: 25px;
-      border-radius: var(--radius-xl);
-      text-align: center;
+    /* ── STATS GRID ──────────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
     }
 
+    /* ── FILTERS BAR ─────────────────────────────────────── */
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-end;
+      background: white;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-width: 130px;
+      flex: 1 1 130px;
+      max-width: 220px;
+    }
+
+    .filter-group label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .filter-group input,
+    .filter-group select {
+      padding: 0.5rem 0.65rem;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: 0.88rem;
+      font-family: inherit;
+      color: var(--color-text);
+      background: white;
+      transition: border-color 0.15s;
+    }
+
+    .filter-group input:focus,
+    .filter-group select:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    /* ── STAT CARDS ──────────────────────────────────────── */
+    .stat-card {
+      background: white;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      padding: 18px 14px 16px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      transition: box-shadow 0.2s, transform 0.15s;
+      color: inherit;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--gradient-primary);
+    }
+
+    .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+
     .stat-card h3 {
-      font-size: 1.1em;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
       margin-bottom: 10px;
-      opacity: 0.9;
+      opacity: 1;
     }
 
     .stat-card .value {
-      font-size: 2.5em;
+      font-size: 2rem;
       font-weight: 700;
-      margin-bottom: 5px;
+      color: var(--color-primary);
+      margin-bottom: 4px;
+      line-height: 1.1;
     }
 
     .stat-card .unit {
-      font-size: 0.9em;
-      opacity: 0.8;
+      font-size: 0.78rem;
+      color: var(--color-text-light);
+      font-weight: 500;
+      opacity: 1;
     }
 
-    .report-section {
+    /* ── TABS (2-row wrapped) ────────────────────────────── */
+    .tabs {
+      flex-wrap: wrap;
+      overflow-x: visible;
       background: var(--color-bg-light);
-      border-radius: var(--radius-xl);
-      padding: 25px;
-      margin-bottom: 25px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 10px 10px 0;
+      margin-bottom: 16px;
+      gap: 2px;
+    }
+
+    .tab-group-label {
+      display: flex;
+      align-items: center;
+      padding: 0 6px 10px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      align-self: flex-end;
+      white-space: nowrap;
+      opacity: 0.7;
+    }
+
+    .tab-group-sep {
+      flex-basis: 100%;
+      height: 1px;
+      background: var(--color-border);
+      margin: 4px 0 6px;
+      opacity: 0.5;
+    }
+
+    /* ── REPORT SECTION ──────────────────────────────────── */
+    .report-section {
+      background: white;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow-sm);
     }
 
     .report-section-title {
-      font-size: 1.5em;
+      font-size: 1rem;
       font-weight: 700;
-      color: var(--color-primary);
-      margin-bottom: 20px;
+      color: var(--color-text);
+      margin-bottom: 14px;
       padding-bottom: 10px;
-      border-bottom: 3px solid var(--color-primary);
+      border-bottom: 2px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
 
+    /* ── REPORT TABLE ────────────────────────────────────── */
     .report-table {
       width: 100%;
       border-collapse: collapse;
       background: white;
-      border-radius: var(--radius-xl);
+      border-radius: var(--radius-lg);
       overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      font-size: 0.87rem;
     }
 
-    .report-table thead {
-      background: var(--gradient-primary);
-      color: white;
-    }
+    .report-table thead { background: var(--color-bg-lighter, #f8f9fa); color: inherit; }
 
     .report-table th {
-      padding: 15px;
+      padding: 10px 12px;
       text-align: left;
       font-weight: 600;
+      font-size: 0.77rem;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      border-bottom: 2px solid var(--color-border);
+      white-space: nowrap;
     }
 
     .report-table td {
-      padding: 15px;
-      border-bottom: 1px solid #e9ecef;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--color-border-light, #f0f1f5);
+      vertical-align: middle;
     }
 
-    .report-table tbody tr:hover {
-      background: var(--color-bg-light);
-    }
+    .report-table tbody tr:hover td { background: var(--color-primary-bg, #eef2ff); }
+    .report-table tbody tr:last-child td { border-bottom: none; }
 
+    /* ── BADGES ──────────────────────────────────────────── */
     .score-badge {
-      padding: 6px 12px;
-      border-radius: var(--radius-2xl);
-      font-size: 0.9em;
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.76rem;
       font-weight: 600;
+      white-space: nowrap;
     }
 
-    .score-excellent {
-      background: #d4edda;
-      color: #155724;
-    }
+    .score-excellent { background: #d1fae5; color: #065f46; }
+    .score-good      { background: #dbeafe; color: #1e40af; }
+    .score-normal    { background: #fef3c7; color: #92400e; }
+    .score-poor      { background: #fee2e2; color: #991b1b; }
 
-    .score-good {
-      background: #cfe2ff;
-      color: #084298;
-    }
+    /* ── MISC ────────────────────────────────────────────── */
+    .loading { text-align: center; padding: 50px 20px; color: var(--color-text-muted); }
 
-    .score-normal {
-      background: #fff3cd;
-      color: #856404;
-    }
+    .empty-state { text-align: center; padding: 50px 20px; color: var(--color-text-light); }
 
-    .score-poor {
-      background: #f8d7da;
-      color: #721c24;
-    }
-
-    .loading {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--color-text-muted);
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--color-text-light);
-    }
-
-    .empty-state-icon {
-      font-size: 4em;
-      margin-bottom: 20px;
-    }
+    .empty-state-icon { font-size: 3.5em; margin-bottom: 14px; opacity: 0.5; }
 
     .kpi-note {
-      background: #e7f3ff;
-      border-left: 4px solid var(--color-primary);
-      padding: 15px;
+      background: #eff6ff;
+      border-left: 3px solid var(--color-primary);
+      padding: 12px 14px;
       border-radius: var(--radius-md);
-      margin-top: 20px;
-      font-size: 0.95em;
+      margin-top: 14px;
+      font-size: 0.84rem;
       color: var(--color-text);
+      line-height: 1.6;
     }
 
+    /* ── RESPONSIVE ──────────────────────────────────────── */
     @media (max-width: 768px) {
-      .stats-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .filters {
-        grid-template-columns: 1fr;
-      }
-
-      .report-table {
-        font-size: 0.9em;
-      }
-
-      .report-table th,
-      .report-table td {
-        padding: 10px;
-      }
-
-      .tabs {
-        gap: 6px;
-      }
-
-      .tab {
-        padding: 10px 16px;
-        font-size: 0.9em;
-        flex: 1 1 calc(50% - 3px);
-        min-width: calc(50% - 3px);
-      }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .filter-group { min-width: 110px; flex: 1 1 110px; max-width: none; }
+      .report-table th, .report-table td { padding: 8px 10px; }
     }
 
     @media (max-width: 480px) {
-      .tab {
-        flex: 1 1 100%;
-        min-width: 100%;
-      }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .stat-card .value { font-size: 1.6rem; }
+      .filter-group { flex: 1 1 calc(50% - 6px); }
     }
   </style>
 </head>
@@ -206,6 +284,8 @@
         <button class="tab" onclick="switchTab('quality', this)">📊 คุณภาพข้อมูล</button>
         <button class="tab" onclick="switchTab('scores', this)">⭐ คะแนนคนขับ</button>
         <button class="tab" onclick="switchTab('alerts', this)">⚠️ แจ้งเตือน</button>
+        <div class="tab-group-sep"></div>
+        <span class="tab-group-label">รายงานตรวจสอบ</span>
         <button class="tab" onclick="switchTab('trips', this)">📋 รายเที่ยว</button>
         <button class="tab" onclick="switchTab('expenses', this)">💰 ค่าใช้จ่ายรวม</button>
         <button class="tab" onclick="switchTab('offhours', this)">🌙 นอกเวลา</button>
@@ -264,20 +344,20 @@
         <button class="btn btn-secondary" onclick="loadReport()">
           🔃 รีเฟรช
         </button>
-        <button class="btn btn-primary" onclick="exportReport()">
-          💾 ส่งออกรายงาน
+        <button class="btn btn-primary" id="btnExportFuel" onclick="exportReport()" style="display:none">
+          📊 Export Excel น้ำมัน
         </button>
         <button class="btn btn-secondary" id="btnPrint" onclick="printFuelReport()" style="display:none">
           🖨️ พิมพ์รายงาน
         </button>
         <button class="btn btn-primary" id="btnExportTrips" onclick="exportTrips()" style="display:none">
-          💾 Export รายเที่ยว
+          � Export Excel รายเที่ยว
         </button>
         <button class="btn btn-primary" id="btnExportExpenses" onclick="exportExpenses()" style="display:none">
-          💾 Export ค่าใช้จ่าย
+          📊 Export Excel ค่าใช้จ่าย
         </button>
         <button class="btn btn-primary" id="btnExportAudit" onclick="exportAudit()" style="display:none">
-          💾 Export ประวัติแก้ไข
+          📊 Export Excel ประวัติแก้ไข
         </button>
       </div>
 
@@ -379,6 +459,7 @@
       document.getElementById('fg-month').style.display = showMonth ? '' : 'none';
       document.getElementById('fg-table').style.display = showTable ? '' : 'none';
       document.getElementById('btnPrint').style.display = (currentTab === 'fuel') ? '' : 'none';
+      document.getElementById('btnExportFuel').style.display = (currentTab === 'fuel') ? '' : 'none';
       document.getElementById('btnExportTrips').style.display = (currentTab === 'trips') ? '' : 'none';
       document.getElementById('btnExportExpenses').style.display = (currentTab === 'expenses') ? '' : 'none';
       document.getElementById('btnExportAudit').style.display = (currentTab === 'audit') ? '' : 'none';
@@ -770,58 +851,30 @@
     }
     function exportReport() {
       if (currentTab !== 'fuel' || !_lastFuelPayload) {
-        alert('\u0e01\u0e23\u0e38\u0e13\u0e32\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e41\u0e17\u0e47\u0e1a\u0e40\u0e0a\u0e37\u0e49\u0e2d\u0e40\u0e1e\u0e25\u0e34\u0e07\u0e01\u0e48\u0e2d\u0e19\u0e2a\u0e48\u0e07\u0e2d\u0e2d\u0e01');
+        alert('กรุณาเลือกแท็บเชื้อเพลิงก่อนส่งออก');
         return;
       }
       var records = _lastFuelPayload.records || [];
-      if (records.length === 0) {
-        alert('\u0e44\u0e21\u0e48\u0e21\u0e35\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e43\u0e2b\u0e49\u0e2a\u0e48\u0e07\u0e2d\u0e2d\u0e01');
-        return;
-      }
-      var headers = ['\u0e40\u0e25\u0e02\u0e17\u0e35\u0e48','\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48','\u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19\u0e23\u0e16','\u0e1c\u0e39\u0e49\u0e40\u0e1a\u0e34\u0e01','\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e40\u0e1a\u0e34\u0e01','\u0e27\u0e31\u0e15\u0e16\u0e38\u0e1b\u0e23\u0e30\u0e2a\u0e07\u0e04\u0e4c','\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e19\u0e49\u0e33\u0e21\u0e31\u0e19','\u0e25\u0e34\u0e15\u0e23','\u0e23\u0e32\u0e04\u0e32/\u0e25\u0e34\u0e15\u0e23','\u0e23\u0e27\u0e21(\u0e1a\u0e32\u0e17)','\u0e40\u0e25\u0e02\u0e17\u0e35\u0e48\u0e43\u0e1a\u0e40\u0e2a\u0e23\u0e47\u0e08','\u0e1b\u0e31\u0e4a\u0e21\u0e19\u0e49\u0e33\u0e21\u0e31\u0e19','\u0e40\u0e25\u0e02\u0e44\u0e21\u0e25\u0e4c\u0e01\u0e48\u0e2d\u0e19','\u0e40\u0e25\u0e02\u0e44\u0e21\u0e25\u0e4c\u0e2b\u0e25\u0e31\u0e07','\u0e2d\u0e31\u0e15\u0e23\u0e32\u0e2a\u0e34\u0e49\u0e19\u0e40\u0e1b\u0e25\u0e37\u0e2d\u0e07','\u0e1c\u0e34\u0e14\u0e1b\u0e01\u0e15\u0e34'];
-      function csvVal(v) {
-        var s = String(v == null ? '' : v);
-        if (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) {
-          return '"' + s.replace(/"/g, '""') + '"';
-        }
-        return s;
-      }
-      var lines = [headers.map(csvVal).join(',')];
-      records.forEach(function (r) {
+      if (records.length === 0) { alert('ไม่มีข้อมูลให้ส่งออก'); return; }
+      var headers = ['เลขที่','วันที่','ทะเบียนรถ','ผู้เบิก','ประเภทเบิก','วัตถุประสงค์','ประเภทน้ำมัน','ลิตร','ราคา/ลิตร','รวม(บาท)','เลขที่ใบเสร็จ','ปั๊มน้ำมัน','เลขไมล์ก่อน','เลขไมล์หลัง','อัตราสิ้นเปลือง','ผิดปกติ'];
+      var dateFrom = document.getElementById('dateFrom').value || 'all';
+      var dateTo = document.getElementById('dateTo').value || 'all';
+      var rows = records.map(function(r) {
         var driverDisplay = r.driver_name || r.driver_name_manual || '';
         var purposeDisplay = _purposeLabels[r.purpose] || r.purpose || '';
         if (r.purpose === 'other' && r.purpose_detail) purposeDisplay += ': ' + r.purpose_detail;
-        lines.push([
-          r.document_number || '',
-          r.date || '',
-          r.license_plate || r.car_id || '',
-          driverDisplay,
-          _expenseLabels[r.expense_type] || r.expense_type || '',
-          purposeDisplay,
-          r.fuel_type || '',
-          r.liters || 0,
-          r.price_per_liter || 0,
-          r.amount || 0,
-          r.receipt_number || '',
-          r.gas_station_name || '',
-          r.mileage_before || 0,
-          r.mileage_after || 0,
+        return [
+          r.document_number || '', r.date || '',
+          r.license_plate || r.car_id || '', driverDisplay,
+          _expenseLabels[r.expense_type] || r.expense_type || '', purposeDisplay,
+          r.fuel_type || '', r.liters || 0, r.price_per_liter || 0, r.amount || 0,
+          r.receipt_number || '', r.gas_station_name || '',
+          r.mileage_before || 0, r.mileage_after || 0,
           r.fuel_consumption_rate ? Number(r.fuel_consumption_rate).toFixed(2) : '',
-          r.anomaly_flag ? '\u0e43\u0e0a\u0e48' : ''
-        ].map(csvVal).join(','));
+          r.anomaly_flag ? 'ใช่' : ''
+        ];
       });
-      var csv = '\ufeff' + lines.join('\r\n');
-      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      var dateFrom = document.getElementById('dateFrom').value || 'all';
-      var dateTo = document.getElementById('dateTo').value || 'all';
-      a.href = url;
-      a.download = '\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19\u0e19\u0e49\u0e33\u0e21\u0e31\u0e19_' + dateFrom + '_' + dateTo + '.csv';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      ExportUtils.exportExcel({ filename: 'รายงานน้ำมัน_' + dateFrom + '_' + dateTo, sheetName: 'น้ำมัน', headers: headers, rows: rows });
     }
 
     function printFuelReport() {
@@ -1045,11 +1098,11 @@
       if (records.length === 0) { alert('ไม่มีข้อมูล'); return; }
       var weekdays = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
       var headers = ['วันที่','วัน','เวลาเริ่ม','เวลาจบ','ทะเบียนรถ','ยี่ห้อ/รุ่น','คนขับ','ภารกิจ','จุดหมาย','ผู้โดยสาร','ออกจริง','กลับจริง','ไมล์เริ่ม','ไมล์จบ','กม.','คุณภาพออก','คุณภาพกลับ','สถานะ','เหตุยกเลิก','ผู้ขอ','บันทึก'];
-      function csvVal(v) { var s = String(v==null?'':v); return (s.includes(',')||s.includes('"')||s.includes('\n'))?'"'+s.replace(/"/g,'""')+'"':s; }
-      var lines = [headers.map(csvVal).join(',')];
-      records.forEach(function(r) {
+      var dateFrom = document.getElementById('dateFrom').value || 'all';
+      var dateTo = document.getElementById('dateTo').value || 'all';
+      var rows = records.map(function(r) {
         var d = new Date(r.date);
-        lines.push([
+        return [
           r.date||'', isNaN(d)?'':weekdays[d.getDay()],
           r.time_start||'', r.time_end||'',
           r.license_plate||'', (r.brand||'')+' '+(r.model||''),
@@ -1059,15 +1112,9 @@
           r.dep_quality||'', r.ret_quality||'',
           _statusTH[r.status]||r.status||'', r.cancel_reason||'',
           r.requester_display_name||r.requested_by||'', r.notes||''
-        ].map(csvVal).join(','));
+        ];
       });
-      var dateFrom = document.getElementById('dateFrom').value || 'all';
-      var dateTo = document.getElementById('dateTo').value || 'all';
-      var blob = new Blob(['\ufeff' + lines.join('\r\n')], {type:'text/csv;charset=utf-8;'});
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'รายงานการใช้รถรายเที่ยว_' + dateFrom + '_' + dateTo + '.csv';
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      ExportUtils.exportExcel({ filename: 'รายงานการใช้รถรายเที่ยว_' + dateFrom + '_' + dateTo, sheetName: 'รายเที่ยว', headers: headers, rows: rows });
     }
 
     // ========== Tab: ค่าใช้จ่ายรวม ==========
@@ -1133,26 +1180,19 @@
       var cars = _lastExpensesPayload.cars || [];
       if (cars.length === 0) { alert('ไม่มีข้อมูล'); return; }
       var headers = ['ทะเบียน','ยี่ห้อ','รุ่น','ปี','ค่าน้ำมัน(บาท)','จำนวนเติม','ค่าซ่อม(บาท)','จำนวนซ่อม','ภาษี(บาท)','ประกัน(บาท)','ตรวจสภาพ(บาท)','รวม(บาท)','ระยะทาง(กม.)','บาท/กม.','สถานะ'];
-      function csvVal(v) { var s = String(v==null?'':v); return (s.includes(',')||s.includes('"'))?'"'+s.replace(/"/g,'""')+'"':s; }
-      var lines = [headers.map(csvVal).join(',')];
-      cars.forEach(function(c) {
-        var cpkm = (c.total_km||0)>0?((c.grand_total||0)/c.total_km).toFixed(2):'';
-        lines.push([c.license_plate||'',c.brand||'',c.model||'',c.year||'',
-          c.total_fuel||0, c.fuel_count||0, c.total_repair||0, c.repair_count||0,
-          c.total_tax||0, c.total_insurance||0, c.total_inspection||0, c.grand_total||0,
-          c.total_km||0, cpkm, _statusTH[c.status]||c.status||''
-        ].map(csvVal).join(','));
-      });
-      var g = _lastExpensesPayload.grand_total || {};
-      var gkm = (g.total_km||0)>0?((g.grand_total||0)/g.total_km).toFixed(2):'';
-      lines.push(['รวมทั้งหมด','','','',g.total_fuel||0,'',g.total_repair||0,'',g.total_tax||0,g.total_insurance||0,g.total_inspection||0,g.grand_total||0,g.total_km||0,gkm,''].map(csvVal).join(','));
       var dateFrom = document.getElementById('dateFrom').value || 'all';
       var dateTo = document.getElementById('dateTo').value || 'all';
-      var blob = new Blob(['\ufeff' + lines.join('\r\n')], {type:'text/csv;charset=utf-8;'});
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'ค่าใช้จ่ายรวม_' + dateFrom + '_' + dateTo + '.csv';
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      var rows = cars.map(function(c) {
+        var cpkm = (c.total_km||0)>0 ? ((c.grand_total||0)/c.total_km).toFixed(2) : '';
+        return [c.license_plate||'', c.brand||'', c.model||'', c.year||'',
+          c.total_fuel||0, c.fuel_count||0, c.total_repair||0, c.repair_count||0,
+          c.total_tax||0, c.total_insurance||0, c.total_inspection||0, c.grand_total||0,
+          c.total_km||0, cpkm, _statusTH[c.status]||c.status||''];
+      });
+      var g = _lastExpensesPayload.grand_total || {};
+      var gkm = (g.total_km||0)>0 ? ((g.grand_total||0)/g.total_km).toFixed(2) : '';
+      rows.push(['รวมทั้งหมด','','','', g.total_fuel||0,'', g.total_repair||0,'', g.total_tax||0, g.total_insurance||0, g.total_inspection||0, g.grand_total||0, g.total_km||0, gkm,'']);
+      ExportUtils.exportExcel({ filename: 'ค่าใช้จ่ายรวม_' + dateFrom + '_' + dateTo, sheetName: 'ค่าใช้จ่าย', headers: headers, rows: rows });
     }
 
     // ========== Tab: นอกเวลาราชการ ==========
@@ -1267,20 +1307,14 @@
       var records = _lastAuditPayload.records || [];
       if (records.length === 0) { alert('ไม่มีข้อมูล'); return; }
       var headers = ['วันเวลา','ผู้กระทำ','username','การกระทำ','ตาราง','ID รายการ','รายละเอียด','IP'];
-      function csvVal(v) { var s = String(v==null?'':v); return (s.includes(',')||s.includes('"')||s.includes('\n'))?'"'+s.replace(/"/g,'""')+'"':s; }
-      var lines = [headers.map(csvVal).join(',')];
-      records.forEach(function(r) {
-        var detail = '';
-        try { detail = JSON.stringify(JSON.parse(r.new_values || '{}')); } catch(e) { detail = r.changed_fields || ''; }
-        lines.push([(r.created_at||'').replace('T',' ').substr(0,19),r.actor_name||'',r.actor_username||'',r.action||'',r.table_name||'',r.record_id||'',detail,r.ip_address||''].map(csvVal).join(','));
-      });
       var dateFrom = document.getElementById('dateFrom').value || 'all';
       var dateTo = document.getElementById('dateTo').value || 'all';
-      var blob = new Blob(['\ufeff' + lines.join('\r\n')], {type:'text/csv;charset=utf-8;'});
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'ประวัติการแก้ไข_' + dateFrom + '_' + dateTo + '.csv';
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      var rows = records.map(function(r) {
+        var detail = '';
+        try { detail = JSON.stringify(JSON.parse(r.new_values || '{}')); } catch(e) { detail = r.changed_fields || ''; }
+        return [(r.created_at||'').replace('T',' ').substr(0,19), r.actor_name||'', r.actor_username||'', r.action||'', r.table_name||'', r.record_id||'', detail, r.ip_address||''];
+      });
+      ExportUtils.exportExcel({ filename: 'ประวัติการแก้ไข_' + dateFrom + '_' + dateTo, sheetName: 'ประวัติแก้ไข', headers: headers, rows: rows });
     }
 
     async function renderScores() {
