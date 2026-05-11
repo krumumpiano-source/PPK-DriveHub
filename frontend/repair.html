@@ -576,7 +576,11 @@
     }
 
     /* ─── Helpers ─── */
-    function vLabel(carId){
+    function vLabel(carId, row){
+      // Prefer joined fields from API row when available (avoids dependence on vehicles cache)
+      if(row&&(row.license_plate||row.brand||row.model)){
+        return ((row.license_plate||'')+' '+(row.brand||'')+' '+(row.model||'')).trim()||carId||'-';
+      }
       var v=vehicles.find(function(x){return x.id===carId});
       return v?(v.license_plate+' '+(v.brand||'')+' '+(v.model||'')).trim():carId||'-';
     }
@@ -658,7 +662,7 @@
 
       var html='<div class="repair-card" style="border-left:4px solid '+(borderColors[rp.status]||'var(--color-border)')+'">';
       html+='<div class="repair-card-header">';
-      html+='<div class="repair-card-title">'+vLabel(rp.car_id)+'</div>';
+      html+='<div class="repair-card-title">'+vLabel(rp.car_id, rp)+'</div>';
       html+=statusBadge(rp.status);
       html+='</div>';
       html+='<div class="repair-card-body">';
@@ -861,7 +865,7 @@
         if(rp.service_type&&rp.service_type!=='repair') html+='<span class="status-badge" style="background:#e0e7ff;color:#3730a3">'+(typeLabels[rp.service_type]||rp.service_type)+'</span>';
         html+='</div>';
         html+='<div class="detail-grid">';
-        html+='<div class="detail-item"><label>รถ</label><span>'+vLabel(rp.car_id)+'</span></div>';
+        html+='<div class="detail-item"><label>รถ</label><span>'+vLabel(rp.car_id, rp)+'</span></div>';
         html+='<div class="detail-item"><label>แจ้งเมื่อ</label><span>'+fmtDate(rp.date_reported)+'</span></div>';
         html+='<div class="detail-item"><label>ผู้แจ้ง</label><span>'+(rp.reporter_name||'-')+'</span></div>';
         if(rp.invoice_number) html+='<div class="detail-item"><label>เลขที่ใบซ่อม</label><span>'+rp.invoice_number+'</span></div>';
@@ -1024,7 +1028,7 @@
       var total=rp.grand_total||rp.cost||0;
       var mileIn=rp.mileage_at_repair?rp.mileage_at_repair.toLocaleString():'--';
       var mileOut=rp.mileage_out?rp.mileage_out.toLocaleString():'--';
-      var vName=vLabel(rp.car_id);
+      var vName=vLabel(rp.car_id, rp);
       var html='<div class="h-card">';
       // Header (clickable to expand)
       html+='<div class="h-card-header" onclick="toggleHistoryCard('+idx+')">';
@@ -1111,7 +1115,7 @@
         var desc=(rp.issue_description||'-').replace(/</g,'&lt;').replace(/>/g,'&gt;');
         html+='<tr>';
         html+='<td style="white-space:nowrap">'+fmtDate(rp.date_completed||rp.date_reported)+'</td>';
-        html+='<td class="t-veh">'+vLabel(rp.car_id)+'</td>';
+        html+='<td class="t-veh">'+vLabel(rp.car_id, rp)+'</td>';
         html+='<td><span class="h-card-type '+st.cls+'">'+st.icon+' '+st.label+'</span></td>';
         html+='<td class="t-desc" title="'+desc+'">'+desc+'</td>';
         html+='<td class="h-hide-sm t-muted">'+(rp.garage_name||'—')+'</td>';
@@ -1131,7 +1135,7 @@
       var q=(document.getElementById('hSearch').value||'').toLowerCase().trim();
       if(!q){renderHistoryTable(historyData);return}
       var filtered=historyData.filter(function(rp){
-        return vLabel(rp.car_id).toLowerCase().includes(q)||
+        return vLabel(rp.car_id, rp).toLowerCase().includes(q)||
           (rp.issue_description||'').toLowerCase().includes(q)||
           (rp.invoice_number||'').toLowerCase().includes(q)||
           (rp.garage_name||'').toLowerCase().includes(q)||
@@ -1439,7 +1443,7 @@
             var cls=isResolved?'resolved':(isCritical?'critical':'');
             aHtml+='<div class="alert-card '+cls+'">';
             aHtml+='<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">';
-            aHtml+='<strong>'+(isCritical?'🔴':'🟡')+' '+vLabel(a.car_id)+'</strong>';
+            aHtml+='<strong>'+(isCritical?'🔴':'🟡')+' '+vLabel(a.car_id, a)+'</strong>';
             if(isResolved) aHtml+='<span class="status-badge status-completed">แก้ไขแล้ว</span>';
             else aHtml+='<span class="status-badge status-requested">ยังไม่แก้ไข</span>';
             aHtml+='</div>';
@@ -1472,7 +1476,7 @@
             var statusCls=log.overall_status==='critical'?'critical':(log.overall_status==='warning'?'':'resolved');
             lHtml+='<div class="alert-card '+statusCls+'" style="border-left-width:3px">';
             lHtml+='<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">';
-            lHtml+='<strong>'+vLabel(log.car_id)+'</strong>';
+            lHtml+='<strong>'+vLabel(log.car_id, log)+'</strong>';
             var sLabel=log.overall_status==='ok'?'✅ ปกติ':(log.overall_status==='critical'?'🔴 พบปัญหาวิกฤต':'🟡 พบปัญหา');
             lHtml+='<span>'+sLabel+'</span>';
             lHtml+='</div>';
