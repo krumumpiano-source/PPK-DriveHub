@@ -574,7 +574,7 @@
       }
     };
 
-    function editRecord(recordId) {
+    async function editRecord(recordId) {
       if (!hasModulePermission('vehicles', 'edit') && getCurrentUser().role !== 'admin') {
         alert('คุณไม่มีสิทธิ์แก้ไขบันทึก กรุณาติดต่อผู้ดูแลระบบ');
         return;
@@ -591,6 +591,27 @@
       editingRecordId = record.id;
       var titles = {tax:'แก้ไขบันทึกภาษี',insurance:'แก้ไขบันทึกประกันภัย',inspection:'แก้ไขบันทึก ตรอ.'};
       document.getElementById('modalTitle').textContent = titles[currentTab] || titles.tax;
+
+      // ถ้ารถที่อ้างถึงไม่มีใน dropdown (รถถูกปิดใช้งาน) ดึงข้อมูลรถมา inject ก่อน
+      var carSel = document.getElementById('car_id');
+      if (carSel && record.car_id) {
+        var hasOpt = false;
+        for (var i = 0; i < carSel.options.length; i++) {
+          if (carSel.options[i].value === record.car_id) { hasOpt = true; break; }
+        }
+        if (!hasOpt) {
+          try {
+            var vRes = await apiCall('getVehicle', { id: record.car_id });
+            if (vRes && vRes.success && vRes.data) {
+              var v = vRes.data;
+              var opt = document.createElement('option');
+              opt.value = v.id;
+              opt.textContent = v.license_plate + ' - ' + (v.brand || '') + ' ' + (v.model || '') + (v.status === 'inactive' ? ' [ยกเลิกใช้]' : '');
+              carSel.appendChild(opt);
+            }
+          } catch (e) { console.warn('inject vehicle failed', e); }
+        }
+      }
 
       // Populate form
       document.getElementById('car_id').value = record.car_id || '';

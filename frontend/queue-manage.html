@@ -2413,6 +2413,31 @@
               }
             } catch (e) { console.warn('inject missing vehicle failed', e); }
           }
+          // เช่นเดียวกันกับคนขับ — getDrivers ดึงเฉพาะ status='active'
+          // ถ้าคนขับถูกปิดใช้งาน/ลาออกแล้ว ต้องดึงคันนี้มาเพิ่ม dropdown ก่อน
+          if (editingQueueData.driver_id && !driversMap[editingQueueData.driver_id]) {
+            try {
+              var dRes = await apiCall('getDriver', { id: editingQueueData.driver_id });
+              if (dRes && dRes.success && dRes.data) {
+                drivers.push(dRes.data);
+                driversMap[dRes.data.id] = dRes.data;
+                // เพิ่ม <option> เข้า edit_driver_id โดยตรง (loadDrivers จะกรองทิ้งถ้าเรียกซ้ำ)
+                var editDriverSel = document.getElementById('edit_driver_id');
+                if (editDriverSel) {
+                  var hasOpt = false;
+                  for (var i = 0; i < editDriverSel.options.length; i++) {
+                    if (editDriverSel.options[i].value === dRes.data.id) { hasOpt = true; break; }
+                  }
+                  if (!hasOpt) {
+                    var dOpt = document.createElement('option');
+                    dOpt.value = dRes.data.id;
+                    dOpt.textContent = (dRes.data.name || '-') + (dRes.data.status === 'inactive' ? ' [ยกเลิกใช้]' : '');
+                    editDriverSel.appendChild(dOpt);
+                  }
+                }
+              }
+            } catch (e) { console.warn('inject missing driver failed', e); }
+          }
           // Re-populate car/driver selects so the current vehicle/driver
           // is guaranteed to appear (เช่น รถถูกปิดใช้งาน/ซ่อมก็ยังเลือกได้)
           if (typeof populateCarSelects === 'function') populateCarSelects();
