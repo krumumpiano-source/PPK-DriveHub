@@ -344,20 +344,11 @@
         <button class="btn btn-secondary" onclick="loadReport()">
           🔃 รีเฟรช
         </button>
-        <button class="btn btn-primary" id="btnExportFuel" onclick="exportReport()" style="display:none">
-          📊 Export Excel น้ำมัน
+        <button class="btn btn-primary" onclick="exportCurrent()">
+          📊 Export Excel (.xlsx)
         </button>
         <button class="btn btn-secondary" id="btnPrint" onclick="printFuelReport()" style="display:none">
           🖨️ พิมพ์รายงาน
-        </button>
-        <button class="btn btn-primary" id="btnExportTrips" onclick="exportTrips()" style="display:none">
-          � Export Excel รายเที่ยว
-        </button>
-        <button class="btn btn-primary" id="btnExportExpenses" onclick="exportExpenses()" style="display:none">
-          📊 Export Excel ค่าใช้จ่าย
-        </button>
-        <button class="btn btn-primary" id="btnExportAudit" onclick="exportAudit()" style="display:none">
-          📊 Export Excel ประวัติแก้ไข
         </button>
       </div>
 
@@ -459,10 +450,6 @@
       document.getElementById('fg-month').style.display = showMonth ? '' : 'none';
       document.getElementById('fg-table').style.display = showTable ? '' : 'none';
       document.getElementById('btnPrint').style.display = (currentTab === 'fuel') ? '' : 'none';
-      document.getElementById('btnExportFuel').style.display = (currentTab === 'fuel') ? '' : 'none';
-      document.getElementById('btnExportTrips').style.display = (currentTab === 'trips') ? '' : 'none';
-      document.getElementById('btnExportExpenses').style.display = (currentTab === 'expenses') ? '' : 'none';
-      document.getElementById('btnExportAudit').style.display = (currentTab === 'audit') ? '' : 'none';
     }
 
     function switchTab(tab, el) {
@@ -849,6 +836,45 @@
 
       return html;
     }
+
+    var _TAB_NAMES = {
+      overview: 'ภาพรวม', vehicles: 'การใช้งานรถ', drivers: 'คนขับ', fuel: 'เชื้อเพลิง',
+      repairs: 'ซ่อมบำรุง', quality: 'คุณภาพข้อมูล', scores: 'คะแนนคนขับ',
+      alerts: 'แจ้งเตือน', trips: 'รายเที่ยว', expenses: 'ค่าใช้จ่ายรวม',
+      offhours: 'นอกเวลาราชการ', audit: 'ประวัติแก้ไข'
+    };
+
+    function exportCurrentTable() {
+      var tables = document.querySelectorAll('#reportContent table.report-table');
+      if (tables.length === 0) { alert('ไม่มีตารางข้อมูลให้ส่งออกในแท็บนี้'); return; }
+      // Export all visible tables in current tab, combined
+      var allHeaders = null;
+      var allRows = [];
+      tables.forEach(function(table) {
+        var ths = Array.from(table.querySelectorAll('thead th'));
+        if (ths.length === 0) return;
+        var headers = ths.map(function(th) { return th.textContent.trim(); });
+        if (!allHeaders) allHeaders = headers;
+        var trs = Array.from(table.querySelectorAll('tbody tr'));
+        trs.forEach(function(tr) {
+          var cells = Array.from(tr.querySelectorAll('td')).map(function(td) { return td.textContent.trim(); });
+          if (cells.length > 0) allRows.push(cells);
+        });
+      });
+      if (!allHeaders || allRows.length === 0) { alert('ไม่มีข้อมูลให้ส่งออก'); return; }
+      var tabName = _TAB_NAMES[currentTab] || currentTab;
+      var today = new Date().toISOString().substr(0, 10);
+      ExportUtils.exportExcel({ filename: 'รายงาน_' + tabName + '_' + today, sheetName: tabName, headers: allHeaders, rows: allRows });
+    }
+
+    function exportCurrent() {
+      if (currentTab === 'fuel') return exportReport();
+      if (currentTab === 'trips') return exportTrips();
+      if (currentTab === 'expenses') return exportExpenses();
+      if (currentTab === 'audit') return exportAudit();
+      exportCurrentTable();
+    }
+
     function exportReport() {
       if (currentTab !== 'fuel' || !_lastFuelPayload) {
         alert('กรุณาเลือกแท็บเชื้อเพลิงก่อนส่งออก');
