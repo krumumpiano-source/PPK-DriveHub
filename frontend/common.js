@@ -727,15 +727,46 @@ function initThaiDateTimePicker(selector, options) {
 function initAllThaiDateTimePickers() {
     if (typeof flatpickr === 'undefined') return;
     document.querySelectorAll('input[type="date"]:not([data-flatpickr-initialized]), input.thai-datepicker:not([data-flatpickr-initialized])').forEach(function (el) {
-        try { initThaiDatePicker(el); el.setAttribute('data-flatpickr-initialized', 'true'); } catch (e) {}
+        try { initThaiDatePicker(el); el.setAttribute('data-flatpickr-initialized', 'true'); }
+        catch (e) { console.error('initThaiDatePicker failed for', el, e); }
     });
     document.querySelectorAll('input[type="time"]:not([data-flatpickr-initialized]), input.thai-timepicker:not([data-flatpickr-initialized])').forEach(function (el) {
-        try { initThaiTimePicker(el); el.setAttribute('data-flatpickr-initialized', 'true'); } catch (e) {}
+        try { initThaiTimePicker(el); el.setAttribute('data-flatpickr-initialized', 'true'); }
+        catch (e) { console.error('initThaiTimePicker failed for', el, e); }
     });
 }
 
+// Run init multiple times to catch:
+// - inputs that exist at DOMContentLoaded (initial pass)
+// - inputs whose values are set programmatically by page scripts after DOMContentLoaded
+// - inputs that are dynamically inserted later (e.g., modals, lazy-rendered content)
+function _scheduleThaiPickerInit() {
+    // Pass 1: immediately after DOMContentLoaded — covers static inputs
+    setTimeout(initAllThaiDateTimePickers, 50);
+    // Pass 2: after page's own DOMContentLoaded handlers finish setting values
+    setTimeout(initAllThaiDateTimePickers, 400);
+    // Pass 3: late safety net — covers async loads
+    setTimeout(initAllThaiDateTimePickers, 1500);
+
+    // Pass 4: MutationObserver — catch dynamically inserted inputs (modals etc.)
+    if (typeof MutationObserver !== 'undefined') {
+        try {
+            var obs = new MutationObserver(function (mutations) {
+                var needsInit = false;
+                for (var i = 0; i < mutations.length; i++) {
+                    if (mutations[i].addedNodes && mutations[i].addedNodes.length) {
+                        needsInit = true; break;
+                    }
+                }
+                if (needsInit) initAllThaiDateTimePickers();
+            });
+            obs.observe(document.body || document.documentElement, { childList: true, subtree: true });
+        } catch (e) { /* ignore */ }
+    }
+}
+
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { setTimeout(initAllThaiDateTimePickers, 300); });
+    document.addEventListener('DOMContentLoaded', _scheduleThaiPickerInit);
 } else {
-    setTimeout(initAllThaiDateTimePickers, 300);
+    _scheduleThaiPickerInit();
 }
