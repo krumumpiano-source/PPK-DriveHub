@@ -141,11 +141,11 @@
         if(sel&&user.driver_id){var o=document.createElement('option');o.value=user.driver_id;o.textContent=(user.display_name||'ตัวเอง');o.selected=true;sel.appendChild(o)}
         return;
       }
-      try{var r=await apiCall('getDrivers',{status:'active'});if(r.success&&r.data&&r.data.drivers){drivers=r.data.drivers;var sel=document.getElementById('f_driver_id');drivers.forEach(function(d){var o=document.createElement('option');o.value=d.driver_id;o.textContent=(d.title||'')+' '+(d.first_name||'')+' '+(d.last_name||'');sel.appendChild(o)})}}catch(e){console.error(e)}
+      try{var r=await apiCall('getDrivers',{status:'active'});if(r.success&&r.data&&r.data.drivers){drivers=r.data.drivers;var sel=document.getElementById('f_driver_id');drivers.forEach(function(d){var o=document.createElement('option');o.value=d.id||d.driver_id||'';o.textContent=(d.title||'')+' '+(d.first_name||d.name||'')+' '+(d.last_name||'');sel.appendChild(o)})}}catch(e){console.error(e)}
     }
 
     function vLabel(id){var v=vehicles.find(function(x){return (x.id||x.car_id)===id});return v?(v.license_plate+' '+(v.brand||'')).trim():(id||'-')}
-    function dLabel(id){var d=drivers.find(function(x){return x.driver_id===id});return d?((d.title||'')+' '+(d.first_name||'')+' '+(d.last_name||'')).trim():(id||'-')}
+    function dLabel(id){var d=drivers.find(function(x){return (x.id||x.driver_id)===id});return d?((d.title||'')+' '+(d.first_name||d.name||'')+' '+(d.last_name||'')).trim():(id||'-')}
     function fmtDate(s){if(!s)return'-';try{var p=s.split(/[T ]/)[0].split('-');var m=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];return parseInt(p[2])+' '+m[parseInt(p[1])-1]+' '+(parseInt(p[0])+543)}catch(e){return s}}
     function showAlert(msg,type){var c=document.getElementById('alertContainer');c.innerHTML='<div class="alert alert-'+type+'">'+msg+'</div>';setTimeout(function(){c.innerHTML=''},5000)}
 
@@ -233,11 +233,13 @@
       e.preventDefault();
       var btn=document.getElementById('submitBtn');btn.disabled=true;btn.textContent='กำลังบันทึก...';
       try{
-        var data={car_id:document.getElementById('f_car_id').value,driver_id:document.getElementById('f_driver_id').value||null,incident_date:document.getElementById('f_date').value,incident_time:document.getElementById('f_time').value||null,incident_type:document.getElementById('f_type').value,description:document.getElementById('f_desc').value.trim(),location:document.getElementById('f_location').value.trim(),damage_cost:parseFloat(document.getElementById('f_cost').value)||0,police_report_number:document.getElementById('f_police').value.trim(),insurance_claim:document.getElementById('f_claim').value.trim(),notes:document.getElementById('f_notes').value.trim()||null};
+        var rawDriver=document.getElementById('f_driver_id').value;
+        var driverId=(rawDriver&&rawDriver!=='undefined'&&rawDriver!=='null')?rawDriver:null;
+        var data={car_id:document.getElementById('f_car_id').value,driver_id:driverId,incident_date:document.getElementById('f_date').value,incident_time:document.getElementById('f_time').value||null,incident_type:document.getElementById('f_type').value,description:document.getElementById('f_desc').value.trim(),location:document.getElementById('f_location').value.trim(),damage_cost:parseFloat(document.getElementById('f_cost').value)||0,police_report_number:document.getElementById('f_police').value.trim(),insurance_claim:document.getElementById('f_claim').value.trim(),notes:document.getElementById('f_notes').value.trim()||null};
         var r=await API.post('/api/incidents',data);
         if(r.success){showAlert('บันทึกสำเร็จ','success');closeModal();loadIncidents()}
         else showAlert(r.message||r.error||'ไม่สำเร็จ','error');
-      }catch(e){showAlert('เกิดข้อผิดพลาด','error')}
+      }catch(e){console.error(e);showAlert('เกิดข้อผิดพลาด: '+(e&&e.message?e.message:e),'error')}
       finally{btn.disabled=false;btn.textContent='💾 บันทึก'}
     }
 

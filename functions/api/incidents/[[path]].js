@@ -1,4 +1,4 @@
-// Incident Logging — อุบัติเหตุ/เหตุการณ์ผิดปกติ
+﻿// Incident Logging — อุบัติเหตุ/เหตุการณ์ผิดปกติ
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, writeAuditLog,
@@ -59,6 +59,16 @@ export async function onRequest(context) {
     const body = await parseBody(request);
     if (!body?.car_id || !body?.incident_date || !body?.incident_type)
       return error('กรุณาระบุรถ วันที่ และประเภทเหตุการณ์');
+    // Sanitize FK fields — turn empty/"undefined"/"null" strings into real NULL
+    const _norm = v => (v === undefined || v === null || v === '' || v === 'undefined' || v === 'null') ? null : v;
+    body.driver_id = _norm(body.driver_id);
+    body.incident_time = _norm(body.incident_time);
+    body.notes = _norm(body.notes);
+    // Validate driver FK if provided
+    if (body.driver_id) {
+      const drv = await dbFirst(env.DB, 'SELECT id FROM drivers WHERE id = ?', [body.driver_id]);
+      if (!drv) return error('ไม่พบพนักงานขับรถที่เลือก (driver_id ไม่ถูกต้อง)');
+    }
     const id = generateUUID();
     const ts = now();
     await dbRun(env.DB,
