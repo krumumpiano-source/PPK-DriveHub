@@ -470,6 +470,7 @@
             html += '<button class="btn btn-primary" onclick="editRecord(\'' + record.id + '\')">✏️ แก้ไข</button>';
           }
           html += '</div>';
+          if (typeof renderAuditMeta === 'function') html += renderAuditMeta(record);
           html += '</div>';
         });
       }

@@ -533,6 +533,7 @@
             console.error('Error checking permissions:', e);
           }
           html += '</div>';
+          if (typeof renderAuditMeta === 'function') html += renderAuditMeta(driver);
           html += '</div>';
         });
       }

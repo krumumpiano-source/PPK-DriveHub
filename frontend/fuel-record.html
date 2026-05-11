@@ -730,8 +730,9 @@
         var driverDisplay = r.driver_name || r.driver_name_manual || '-';
         var dateDisplay = typeof formatDateThai === 'function' ? formatDateThai(r.date) : r.date;
         var mileage = r.mileage_after || r.mileage_before || '-';
+        var auditMeta = typeof renderAuditMetaInline === 'function' ? renderAuditMetaInline(r) : '';
         html += '<tr style="border-bottom:1px solid var(--color-border);">' +
-          '<td style="padding:8px;">' + dateDisplay + '</td>' +
+          '<td style="padding:8px;">' + dateDisplay + (auditMeta ? '<br>' + auditMeta : '') + '</td>' +
           '<td style="padding:8px;">' + (r.license_plate || '-') + '</td>' +
           '<td style="padding:8px;">' + driverDisplay + '</td>' +
           '<td style="padding:8px;">' + (r.fuel_type || '-') + '</td>' +

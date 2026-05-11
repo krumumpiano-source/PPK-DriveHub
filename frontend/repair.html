@@ -707,6 +707,7 @@
       html+='<div class="spacer"></div>';
       html+='<button class="btn btn-ghost" style="padding:5px 12px;font-size:.84rem" onclick="showDetail(\''+rp.id+'\')">📄 ดูเพิ่มเติม</button>';
       html+='</div>';
+      if(typeof renderAuditMeta==='function') html+=renderAuditMeta(rp);
       html+='</div>'; // end card
       return html;
     }
@@ -1075,6 +1076,7 @@
         html+='<button class="btn btn-ghost" style="padding:4px 12px;font-size:.82rem" onclick="event.stopPropagation();editCompleted(\''+rp.id+'\')">\u270F\uFE0F \u0e41\u0e01\u0e49\u0e44\u0e02</button>';
       }
       html+='</div>';
+      if(typeof renderAuditMeta==='function') html+=renderAuditMeta(rp);
       html+='</div>'; // end body
       html+='</div>'; // end card
       return html;

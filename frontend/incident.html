@@ -184,6 +184,7 @@
             html+='<button class="btn btn-primary" style="padding:4px 12px;font-size:.82rem" onclick="openResolve(\''+inc.id+'\')">✅ ปิดเรื่อง</button>';
             html+='</div>';
           }
+          if(typeof renderAuditMeta==='function') html+=renderAuditMeta(inc);
           html+='</div>';
         });
         document.getElementById('incidentList').innerHTML=html;

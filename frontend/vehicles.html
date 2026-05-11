@@ -773,6 +773,7 @@
             html += '</div></div>';
           }
           html += '</div>';
+          if (typeof renderAuditMeta === 'function') html += renderAuditMeta(vehicle);
           html += '</div>';
         });
       }

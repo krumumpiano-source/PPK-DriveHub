@@ -2381,6 +2381,7 @@
           infoHtml += 'คนขับ: ' + driverName + '<br>';
           infoHtml += 'สถานะ: ' + getStatusText(status);
           if (frozen) infoHtml += ' (Freeze)';
+          if (typeof renderAuditMeta === 'function') infoHtml += renderAuditMeta(editingQueueData);
           document.getElementById('editQueueInfo').innerHTML = infoHtml;
           document.getElementById('editQueueInfo').style.display = 'block';
 
