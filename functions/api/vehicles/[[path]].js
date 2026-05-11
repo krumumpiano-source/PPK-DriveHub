@@ -87,12 +87,15 @@ export async function onRequest(context) {
   if (path.match(/^\/api\/vehicles\/[^/]+$/) && method === 'GET') {
     try { requirePermission(user, 'vehicles', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = extractParam(path, '/api/vehicles/');
+    // Note: no status filter — single-record lookup must return inactive vehicles too,
+    // so edit modals (queue, repair, ฯลฯ) can still display the historical vehicle
+    // ที่ถูกอ้างถึงในเรกคอร์ด แม้รถจะถูกปิดใช้งานไปแล้ว
     const car = await dbFirst(env.DB,
       `SELECT c.*, uc.display_name AS created_by_name, uu.display_name AS updated_by_name
        FROM cars c
        LEFT JOIN users uc ON c.created_by = uc.id
        LEFT JOIN users uu ON c.updated_by = uu.id
-       WHERE c.id = ? AND c.status != 'inactive'`, [id]);
+       WHERE c.id = ?`, [id]);
     return car ? success(car) : error('ไม่พบยานพาหนะ', 404);
   }
 

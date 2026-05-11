@@ -1323,6 +1323,28 @@
         var rp=r.data;
         editingId=id;
         document.getElementById('cmpTitle').textContent='✏️ แก้ไขบันทึกซ่อม';
+        // ถ้า car_id ของบันทึกนี้ไม่มีใน dropdown (รถถูกปิดใช้งาน หรือ vehicles ยังโหลดไม่เสร็จ)
+        // ให้ดึงข้อมูลรถคันนั้นมาแล้ว inject เป็น <option> ก่อน เพื่อกันทะเบียนหาย
+        var carSel=document.getElementById('cmp_car_id');
+        if(carSel && rp.car_id){
+          var hasOpt=false;
+          for(var i=0;i<carSel.options.length;i++){
+            if(carSel.options[i].value===rp.car_id){hasOpt=true;break}
+          }
+          if(!hasOpt){
+            try{
+              var vRes=await apiCall('getVehicle',{id:rp.car_id});
+              if(vRes && vRes.success && vRes.data){
+                var v=vRes.data;
+                if(!vehicles.some(function(x){return x.id===v.id})) vehicles.push(v);
+                var o=document.createElement('option');
+                o.value=v.id;
+                o.textContent=v.license_plate+' - '+(v.brand||'')+' '+(v.model||'')+(v.status==='inactive'?' [ยกเลิกใช้]':'');
+                carSel.appendChild(o);
+              }
+            }catch(e){console.warn('inject vehicle failed',e)}
+          }
+        }
         document.getElementById('cmp_car_id').value=rp.car_id||'';
         var dc=rp.date_completed||rp.date_reported||'';
         if(dc){

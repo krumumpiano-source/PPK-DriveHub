@@ -2402,6 +2402,17 @@
           _fpSetDate('edit_date', editingQueueData.date || '');
           document.getElementById('edit_time_start').value = editingQueueData.time_start || '';
           document.getElementById('edit_time_end').value = editingQueueData.time_end || '';
+          // ถ้ารถที่อ้างถึงในคิวไม่อยู่ใน vehicles (เช่น ถูกปิดใช้งานไปแล้ว)
+          // ดึงข้อมูลรถคันนั้นมาเพิ่มใน list ก่อน เพื่อให้ dropdown มีตัวเลือกให้แสดง
+          if (editingQueueData.car_id && !vehiclesMap[editingQueueData.car_id]) {
+            try {
+              var vRes = await apiCall('getVehicle', { id: editingQueueData.car_id });
+              if (vRes && vRes.success && vRes.data) {
+                vehicles.push(vRes.data);
+                vehiclesMap[vRes.data.id] = vRes.data;
+              }
+            } catch (e) { console.warn('inject missing vehicle failed', e); }
+          }
           // Re-populate car/driver selects so the current vehicle/driver
           // is guaranteed to appear (เช่น รถถูกปิดใช้งาน/ซ่อมก็ยังเลือกได้)
           if (typeof populateCarSelects === 'function') populateCarSelects();
