@@ -193,7 +193,38 @@
 
     function _buildQ(obj){if(!obj)return'';var p=new URLSearchParams();for(var k in obj){if(obj[k])p.append(k,obj[k])}var s=p.toString();return s?'?'+s:''}
 
-    function openAddModal(){editingId=null;document.getElementById('modalTitle').textContent='⚠️ เพิ่มบันทึกอุบัติเหตุ';document.getElementById('incForm').reset();document.getElementById('addModal').classList.add('show');setTimeout(function(){var d=document.getElementById('f_date');var t=document.getElementById('f_time');if(d&&d._flatpickr){try{d._flatpickr.destroy()}catch(e){}d.removeAttribute('data-flatpickr-initialized')}if(t&&t._flatpickr){try{t._flatpickr.destroy()}catch(e){}t.removeAttribute('data-flatpickr-initialized')}if(typeof initThaiDatePicker==='function'&&d){try{initThaiDatePicker(d);d.setAttribute('data-flatpickr-initialized','true')}catch(e){console.error(e)}}if(typeof initThaiTimePicker==='function'&&t){try{initThaiTimePicker(t);t.setAttribute('data-flatpickr-initialized','true')}catch(e){console.error(e)}}},150)}
+    function _cleanupStrayAltInputs(input){
+      // flatpickr inserts altInput right after the original input. Remove orphan altInputs (form-control class but no _flatpickr).
+      if(!input||!input.parentNode)return;
+      var sib=input.nextSibling;
+      while(sib){
+        var next=sib.nextSibling;
+        if(sib.nodeType===1&&sib.classList&&sib.classList.contains('form-control')&&!sib._flatpickr&&sib.tagName==='INPUT'){
+          sib.parentNode.removeChild(sib);
+        } else { break; }
+        sib=next;
+      }
+    }
+    function _resetPicker(id, initFn){
+      var el=document.getElementById(id); if(!el) return;
+      if(el._flatpickr){ try{el._flatpickr.destroy()}catch(e){} }
+      el.removeAttribute('data-flatpickr-initialized');
+      _cleanupStrayAltInputs(el);
+      el.value='';
+      try{ initFn(el); el.setAttribute('data-flatpickr-initialized','true'); }catch(e){console.error(e)}
+    }
+    function openAddModal(){
+      editingId=null;
+      document.getElementById('modalTitle').textContent='⚠️ เพิ่มบันทึกอุบัติเหตุ';
+      // Destroy pickers BEFORE form.reset so flatpickr cleans up its altInputs first
+      ['f_date','f_time'].forEach(function(id){var el=document.getElementById(id);if(el&&el._flatpickr){try{el._flatpickr.destroy()}catch(e){}el.removeAttribute('data-flatpickr-initialized');}_cleanupStrayAltInputs(document.getElementById(id));});
+      document.getElementById('incForm').reset();
+      document.getElementById('addModal').classList.add('show');
+      setTimeout(function(){
+        _resetPicker('f_date', function(el){ if(typeof initThaiDatePicker==='function') initThaiDatePicker(el); });
+        _resetPicker('f_time', function(el){ if(typeof initThaiTimePicker==='function') initThaiTimePicker(el); });
+      },150);
+    }
     function closeModal(){document.getElementById('addModal').classList.remove('show')}
     function openResolve(id){resolvingId=id;document.getElementById('resolveForm').reset();document.getElementById('resolveModal').classList.add('show')}
     function closeResolve(){document.getElementById('resolveModal').classList.remove('show')}
