@@ -819,8 +819,8 @@
             displayQueues.forEach(function (queue) {
               var vehicle = vehiclesMap[queue.car_id];
               var driver = driversMap[queue.driver_id];
-              var plate = vehicle ? vehicle.license_plate : (queue.car_id ? queue.car_id.substring(0, 8) : '-');
-              var driverName = driver ? (driver.name || driver.full_name || '-') : (queue.driver_name || (queue.driver_id ? queue.driver_id.substring(0, 8) : '-'));
+              var plate = queue.license_plate || (vehicle && vehicle.license_plate) || (queue.car_id ? queue.car_id.substring(0, 8) : '-');
+              var driverName = queue.driver_name || (driver && (driver.name || driver.full_name)) || (queue.driver_id ? queue.driver_id.substring(0, 8) : '-');
               var destination = queue.destination || queue.mission || '-';
 
               html += '<div class="queue-item">';
