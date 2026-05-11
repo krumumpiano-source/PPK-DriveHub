@@ -1745,8 +1745,10 @@
         dayQueues.forEach(function (queue) {
           var vehicle = vehiclesMap[queue.car_id];
           var driver = driversMap[queue.driver_id];
-          var licensePlate = vehicle ? vehicle.license_plate : (queue.car_id ? queue.car_id.substring(0, 8) : '-');
-          var driverName = driver ? (driver.name || '-') : (queue.driver_name || '-');
+          // Prefer joined fields from API (license_plate / driver_name) so that
+          // รถที่ถูกปิดใช้งาน/ซ่อม (ไม่อยู่ใน vehiclesMap) ยังแสดงป้ายทะเบียนได้
+          var licensePlate = (vehicle && vehicle.license_plate) || queue.license_plate || '-';
+          var driverName = queue.driver_name || (driver && driver.name) || '-';
 
           html += '<div class="queue-item" onclick="openEditModal(\'' + queue.id + '\'); event.stopPropagation();">';
           html += '<span class="queue-plate">' + licensePlate + '</span> ' + driverName;
