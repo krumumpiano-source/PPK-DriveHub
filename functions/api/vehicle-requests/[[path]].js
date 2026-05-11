@@ -30,11 +30,15 @@ export async function onRequest(context) {
     if (dateTo) { where.push('vr.date <= ?'); params.push(dateTo); }
     const rows = await dbAll(env.DB,
       `SELECT vr.*, c.license_plate, c.brand AS car_brand,
-       d.name AS driver_name, u.display_name AS approved_by_name
+       d.name AS driver_name, u.display_name AS approved_by_name,
+       uc.display_name AS created_by_name,
+       uu.display_name AS updated_by_name
        FROM vehicle_requests vr
        LEFT JOIN cars c ON vr.assigned_car_id = c.id
        LEFT JOIN drivers d ON vr.assigned_driver_id = d.id
        LEFT JOIN users u ON vr.approved_by = u.id
+       LEFT JOIN users uc ON vr.created_by = uc.id
+       LEFT JOIN users uu ON vr.updated_by = uu.id
        ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
        ORDER BY vr.created_at DESC LIMIT 500`,
       params
@@ -47,11 +51,15 @@ export async function onRequest(context) {
     const id = path.split('/').pop();
     const row = await dbFirst(env.DB,
       `SELECT vr.*, c.license_plate, c.brand AS car_brand,
-       d.name AS driver_name, u.display_name AS approved_by_name
+       d.name AS driver_name, u.display_name AS approved_by_name,
+       uc.display_name AS created_by_name,
+       uu.display_name AS updated_by_name
        FROM vehicle_requests vr
        LEFT JOIN cars c ON vr.assigned_car_id = c.id
        LEFT JOIN drivers d ON vr.assigned_driver_id = d.id
        LEFT JOIN users u ON vr.approved_by = u.id
+       LEFT JOIN users uc ON vr.created_by = uc.id
+       LEFT JOIN users uu ON vr.updated_by = uu.id
        WHERE vr.id = ?`, [id]);
     if (!row) return error('ไม่พบคำขอใช้รถ', 404);
     return success(row);
@@ -112,6 +120,7 @@ export async function onRequest(context) {
     }
     if (body.passenger_names !== undefined) { sets.push('passenger_names = ?'); params.push(JSON.stringify(body.passenger_names)); }
     if (!sets.length) return error('ไม่มีข้อมูลที่จะอัปเดต');
+    sets.push('updated_by = ?'); params.push(user.id);
     sets.push('updated_at = ?'); params.push(now());
     params.push(id);
     await dbRun(env.DB, `UPDATE vehicle_requests SET ${sets.join(', ')} WHERE id = ?`, params);
@@ -127,7 +136,7 @@ export async function onRequest(context) {
       return error('ไม่มีสิทธิ์ยกเลิกคำขอนี้', 403);
     const ts = now();
     await dbRun(env.DB,
-      `UPDATE vehicle_requests SET status = 'cancelled', updated_at = ? WHERE id = ?`, [ts, id]);
+      `UPDATE vehicle_requests SET status = 'cancelled', updated_by = ?, updated_at = ? WHERE id = ?`, [user.id, ts, id]);
     await writeAuditLog(env.DB, user.id, user.displayName, 'cancel_vehicle_request', 'vehicle_request', id, null);
     return success({ message: 'ยกเลิกคำขอเรียบร้อย' });
   }
@@ -177,8 +186,8 @@ export async function onRequest(context) {
     // อัปเดตคำขอ
     await dbRun(env.DB,
       `UPDATE vehicle_requests SET status = 'approved', approved_by = ?, approved_at = ?,
-       assigned_car_id = ?, assigned_driver_id = ?, assigned_queue_id = ?, updated_at = ? WHERE id = ?`,
-      [user.id, ts, body.assigned_car_id, body.assigned_driver_id, queueId, ts, id]
+       assigned_car_id = ?, assigned_driver_id = ?, assigned_queue_id = ?, updated_by = ?, updated_at = ? WHERE id = ?`,
+      [user.id, ts, body.assigned_car_id, body.assigned_driver_id, queueId, user.id, ts, id]
     );
 
     await writeAuditLog(env.DB, user.id, user.displayName, 'approve_vehicle_request', 'vehicle_request', id,
@@ -210,8 +219,8 @@ export async function onRequest(context) {
     const body = await parseBody(request);
     const ts = now();
     await dbRun(env.DB,
-      `UPDATE vehicle_requests SET status = 'rejected', rejection_reason = ?, approved_by = ?, approved_at = ?, updated_at = ? WHERE id = ?`,
-      [body?.reason || '', user.id, ts, ts, id]
+      `UPDATE vehicle_requests SET status = 'rejected', rejection_reason = ?, approved_by = ?, approved_at = ?, updated_by = ?, updated_at = ? WHERE id = ?`,
+      [body?.reason || '', user.id, ts, user.id, ts, id]
     );
     await writeAuditLog(env.DB, user.id, user.displayName, 'reject_vehicle_request', 'vehicle_request', id, { reason: body?.reason });
     await createNotification(env.DB, row.requester_id, 'vehicle_request', 'คำขอใช้รถไม่ได้รับอนุมัติ',

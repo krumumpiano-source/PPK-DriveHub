@@ -150,6 +150,24 @@ export async function uploadToR2(env, base64Data, fileName, folder, mimeType = '
   return `/api/files/${key}`;
 }
 
+// Helper for UPDATE statements: returns SQL fragment + params for updated_by/updated_at
+// Usage: const a = auditUpdate(user); sets.push(a.sql); params.push(...a.params);
+export function auditUpdate(user) {
+  return {
+    sql: 'updated_by = ?, updated_at = ?',
+    params: [user?.id || null, now()]
+  };
+}
+
+// SQL fragments for SELECT queries to JOIN user names for created_by + updated_by
+// Use with table alias 't' (or replace via .replace(/\bt\./g, 'yourAlias.'))
+export const AUDIT_NAME_SELECT = `t.created_by AS created_by, t.updated_by AS updated_by,
+  uc.display_name AS created_by_name,
+  uu.display_name AS updated_by_name`;
+
+export const AUDIT_NAME_JOIN = `LEFT JOIN users uc ON t.created_by = uc.id
+  LEFT JOIN users uu ON t.updated_by = uu.id`;
+
 export async function writeAuditLog(db, userId, username, action, module, entityId, details, ipAddress) {
   try {
     await dbRun(db,

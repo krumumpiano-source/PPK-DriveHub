@@ -26,11 +26,13 @@ export async function onRequest(context) {
     if (status) { where.push('i.status = ?'); params.push(status); }
     const rows = await dbAll(env.DB,
       `SELECT i.*, c.license_plate, c.brand, d.name AS driver_name,
-       u.display_name AS created_by_name
+       u.display_name AS created_by_name,
+       uu.display_name AS updated_by_name
        FROM incidents i
        LEFT JOIN cars c ON i.car_id = c.id
        LEFT JOIN drivers d ON i.driver_id = d.id
        LEFT JOIN users u ON i.created_by = u.id
+       LEFT JOIN users uu ON i.updated_by = uu.id
        ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
        ORDER BY i.incident_date DESC LIMIT 300`,
       params
@@ -44,11 +46,13 @@ export async function onRequest(context) {
     const id = path.split('/').pop();
     const row = await dbFirst(env.DB,
       `SELECT i.*, c.license_plate, c.brand, d.name AS driver_name,
-       u.display_name AS created_by_name
+       u.display_name AS created_by_name,
+       uu.display_name AS updated_by_name
        FROM incidents i
        LEFT JOIN cars c ON i.car_id = c.id
        LEFT JOIN drivers d ON i.driver_id = d.id
        LEFT JOIN users u ON i.created_by = u.id
+       LEFT JOIN users uu ON i.updated_by = uu.id
        WHERE i.id = ?`, [id]);
     if (!row) return error('ไม่พบข้อมูลอุบัติเหตุ', 404);
     return success(row);
@@ -107,9 +111,11 @@ export async function onRequest(context) {
     }
     if (body.photos !== undefined) { sets.push('photos = ?'); params.push(JSON.stringify(body.photos)); }
     if (!sets.length) return error('ไม่มีข้อมูลที่จะอัปเดต');
+    sets.push('updated_by = ?'); params.push(user.id);
     sets.push('updated_at = ?'); params.push(now());
     params.push(id);
     await dbRun(env.DB, `UPDATE incidents SET ${sets.join(', ')} WHERE id = ?`, params);
+    await writeAuditLog(env.DB, user.id, user.displayName, 'update_incident', 'incident', id, null);
     return success({ message: 'อัปเดตข้อมูลอุบัติเหตุเรียบร้อย' });
   }
 
@@ -122,8 +128,8 @@ export async function onRequest(context) {
     const ts = now();
     await dbRun(env.DB,
       `UPDATE incidents SET status = 'resolved', resolved_by = ?, resolved_at = ?,
-       resolution_notes = ?, updated_at = ? WHERE id = ?`,
-      [user.id, ts, body?.resolution_notes || '', ts, id]
+       resolution_notes = ?, updated_by = ?, updated_at = ? WHERE id = ?`,
+      [user.id, ts, body?.resolution_notes || '', user.id, ts, id]
     );
     await writeAuditLog(env.DB, user.id, user.displayName, 'resolve_incident', 'incident', id, null);
     return success({ message: 'ปิดเรื่องเรียบร้อย' });

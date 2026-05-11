@@ -35,8 +35,13 @@ export async function onRequest(context) {
     const carId = url.searchParams.get('car_id');
     const where = carId ? 'WHERE tr.car_id = ?' : '';
     const rows = await dbAll(env.DB,
-      `SELECT tr.*, c.license_plate, c.brand FROM tax_records tr
+      `SELECT tr.*, c.license_plate, c.brand,
+              uc.display_name AS created_by_name,
+              uu.display_name AS updated_by_name
+       FROM tax_records tr
        LEFT JOIN cars c ON tr.car_id = c.id
+       LEFT JOIN users uc ON tr.created_by = uc.id
+       LEFT JOIN users uu ON tr.updated_by = uu.id
        ${where} ORDER BY tr.expiry_date DESC`,
       carId ? [carId] : []
     );
@@ -91,8 +96,11 @@ export async function onRequest(context) {
       updates.push('receipt_image = ?'); params.push(receiptUrl);
     }
     if (!updates.length) return error('ไม่มีข้อมูลที่จะอัปเดต');
+    updates.push('updated_by = ?'); params.push(user.id);
+    updates.push('updated_at = ?'); params.push(now());
     params.push(id);
     await dbRun(env.DB, `UPDATE tax_records SET ${updates.join(', ')} WHERE id = ?`, params);
+    await writeAuditLog(env.DB, user.id, user.displayName, 'update_tax', 'tax', id, null);
     return success({ message: 'อัปเดตข้อมูลภาษีรถเรียบร้อย' });
   }
 
@@ -101,8 +109,13 @@ export async function onRequest(context) {
     const carId = url.searchParams.get('car_id');
     const where = carId ? 'WHERE ir.car_id = ?' : '';
     const rows = await dbAll(env.DB,
-      `SELECT ir.*, c.license_plate, c.brand FROM insurance_records ir
+      `SELECT ir.*, c.license_plate, c.brand,
+              uc.display_name AS created_by_name,
+              uu.display_name AS updated_by_name
+       FROM insurance_records ir
        LEFT JOIN cars c ON ir.car_id = c.id
+       LEFT JOIN users uc ON ir.created_by = uc.id
+       LEFT JOIN users uu ON ir.updated_by = uu.id
        ${where} ORDER BY ir.expiry_date DESC`,
       carId ? [carId] : []
     );
@@ -148,8 +161,11 @@ export async function onRequest(context) {
       updates.push('receipt_image = ?'); params.push(receiptUrl);
     }
     if (!updates.length) return error('ไม่มีข้อมูลที่จะอัปเดต');
+    updates.push('updated_by = ?'); params.push(user.id);
+    updates.push('updated_at = ?'); params.push(now());
     params.push(id);
     await dbRun(env.DB, `UPDATE insurance_records SET ${updates.join(', ')} WHERE id = ?`, params);
+    await writeAuditLog(env.DB, user.id, user.displayName, 'update_insurance', 'insurance', id, null);
     return success({ message: 'อัปเดตข้อมูลประกันภัยเรียบร้อย' });
   }
 
@@ -180,8 +196,13 @@ export async function onRequest(context) {
     const carId = url.searchParams.get('car_id');
     const where = carId ? 'WHERE ir.car_id = ?' : '';
     const rows = await dbAll(env.DB,
-      `SELECT ir.*, c.license_plate, c.brand FROM inspection_records ir
+      `SELECT ir.*, c.license_plate, c.brand,
+              uc.display_name AS created_by_name,
+              uu.display_name AS updated_by_name
+       FROM inspection_records ir
        LEFT JOIN cars c ON ir.car_id = c.id
+       LEFT JOIN users uc ON ir.created_by = uc.id
+       LEFT JOIN users uu ON ir.updated_by = uu.id
        ${where} ORDER BY ir.expiry_date DESC`,
       carId ? [carId] : []
     );
@@ -228,6 +249,8 @@ export async function onRequest(context) {
       if (body[f] !== undefined) { sets.push(`${f} = ?`); params.push(body[f]); }
     }
     if (!sets.length) return error('ไม่มีข้อมูลที่จะอัปเดต');
+    sets.push('updated_by = ?'); params.push(user.id);
+    sets.push('updated_at = ?'); params.push(now());
     params.push(id);
     await dbRun(env.DB, `UPDATE inspection_records SET ${sets.join(', ')} WHERE id = ?`, params);
     return success({ message: 'อัปเดตข้อมูล ตรอ. เรียบร้อย' });

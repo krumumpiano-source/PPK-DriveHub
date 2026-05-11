@@ -522,6 +522,60 @@ function formatDateThai(dateString) {
     return d.getDate() + ' ' + months[d.getMonth()] + ' ' + (d.getFullYear() + 543);
 }
 
+// ===== Audit Meta Display: บันทึกโดย/แก้ไขโดย =====
+function _formatAuditTime(ts) {
+    if (!ts) return '';
+    try {
+        var d = new Date(ts);
+        if (isNaN(d.getTime())) return ts;
+        var months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+        var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+        return d.getDate() + ' ' + months[d.getMonth()] + ' ' + (d.getFullYear() + 543) +
+            ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    } catch (e) { return ts; }
+}
+
+function _displayCreator(name) {
+    if (!name || name === '-') return 'ไม่ระบุ';
+    if (name === 'qr' || name === 'QR') return 'ผ่าน QR (ไม่ระบุตัวตน)';
+    return name;
+}
+
+// แสดง "บันทึกโดย ... / แก้ไขล่าสุด ..." สำหรับ row ที่มี created_by_name, created_at, updated_by_name, updated_at
+function renderAuditMeta(row) {
+    if (!row) return '';
+    var created = _displayCreator(row.created_by_name);
+    var createdAt = _formatAuditTime(row.created_at);
+    var html = '<small style="color:#666;display:block;margin-top:4px">' +
+        '📝 บันทึกโดย: <b>' + created + '</b>' +
+        (createdAt ? ' <span style="color:#999">(' + createdAt + ')</span>' : '') +
+        '</small>';
+    if (row.updated_by_name && row.updated_at && row.updated_at !== row.created_at) {
+        html += '<small style="color:#e67e22;display:block">' +
+            '✏️ แก้ไขล่าสุด: <b>' + _displayCreator(row.updated_by_name) + '</b>' +
+            ' <span style="color:#999">(' + _formatAuditTime(row.updated_at) + ')</span>' +
+            '</small>';
+    }
+    return html;
+}
+
+// แบบสั้นบรรทัดเดียว สำหรับใส่ในตาราง
+function renderAuditMetaInline(row) {
+    if (!row) return '-';
+    var created = _displayCreator(row.created_by_name);
+    var s = '<small>' + created;
+    if (row.updated_by_name && row.updated_at && row.updated_at !== row.created_at) {
+        s += ' <span style="color:#e67e22">/ แก้: ' + _displayCreator(row.updated_by_name) + '</span>';
+    }
+    s += '</small>';
+    return s;
+}
+
+if (typeof window !== 'undefined') {
+    window.renderAuditMeta = renderAuditMeta;
+    window.renderAuditMetaInline = renderAuditMetaInline;
+}
+
 function formatCurrency(amount) {
     if (!amount && amount !== 0) return '0.00';
     return parseFloat(amount).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

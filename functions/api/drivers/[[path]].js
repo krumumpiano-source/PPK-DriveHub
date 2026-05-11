@@ -23,7 +23,10 @@ export async function onRequest(context) {
     if (status) { where.push('d.status = ?'); params.push(status); }
     if (search) { where.push("(d.name LIKE ? OR d.license_number LIKE ? OR d.phone LIKE ?)"); params.push(`%${search}%`, `%${search}%`, `%${search}%`); }
     const rows = await dbAll(env.DB,
-      `SELECT d.* FROM drivers d
+      `SELECT d.*, uc.display_name AS created_by_name, uu.display_name AS updated_by_name
+       FROM drivers d
+       LEFT JOIN users uc ON d.created_by = uc.id
+       LEFT JOIN users uu ON d.updated_by = uu.id
        ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
        ORDER BY d.created_at DESC`,
       params
@@ -35,7 +38,12 @@ export async function onRequest(context) {
   if (path.match(/^\/api\/drivers\/[^/]+$/) && method === 'GET') {
     try { requirePermission(user, 'drivers', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = extractParam(path, '/api/drivers/');
-    const row = await dbFirst(env.DB, 'SELECT * FROM drivers WHERE id = ?', [id]);
+    const row = await dbFirst(env.DB,
+      `SELECT d.*, uc.display_name AS created_by_name, uu.display_name AS updated_by_name
+       FROM drivers d
+       LEFT JOIN users uc ON d.created_by = uc.id
+       LEFT JOIN users uu ON d.updated_by = uu.id
+       WHERE d.id = ?`, [id]);
     if (!row) return error('ไม่พบข้อมูลพนักงานขับรถ', 404);
     return success(row);
   }
@@ -92,6 +100,7 @@ export async function onRequest(context) {
       if (body[f] !== undefined) { sets.push(`${f} = ?`); params.push(body[f]); }
     }
     if (!sets.length) return error('ไม่มีข้อมูลที่จะอัปเดต');
+    sets.push('updated_by = ?'); params.push(user.id);
     sets.push('updated_at = ?'); params.push(now());
     params.push(id);
     await dbRun(env.DB, `UPDATE drivers SET ${sets.join(', ')} WHERE id = ?`, params);
@@ -102,7 +111,7 @@ export async function onRequest(context) {
   if (path.match(/^\/api\/drivers\/[^/]+$/) && method === 'DELETE') {
     try { requirePermission(user, 'drivers', 'delete'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = extractParam(path, '/api/drivers/');
-    await dbRun(env.DB, "UPDATE drivers SET status = 'inactive', deactivated_at = ? WHERE id = ?", [now(), id]);
+    await dbRun(env.DB, "UPDATE drivers SET status = 'inactive', deactivated_at = ?, updated_by = ?, updated_at = ? WHERE id = ?", [now(), user.id, now(), id]);
     return success({ message: 'ลบพนักงานขับรถเรียบร้อย' });
   }
 

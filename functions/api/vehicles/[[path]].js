@@ -44,7 +44,11 @@ export async function onRequest(context) {
     const where = ["status != 'inactive'"];
     if (status) { where.push('status = ?'); params.push(status); }
     const vehicles = await dbAll(env.DB,
-      `SELECT * FROM cars WHERE ${where.join(' AND ')} ORDER BY license_plate ASC`, params
+      `SELECT c.*, uc.display_name AS created_by_name, uu.display_name AS updated_by_name
+       FROM cars c
+       LEFT JOIN users uc ON c.created_by = uc.id
+       LEFT JOIN users uu ON c.updated_by = uu.id
+       WHERE ${where.map(w => 'c.' + w).join(' AND ')} ORDER BY c.license_plate ASC`, params
     );
     return success({ vehicles });
   }
@@ -83,7 +87,12 @@ export async function onRequest(context) {
   if (path.match(/^\/api\/vehicles\/[^/]+$/) && method === 'GET') {
     try { requirePermission(user, 'vehicles', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = extractParam(path, '/api/vehicles/');
-    const car = await dbFirst(env.DB, "SELECT * FROM cars WHERE id = ? AND status != 'inactive'", [id]);
+    const car = await dbFirst(env.DB,
+      `SELECT c.*, uc.display_name AS created_by_name, uu.display_name AS updated_by_name
+       FROM cars c
+       LEFT JOIN users uc ON c.created_by = uc.id
+       LEFT JOIN users uu ON c.updated_by = uu.id
+       WHERE c.id = ? AND c.status != 'inactive'`, [id]);
     return car ? success(car) : error('ไม่พบยานพาหนะ', 404);
   }
 
@@ -105,6 +114,7 @@ export async function onRequest(context) {
       updates.push('vehicle_images = ?'); params.push(JSON.stringify([imgUrl]));
     }
     if (!updates.length) return error('ไม่มีข้อมูลที่จะอัปเดต');
+    updates.push('updated_by = ?'); params.push(user.id);
     updates.push('updated_at = ?'); params.push(now(), id);
     await dbRun(env.DB, `UPDATE cars SET ${updates.join(', ')} WHERE id = ?`, params);
     await writeAuditLog(env.DB, user.id, user.displayName, 'update_vehicle', 'vehicles', id, null);
@@ -124,8 +134,8 @@ export async function onRequest(context) {
     const id = path.split('/')[3];
     const body = await parseBody(request);
     await dbRun(env.DB,
-      `UPDATE cars SET status = 'inactive', deactivated_reason = ?, deactivated_at = ?, updated_at = ? WHERE id = ?`,
-      [body?.reason || '', now(), now(), id]
+      `UPDATE cars SET status = 'inactive', deactivated_reason = ?, deactivated_at = ?, updated_by = ?, updated_at = ? WHERE id = ?`,
+      [body?.reason || '', now(), user.id, now(), id]
     );
     await writeAuditLog(env.DB, user.id, user.displayName, 'deactivate_vehicle', 'vehicles', id, null);
     return success({ message: 'ปิดการใช้งานยานพาหนะเรียบร้อย' });
@@ -137,8 +147,8 @@ export async function onRequest(context) {
     const car = await dbFirst(env.DB, "SELECT id, license_plate FROM cars WHERE id = ? AND status = 'inactive'", [id]);
     if (!car) return error('ไม่พบยานพาหนะที่ถูกลบ', 404);
     await dbRun(env.DB,
-      `UPDATE cars SET status = 'active', deactivated_reason = NULL, deactivated_at = NULL, updated_at = ? WHERE id = ?`,
-      [now(), id]
+      `UPDATE cars SET status = 'active', deactivated_reason = NULL, deactivated_at = NULL, updated_by = ?, updated_at = ? WHERE id = ?`,
+      [user.id, now(), id]
     );
     await writeAuditLog(env.DB, user.id, user.displayName, 'reactivate_vehicle', 'vehicles', id, { license_plate: car.license_plate });
     return success({ message: 'กู้คืนยานพาหนะเรียบร้อย' });

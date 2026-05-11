@@ -203,9 +203,13 @@ export async function onRequest(context) {
     // Driver role: allow viewing own repair requests
     if (user.role === 'driver') {
       const rows = await dbAll(env.DB,
-        `SELECT rl.*, c.license_plate, c.brand
+        `SELECT rl.*, c.license_plate, c.brand,
+                uc.display_name AS created_by_name,
+                uu.display_name AS updated_by_name
          FROM repair_log rl
          LEFT JOIN cars c ON rl.car_id = c.id
+         LEFT JOIN users uc ON rl.created_by = uc.id
+         LEFT JOIN users uu ON rl.updated_by = uu.id
          WHERE rl.reporter_id = ? OR rl.requested_by_driver_id = ?
          ORDER BY rl.date_reported DESC LIMIT 100`,
         [user.id, user.driver_id || user.id]
@@ -220,9 +224,13 @@ export async function onRequest(context) {
     if (carId) { where.push('rl.car_id = ?'); params.push(carId); }
     if (status) { where.push('rl.status = ?'); params.push(status); }
     const rows = await dbAll(env.DB,
-      `SELECT rl.*, c.license_plate, c.brand
+      `SELECT rl.*, c.license_plate, c.brand,
+              uc.display_name AS created_by_name,
+              uu.display_name AS updated_by_name
        FROM repair_log rl
        LEFT JOIN cars c ON rl.car_id = c.id
+       LEFT JOIN users uc ON rl.created_by = uc.id
+       LEFT JOIN users uu ON rl.updated_by = uu.id
        ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
        ORDER BY rl.date_reported DESC LIMIT 300`,
       params
@@ -235,8 +243,14 @@ export async function onRequest(context) {
     try { requirePermission(user, 'repair', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/').pop();
     const row = await dbFirst(env.DB,
-      `SELECT rl.*, c.license_plate, c.brand FROM repair_log rl
-       LEFT JOIN cars c ON rl.car_id = c.id WHERE rl.id = ?`, [id]);
+      `SELECT rl.*, c.license_plate, c.brand,
+              uc.display_name AS created_by_name,
+              uu.display_name AS updated_by_name
+       FROM repair_log rl
+       LEFT JOIN cars c ON rl.car_id = c.id
+       LEFT JOIN users uc ON rl.created_by = uc.id
+       LEFT JOIN users uu ON rl.updated_by = uu.id
+       WHERE rl.id = ?`, [id]);
     if (!row) return error('ไม่พบข้อมูลซ่อม', 404);
     // Attach itemized parts
     const items = await dbAll(env.DB,
@@ -345,6 +359,7 @@ export async function onRequest(context) {
     if (body.documents !== undefined) { sets.push('documents = ?'); params.push(JSON.stringify(body.documents)); }
     if (!sets.length && !(body.items_detail && body.items_detail.length)) return error('ไม่มีข้อมูลที่จะอัปเดต');
     if (sets.length) {
+      sets.push('updated_by = ?'); params.push(user.id);
       sets.push('updated_at = ?'); params.push(now());
       params.push(id);
       await dbRun(env.DB, `UPDATE repair_log SET ${sets.join(', ')} WHERE id = ?`, params);
@@ -396,8 +411,8 @@ export async function onRequest(context) {
     if (row.status !== 'requested') return error(`ไม่สามารถอนุมัติได้ สถานะปัจจุบัน: ${row.status}`);
     const ts = now();
     await dbRun(env.DB,
-      `UPDATE repair_log SET status = 'approved', approved_by = ?, approved_at = ?, updated_at = ? WHERE id = ?`,
-      [user.id, ts, ts, id]
+      `UPDATE repair_log SET status = 'approved', approved_by = ?, approved_at = ?, updated_by = ?, updated_at = ? WHERE id = ?`,
+      [user.id, ts, user.id, ts, id]
     );
     const car = await dbFirst(env.DB, 'SELECT license_plate, brand FROM cars WHERE id = ?', [row.car_id]);
     const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : row.car_id;
@@ -417,8 +432,8 @@ export async function onRequest(context) {
     if (row.status !== 'requested') return error(`ไม่สามารถปฏิเสธได้ สถานะปัจจุบัน: ${row.status}`);
     const ts = now();
     await dbRun(env.DB,
-      `UPDATE repair_log SET status = 'rejected', rejected_by = ?, rejected_at = ?, rejection_reason = ?, updated_at = ? WHERE id = ?`,
-      [user.id, ts, body?.reason || '', ts, id]
+      `UPDATE repair_log SET status = 'rejected', rejected_by = ?, rejected_at = ?, rejection_reason = ?, updated_by = ?, updated_at = ? WHERE id = ?`,
+      [user.id, ts, body?.reason || '', user.id, ts, id]
     );
     const car = await dbFirst(env.DB, 'SELECT license_plate, brand FROM cars WHERE id = ?', [row.car_id]);
     const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : row.car_id;
@@ -439,10 +454,10 @@ export async function onRequest(context) {
     const ts = now();
     await dbRun(env.DB,
       `UPDATE repair_log SET status = 'inspected', inspection_date = ?, inspection_notes = ?,
-       quotation_documents = ?, garage_name = COALESCE(?, garage_name), updated_at = ? WHERE id = ?`,
+       quotation_documents = ?, garage_name = COALESCE(?, garage_name), updated_by = ?, updated_at = ? WHERE id = ?`,
       [body?.inspection_date || ts.substr(0,10), body?.inspection_notes || '',
        JSON.stringify(body?.quotation_documents || []),
-       body?.garage_name || null, ts, id]
+       body?.garage_name || null, user.id, ts, id]
     );
     const car = await dbFirst(env.DB, 'SELECT license_plate, brand FROM cars WHERE id = ?', [row.car_id]);
     const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : row.car_id;
@@ -462,8 +477,8 @@ export async function onRequest(context) {
     if (row.status !== 'inspected') return error(`ไม่สามารถทำบันทึกข้อความได้ สถานะปัจจุบัน: ${row.status}`);
     const ts = now();
     await dbRun(env.DB,
-      `UPDATE repair_log SET status = 'documented', memo_documents = ?, memo_notes = ?, updated_at = ? WHERE id = ?`,
-      [JSON.stringify(body?.memo_documents || []), body?.memo_notes || '', ts, id]
+      `UPDATE repair_log SET status = 'documented', memo_documents = ?, memo_notes = ?, updated_by = ?, updated_at = ? WHERE id = ?`,
+      [JSON.stringify(body?.memo_documents || []), body?.memo_notes || '', user.id, ts, id]
     );
     const car = await dbFirst(env.DB, 'SELECT license_plate, brand FROM cars WHERE id = ?', [row.car_id]);
     const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : row.car_id;
@@ -484,8 +499,8 @@ export async function onRequest(context) {
     const ts = now();
     await dbRun(env.DB,
       `UPDATE repair_log SET status = 'repairing', date_started = ?, garage_name = COALESCE(?, garage_name),
-       cost = COALESCE(?, cost), updated_at = ? WHERE id = ?`,
-      [body?.date_started || ts.substr(0,10), body?.garage_name || null, body?.cost || null, ts, id]
+       cost = COALESCE(?, cost), updated_by = ?, updated_at = ? WHERE id = ?`,
+      [body?.date_started || ts.substr(0,10), body?.garage_name || null, body?.cost || null, user.id, ts, id]
     );
     // อัปเดตสถานะรถเป็น under_repair
     await dbRun(env.DB, `UPDATE cars SET status = 'under_repair', updated_at = ? WHERE id = ?`, [ts, row.car_id]);
@@ -517,7 +532,7 @@ export async function onRequest(context) {
        mechanic_name = COALESCE(?, mechanic_name),
        taken_by = COALESCE(?, taken_by), claim_number = COALESCE(?, claim_number),
        insurance_company = COALESCE(?, insurance_company),
-       updated_at = ? WHERE id = ?`,
+       updated_by = ?, updated_at = ? WHERE id = ?`,
       [body?.date_completed || ts.substr(0,10), body?.cost || null,
        JSON.stringify(body?.receipt_documents || []), body?.notes || null,
        body?.invoice_number || null, body?.work_order_number || null,
@@ -528,7 +543,7 @@ export async function onRequest(context) {
        body?.mechanic_name || null,
        body?.taken_by || null, body?.claim_number || null,
        body?.insurance_company || null,
-       ts, id]
+       user.id, ts, id]
     );
     // Save itemized parts if provided
     if (body?.items_detail && Array.isArray(body.items_detail) && body.items_detail.length) {

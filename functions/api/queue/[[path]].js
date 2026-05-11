@@ -36,12 +36,16 @@ export async function onRequest(context) {
     const rows = await dbAll(env.DB,
       `SELECT q.*, c.license_plate, c.brand, c.model,
        d.name AS driver_name, bd.name AS backup_driver_name,
-       u.display_name AS requester_display_name
+       u.display_name AS requester_display_name,
+       uc.display_name AS created_by_name,
+       uu.display_name AS updated_by_name
        FROM queue q
        LEFT JOIN cars c ON q.car_id = c.id
        LEFT JOIN drivers d ON q.driver_id = d.id
        LEFT JOIN drivers bd ON q.backup_driver_id = bd.id
        LEFT JOIN users u ON q.requester_id = u.id
+       LEFT JOIN users uc ON q.created_by = uc.id
+       LEFT JOIN users uu ON q.updated_by = uu.id
        ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
        ORDER BY q.date DESC, q.time_start ASC`,
       params
@@ -63,12 +67,16 @@ export async function onRequest(context) {
     const row = await dbFirst(env.DB,
       `SELECT q.*, c.license_plate, c.brand, c.model,
        d.name AS driver_name, bd.name AS backup_driver_name,
-       u.display_name AS requester_display_name
+       u.display_name AS requester_display_name,
+       uc.display_name AS created_by_name,
+       uu.display_name AS updated_by_name
        FROM queue q
        LEFT JOIN cars c ON q.car_id = c.id
        LEFT JOIN drivers d ON q.driver_id = d.id
        LEFT JOIN drivers bd ON q.backup_driver_id = bd.id
        LEFT JOIN users u ON q.requester_id = u.id
+       LEFT JOIN users uc ON q.created_by = uc.id
+       LEFT JOIN users uu ON q.updated_by = uu.id
        WHERE q.id = ?`, [id]);
     if (!row) return error('ไม่พบคิว', 404);
     return success(row);
@@ -175,6 +183,7 @@ export async function onRequest(context) {
       if (body[f] !== undefined) { sets.push(`${f} = ?`); params.push(body[f]); }
     }
     if (!sets.length) return error('ไม่มีข้อมูลที่จะอัปเดต');
+    sets.push('updated_by = ?'); params.push(user.id);
     sets.push('updated_at = ?'); params.push(now());
     params.push(id);
     await dbRun(env.DB, `UPDATE queue SET ${sets.join(', ')} WHERE id = ?`, params);
@@ -196,8 +205,8 @@ export async function onRequest(context) {
     const body = await parseBody(request);
     await dbRun(env.DB,
       `UPDATE queue SET status = 'frozen', frozen_by = ?, frozen_at = ?,
-       frozen_reason = ?, updated_at = ? WHERE id = ?`,
-      [user.id, now(), body.frozen_reason || body.reason || '', now(), id]
+       frozen_reason = ?, updated_by = ?, updated_at = ? WHERE id = ?`,
+      [user.id, now(), body.frozen_reason || body.reason || '', user.id, now(), id]
     );
     return success({ message: 'อายัดคิวเรียบร้อย' });
   }
@@ -208,8 +217,8 @@ export async function onRequest(context) {
     const id = path.split('/')[3];
     await dbRun(env.DB,
       `UPDATE queue SET status = 'scheduled', frozen_by = NULL, frozen_at = NULL,
-       frozen_reason = NULL, updated_at = ? WHERE id = ?`,
-      [now(), id]
+       frozen_reason = NULL, updated_by = ?, updated_at = ? WHERE id = ?`,
+      [user.id, now(), id]
     );
     return success({ message: 'ปลดอายัดคิวเรียบร้อย' });
   }
@@ -223,8 +232,8 @@ export async function onRequest(context) {
       `SELECT q.date, q.time_start, c.license_plate, d.name AS driver_name
        FROM queue q LEFT JOIN cars c ON q.car_id = c.id LEFT JOIN drivers d ON q.driver_id = d.id WHERE q.id = ?`, [id]);
     await dbRun(env.DB,
-      `UPDATE queue SET status = 'cancelled', cancel_reason = ?, updated_at = ? WHERE id = ?`,
-      [body.cancel_reason || body.reason || '', now(), id]
+      `UPDATE queue SET status = 'cancelled', cancel_reason = ?, updated_by = ?, updated_at = ? WHERE id = ?`,
+      [body.cancel_reason || body.reason || '', user.id, now(), id]
     );
     await writeAuditLog(env.DB, user.id, user.displayName, 'cancel_queue', 'queue', id, null);
     if (q) {
@@ -241,8 +250,8 @@ export async function onRequest(context) {
     try { requirePermission(user, 'queue', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[3];
     await dbRun(env.DB,
-      `UPDATE queue SET status = 'completed', updated_at = ? WHERE id = ?`,
-      [now(), id]
+      `UPDATE queue SET status = 'completed', updated_by = ?, updated_at = ? WHERE id = ?`,
+      [user.id, now(), id]
     );
     return success({ message: 'ดำเนินการคิวเสร็จสิ้น' });
   }
@@ -252,8 +261,8 @@ export async function onRequest(context) {
     try { requirePermission(user, 'queue', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[3];
     await dbRun(env.DB,
-      `UPDATE queue SET status = 'ongoing', updated_at = ? WHERE id = ?`,
-      [now(), id]
+      `UPDATE queue SET status = 'ongoing', updated_by = ?, updated_at = ? WHERE id = ?`,
+      [user.id, now(), id]
     );
     return success({ message: 'เริ่มดำเนินการคิว' });
   }

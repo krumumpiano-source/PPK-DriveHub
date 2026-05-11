@@ -201,10 +201,14 @@ export async function onRequest(context) {
     if (dateFrom) { where.push('fl.date >= ?'); params.push(dateFrom); }
     if (dateTo) { where.push('fl.date <= ?'); params.push(dateTo); }
     const rows = await dbAll(env.DB,
-      `SELECT fl.*, c.license_plate, c.brand, d.name AS driver_name
+      `SELECT fl.*, c.license_plate, c.brand, d.name AS driver_name,
+              uc.display_name AS created_by_name,
+              uu.display_name AS updated_by_name
        FROM fuel_log fl
        LEFT JOIN cars c ON fl.car_id = c.id
        LEFT JOIN drivers d ON fl.driver_id = d.id
+       LEFT JOIN users uc ON fl.created_by = uc.id
+       LEFT JOIN users uu ON fl.updated_by = uu.id
        WHERE ${where.join(' AND ')}
        ORDER BY fl.date DESC, fl.time DESC LIMIT 500`,
       params
@@ -217,10 +221,14 @@ export async function onRequest(context) {
     try { requirePermission(user, 'fuel', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/').pop();
     const row = await dbFirst(env.DB,
-      `SELECT fl.*, c.license_plate, c.brand, d.name AS driver_name
+      `SELECT fl.*, c.license_plate, c.brand, d.name AS driver_name,
+              uc.display_name AS created_by_name,
+              uu.display_name AS updated_by_name
        FROM fuel_log fl
        LEFT JOIN cars c ON fl.car_id = c.id
        LEFT JOIN drivers d ON fl.driver_id = d.id
+       LEFT JOIN users uc ON fl.created_by = uc.id
+       LEFT JOIN users uu ON fl.updated_by = uu.id
        WHERE fl.id = ? AND fl.deleted_at IS NULL`, [id]);
     if (!row) return error('ไม่พบข้อมูล', 404);
     return success(row);
@@ -254,6 +262,7 @@ export async function onRequest(context) {
       }
     }
     if (!sets.length) return error('ไม่มีข้อมูลที่จะอัปเดต');
+    sets.push('updated_by = ?'); params.push(user.id);
     sets.push('updated_at = ?'); params.push(now());
     params.push(id);
     await dbRun(env.DB, `UPDATE fuel_log SET ${sets.join(', ')} WHERE id = ?`, params);
