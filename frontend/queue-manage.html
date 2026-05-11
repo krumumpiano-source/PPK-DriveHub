@@ -2373,8 +2373,12 @@
 
           var vehicle = vehiclesMap[editingQueueData.car_id];
           var driver = driversMap[editingQueueData.driver_id];
-          var vehicleName = vehicle ? (vehicle.license_plate + ' - ' + (vehicle.brand || '') + ' ' + (vehicle.model || '')) : editingQueueData.car_id;
-          var driverName = driver ? (driver.name || '-') : editingQueueData.driver_id;
+          // Prefer joined fields from the API response (license_plate / driver_name)
+          // ถ้า vehicle/driver ไม่อยู่ใน map (เช่น ถูกปิดใช้งาน/ซ่อม) จะใช้ค่าที่ join มาแทน UUID
+          var vehicleName = (editingQueueData.license_plate
+            ? (editingQueueData.license_plate + ' - ' + (editingQueueData.brand || '') + ' ' + (editingQueueData.model || '')).trim()
+            : (vehicle ? (vehicle.license_plate + ' - ' + (vehicle.brand || '') + ' ' + (vehicle.model || '')) : '-'));
+          var driverName = editingQueueData.driver_name || (driver && driver.name) || '-';
 
           var infoHtml = '<strong>ข้อมูลคิว:</strong><br>';
           infoHtml += 'รถ: ' + vehicleName + '<br>';
@@ -2396,6 +2400,10 @@
           _fpSetDate('edit_date', editingQueueData.date || '');
           document.getElementById('edit_time_start').value = editingQueueData.time_start || '';
           document.getElementById('edit_time_end').value = editingQueueData.time_end || '';
+          // Re-populate car/driver selects so the current vehicle/driver
+          // is guaranteed to appear (เช่น รถถูกปิดใช้งาน/ซ่อมก็ยังเลือกได้)
+          if (typeof populateCarSelects === 'function') populateCarSelects();
+          if (typeof populateDriverSelects === 'function') populateDriverSelects();
           document.getElementById('edit_car_id').value = editingQueueData.car_id || '';
           document.getElementById('edit_driver_id').value = editingQueueData.driver_id || '';
           document.getElementById('edit_mission').value = editingQueueData.mission || '';
