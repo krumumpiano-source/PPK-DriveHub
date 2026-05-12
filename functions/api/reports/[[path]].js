@@ -671,7 +671,17 @@ export async function onRequest(context) {
        ret.auto_notes AS ret_auto_notes,
        ret.notes AS ret_notes,
        (CASE WHEN dep.mileage IS NOT NULL AND ret.mileage IS NOT NULL AND ret.mileage > dep.mileage
-             THEN ret.mileage - dep.mileage ELSE NULL END) AS km_used
+             THEN ret.mileage - dep.mileage ELSE NULL END) AS km_used,
+       (SELECT ur2.mileage FROM usage_records ur2
+        JOIN queue q2 ON ur2.queue_id = q2.id AND ur2.record_type = 'departure'
+        WHERE q2.car_id = q.car_id
+          AND (q2.date > q.date OR (q2.date = q.date AND q2.time_start > q.time_start))
+        ORDER BY q2.date ASC, q2.time_start ASC LIMIT 1) AS next_dep_mileage,
+       (SELECT ur3.mileage FROM usage_records ur3
+        JOIN queue q3 ON ur3.queue_id = q3.id AND ur3.record_type = 'return'
+        WHERE q3.car_id = q.car_id
+          AND (q3.date < q.date OR (q3.date = q.date AND q3.time_start < q.time_start))
+        ORDER BY q3.date DESC, q3.time_start DESC LIMIT 1) AS prev_ret_mileage
        FROM queue q
        LEFT JOIN cars c ON q.car_id = c.id
        LEFT JOIN drivers d ON q.driver_id = d.id

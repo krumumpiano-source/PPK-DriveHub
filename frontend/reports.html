@@ -596,7 +596,11 @@
         var rows=list.map(function(r,i){
           var d=new Date(r.date);
           var thd=isNaN(d)?r.date||'':d.getDate()+' '+mth[d.getMonth()]+' '+(d.getFullYear()+543);
-          var km=(r.mileage_start!=null&&r.mileage_end!=null&&r.mileage_end>r.mileage_start)?r.mileage_end-r.mileage_start:'';
+          // คำนวณระยะทาง: ใช้ไมล์จริงก่อน ถ้าขาดให้ใช้ประมาณ (prev_ret / next_dep) แต่ไม่แสดงในช่องเลขไมล์
+          var ms=r.mileage_start, me=r.mileage_end;
+          var effStart=ms!=null?ms:(r.prev_ret_mileage!=null?r.prev_ret_mileage:null);
+          var effEnd=me!=null?me:(r.next_dep_mileage!=null?r.next_dep_mileage:null);
+          var km=(effStart!=null&&effEnd!=null&&effEnd>effStart)?effEnd-effStart:'';
           var isAutoGap=r.mission&&r.mission.indexOf('ไม่บันทึกข้อมูล')>=0;
           var driverExport=isAutoGap?'ไม่ทราบ':(r.driver_name||'-');
           var remark='';
@@ -704,7 +708,9 @@
       recs.forEach(function(r,i) {
         var d=new Date(r.date);
         var thd=isNaN(d)?r.date||'':d.getDate()+' '+mth[d.getMonth()]+' '+(d.getFullYear()+543);
-        var km=(r.mileage_start!=null&&r.mileage_end!=null&&r.mileage_end>r.mileage_start)?r.mileage_end-r.mileage_start:'-';
+        var effStart=r.mileage_start!=null?r.mileage_start:(r.prev_ret_mileage!=null?r.prev_ret_mileage:null);
+        var effEnd=r.mileage_end!=null?r.mileage_end:(r.next_dep_mileage!=null?r.next_dep_mileage:null);
+        var km=(effStart!=null&&effEnd!=null&&effEnd>effStart)?effEnd-effStart:'-';
         var isAutoGap=r.mission&&r.mission.indexOf('ไม่บันทึกข้อมูล')>=0;
         var driver=isAutoGap?'ไม่ทราบ':(r.driver_name||'-');
         var remark='';
