@@ -678,14 +678,6 @@
           else if(!r.actual_departure) remark='พนักงานขับรถไม่บันทึกก่อนออกเดินทาง';
           else if(!r.actual_return) remark='พนักงานขับรถไม่บันทึกกลับมาจากเดินทาง';
           if(remark){redCells.push({row:i,col:13});}
-          // ตรวจ anomaly เลขไมล์
-          var anomalies=detectMileageAnomalies(r,_carAvg[r.license_plate||'_']);
-          if(anomalies.length){
-            var aMsg=anomalies.map(function(a){return '⚠️ '+a.msg;}).join(' | ');
-            remark=remark?(remark+' | '+aMsg):aMsg;
-            var aColor=anomalies.some(function(a){return a.level==='error';})?'FF0000':'FF8800';
-            redCells.push({row:i,col:13,color:aColor});
-          }
           return [thd,r.time_start||'',r.time_end||'',r.license_plate||'',r.requester_display_name||r.requested_by||'',r.destination||'',r.mission||'',driverExport,isAutoGap?'':fmtDT(r.actual_departure),isAutoGap?'':fmtDT(r.actual_return),isAutoGap?'':(r.mileage_start!=null?r.mileage_start:''),isAutoGap?'':(r.mileage_end!=null?r.mileage_end:''),km,remark];
         });
         return {rows:rows,redCells:redCells};
@@ -795,12 +787,7 @@
         else if(!r.actual_departure&&!r.actual_return) remark='ไม่บันทึกออกและกลับ';
         else if(!r.actual_departure) remark='ไม่บันทึกก่อนออกเดินทาง';
         else if(!r.actual_return) remark='ไม่บันทึกกลับมาจากเดินทาง';
-        var anomalies=detectMileageAnomalies(r, null);
-        if(anomalies.length){
-          var aMsg=anomalies.map(function(a){return '⚠️ '+a.msg;}).join(' | ');
-          remark=remark?(remark+' | '+aMsg):aMsg;
-        }
-        var remarkStyle=(remark&&remark.indexOf('⚠️')>=0)?'style="color:#b45309;font-weight:bold"':(remark?'style="color:red;font-weight:bold"':'');
+        var remarkStyle=remark?'style="color:red;font-weight:bold"':'';
         h+='<tr>'
           +'<td>'+(i+1)+'</td><td>'+thd+'</td>'
           +'<td>'+(r.time_start||'')+'</td><td>'+(r.time_end||'')+'</td>'
