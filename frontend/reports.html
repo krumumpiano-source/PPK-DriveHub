@@ -56,6 +56,7 @@
     .report-table tbody tr:hover td { background:var(--color-primary-bg,#eef2ff); }
     .report-table tfoot td { padding:10px 12px;font-weight:700;border-top:2px solid var(--color-border);background:var(--color-bg-lighter,#f8f9fa); }
     tr.row-no-record { background:rgba(245,158,11,.07) !important; }
+    tr.row-anomaly { background:rgba(217,119,6,.12) !important; }
     tr.row-incomplete { background:rgba(251,191,36,.05) !important; }
     .badge { display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:999px;font-size:.74rem;font-weight:700;white-space:nowrap; }
     .badge-green  { background:#d1fae5;color:#065f46; }
@@ -187,6 +188,37 @@
       return fmtDateTH(s)+' '+pad(d.getHours())+':'+pad(d.getMinutes());
     }
     function htmlEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    // ── ตรวจสอบความผิดปกติของเลขไมล์ ──────────────────────────────
+    // r = record (มี mileage_start, mileage_end, prev_ret_mileage, next_dep_mileage)
+    // avgKm = ระยะทางเฉลี่ยของรถคันนี้ (null = ไม่ตรวจ outlier)
+    // คืน array of {msg, level} เมื่อพบความผิดปกติ
+    function detectMileageAnomalies(r, avgKm) {
+      var issues = [];
+      var ms = r.mileage_start, me = r.mileage_end;
+      if (ms != null && me != null) {
+        if (me < ms)
+          issues.push({msg:'เลขไมล์กลับ ('+me+') น้อยกว่าออก ('+ms+')', level:'error'});
+        else if (me === ms)
+          issues.push({msg:'เลขไมล์ออก = กลับ (0 กม.)', level:'warn'});
+      }
+      if (ms != null && r.prev_ret_mileage != null) {
+        var gap = ms - r.prev_ret_mileage;
+        if (Math.abs(gap) > 50)
+          issues.push({msg:'ไมล์ไม่ต่อเนื่อง ('+(gap>0?'+':'')+gap+' จากคิวก่อน)', level:'warn'});
+      }
+      if (avgKm && avgKm > 0) {
+        var effS = ms!=null?ms:(r.prev_ret_mileage!=null?r.prev_ret_mileage:null);
+        var effE = me!=null?me:(r.next_dep_mileage!=null?r.next_dep_mileage:null);
+        if (effS!=null && effE!=null && effE>effS) {
+          var km = effE - effS;
+          var threshold = Math.max(200, avgKm * 3);
+          if (km > threshold)
+            issues.push({msg:'ระยะทาง '+km+' กม. ผิดปกติมาก (เฉลี่ย '+Math.round(avgKm)+' กม.)', level:'warn'});
+        }
+      }
+      return issues;
+    }
     function buildQuery(params) {
       var parts = [];
       Object.keys(params).forEach(function(k) {
@@ -358,17 +390,34 @@
         if (rec._km!=null) { totalKm+=rec._km; kmCnt++; }
       });
 
+      // Pre-compute avg km per car สำหรับ outlier
+      var _rCarKms={};
+      processed.forEach(function(rec){
+        if(rec._km!=null&&!rec._inf){var k=rec.license_plate||'_';if(!_rCarKms[k])_rCarKms[k]=[];_rCarKms[k].push(rec._km);}
+      });
+      var _rCarAvg={};
+      Object.keys(_rCarKms).forEach(function(k){var a=_rCarKms[k];_rCarAvg[k]=a.reduce(function(s,v){return s+v;},0)/a.length;});
+      // Detect anomalies per record
+      processed=processed.map(function(rec){
+        var issues=detectMileageAnomalies(rec,_rCarAvg[rec.license_plate||'_']);
+        return Object.assign({},rec,{_anomalies:issues});
+      });
+      var anomalyCount=processed.filter(function(r){return r._anomalies&&r._anomalies.length;}).length;
+
       var rl=getRangeLabel();
       var h='<div class="stats-grid">';
       h+=statCard('🚗 จำนวนเที่ยว',fmtNum(summary.total||0),'เที่ยว','เสร็จ '+fmtNum(summary.completed||0)+' | ยกเลิก '+fmtNum(summary.cancelled||0));
       h+=statCard('🛣️ ระยะทางรวม',fmtNum(totalKm),'กม.','จาก '+fmtNum(kmCnt)+' เที่ยวที่มีข้อมูล','success');
       h+=statCard('⚠️ ไม่มีบันทึกเลย',fmtNum(noRec),'เที่ยว','ขาดทั้งออกและกลับ',noRec>0?'warn':'');
       h+=statCard('🔔 บันทึกไม่ครบ',fmtNum(incomp),'เที่ยว','ขาดออกหรือกลับ',incomp>0?'warn':'');
+      h+=statCard('🔍 เลขไมล์น่าสงสัย',fmtNum(anomalyCount),'รายการ','ตรวจสอบได้ด้านล่าง',anomalyCount>0?'warn':'');
       h+='</div>';
       if (!processed.length) return h+emptyState('🚗','ไม่พบข้อมูลในช่วงเวลาที่เลือก');
 
       var wds=['อา','จ','อ','พ','พฤ','ศ','ส'];
-      h+='<div class="report-section"><div class="section-header"><span class="section-title">📋 รายการใช้รถ'+(rl?' ('+rl+')':'')+'</span><span style="font-size:.8rem;color:var(--color-text-muted)">'+fmtNum(processed.length)+' รายการ</span></div>';
+      h+='<div class="report-section"><div class="section-header"><span class="section-title">📋 รายการใช้รถ'+(rl?' ('+rl+')':'')+'</span>'
+        +(anomalyCount>0?'<button onclick="this.dataset.f=this.dataset.f===\'1\'?\'0\':\'1\';document.querySelectorAll(\'tr.row-ok\').forEach(function(t){t.style.display=this.dataset.f===\'1\'?\'none\':\'\';}.bind(this));this.textContent=this.dataset.f===\'1\'?\'แสดงทั้งหมด\':\'🔍 แสดงเฉพาะน่าสงสัย ('+anomalyCount+')\'" data-f="0" style="margin-left:auto;padding:4px 12px;font-size:.8rem;border-radius:6px;border:1px solid #d97706;color:#d97706;background:#fffbeb;cursor:pointer">🔍 แสดงเฉพาะน่าสงสัย ('+anomalyCount+')</button>':'')
+        +'<span style="font-size:.8rem;color:var(--color-text-muted)">'+fmtNum(processed.length)+' รายการ</span></div>';
       h+='<div class="section-body"><table class="report-table"><thead><tr><th>วันที่</th><th>เวลา</th><th>ทะเบียน</th><th>ผู้ขอ</th><th>จุดหมาย/ภารกิจ</th><th>คนขับ</th><th>บันทึกออก</th><th>บันทึกกลับ</th><th>ระยะทาง</th><th>สถานะ</th></tr></thead><tbody>';
       processed.forEach(function(rec) {
         var d=new Date(rec.date);
@@ -376,13 +425,19 @@
         var isWE=!isNaN(d)&&(d.getDay()===0||d.getDay()===6);
         var noR=!rec.actual_departure&&!rec.actual_return;
         var inc=!noR&&(!rec.actual_departure||!rec.actual_return);
-        var rc=noR?'row-no-record':(inc?'row-incomplete':'');
+        var hasAnomaly=rec._anomalies&&rec._anomalies.length>0;
+        var rc=hasAnomaly?'row-anomaly':(noR?'row-no-record':(inc?'row-incomplete':'row-ok'));
         var dep=rec.actual_departure?fmtDateTimeTH(rec.actual_departure):'<span class="no-record-cell">🔴 ไม่มีการบันทึก</span>';
         var ret=rec.actual_return?fmtDateTimeTH(rec.actual_return):'<span class="no-record-cell">🔴 ไม่มีการบันทึก</span>';
         var kmC='-';
         if (rec._km!=null) {
           kmC=fmtNum(rec._km)+' กม.';
           if (rec._inf) kmC+='<div class="mileage-inferred">📐 คำนวณจากไมล์ข้างเคียง</div>';
+        }
+        if (hasAnomaly) {
+          var aStyle=rec._anomalies.some(function(a){return a.level==='error';});
+          kmC+='<div style="font-size:.78em;color:'+(aStyle?'#dc2626':'#d97706')+';margin-top:2px">'
+            +rec._anomalies.map(function(a){return '⚠️ '+htmlEsc(a.msg);}).join('<br>')+'</div>';
         }
         h+='<tr class="'+rc+'">';
         h+='<td>'+fmtDateTH(rec.date)+' <span style="font-size:.8em;color:'+(isWE?'#dc2626':'inherit')+'">'+wd+'</span></td>';
@@ -591,6 +646,14 @@
         return dt.getDate()+' '+mth[dt.getMonth()]+' '+(dt.getFullYear()+543)+' '+hh+':'+mm+'น.';
       }
       var hdr=['วันที่','เวลาสแกนออก','เวลาสแกนเข้า','ทะเบียน','ผู้ขอ','จุดหมาย','ภารกิจ','คนขับ','ก่อนออกเดินทาง','กลับมาจากเดินทาง','เลขไมล์ก่อนออก','เลขไมล์กลับมา','ระยะทาง (กม.)','หมายเหตุ'];
+      // Pre-compute avg km per car (เฉพาะค่าจริง) สำหรับ outlier detection
+      var _carKms={};
+      recs.forEach(function(r){
+        var ms=r.mileage_start,me=r.mileage_end;
+        if(ms!=null&&me!=null&&me>ms){var k=r.license_plate||'_';if(!_carKms[k])_carKms[k]=[];_carKms[k].push(me-ms);}
+      });
+      var _carAvg={};
+      Object.keys(_carKms).forEach(function(k){var a=_carKms[k];_carAvg[k]=a.reduce(function(s,v){return s+v;},0)/a.length;});
       function buildRows(list){
         var redCells=[];
         var rows=list.map(function(r,i){
@@ -608,7 +671,15 @@
           else if(!r.actual_departure&&!r.actual_return) remark='พนักงานขับรถไม่บันทึกออกและกลับ';
           else if(!r.actual_departure) remark='พนักงานขับรถไม่บันทึกก่อนออกเดินทาง';
           else if(!r.actual_return) remark='พนักงานขับรถไม่บันทึกกลับมาจากเดินทาง';
-          if(remark) redCells.push({row:i,col:13});
+          if(remark){redCells.push({row:i,col:13});}
+          // ตรวจ anomaly เลขไมล์
+          var anomalies=detectMileageAnomalies(r,_carAvg[r.license_plate||'_']);
+          if(anomalies.length){
+            var aMsg=anomalies.map(function(a){return '⚠️ '+a.msg;}).join(' | ');
+            remark=remark?(remark+' | '+aMsg):aMsg;
+            var aColor=anomalies.some(function(a){return a.level==='error';})?'FF0000':'FF8800';
+            redCells.push({row:i,col:13,color:aColor});
+          }
           return [thd,r.time_start||'',r.time_end||'',r.license_plate||'',r.requester_display_name||r.requested_by||'',r.destination||'',r.mission||'',driverExport,isAutoGap?'':fmtDT(r.actual_departure),isAutoGap?'':fmtDT(r.actual_return),isAutoGap?'':(r.mileage_start!=null?r.mileage_start:''),isAutoGap?'':(r.mileage_end!=null?r.mileage_end:''),km,remark];
         });
         return {rows:rows,redCells:redCells};
@@ -718,7 +789,12 @@
         else if(!r.actual_departure&&!r.actual_return) remark='ไม่บันทึกออกและกลับ';
         else if(!r.actual_departure) remark='ไม่บันทึกก่อนออกเดินทาง';
         else if(!r.actual_return) remark='ไม่บันทึกกลับมาจากเดินทาง';
-        var remarkStyle=remark?'style="color:red;font-weight:bold"':'';
+        var anomalies=detectMileageAnomalies(r, null);
+        if(anomalies.length){
+          var aMsg=anomalies.map(function(a){return '⚠️ '+a.msg;}).join(' | ');
+          remark=remark?(remark+' | '+aMsg):aMsg;
+        }
+        var remarkStyle=(remark&&remark.indexOf('⚠️')>=0)?'style="color:#b45309;font-weight:bold"':(remark?'style="color:red;font-weight:bold"':'');
         h+='<tr>'
           +'<td>'+(i+1)+'</td><td>'+thd+'</td>'
           +'<td>'+(r.time_start||'')+'</td><td>'+(r.time_end||'')+'</td>'

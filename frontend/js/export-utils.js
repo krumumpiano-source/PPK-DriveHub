@@ -27,7 +27,7 @@
     if(redCells&&redCells.length){
       redCells.forEach(function(rc){
         var addr=XLSX.utils.encode_cell({r:rc.row+1,c:rc.col});
-        if(ws[addr])ws[addr].s={font:{color:{rgb:'FF0000'},bold:true}};
+        if(ws[addr])ws[addr].s={font:{color:{rgb:rc.color||'FF0000'},bold:true}};
       });
     }
     return ws;
