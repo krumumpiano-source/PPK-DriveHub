@@ -798,6 +798,62 @@ export async function onRequest(context) {
     return success({ records: rows, summary });
   }
 
+  // ========== Standalone QR Scan Records (สแกน QR โดยตรง ไม่มีคิวผูก) ==========
+  if (path === '/api/reports/standalone-scans' && method === 'GET') {
+    try { requirePermission(user, 'reports', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const dateFrom = url.searchParams.get('date_from');
+    const dateTo = url.searchParams.get('date_to');
+    const carId = url.searchParams.get('car_id');
+    const extraWhere = [];
+    const params = [];
+    if (dateFrom) { extraWhere.push("DATE(dep.datetime) >= ?"); params.push(dateFrom); }
+    if (dateTo) { extraWhere.push("DATE(dep.datetime) <= ?"); params.push(dateTo); }
+    if (carId) { extraWhere.push("dep.car_id = ?"); params.push(carId); }
+    const whereStr = extraWhere.length ? 'AND ' + extraWhere.join(' AND ') : '';
+    const rows = await dbAll(env.DB,
+      `WITH dep AS (
+         SELECT *, ROW_NUMBER() OVER (PARTITION BY car_id ORDER BY datetime) AS rn
+         FROM usage_records
+         WHERE record_type = 'departure' AND queue_id IS NULL
+       ),
+       ret AS (
+         SELECT *, ROW_NUMBER() OVER (PARTITION BY car_id ORDER BY datetime) AS rn
+         FROM usage_records
+         WHERE record_type = 'return' AND queue_id IS NULL
+       )
+       SELECT
+         dep.id,
+         DATE(dep.datetime) AS date,
+         dep.car_id,
+         c.license_plate, c.brand, c.model,
+         COALESCE(d.name, dep.driver_name_manual) AS driver_name,
+         dep.datetime AS actual_departure,
+         dep.mileage AS mileage_start,
+         dep.data_quality AS dep_quality,
+         dep.auto_notes AS dep_auto_notes,
+         dep.notes AS dep_notes,
+         dep.destination,
+         dep.purpose,
+         dep.requester_name,
+         ret.datetime AS actual_return,
+         ret.mileage AS mileage_end,
+         ret.data_quality AS ret_quality,
+         ret.auto_notes AS ret_auto_notes,
+         ret.notes AS ret_notes,
+         CASE WHEN ret.mileage IS NOT NULL AND dep.mileage IS NOT NULL AND ret.mileage > dep.mileage
+              THEN ret.mileage - dep.mileage ELSE NULL END AS km_used
+       FROM dep
+       LEFT JOIN ret ON ret.car_id = dep.car_id AND ret.rn = dep.rn
+       LEFT JOIN cars c ON c.id = dep.car_id
+       LEFT JOIN drivers d ON d.id = dep.driver_id
+       WHERE 1=1 ${whereStr}
+       ORDER BY dep.datetime DESC
+       LIMIT 5000`,
+      params
+    );
+    return success({ records: rows, total: rows.length });
+  }
+
   // ========== Check Log (ตรวจสภาพรถ) — ใช้ใน audit export ==========
   if (path === '/api/reports/check-log' && method === 'GET') {
     try { requirePermission(user, 'reports', 'view'); } catch { return error('\u0e44\u0e21\u0e48\u0e21\u0e35\u0e2a\u0e34\u0e17\u0e18\u0e34\u0e4c', 403); }
