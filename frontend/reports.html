@@ -674,7 +674,7 @@
       else if (t==='repairs') tblHtml=buildPrintRepairs(p);
       var w=window.open('','_blank');
       var h='<!DOCTYPE html><html><head><meta charset="utf-8"><title>รายงาน'+tn+'</title>';
-      h+='<style>body{font-family:"TH Sarabun New",Sarabun,sans-serif;font-size:13pt;margin:15mm;color:#000}.hdr{text-align:center;margin-bottom:16px}.hdr h2{font-size:16pt;margin:0}.hdr p{margin:3px 0;font-size:13pt}table{width:100%;border-collapse:collapse;font-size:11pt;margin-bottom:12px}th,td{border:1px solid #333;padding:4px 7px}th{background:#e8e8e8;font-weight:700;text-align:center}.sl{font-size:13pt;font-weight:700;margin:14px 0 6px}.sigs{margin-top:40px;display:flex;justify-content:space-around}.sig{text-align:center;width:28%}.sigline{border-top:1px solid #000;margin-top:40px;padding-top:5px;font-size:12pt}@media print{body{margin:10mm}}</style></head><body>';
+      h+='<style>body{font-family:"TH Sarabun New",Sarabun,sans-serif;font-size:13pt;margin:15mm;color:#000}.hdr{text-align:center;margin-bottom:16px}.hdr h2{font-size:16pt;margin:0}.hdr p{margin:3px 0;font-size:13pt}table{width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:12px}th,td{border:1px solid #333;padding:3px 5px}th{background:#e8e8e8;font-weight:700;text-align:center}.sl{font-size:13pt;font-weight:700;margin:14px 0 6px}.sigs{margin-top:40px;display:flex;justify-content:space-around}.sig{text-align:center;width:28%}.sigline{border-top:1px solid #000;margin-top:40px;padding-top:5px;font-size:12pt}@media print{@page{size:A4 landscape}body{margin:8mm;font-size:9pt}}</style></head><body>';
       h+='<div class="hdr"><h2>โรงเรียนพะเยาพิทยาคม</h2><p>รายงาน'+tn+'</p><p>ช่วงเวลา: '+rl+'</p></div>';
       h+=tblHtml;
       h+='<div class="sigs">';
@@ -689,18 +689,44 @@
     function buildPrintTrips(p) {
       var recs=p.records||[];
       if (!recs.length) return '<p>ไม่มีข้อมูล</p>';
-      var wds=['อา','จ','อ','พ','พฤ','ศ','ส'];
-      var h='<table><thead><tr><th>ที่</th><th>วันที่</th><th>วัน</th><th>เวลา</th><th>ทะเบียน</th><th>ผู้ขอ</th><th>จุดหมาย</th><th>คนขับ</th><th>บันทึกออก</th><th>บันทึกกลับ</th><th>ระยะ(กม.)</th><th>สถานะ</th></tr></thead><tbody>';
+      var mth=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+      function fmtDT(s){
+        if(!s) return 'ไม่มีการบันทึก';
+        var dt=new Date(s); if(isNaN(dt)) return s;
+        return dt.getDate()+' '+mth[dt.getMonth()]+' '+(dt.getFullYear()+543)+' '+String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0')+'น.';
+      }
+      var h='<table><thead><tr>'
+        +'<th>ที่</th><th>วันที่</th><th>สแกนออก</th><th>สแกนเข้า</th><th>ทะเบียน</th>'
+        +'<th>ผู้ขอ</th><th>จุดหมาย</th><th>ภารกิจ</th><th>คนขับ</th>'
+        +'<th>ก่อนออกเดินทาง</th><th>กลับมาจากเดินทาง</th>'
+        +'<th>ไมล์ก่อนออก</th><th>ไมล์กลับมา</th><th>ระยะ(กม.)</th><th>หมายเหตุ</th>'
+        +'</tr></thead><tbody>';
       recs.forEach(function(r,i) {
         var d=new Date(r.date);
-        var km=(r.mileage_start&&r.mileage_end&&r.mileage_end>r.mileage_start)?(r.mileage_end-r.mileage_start):'-';
-        h+='<tr><td>'+(i+1)+'</td><td>'+(r.date||'-')+'</td><td>'+(isNaN(d)?'':wds[d.getDay()])+'</td>'
-          +'<td>'+(r.time_start||'')+'</td><td>'+(r.license_plate||'-')+'</td>'
+        var thd=isNaN(d)?r.date||'':d.getDate()+' '+mth[d.getMonth()]+' '+(d.getFullYear()+543);
+        var km=(r.mileage_start!=null&&r.mileage_end!=null&&r.mileage_end>r.mileage_start)?r.mileage_end-r.mileage_start:'-';
+        var isAutoGap=r.mission&&r.mission.indexOf('ไม่บันทึกข้อมูล')>=0;
+        var driver=isAutoGap?'ไม่ทราบ':(r.driver_name||'-');
+        var remark='';
+        if(isAutoGap) remark='มีการใช้รถโดยไม่บันทึกข้อมูล';
+        else if(!r.actual_departure&&!r.actual_return) remark='ไม่บันทึกออกและกลับ';
+        else if(!r.actual_departure) remark='ไม่บันทึกก่อนออกเดินทาง';
+        else if(!r.actual_return) remark='ไม่บันทึกกลับมาจากเดินทาง';
+        var remarkStyle=remark?'style="color:red;font-weight:bold"':'';
+        h+='<tr>'
+          +'<td>'+(i+1)+'</td><td>'+thd+'</td>'
+          +'<td>'+(r.time_start||'')+'</td><td>'+(r.time_end||'')+'</td>'
+          +'<td>'+(r.license_plate||'-')+'</td>'
           +'<td>'+(r.requester_display_name||r.requested_by||'-')+'</td>'
-          +'<td>'+(r.destination||'-')+'</td><td>'+(r.driver_name||'-')+'</td>'
-          +'<td>'+(r.actual_departure?r.actual_departure.replace('T',' ').substr(0,16):'ไม่มีการบันทึก')+'</td>'
-          +'<td>'+(r.actual_return?r.actual_return.replace('T',' ').substr(0,16):'ไม่มีการบันทึก')+'</td>'
-          +'<td>'+km+'</td><td>'+(r.status||'-')+'</td></tr>';
+          +'<td>'+(r.destination||'-')+'</td><td>'+(r.mission||'-')+'</td>'
+          +'<td>'+(isAutoGap?'<span style="color:#666;font-style:italic">ไม่ทราบ</span>':htmlEsc(r.driver_name||'-'))+'</td>'
+          +'<td>'+(isAutoGap?'':fmtDT(r.actual_departure))+'</td>'
+          +'<td>'+(isAutoGap?'':fmtDT(r.actual_return))+'</td>'
+          +'<td>'+(isAutoGap?'':(r.mileage_start!=null?r.mileage_start:''))+'</td>'
+          +'<td>'+(isAutoGap?'':(r.mileage_end!=null?r.mileage_end:''))+'</td>'
+          +'<td>'+km+'</td>'
+          +'<td '+remarkStyle+'>'+remark+'</td>'
+          +'</tr>';
       });
       return h+'</tbody></table>';
     }
