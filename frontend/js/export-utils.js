@@ -123,7 +123,8 @@
     // Build table rows HTML
     var theadCells=opts.headers.map(function(h){return '<th>'+_esc(h)+'</th>';}).join('');
     var tbodyRows=opts.rows.map(function(r,i){
-      return '<tr>'+(i%2===1?'style="background:#f5f5f5"':'')+(r.map?r.map(function(c){return '<td>'+_esc(c==null?'-':c)+'</td>';}).join(''))+'</tr>';
+      return '<tr'+(i%2===1?' style="background:#f5f5f5"':'')+'>'+
+        (r.map?r.map(function(c){return '<td>'+_esc(c==null?'-':c)+'</td>';}).join(''):'')+'</tr>';
     }).join('');
     // Signature blocks
     var sigs='';
