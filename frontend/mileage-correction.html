@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>แก้ไขเลขไมล์ - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>
+    window.API_BASE_URL = CONFIG.API_BASE_URL;
+    window.currentPage = 'mileage-correction';
+    window.REQUIRE_AUTH = true;
+  </script>
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="js/api.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
+  <script src="common.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-family);
+      background: var(--gradient-primary);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: white;
+      border-radius: var(--radius-2xl);
+      box-shadow: var(--shadow-container);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #c62828, #ef5350);
+      color: white;
+      padding: 25px;
+      text-align: center;
+    }
+
+    .header h1 { font-size: 1.8em; margin-bottom: 8px; }
+    .header p { opacity: 0.85; font-size: 0.95em; }
+
+    .admin-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.25);
+      border: 1px solid rgba(255,255,255,0.5);
+      color: white;
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      font-size: 0.82em;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-top: 8px;
+    }
+
+    .content { padding: 25px; }
+
+    /* Summary cards */
+    .summary-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+
+    .summary-card {
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: 18px;
+      text-align: center;
+      border: 1px solid var(--color-border);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .summary-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .summary-card .sc-icon { font-size: 2em; margin-bottom: 6px; }
+    .summary-card .sc-value { font-size: 2em; font-weight: 700; }
+    .summary-card .sc-label { font-size: 0.82em; color: var(--color-text-muted); margin-top: 4px; }
+    .summary-card.green  { border-top: 4px solid #2e7d32; } .summary-card.green .sc-value  { color: #2e7d32; }
+    .summary-card.orange { border-top: 4px solid #e65100; } .summary-card.orange .sc-value { color: #e65100; }
+    .summary-card.red    { border-top: 4px solid #c62828; } .summary-card.red .sc-value    { color: #c62828; }
+    .summary-card.blue   { border-top: 4px solid #1565c0; } .summary-card.blue .sc-value   { color: #1565c0; }
+    .summary-card.purple { border-top: 4px solid #6a1b9a; } .summary-card.purple .sc-value { color: #6a1b9a; }
+
+    /* Anomaly alert banner */
+    .anomaly-banner {
+      background: #fff3e0;
+      border: 1px solid #ffb300;
+      border-left: 5px solid #e65100;
+      border-radius: var(--radius-lg);
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .anomaly-banner h3 {
+      color: #e65100;
+      margin: 0 0 10px;
+      font-size: 1em;
+    }
+
+    .anomaly-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .anomaly-list li {
+      background: #ffcc02;
+      color: #5d3e00;
+      padding: 4px 10px;
+      border-radius: var(--radius-md);
+      font-size: 0.85em;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .anomaly-list li:hover { background: #ffa000; color: white; }
+
+    /* Filters */
+    .filters {
+      background: var(--color-bg-light);
+      padding: 20px;
+      border-radius: var(--radius-xl);
+      margin-bottom: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 14px;
+      align-items: end;
+    }
+
+    .filter-group { display: flex; flex-direction: column; gap: 7px; }
+    .filter-group label { font-weight: 600; color: var(--color-text); font-size: 0.88em; }
+    .filter-group input,
+    .filter-group select {
+      padding: 10px;
+      border: 2px solid #ddd;
+      border-radius: var(--radius-md);
+      font-size: 0.95em;
+      font-family: inherit;
+    }
+
+    .filter-group input:focus,
+    .filter-group select:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+
+    .actions-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 0.95em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-primary { background: var(--gradient-primary); color: white; }
+    .btn-primary:hover:not(:disabled) { opacity: 0.9; }
+    .btn-secondary { background: #6c757d; color: white; }
+    .btn-secondary:hover:not(:disabled) { background: #5a6268; }
+    .btn-warning { background: #e65100; color: white; }
+    .btn-warning:hover:not(:disabled) { background: #bf360c; }
+    .btn-sm { padding: 6px 12px; font-size: 0.85em; }
+
+    /* Table */
+    .table-container {
+      overflow-x: auto;
+      border-radius: var(--radius-xl);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .correction-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      font-size: 0.9em;
+    }
+
+    .correction-table thead {
+      background: linear-gradient(135deg, #c62828, #ef5350);
+      color: white;
+    }
+
+    .correction-table th {
+      padding: 13px 12px;
+      text-align: left;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .correction-table td {
+      padding: 11px 12px;
+      border-bottom: 1px solid #e9ecef;
+      vertical-align: middle;
+    }
+
+    .correction-table tbody tr:hover { background: #fff8f8; }
+
+    .correction-table tr.row-anomaly-missing  { background: #fff8e1; }
+    .correction-table tr.row-anomaly-negative { background: #ffebee; }
+    .correction-table tr.row-anomaly-spike    { background: #fce4ec; }
+    .correction-table tr.row-corrected        { background: #e8f5e9; }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: var(--radius-xl);
+      font-size: 0.8em;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .badge-ok       { background: #e8f5e9; color: #2e7d32; }
+    .badge-missing  { background: #fff3e0; color: #e65100; border: 1px solid #ffb300; }
+    .badge-negative { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+    .badge-spike    { background: #fce4ec; color: #ad1457; border: 1px solid #f48fb1; }
+    .badge-corrected{ background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+    .badge-dep      { background: #e3f2fd; color: #1565c0; }
+    .badge-ret      { background: #f3e5f5; color: #6a1b9a; }
+    .badge-ref      { background: #e8f5e9; color: #2e7d32; }
+    .badge-insp     { background: #e0f2f1; color: #00695c; }
+    .badge-auto     { background: #e8eaf6; color: #283593; }
+
+    .mileage-cell {
+      font-family: monospace;
+      font-size: 1em;
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .mileage-cell.missing { color: #9e9e9e; font-style: italic; }
+    .mileage-cell.corrected { color: #2e7d32; }
+
+    .corrected-info {
+      font-size: 0.75em;
+      color: #757575;
+      display: block;
+    }
+
+    /* Loading / empty */
+    .loading { text-align: center; padding: 60px 20px; color: var(--color-text-muted); }
+    .empty-state { text-align: center; padding: 50px 20px; color: var(--color-text-light); }
+    .empty-state-icon { font-size: 3.5em; margin-bottom: 14px; }
+
+    /* Alert */
+    #alertContainer { margin-bottom: 15px; }
+    .alert { padding: 14px 18px; border-radius: var(--radius-md); font-weight: 500; }
+    .alert-success { background: #d4edda; color: #155724; border-left: 4px solid #2e7d32; }
+    .alert-error   { background: #ffebee; color: #c62828; border-left: 4px solid #c62828; }
+    .alert-warning { background: #fff3e0; color: #e65100; border-left: 4px solid #e65100; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal-box {
+      background: white;
+      border-radius: var(--radius-xl);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+      width: 100%;
+      max-width: 540px;
+      animation: slideUp 0.25s ease;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+
+    .modal-header {
+      background: linear-gradient(135deg, #c62828, #ef5350);
+      color: white;
+      padding: 18px 22px;
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-header h2 { margin: 0; font-size: 1.1em; }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.4em;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0 4px;
+      opacity: 0.85;
+    }
+
+    .modal-close:hover { opacity: 1; }
+
+    .modal-body { padding: 22px; }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 16px;
+      background: var(--color-bg-light);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      margin-bottom: 18px;
+      font-size: 0.9em;
+    }
+
+    .info-grid .info-label { color: var(--color-text-muted); font-size: 0.85em; margin-bottom: 2px; }
+    .info-grid .info-value { font-weight: 600; color: var(--color-text); }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-weight: 600; margin-bottom: 7px; font-size: 0.9em; }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 11px 13px;
+      border: 2px solid #ddd;
+      border-radius: var(--radius-md);
+      font-size: 0.98em;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+
+    .form-group input.input-error { border-color: #c62828; }
+
+    .form-group textarea { resize: vertical; min-height: 80px; }
+
+    /* Warning list in modal */
+    .modal-warnings {
+      margin-bottom: 16px;
+    }
+
+    .modal-warning-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      background: #fff3e0;
+      border: 1px solid #ffb300;
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      font-size: 0.88em;
+      color: #5d3e00;
+    }
+
+    .modal-warning-item.critical {
+      background: #ffebee;
+      border-color: #ef9a9a;
+      color: #b71c1c;
+    }
+
+    .modal-warning-item .wi-icon { font-size: 1.1em; flex-shrink: 0; }
+
+    .modal-footer {
+      padding: 14px 22px 18px;
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      border-top: 1px solid #eee;
+    }
+
+    .btn-confirm-danger { background: #c62828; color: white; }
+    .btn-confirm-danger:hover:not(:disabled) { background: #b71c1c; }
+    .btn-confirm-warning { background: #e65100; color: white; }
+    .btn-confirm-warning:hover:not(:disabled) { background: #bf360c; }
+
+    @media (max-width: 768px) {
+      .filters { grid-template-columns: 1fr 1fr; }
+      .summary-cards { grid-template-columns: repeat(2, 1fr); }
+      .info-grid { grid-template-columns: 1fr; }
+      .correction-table { font-size: 0.82em; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div id="commonHeader"></div>
+    <div id="commonNav"></div>
+
+    <div class="header">
+      <h1>🔧 แก้ไขเลขไมล์บันทึกการใช้รถ</h1>
+      <p>สำหรับกรณีที่พนักงานขับรถบันทึกเลขไมล์ผิดพลาด</p>
+      <div class="admin-badge">🛡️ เฉพาะผู้ดูแลระบบเท่านั้น</div>
+    </div>
+
+    <div class="content">
+      <div id="alertContainer"></div>
+
+      <!-- Summary cards -->
+      <div class="summary-cards" id="summaryCards">
+        <div class="summary-card green">
+          <div class="sc-icon">✅</div>
+          <div class="sc-value" id="cntNormal">—</div>
+          <div class="sc-label">บันทึกปกติ</div>
+        </div>
+        <div class="summary-card orange">
+          <div class="sc-icon">⚪</div>
+          <div class="sc-value" id="cntMissing">—</div>
+          <div class="sc-label">ไมล์ว่างเปล่า</div>
+        </div>
+        <div class="summary-card red">
+          <div class="sc-icon">🔻</div>
+          <div class="sc-value" id="cntNegative">—</div>
+          <div class="sc-label">ไมล์ติดลบ / ย้อนกลับ</div>
+        </div>
+        <div class="summary-card purple">
+          <div class="sc-icon">📈</div>
+          <div class="sc-value" id="cntSpike">—</div>
+          <div class="sc-label">ไมล์กระโดดสูง (&gt;300 กม.)</div>
+        </div>
+        <div class="summary-card blue">
+          <div class="sc-icon">✏️</div>
+          <div class="sc-value" id="cntCorrected">—</div>
+          <div class="sc-label">เคยแก้ไขแล้ว</div>
+        </div>
+      </div>
+
+      <!-- Anomaly banner -->
+      <div class="anomaly-banner" id="anomalyBanner">
+        <h3>⚠️ พบความผิดปกติ — คลิกที่รายการเพื่อกรองดูเฉพาะประเภทนั้น</h3>
+        <ul class="anomaly-list" id="anomalyList"></ul>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters">
+        <div class="filter-group">
+          <label>🚗 รถ</label>
+          <select id="filterCar"><option value="">— ทุกคัน —</option></select>
+        </div>
+        <div class="filter-group">
+          <label>📅 วันที่เริ่ม</label>
+          <input type="date" id="dateFrom">
+        </div>
+        <div class="filter-group">
+          <label>📅 วันที่สิ้นสุด</label>
+          <input type="date" id="dateTo">
+        </div>
+        <div class="filter-group">
+          <label>🔍 ประเภทปัญหา</label>
+          <select id="filterAnomaly">
+            <option value="">— แสดงทั้งหมด —</option>
+            <option value="missing">⚪ ไมล์ว่างเปล่า</option>
+            <option value="negative">🔻 ไมล์ติดลบ / ย้อนกลับ</option>
+            <option value="spike">📈 ไมล์กระโดดสูง</option>
+            <option value="corrected">✏️ เคยแก้ไขแล้ว</option>
+            <option value="normal">✅ ปกติ (ไม่มีปัญหา)</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>📋 ประเภทบันทึก</label>
+          <select id="filterType">
+            <option value="">— ทุกประเภท —</option>
+            <option value="departure">ออก</option>
+            <option value="return">กลับ</option>
+            <option value="refuel">เติมน้ำมัน</option>
+            <option value="inspection">ตรวจสภาพ</option>
+          </select>
+        </div>
+        <div class="filter-group" style="justify-content: flex-end;">
+          <button class="btn btn-primary" onclick="applyFilter()">🔍 กรองข้อมูล</button>
+          <button class="btn btn-secondary" onclick="resetFilter()" style="margin-top:6px">↺ รีเซ็ต</button>
+        </div>
+      </div>
+
+      <div class="actions-bar">
+        <button class="btn btn-secondary" onclick="loadRecords()">🔃 รีเฟรช</button>
+        <span id="resultCount" style="color: var(--color-text-muted); font-size: 0.9em;"></span>
+      </div>
+
+      <!-- Table -->
+      <div id="loading" class="loading">⏳ กำลังโหลดข้อมูล...</div>
+      <div id="tableContainer" style="display:none">
+        <div class="table-container">
+          <table class="correction-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>วันที่ / เวลา</th>
+                <th>รถ</th>
+                <th>คนขับ</th>
+                <th>ประเภท</th>
+                <th style="text-align:right">เลขไมล์</th>
+                <th>สถานะ / ปัญหา</th>
+                <th>แก้ไขล่าสุด</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div style="background: var(--color-bg-light); padding: 16px; text-align: center; color: var(--color-text-muted); font-size: 0.85em; margin-top: 20px;">
+      <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div class="modal-overlay" id="editModal" onclick="handleOverlayClick(event)">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2>✏️ แก้ไขเลขไมล์บันทึก</h2>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- Record info -->
+        <div class="info-grid">
+          <div>
+            <div class="info-label">วันที่ / เวลา</div>
+            <div class="info-value" id="infoDatetime">—</div>
+          </div>
+          <div>
+            <div class="info-label">รถ</div>
+            <div class="info-value" id="infoCar">—</div>
+          </div>
+          <div>
+            <div class="info-label">คนขับ</div>
+            <div class="info-value" id="infoDriver">—</div>
+          </div>
+          <div>
+            <div class="info-label">ประเภทบันทึก</div>
+            <div class="info-value" id="infoType">—</div>
+          </div>
+          <div>
+            <div class="info-label">เลขไมล์เดิม</div>
+            <div class="info-value" id="infoOldMileage" style="font-family:monospace; font-size:1.1em; color:#c62828">—</div>
+          </div>
+          <div>
+            <div class="info-label">บริบทรถคันนี้</div>
+            <div class="info-value" id="infoContext" style="font-size:0.88em">—</div>
+          </div>
+        </div>
+
+        <!-- Warnings -->
+        <div class="modal-warnings" id="modalWarnings" style="display:none"></div>
+
+        <!-- New mileage -->
+        <div class="form-group">
+          <label for="inputMileage">📏 เลขไมล์ใหม่ (กิโลเมตร) <span style="color:#c62828">*</span></label>
+          <input type="number" id="inputMileage" min="1" placeholder="กรอกเลขไมล์ที่ถูกต้อง"
+            oninput="checkWarnings()">
+        </div>
+
+        <!-- Reason -->
+        <div class="form-group">
+          <label for="inputNote">📝 เหตุผลในการแก้ไข <span style="color:#c62828">*</span></label>
+          <textarea id="inputNote" placeholder="เช่น: พนักงานกด 0 เกิน / บันทึกสลับตัวเลข / ยืนยันจากใบอนุญาตขับขี่ใช้งาน..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal()">ยกเลิก</button>
+        <button class="btn btn-confirm-danger" id="btnSave" onclick="saveCorrection()">💾 บันทึกการแก้ไข</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var allRecords = [];       // raw records from API (all types)
+    var filteredRecords = [];  // after filter
+    var anomalyMap = {};       // record.id → anomaly type
+    var vehicles = [];
+    var vehiclesMap = {};
+    var editTarget = null;     // current record being edited
+
+    var SPIKE_KM = 300;        // threshold for mileage spike warning
+
+    document.addEventListener('DOMContentLoaded', function() {
+      if (!requireAuth()) return;
+      var user = getCurrentUser();
+      if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+        showAlert('หน้านี้สำหรับผู้ดูแลระบบเท่านั้น', 'error');
+        setTimeout(function() { window.location.href = 'dashboard.html'; }, 2000);
+        return;
+      }
+
+      var today = new Date();
+      var from = new Date(); from.setDate(from.getDate() - 60);
+      document.getElementById('dateFrom').value = fmt(from);
+      document.getElementById('dateTo').value = fmt(today);
+
+      loadVehicles();
+      loadRecords();
+    });
+
+    function fmt(d) {
+      return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    }
+
+    function fmtDateThai(s) {
+      if (!s) return '-';
+      var months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+      var d = new Date(s.length <= 10 ? s + 'T00:00:00' : s);
+      return d.getDate() + ' ' + months[d.getMonth()] + ' ' + (d.getFullYear()+543);
+    }
+
+    function fmtDatetimeThai(s) {
+      if (!s) return '-';
+      var d = new Date(s.length <= 10 ? s + 'T00:00:00' : s);
+      var months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+      var date = d.getDate() + ' ' + months[d.getMonth()] + ' ' + (d.getFullYear()+543);
+      var time = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+      return date + ' ' + time;
+    }
+
+    async function loadVehicles() {
+      try {
+        var res = await apiCall('getVehicles', {});
+        if (res.success && res.data && res.data.vehicles) {
+          vehicles = res.data.vehicles;
+          vehicles.forEach(function(v) { vehiclesMap[v.id || v.car_id] = v; });
+          var sel = document.getElementById('filterCar');
+          vehicles.forEach(function(v) {
+            var o = document.createElement('option');
+            o.value = v.id || v.car_id;
+            o.textContent = v.license_plate + ' ' + (v.brand || '');
+            sel.appendChild(o);
+          });
+        }
+      } catch(e) { console.error('loadVehicles', e); }
+    }
+
+    async function loadRecords() {
+      try {
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('tableContainer').style.display = 'none';
+
+        var from = document.getElementById('dateFrom').value;
+        var to   = document.getElementById('dateTo').value;
+        var carId = document.getElementById('filterCar').value;
+        var recType = document.getElementById('filterType').value;
+
+        var params = {};
+        if (from) params.date_from = from;
+        if (to)   params.date_to   = to;
+        if (carId) params.car_id   = carId;
+        if (recType) params.record_type = recType;
+
+        var res = await API.get('/api/usage' + buildQS(params));
+        allRecords = Array.isArray(res.data) ? res.data : [];
+
+        detectAnomalies();
+        updateSummaryCards();
+        applyFilter();
+      } catch(e) {
+        showAlert('โหลดข้อมูลไม่สำเร็จ: ' + (e.message || ''), 'error');
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('tableContainer').style.display = 'block';
+      }
+    }
+
+    function buildQS(params) {
+      var q = Object.keys(params).map(function(k) {
+        return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+      }).join('&');
+      return q ? '?' + q : '';
+    }
+
+    // ── Anomaly detection ──────────────────────────────────
+    function detectAnomalies() {
+      anomalyMap = {};
+
+      // Mark already-corrected records
+      allRecords.forEach(function(r) {
+        if (r.updated_by && r.correction_note) {
+          anomalyMap[r.id] = 'corrected';
+        }
+      });
+
+      // Per-car sorted records → detect negative / spike
+      var byCar = {};
+      allRecords.forEach(function(r) {
+        if (r.record_type === 'departure' || r.record_type === 'return') {
+          if (!byCar[r.car_id]) byCar[r.car_id] = [];
+          byCar[r.car_id].push(r);
+        }
+      });
+
+      Object.keys(byCar).forEach(function(carId) {
+        var sorted = byCar[carId].slice().sort(function(a, b) {
+          return (a.datetime || '').localeCompare(b.datetime || '');
+        });
+        for (var i = 1; i < sorted.length; i++) {
+          var prev = sorted[i-1];
+          var curr = sorted[i];
+          if (prev.mileage && curr.mileage) {
+            var diff = curr.mileage - prev.mileage;
+            if (diff < 0) {
+              // Mark both as negative — the one that caused the reversal
+              if (!anomalyMap[curr.id] || anomalyMap[curr.id] === 'corrected') {
+                anomalyMap[curr.id] = anomalyMap[curr.id] === 'corrected' ? 'corrected' : 'negative';
+              }
+            } else if (diff > SPIKE_KM) {
+              if (!anomalyMap[curr.id]) anomalyMap[curr.id] = 'spike';
+              if (!anomalyMap[prev.id]) anomalyMap[prev.id] = 'spike';
+            }
+          }
+        }
+      });
+
+      // Missing mileage (only departure/return)
+      allRecords.forEach(function(r) {
+        if ((r.record_type === 'departure' || r.record_type === 'return') &&
+            (r.mileage === null || r.mileage === undefined || r.mileage === 0)) {
+          if (!anomalyMap[r.id]) anomalyMap[r.id] = 'missing';
+        }
+      });
+    }
+
+    function updateSummaryCards() {
+      var cnt = { normal: 0, missing: 0, negative: 0, spike: 0, corrected: 0 };
+      allRecords.forEach(function(r) {
+        var a = anomalyMap[r.id];
+        if      (a === 'missing')   cnt.missing++;
+        else if (a === 'negative')  cnt.negative++;
+        else if (a === 'spike')     cnt.spike++;
+        else if (a === 'corrected') cnt.corrected++;
+        else                        cnt.normal++;
+      });
+      document.getElementById('cntNormal').textContent    = cnt.normal.toLocaleString();
+      document.getElementById('cntMissing').textContent   = cnt.missing.toLocaleString();
+      document.getElementById('cntNegative').textContent  = cnt.negative.toLocaleString();
+      document.getElementById('cntSpike').textContent     = cnt.spike.toLocaleString();
+      document.getElementById('cntCorrected').textContent = cnt.corrected.toLocaleString();
+
+      // Update anomaly banner
+      var hasAnomalies = cnt.missing + cnt.negative + cnt.spike > 0;
+      var banner = document.getElementById('anomalyBanner');
+      var list   = document.getElementById('anomalyList');
+      if (hasAnomalies) {
+        var items = [];
+        if (cnt.negative > 0) items.push({ type: 'negative', label: '🔻 ไมล์ติดลบ ' + cnt.negative + ' รายการ' });
+        if (cnt.missing  > 0) items.push({ type: 'missing',  label: '⚪ ไมล์ว่างเปล่า ' + cnt.missing + ' รายการ' });
+        if (cnt.spike    > 0) items.push({ type: 'spike',    label: '📈 ไมล์กระโดดสูง ' + cnt.spike + ' รายการ' });
+        list.innerHTML = items.map(function(it) {
+          return '<li onclick="quickFilter(\'' + it.type + '\')">' + it.label + '</li>';
+        }).join('');
+        banner.style.display = 'block';
+      } else {
+        banner.style.display = 'none';
+      }
+    }
+
+    function quickFilter(type) {
+      document.getElementById('filterAnomaly').value = type;
+      applyFilter();
+    }
+
+    function applyFilter() {
+      var anomalyFilter = document.getElementById('filterAnomaly').value;
+      filteredRecords = allRecords.filter(function(r) {
+        var a = anomalyMap[r.id] || 'normal';
+        if (!anomalyFilter) return true;
+        if (anomalyFilter === 'normal') return a === 'normal' || a === undefined;
+        return a === anomalyFilter;
+      });
+      document.getElementById('resultCount').textContent = 'แสดง ' + filteredRecords.length + ' จาก ' + allRecords.length + ' รายการ';
+      renderTable();
+    }
+
+    function resetFilter() {
+      document.getElementById('filterAnomaly').value = '';
+      document.getElementById('filterType').value = '';
+      var today = new Date();
+      var from  = new Date(); from.setDate(from.getDate() - 60);
+      document.getElementById('dateFrom').value = fmt(from);
+      document.getElementById('dateTo').value   = fmt(today);
+      applyFilter();
+    }
+
+    function renderTable() {
+      var tbody = document.getElementById('tableBody');
+      if (filteredRecords.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="empty-state-icon">🎉</div><p>ไม่พบรายการตามเงื่อนไขที่กรอง</p></div></td></tr>';
+        return;
+      }
+      var html = '';
+      filteredRecords.forEach(function(r, i) {
+        var anomaly = anomalyMap[r.id] || 'normal';
+        var rowClass = '';
+        if (anomaly === 'missing')   rowClass = 'row-anomaly-missing';
+        if (anomaly === 'negative')  rowClass = 'row-anomaly-negative';
+        if (anomaly === 'spike')     rowClass = 'row-anomaly-spike';
+        if (anomaly === 'corrected') rowClass = 'row-corrected';
+
+        var typeBadge = '';
+        if (r.record_type === 'departure')  typeBadge = '<span class="badge badge-dep">ออก</span>';
+        if (r.record_type === 'return')     typeBadge = '<span class="badge badge-ret">กลับ</span>';
+        if (r.record_type === 'refuel')     typeBadge = '<span class="badge badge-ref">เติมน้ำมัน</span>';
+        if (r.record_type === 'inspection') typeBadge = '<span class="badge badge-insp">ตรวจสภาพ</span>';
+        if (r.data_quality && r.data_quality !== 'normal') {
+          typeBadge += ' <span class="badge badge-auto">' + r.data_quality + '</span>';
+        }
+
+        var anomalyBadge = '';
+        if      (anomaly === 'missing')   anomalyBadge = '<span class="badge badge-missing">⚪ ไมล์ว่างเปล่า</span>';
+        else if (anomaly === 'negative')  anomalyBadge = '<span class="badge badge-negative">🔻 ไมล์ย้อนกลับ</span>';
+        else if (anomaly === 'spike')     anomalyBadge = '<span class="badge badge-spike">📈 ไมล์กระโดด</span>';
+        else if (anomaly === 'corrected') anomalyBadge = '<span class="badge badge-corrected">✅ แก้ไขแล้ว</span>';
+        else                              anomalyBadge = '<span class="badge badge-ok">✅ ปกติ</span>';
+
+        var mileageHtml = '';
+        if (r.mileage) {
+          var cls = anomaly === 'corrected' ? 'corrected' : '';
+          mileageHtml = '<span class="mileage-cell ' + cls + '">' + Number(r.mileage).toLocaleString() + ' กม.</span>';
+        } else {
+          mileageHtml = '<span class="mileage-cell missing">— ไม่มีข้อมูล —</span>';
+        }
+
+        var correctedInfo = '';
+        if (r.updated_by) {
+          correctedInfo = '<span class="corrected-info">โดย: ' + (r.updated_by || '') + '</span>';
+          if (r.updated_at) correctedInfo += '<span class="corrected-info">' + fmtDatetimeThai(r.updated_at) + '</span>';
+          if (r.correction_note) correctedInfo += '<span class="corrected-info" title="' + esc(r.correction_note) + '">📝 ' + truncate(r.correction_note, 20) + '</span>';
+        } else {
+          correctedInfo = '<span style="color:#bbb; font-size:0.8em">—</span>';
+        }
+
+        var rid = esc(r.id);
+        html += '<tr class="' + rowClass + '">';
+        html += '<td style="color:#999; font-size:0.8em">' + (i+1) + '</td>';
+        html += '<td style="white-space:nowrap">' + fmtDatetimeThai(r.datetime) + '</td>';
+        html += '<td>' + (r.license_plate || '') + ' <span style="color:#999; font-size:0.85em">' + (r.brand || '') + '</span></td>';
+        html += '<td>' + (r.driver_name || '<span style="color:#bbb">—</span>') + '</td>';
+        html += '<td>' + typeBadge + '</td>';
+        html += '<td style="text-align:right">' + mileageHtml + '</td>';
+        html += '<td>' + anomalyBadge + '</td>';
+        html += '<td style="font-size:0.82em; line-height:1.6">' + correctedInfo + '</td>';
+        html += '<td><button class="btn btn-warning btn-sm" onclick="openEdit(\'' + rid + '\')">✏️ แก้ไขไมล์</button></td>';
+        html += '</tr>';
+      });
+      tbody.innerHTML = html;
+    }
+
+    function esc(s) {
+      if (!s) return '';
+      return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function truncate(s, n) {
+      if (!s) return '';
+      return s.length > n ? s.substring(0, n) + '…' : s;
+    }
+
+    // ── Edit modal ─────────────────────────────────────────
+    function openEdit(id) {
+      var r = allRecords.find(function(x) { return x.id === id; });
+      if (!r) return;
+      editTarget = r;
+
+      var typeLabel = { departure: 'ออก (Departure)', return: 'กลับ (Return)', refuel: 'เติมน้ำมัน', inspection: 'ตรวจสภาพ' };
+      document.getElementById('infoDatetime').textContent  = fmtDatetimeThai(r.datetime);
+      document.getElementById('infoCar').textContent       = (r.license_plate || '') + ' ' + (r.brand || '');
+      document.getElementById('infoDriver').textContent    = r.driver_name || '—';
+      document.getElementById('infoType').textContent      = typeLabel[r.record_type] || r.record_type;
+      document.getElementById('infoOldMileage').textContent = r.mileage ? Number(r.mileage).toLocaleString() + ' กม.' : '— ไม่มีข้อมูล —';
+
+      // Build context: prev and next records for this car
+      var carRecs = allRecords.filter(function(x) {
+        return x.car_id === r.car_id && (x.record_type === 'departure' || x.record_type === 'return');
+      }).sort(function(a, b) { return (a.datetime || '').localeCompare(b.datetime || ''); });
+
+      var idx = carRecs.findIndex(function(x) { return x.id === r.id; });
+      var prevRec = idx > 0 ? carRecs[idx-1] : null;
+      var nextRec = idx < carRecs.length-1 ? carRecs[idx+1] : null;
+
+      var ctxParts = [];
+      if (prevRec && prevRec.mileage) ctxParts.push('ก่อนหน้า: ' + Number(prevRec.mileage).toLocaleString() + ' กม. (' + fmtDatetimeThai(prevRec.datetime) + ')');
+      if (nextRec && nextRec.mileage) ctxParts.push('ถัดไป: '    + Number(nextRec.mileage).toLocaleString() + ' กม. (' + fmtDatetimeThai(nextRec.datetime) + ')');
+      document.getElementById('infoContext').textContent = ctxParts.length ? ctxParts.join(' | ') : 'ไม่มีข้อมูลบริบท';
+
+      // Pre-fill current mileage
+      document.getElementById('inputMileage').value = r.mileage || '';
+      document.getElementById('inputMileage').classList.remove('input-error');
+      document.getElementById('inputNote').value = '';
+      document.getElementById('modalWarnings').style.display = 'none';
+      document.getElementById('modalWarnings').innerHTML = '';
+      document.getElementById('btnSave').className = 'btn btn-confirm-danger';
+
+      // Store context for warning checks
+      editTarget._prev = prevRec;
+      editTarget._next = nextRec;
+
+      document.getElementById('editModal').classList.add('open');
+      setTimeout(function() { document.getElementById('inputMileage').focus(); }, 100);
+    }
+
+    function closeModal() {
+      document.getElementById('editModal').classList.remove('open');
+      editTarget = null;
+    }
+
+    function handleOverlayClick(e) {
+      if (e.target === document.getElementById('editModal')) closeModal();
+    }
+
+    // ── Real-time warning check ────────────────────────────
+    function checkWarnings() {
+      if (!editTarget) return;
+      var val = parseInt(document.getElementById('inputMileage').value);
+      var warnings = [];
+      var hasError = false;
+
+      if (isNaN(val) || val <= 0) {
+        // no val yet, skip
+        document.getElementById('modalWarnings').style.display = 'none';
+        return;
+      }
+
+      var old = editTarget.mileage;
+      var prev = editTarget._prev;
+      var next = editTarget._next;
+
+      // 1. ติดลบ / เป็น 0
+      if (val <= 0) {
+        warnings.push({ type: 'critical', text: 'เลขไมล์ต้องมากกว่า 0' });
+        hasError = true;
+      }
+
+      // 2. น้อยกว่า prev
+      if (prev && prev.mileage && val < prev.mileage) {
+        warnings.push({
+          type: 'warn',
+          text: 'เลขไมล์ใหม่ (' + val.toLocaleString() + ') น้อยกว่าบันทึกก่อนหน้า (' + Number(prev.mileage).toLocaleString() + ' กม. เมื่อ ' + fmtDatetimeThai(prev.datetime) + ')'
+        });
+      }
+
+      // 3. มากกว่า next
+      if (next && next.mileage && val > next.mileage) {
+        warnings.push({
+          type: 'warn',
+          text: 'เลขไมล์ใหม่ (' + val.toLocaleString() + ') มากกว่าบันทึกถัดไป (' + Number(next.mileage).toLocaleString() + ' กม. เมื่อ ' + fmtDatetimeThai(next.datetime) + ')'
+        });
+      }
+
+      // 4. เปลี่ยนแปลงมากเกิน 50%
+      if (old && old > 0) {
+        var changePct = Math.abs(val - old) / old * 100;
+        if (changePct > 50) {
+          warnings.push({
+            type: 'warn',
+            text: 'ค่าเปลี่ยนแปลงสูงมาก (' + changePct.toFixed(0) + '%) จาก ' + Number(old).toLocaleString() + ' → ' + val.toLocaleString() + ' กม. กรุณาตรวจสอบให้แน่ใจ'
+          });
+        }
+      }
+
+      // 5. Spike warning
+      if (prev && prev.mileage) {
+        var gapFromPrev = val - prev.mileage;
+        if (gapFromPrev > SPIKE_KM) {
+          warnings.push({
+            type: 'warn',
+            text: 'ระยะห่างจากบันทึกก่อนหน้าสูงถึง ' + gapFromPrev.toLocaleString() + ' กม. — ตรวจสอบว่าถูกต้องหรือไม่'
+          });
+        }
+      }
+
+      var wDiv = document.getElementById('modalWarnings');
+      if (warnings.length > 0) {
+        wDiv.innerHTML = warnings.map(function(w) {
+          return '<div class="modal-warning-item ' + (w.type === 'critical' ? 'critical' : '') + '">' +
+            '<span class="wi-icon">' + (w.type === 'critical' ? '🚫' : '⚠️') + '</span>' +
+            '<span>' + esc(w.text) + '</span>' +
+            '</div>';
+        }).join('');
+        wDiv.style.display = 'block';
+
+        // Change button style
+        var btn = document.getElementById('btnSave');
+        btn.className = hasError ? 'btn btn-secondary' : 'btn btn-confirm-warning';
+        btn.disabled = hasError;
+      } else {
+        wDiv.style.display = 'none';
+        document.getElementById('btnSave').className = 'btn btn-confirm-danger';
+        document.getElementById('btnSave').disabled = false;
+      }
+    }
+
+    // ── Save correction ────────────────────────────────────
+    async function saveCorrection() {
+      if (!editTarget) return;
+
+      var mileageRaw = document.getElementById('inputMileage').value.trim();
+      var note = document.getElementById('inputNote').value.trim();
+
+      // Validate
+      var newMileage = parseInt(mileageRaw);
+      if (!mileageRaw || isNaN(newMileage) || newMileage <= 0) {
+        document.getElementById('inputMileage').classList.add('input-error');
+        showAlertInModal('กรุณากรอกเลขไมล์ที่ถูกต้อง (ต้องมากกว่า 0)');
+        return;
+      }
+      document.getElementById('inputMileage').classList.remove('input-error');
+
+      if (!note) {
+        document.getElementById('inputNote').style.borderColor = '#c62828';
+        showAlertInModal('กรุณาระบุเหตุผลในการแก้ไข');
+        return;
+      }
+      document.getElementById('inputNote').style.borderColor = '';
+
+      // Warn if no change
+      if (newMileage === editTarget.mileage) {
+        showAlertInModal('เลขไมล์เท่าเดิม ไม่มีการเปลี่ยนแปลง');
+        return;
+      }
+
+      var btn = document.getElementById('btnSave');
+      btn.disabled = true;
+      btn.textContent = '⏳ กำลังบันทึก...';
+
+      try {
+        var res = await API.put('/api/usage/' + editTarget.id, {
+          mileage: newMileage,
+          correction_note: note
+        });
+
+        // Update in-memory record
+        var rec = allRecords.find(function(x) { return x.id === editTarget.id; });
+        if (rec) {
+          rec.mileage = newMileage;
+          rec.correction_note = note;
+          var u = getCurrentUser();
+          rec.updated_by = u ? (u.full_name || u.username || u.id) : 'admin';
+          rec.updated_at = new Date().toISOString();
+        }
+
+        detectAnomalies();
+        updateSummaryCards();
+        applyFilter();
+
+        closeModal();
+        showAlert('แก้ไขเลขไมล์เรียบร้อย: ' + Number(editTarget.mileage).toLocaleString() + ' → ' + newMileage.toLocaleString() + ' กม.', 'success');
+      } catch(e) {
+        showAlertInModal('บันทึกไม่สำเร็จ: ' + (e.message || ''));
+        btn.disabled = false;
+        btn.textContent = '💾 บันทึกการแก้ไข';
+      }
+    }
+
+    function showAlertInModal(msg) {
+      var existing = document.querySelector('.modal-body .alert');
+      if (existing) existing.remove();
+      var a = document.createElement('div');
+      a.className = 'alert alert-error';
+      a.textContent = msg;
+      document.querySelector('.modal-body').insertBefore(a, document.querySelector('.modal-body').firstChild);
+      setTimeout(function() { a.remove(); }, 5000);
+    }
+
+    function showAlert(msg, type) {
+      var c = document.getElementById('alertContainer');
+      c.innerHTML = '<div class="alert alert-' + type + '">' + esc(msg) + '</div>';
+      setTimeout(function() { c.innerHTML = ''; }, 7000);
+      c.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  </script>
+</body>
+
+</html>

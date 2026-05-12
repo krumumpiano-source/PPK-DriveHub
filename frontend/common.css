@@ -1134,6 +1134,7 @@ body.qr-page .content { padding: clamp(14px, 3vw, 20px); }
 .flatpickr-current-month .numInputWrapper { width: 7ch !important; }
 .flatpickr-current-month input.cur-year { font-weight: 600 !important; padding: 0 0.5ch !important; }
 .flatpickr-current-month .flatpickr-monthDropdown-months { font-weight: 600 !important; padding: 0 4px !important; }
+.flatpickr-prev-month, .flatpickr-next-month { z-index: 3 !important; }
 .flatpickr-innerContainer { margin-top: 4px !important; }
 .flatpickr-weekdays { margin-top: 6px !important; height: 28px !important; }
 .flatpickr-weekday { line-height: 28px !important; }

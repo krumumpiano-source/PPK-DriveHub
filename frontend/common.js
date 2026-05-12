@@ -217,6 +217,7 @@ function renderNavigation() {
         nav += _sidebarItem('qr-manage.html', 'qr-manage', '📱', 'จัดการ QR Code');
         nav += _sidebarItem('user-management.html', 'user-management', '👥', 'จัดการผู้ใช้');
         nav += _sidebarItem('admin-settings.html', 'settings', '⚙️', 'ตั้งค่าระบบ');
+        nav += _sidebarItem('mileage-correction.html', 'mileage-correction', '🔧', 'แก้ไขเลขไมล์');
         nav += _sidebarItem('audit-log.html', 'audit-log', '📜', 'บันทึกกิจกรรม');
         nav += _sidebarItem('backup-recovery.html', 'backup-recovery', '💾', 'สำรอง/กู้คืน');
 
