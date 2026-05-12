@@ -63,15 +63,22 @@ export async function onRequest(context) {
   // ========== Vehicle Report ==========
   if (path === '/api/reports/vehicles' && method === 'GET') {
     try { requirePermission(user, 'reports', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const vDateFrom = url.searchParams.get('date_from') || '1970-01-01';
+    const vDateTo = url.searchParams.get('date_to') || new Date().toISOString().substr(0, 10);
+    const vCarId = url.searchParams.get('car_id') || null;
+    const vCarWhere = vCarId ? 'AND c.id = ?' : '';
+    const vCarParams = vCarId ? [vCarId] : [];
     const rows = await dbAll(env.DB,
       `SELECT c.id, c.license_plate, c.brand, c.model, c.year, c.status,
        c.current_mileage, c.fuel_type,
-       (SELECT COUNT(*) FROM queue q WHERE q.car_id = c.id AND q.status = 'completed') AS trip_count,
-       (SELECT COALESCE(SUM(fl.liters),0) FROM fuel_log fl WHERE fl.car_id = c.id AND fl.deleted_at IS NULL) AS total_fuel_liters,
-       (SELECT COALESCE(SUM(fl.amount),0) FROM fuel_log fl WHERE fl.car_id = c.id AND fl.deleted_at IS NULL) AS total_fuel_cost,
-       (SELECT COUNT(*) FROM repair_log rl WHERE rl.car_id = c.id) AS repair_count,
-       (SELECT COALESCE(SUM(rl.cost),0) FROM repair_log rl WHERE rl.car_id = c.id) AS total_repair_cost
-       FROM cars c ORDER BY c.license_plate`, []
+       (SELECT COUNT(*) FROM queue q WHERE q.car_id = c.id AND q.status = 'completed' AND q.date >= ? AND q.date <= ?) AS trip_count,
+       (SELECT COALESCE(SUM(fl.liters),0) FROM fuel_log fl WHERE fl.car_id = c.id AND fl.deleted_at IS NULL AND fl.date >= ? AND fl.date <= ?) AS total_fuel_liters,
+       (SELECT COALESCE(SUM(fl.amount),0) FROM fuel_log fl WHERE fl.car_id = c.id AND fl.deleted_at IS NULL AND fl.date >= ? AND fl.date <= ?) AS total_fuel_cost,
+       (SELECT COALESCE(AVG(fl.fuel_consumption_rate),NULL) FROM fuel_log fl WHERE fl.car_id = c.id AND fl.deleted_at IS NULL AND fl.date >= ? AND fl.date <= ? AND fl.fuel_consumption_rate > 0) AS avg_consumption,
+       (SELECT COUNT(*) FROM repair_log rl WHERE rl.car_id = c.id AND rl.date_reported >= ? AND rl.date_reported <= ?) AS repair_count,
+       (SELECT COALESCE(SUM(rl.cost),0) FROM repair_log rl WHERE rl.car_id = c.id AND rl.date_reported >= ? AND rl.date_reported <= ?) AS total_repair_cost
+       FROM cars c WHERE 1=1 ${vCarWhere} ORDER BY c.license_plate`,
+      [vDateFrom, vDateTo, vDateFrom, vDateTo, vDateFrom, vDateTo, vDateFrom, vDateTo, vDateFrom, vDateTo, vDateFrom, vDateTo, ...vCarParams]
     );
     return success(rows);
   }

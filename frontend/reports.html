@@ -1450,6 +1450,15 @@
           </div>
         </div>
         </div><!-- end em_period_section -->
+        <!-- ตัวเลือกรถ (แสดงเฉพาะ type=vehicles) -->
+        <div id="em_vehicle_section" style="display:none;">
+          <div class="form-group">
+            <label><strong>เลือกรถ</strong></label>
+            <select id="em_car_id">
+              <option value="">ทุกคัน (แยกแผ่น Excel รายคัน)</option>
+            </select>
+          </div>
+        </div>
         <!-- รูปแบบไฟล์ -->
         <div class="form-group">
           <label><strong>รูปแบบไฟล์</strong></label>
@@ -1516,8 +1525,22 @@
 
   <script>
   // ═══ Advanced Export Modal ═══
-  function openExportModal() {
+  async function openExportModal() {
     document.getElementById('em_type').value = currentTab || 'trips';
+    // Populate car selector if not already done
+    var carSel = document.getElementById('em_car_id');
+    if (carSel.options.length <= 1) {
+      try {
+        var r = await apiCall('getVehicles', {});
+        var list = (r && r.data) ? (r.data.vehicles || r.data) : [];
+        list.forEach(function(v) {
+          var o = document.createElement('option');
+          o.value = v.id || v.car_id || '';
+          o.textContent = (v.license_plate||'') + (v.brand ? ' – '+v.brand : '') + (v.model ? ' '+v.model : '');
+          carSel.appendChild(o);
+        });
+      } catch(e) {}
+    }
     onEmTypeChange();
     document.getElementById('exportModal').style.display = 'flex';
   }
@@ -1559,8 +1582,9 @@
   function onEmTypeChange() {
     var type = document.getElementById('em_type').value;
     // Types that support date range
-    var hasDates = ['trips','fuel','repairs','expenses','offhours','audit','quality'].includes(type);
+    var hasDates = ['trips','fuel','repairs','expenses','offhours','audit','quality','vehicles'].includes(type);
     document.getElementById('em_period_section').style.display = hasDates ? '' : 'none';
+    document.getElementById('em_vehicle_section').style.display = (type === 'vehicles') ? '' : 'none';
     // PDF only for trips/fuel
     var hasPDF = type === 'trips' || type === 'fuel';
     document.getElementById('em_format_pdf_lbl').style.opacity = hasPDF ? '1' : '0.4';
@@ -1623,7 +1647,7 @@
     try {
       var type = document.getElementById('em_type').value;
       var fmt = document.querySelector('input[name="em_format"]:checked').value;
-      var hasDates = ['trips','fuel','repairs','expenses','offhours','audit','quality'].includes(type);
+      var hasDates = ['trips','fuel','repairs','expenses','offhours','audit','quality','vehicles'].includes(type);
       var dr = hasDates ? _emComputeDateRange() : { from: '1970-01-01', to: new Date().toISOString().substr(0,10), label: 'ข้อมูลทั้งหมด' };
       var dateLabel = dr.label || (dr.from + ' ถึง ' + dr.to);
       var qs = '?date_from='+encodeURIComponent(dr.from)+'&date_to='+encodeURIComponent(dr.to);
@@ -1643,8 +1667,12 @@
         quality: '/api/reports/data-quality'
       };
       var endpoint = endpointMap[type];
-      var noDateTypes = ['vehicles','drivers'];
-      var urlParam = noDateTypes.includes(type) ? '' : qs;
+      // vehicles uses date + optional car_id; drivers has no date
+      var urlParam = (type === 'drivers') ? '' : qs;
+      if (type === 'vehicles') {
+        var selCarId = document.getElementById('em_car_id').value;
+        if (selCarId) urlParam += '&car_id=' + encodeURIComponent(selCarId);
+      }
       var r = await API.get(endpoint + urlParam);
       var result = (r && r.data) ? r.data : (r || {});
 
@@ -1749,11 +1777,59 @@
   function _emExportVehicles(records, dateLabel) {
     var rn = document.getElementById('em_reporter_name').value||'-';
     var rp = document.getElementById('em_reporter_pos').value||'-';
-    var headers = ['ทะเบียน','ยี่ห้อ','รุ่น','ปี','สถานะ','เลขไมล์ปัจจุบัน','ประเภทน้ำมัน','จำนวนเที่ยว','น้ำมันรวม(ลิตร)','ค่าน้ำมันรวม(บาท)','จำนวนซ่อม','ค่าซ่อมรวม(บาท)'];
     var statMap = { active:'ใช้งาน', maintenance:'ซ่อมบำรุง', inactive:'ไม่ใช้งาน' };
-    var rows = records.map(function(v){ return [v.license_plate||'',v.brand||'',(v.model||'')+(v.year?' ('+v.year+')':''),v.year||'',statMap[v.status]||v.status||'',v.current_mileage||0,v.fuel_type||'',v.trip_count||0,Number(v.total_fuel_liters||0).toFixed(2),Number(v.total_fuel_cost||0).toFixed(2),v.repair_count||0,Number(v.total_repair_cost||0).toFixed(2)]; });
+    var headers = ['ทะเบียน','ยี่ห้อ','รุ่น','ปี','สถานะ','เลขไมล์ปัจจุบัน','ประเภทน้ำมัน','จำนวนเที่ยว','น้ำมันรวม(ลิตร)','ค่าน้ำมัน(บาท)','อัตราสิ้นเปลือง(กม./ลิตร)','จำนวนซ่อม','ค่าซ่อม(บาท)'];
+    var summaryRows = records.map(function(v) {
+      return [v.license_plate||'',v.brand||'',v.model||'',v.year||'',statMap[v.status]||v.status||'',v.current_mileage||0,v.fuel_type||'',v.trip_count||0,Number(v.total_fuel_liters||0).toFixed(2),Number(v.total_fuel_cost||0).toFixed(2),v.avg_consumption>0?Number(v.avg_consumption).toFixed(2):'-',v.repair_count||0,Number(v.total_repair_cost||0).toFixed(2)];
+    });
+
+    var sheets = [{ sheetName:'สรุปทุกคัน', headers:headers, rows:summaryRows }];
+
+    // Per-vehicle sheets (only when exporting all cars)
+    var selCarId = document.getElementById('em_car_id').value;
+    if (!selCarId && records.length > 1) {
+      records.forEach(function(v) {
+        var sheetName = (v.license_plate||v.id||'รถ').replace(/[\/\\\?\*\[\]:]/g,'').substr(0,28);
+        var cardRows = [
+          ['ทะเบียน', v.license_plate||'-'],
+          ['ยี่ห้อ/รุ่น', (v.brand||'') + (v.model?' '+v.model:'') + (v.year?' ('+v.year+')':'')],
+          ['สถานะ', statMap[v.status]||v.status||'-'],
+          ['ประเภทน้ำมัน', v.fuel_type||'-'],
+          ['เลขไมล์ปัจจุบัน', v.current_mileage||0],
+          ['',''],
+          ['ช่วงเวลา', dateLabel],
+          ['จำนวนเที่ยว', v.trip_count||0],
+          ['น้ำมันรวม (ลิตร)', Number(v.total_fuel_liters||0).toFixed(2)],
+          ['ค่าน้ำมันรวม (บาท)', Number(v.total_fuel_cost||0).toFixed(2)],
+          ['อัตราสิ้นเปลืองเฉลี่ย', v.avg_consumption>0?Number(v.avg_consumption).toFixed(2)+' กม./ลิตร':'-'],
+          ['จำนวนครั้งซ่อม', v.repair_count||0],
+          ['ค่าซ่อมรวม (บาท)', Number(v.total_repair_cost||0).toFixed(2)]
+        ];
+        sheets.push({ sheetName: sheetName, headers:['รายการ','ข้อมูล'], rows: cardRows });
+      });
+    } else if (selCarId && records.length === 1) {
+      // Single car — card-style detail as second sheet
+      var v = records[0];
+      var cardRows = [
+        ['ทะเบียน', v.license_plate||'-'],
+        ['ยี่ห้อ/รุ่น', (v.brand||'') + (v.model?' '+v.model:'') + (v.year?' ('+v.year+')':'')],
+        ['สถานะ', statMap[v.status]||v.status||'-'],
+        ['ประเภทน้ำมัน', v.fuel_type||'-'],
+        ['เลขไมล์ปัจจุบัน', v.current_mileage||0],
+        ['',''],
+        ['ช่วงเวลา', dateLabel],
+        ['จำนวนเที่ยว', v.trip_count||0],
+        ['น้ำมันรวม (ลิตร)', Number(v.total_fuel_liters||0).toFixed(2)],
+        ['ค่าน้ำมันรวม (บาท)', Number(v.total_fuel_cost||0).toFixed(2)],
+        ['อัตราสิ้นเปลืองเฉลี่ย', v.avg_consumption>0?Number(v.avg_consumption).toFixed(2)+' กม./ลิตร':'-'],
+        ['จำนวนครั้งซ่อม', v.repair_count||0],
+        ['ค่าซ่อมรวม (บาท)', Number(v.total_repair_cost||0).toFixed(2)]
+      ];
+      sheets.push({ sheetName:'รายละเอียด', headers:['รายการ','ข้อมูล'], rows: cardRows });
+    }
+
     ExportUtils.exportExcelMultiSheet({ filename: 'รายงานการใช้งานรถ_'+new Date().toISOString().substr(0,10),
-      sheets:[{sheetName:'รายคัน',headers:headers,rows:rows}],
+      sheets: sheets,
       reportMeta:{reportedBy:rn,reportedByPosition:rp,dateRange:dateLabel,type:'การใช้งานรถ'} });
   }
 
