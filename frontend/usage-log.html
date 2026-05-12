@@ -241,6 +241,32 @@
       border-left: 4px solid #c62828;
     }
 
+    .badge-gap {
+      background: #fde8e8;
+      color: #c62828;
+    }
+
+    .row-undocumented-gap {
+      background: #fff3e0 !important;
+      border-left: 4px solid #e65100;
+    }
+
+    .row-undocumented-gap:hover {
+      background: #ffe0b2 !important;
+    }
+
+    .mileage-inferred {
+      font-style: italic;
+      color: #f57c00;
+    }
+
+    .note-inferred {
+      display: block;
+      font-size: 0.8em;
+      color: #e65100;
+      margin-top: 2px;
+    }
+
     @media (max-width: 768px) {
       .filters {
         grid-template-columns: 1fr;
@@ -552,56 +578,139 @@
     }
 
     function pairTrips(records) {
+      // กรองเฉพาะ departure/return (ข้าม gap_record ที่ระบบสร้าง)
       var usable = records.filter(function(r) {
-        return (r.record_type === 'departure' || r.record_type === 'return') && r.data_quality !== 'gap_record';
+        return r.record_type === 'departure' || r.record_type === 'return';
       });
+
+      // จัดกลุ่มตามรถ
       var byCar = {};
       usable.forEach(function(r) {
         if (!byCar[r.car_id]) byCar[r.car_id] = [];
         byCar[r.car_id].push(r);
       });
-      var result = [];
+
+      var allTrips = [];
+
       Object.keys(byCar).forEach(function(carId) {
-        var carRecs = byCar[carId].sort(function(a, b) { return a.datetime.localeCompare(b.datetime); });
-        var curDep = null;
-        carRecs.forEach(function(rec) {
-          if (rec.record_type === 'departure') {
-            if (curDep) {
-              // departure ซ้อน departure = คนขับลืมสแกนกลับ
-              // ใช้ไมล์ของ departure ใหม่เป็นไมล์กลับ (เพราะรถต้องกลับก่อนถึงออกใหม่ได้)
-              var inferredReturn = {
-                car_id: rec.car_id,
-                driver_id: curDep.driver_id,
-                record_type: 'return',
-                datetime: rec.datetime,
-                mileage: rec.mileage,
-                location: curDep.location,
-                requester_name: curDep.requester_name,
-                license_plate: rec.license_plate,
-                brand: rec.brand,
-                driver_name: curDep.driver_name
-              };
-              result.push(buildTrip(curDep, inferredReturn, 'inferred'));
-            }
-            curDep = rec;
-          } else if (rec.record_type === 'return') {
-            if (curDep) {
-              result.push(buildTrip(curDep, rec, 'complete'));
-              curDep = null;
-            } else {
-              result.push(buildTrip(null, rec, 'no_departure'));
-            }
+        // เรียงตามเวลา เก่า→ใหม่
+        var carRecs = byCar[carId].sort(function(a, b) {
+          return a.datetime.localeCompare(b.datetime);
+        });
+
+        // --- จับคู่โดยใช้ queue_id ก่อน ---
+        var queueMap = {};
+        var noQueue = [];
+        carRecs.forEach(function(r) {
+          if (r.queue_id) {
+            if (!queueMap[r.queue_id]) queueMap[r.queue_id] = { dep: null, ret: null };
+            if (r.record_type === 'departure') queueMap[r.queue_id].dep = r;
+            else queueMap[r.queue_id].ret = r;
+          } else {
+            noQueue.push(r);
           }
         });
-        if (curDep) result.push(buildTrip(curDep, null, 'no_return'));
+
+        var trips = [];
+
+        // คิวที่มี queue_id
+        Object.keys(queueMap).forEach(function(qid) {
+          var g = queueMap[qid];
+          var st = (g.dep && g.ret) ? 'complete' : (g.dep ? 'no_return' : 'no_departure');
+          trips.push(buildTrip(g.dep, g.ret, st));
+        });
+
+        // บันทึกที่ไม่มี queue_id → จับคู่ตามลำดับเวลา
+        var curDep = null;
+        noQueue.forEach(function(rec) {
+          if (rec.record_type === 'departure') {
+            if (curDep) trips.push(buildTrip(curDep, null, 'no_return'));
+            curDep = rec;
+          } else {
+            if (curDep) { trips.push(buildTrip(curDep, rec, 'complete')); curDep = null; }
+            else trips.push(buildTrip(null, rec, 'no_departure'));
+          }
+        });
+        if (curDep) trips.push(buildTrip(curDep, null, 'no_return'));
+
+        // เรียงตามเวลา เก่า→ใหม่
+        trips.sort(function(a, b) { return (a.sort_key || '').localeCompare(b.sort_key || ''); });
+
+        // --- Pass 1 (ไปข้างหน้า): เติมไมล์ก่อนออกที่หายไปจากไมล์กลับของคิวก่อนหน้า ---
+        for (var i = 1; i < trips.length; i++) {
+          if (trips[i].mileage_start == null && trips[i - 1].mileage_end != null) {
+            trips[i].mileage_start = trips[i - 1].mileage_end;
+            trips[i].mileage_start_inferred = true;
+            trips[i].notes = (trips[i].notes ? trips[i].notes + ' / ' : '') + 'พนักงานขับรถไม่บันทึกก่อนออกเดินทาง';
+          }
+        }
+
+        // --- Pass 2 (ย้อนกลับ): เติมไมล์กลับที่หายไปจากไมล์ก่อนออกของคิวถัดไป ---
+        for (var i = trips.length - 2; i >= 0; i--) {
+          if (trips[i].mileage_end == null && trips[i + 1].mileage_start != null) {
+            trips[i].mileage_end = trips[i + 1].mileage_start;
+            trips[i].mileage_end_inferred = true;
+            trips[i].notes = (trips[i].notes ? trips[i].notes + ' / ' : '') + 'พนักงานขับรถไม่บันทึกกลับมาจากเดินทาง';
+          }
+        }
+
+        // คำนวณระยะทางใหม่หลังเติมไมล์
+        trips.forEach(function(trip) {
+          if (trip.mileage_start != null && trip.mileage_end != null) {
+            var d = trip.mileage_end - trip.mileage_start;
+            trip.distance = d >= 0 ? d : null;
+          }
+        });
+
+        // --- แทรก "ใช้รถโดยไม่บันทึก" ระหว่างคิวที่มีเลขไมล์กระโดด ---
+        var final = [];
+        for (var i = 0; i < trips.length; i++) {
+          final.push(trips[i]);
+          if (i < trips.length - 1) {
+            var curr = trips[i];
+            var next = trips[i + 1];
+            // ตรวจเฉพาะเมื่อทั้งคู่เป็นเลขไมล์จริง (ไม่ใช่ที่อนุมานซึ่งกันและกัน)
+            if (!curr.mileage_end_inferred && !next.mileage_start_inferred
+                && curr.mileage_end != null && next.mileage_start != null
+                && next.mileage_start > curr.mileage_end) {
+              var gapDist = next.mileage_start - curr.mileage_end;
+              final.push({
+                car_id: carId,
+                license_plate: curr.license_plate || '',
+                brand: curr.brand || '',
+                driver_id: null,
+                driver_name: '-',
+                date: next.date || curr.date,
+                departure_time: null,
+                return_time: null,
+                destination: '-',
+                requester_name: '-',
+                mileage_start: curr.mileage_end,
+                mileage_start_inferred: false,
+                mileage_end: next.mileage_start,
+                mileage_end_inferred: false,
+                distance: gapDist,
+                data_quality: 'undocumented_gap',
+                record_source: '',
+                sort_key: curr.sort_key + '\u00ff',
+                status: 'undocumented_gap',
+                notes: 'มีการใช้รถโดยไม่บันทึกข้อมูล ระยะทาง ' + gapDist.toLocaleString() + ' กม.'
+              });
+            }
+          }
+        }
+
+        allTrips = allTrips.concat(final);
       });
-      result.sort(function(a, b) { return (b.sort_key || '').localeCompare(a.sort_key || ''); });
-      return result;
+
+      // เรียงใหม่ ใหม่→เก่า
+      allTrips.sort(function(a, b) { return (b.sort_key || '').localeCompare(a.sort_key || ''); });
+      return allTrips;
     }
 
     function buildTrip(dep, ret, status) {
       var dist = null;
-      if (dep && ret && ret.mileage && dep.mileage) {
+      if (dep && ret && ret.mileage != null && dep.mileage != null) {
         dist = ret.mileage - dep.mileage;
         if (dist < 0) dist = null;
       }
@@ -618,32 +727,37 @@
         driver_name: (dep && dep.driver_name) || (ret && ret.driver_name) || '',
         date: dep ? dep.datetime.substring(0, 10) : ret.datetime.substring(0, 10),
         departure_time: dep ? dep.datetime.substring(11, 16) : null,
-        return_time: (ret && status !== 'inferred') ? ret.datetime.substring(11, 16) : null,
+        return_time: ret ? ret.datetime.substring(11, 16) : null,
         destination: (dep && dep.destination) || (dep && dep.location) || (ret && ret.destination) || (ret && ret.location) || '',
         requester_name: (dep && dep.requester_name) || (ret && ret.requester_name) || '',
         mileage_start: dep ? dep.mileage : null,
+        mileage_start_inferred: false,
         mileage_end: ret ? ret.mileage : null,
+        mileage_end_inferred: false,
         distance: dist,
         data_quality: dep ? dep.data_quality : ret.data_quality,
         record_source: (dep && dep.record_source) || (ret && ret.record_source) || '',
         sort_key: dep ? dep.datetime : ret.datetime,
-        status: status
+        status: status,
+        notes: ''
       };
     }
 
     function displayStats() {
-      var totalTrips = trips.length;
+      var totalTrips = 0;
       var totalDistance = 0;
       var totalCars = new Set();
       var totalDrivers = new Set();
       var completeTrips = 0;
 
       trips.forEach(function(trip) {
+        if (trip.status === 'undocumented_gap') return; // ไม่นับ gap เป็นเที่ยว
         if (trip.distance && trip.distance > 0) totalDistance += trip.distance;
         if (trip.car_id) totalCars.add(trip.car_id);
         if (trip.driver_id) totalDrivers.add(trip.driver_id);
-        if (trip.status === 'complete' || trip.status === 'inferred') completeTrips++;
+        if (trip.status === 'complete') completeTrips++;
       });
+      totalTrips = trips.filter(function(t) { return t.status !== 'undocumented_gap'; }).length;
 
       var html = '';
       html += '<div class="stat-card">';
@@ -706,31 +820,77 @@
 
         sorted.forEach(function(trip) {
           var statusBadge = '';
-          if (trip.status === 'complete') {
+          var trClass = '';
+
+          if (trip.status === 'undocumented_gap') {
+            trClass = 'class="row-undocumented-gap"';
+            statusBadge = '<span class="badge badge-gap">🔴 ใช้รถโดยไม่บันทึก</span>';
+          } else if (trip.status === 'complete') {
             statusBadge = '<span class="badge badge-success">✅ สมบูรณ์</span>';
-          } else if (trip.status === 'inferred') {
-            statusBadge = '<span class="badge badge-info" title="ลืมบันทึกกลับ — ระบบคำนวณระยะทางจากเลขไมล์เที่ยวถัดไป">🔵 ลืมสแกนกลับ</span>';
           } else if (trip.status === 'no_return') {
-            statusBadge = '<span class="badge badge-warning">🟡 ยังไม่กลับ</span>';
+            if (trip.mileage_end_inferred) {
+              statusBadge = '<span class="badge badge-warning" title="' + (trip.notes || '') + '">⚠️ ไม่มีบันทึกกลับ*</span>';
+            } else {
+              statusBadge = '<span class="badge badge-warning">🟡 ยังไม่กลับ</span>';
+            }
           } else if (trip.status === 'no_departure') {
-            statusBadge = '<span class="badge badge-info">🔵 ไม่มีบันทึกออก</span>';
+            if (trip.mileage_start_inferred) {
+              statusBadge = '<span class="badge badge-warning" title="' + (trip.notes || '') + '">⚠️ ไม่มีบันทึกออก*</span>';
+            } else {
+              statusBadge = '<span class="badge badge-info">🔵 ไม่มีบันทึกออก</span>';
+            }
           }
+
+          // แสดง notes เป็นบรรทัดล่าง
+          var noteHtml = '';
+          if (trip.notes && trip.status !== 'undocumented_gap') {
+            noteHtml = '<br><small class="note-inferred">' + trip.notes + '</small>';
+          }
+
           if (trip.record_source === 'qr_manual') {
             statusBadge += ' <span class="badge badge-warning" title="บันทึกโดยผู้ไม่มีบัญชี">👤 Manual</span>';
           }
 
-          html += '<tr>';
-          html += '<td>' + formatDateThai(trip.date) + '</td>';
-          html += '<td>' + (trip.license_plate + ' ' + (trip.brand || '')).trim() + '</td>';
-          html += '<td>' + (trip.driver_name || '-') + '</td>';
-          html += '<td>' + (trip.departure_time || '-') + '</td>';
-          html += '<td>' + (trip.return_time || '-') + '</td>';
-          html += '<td>' + (trip.destination || '-') + '</td>';
-          html += '<td>' + (trip.requester_name || '-') + '</td>';
-          html += '<td style="text-align:right">' + (trip.mileage_start != null ? Number(trip.mileage_start).toLocaleString() : '-') + '</td>';
-          html += '<td style="text-align:right">' + (trip.mileage_end != null ? Number(trip.mileage_end).toLocaleString() : '-') + '</td>';
-          html += '<td style="text-align:right">' + (trip.distance != null && trip.distance >= 0 ? Number(trip.distance).toLocaleString() : '-') + '</td>';
-          html += '<td>' + statusBadge + '</td>';
+          // แสดงเลขไมล์ที่อนุมานด้วยตัวเอียงและ *
+          var mileStartHtml = '-';
+          if (trip.mileage_start != null) {
+            if (trip.mileage_start_inferred) {
+              mileStartHtml = '<span class="mileage-inferred" title="อ้างอิงจากเลขไมล์กลับของคิวก่อนหน้า">' + Number(trip.mileage_start).toLocaleString() + '*</span>';
+            } else {
+              mileStartHtml = Number(trip.mileage_start).toLocaleString();
+            }
+          }
+          var mileEndHtml = '-';
+          if (trip.mileage_end != null) {
+            if (trip.mileage_end_inferred) {
+              mileEndHtml = '<span class="mileage-inferred" title="อ้างอิงจากเลขไมล์ออกของคิวถัดไป">' + Number(trip.mileage_end).toLocaleString() + '*</span>';
+            } else {
+              mileEndHtml = Number(trip.mileage_end).toLocaleString();
+            }
+          }
+
+          html += '<tr ' + trClass + '>';
+          if (trip.status === 'undocumented_gap') {
+            html += '<td>' + formatDateThai(trip.date) + '</td>';
+            html += '<td>' + (trip.license_plate + ' ' + (trip.brand || '')).trim() + '</td>';
+            html += '<td colspan="5" style="color:#c62828;font-style:italic">' + trip.notes + '</td>';
+            html += '<td style="text-align:right">' + mileStartHtml + '</td>';
+            html += '<td style="text-align:right">' + mileEndHtml + '</td>';
+            html += '<td style="text-align:right;color:#c62828;font-weight:700">' + (trip.distance != null ? Number(trip.distance).toLocaleString() : '-') + '</td>';
+            html += '<td>' + statusBadge + '</td>';
+          } else {
+            html += '<td>' + formatDateThai(trip.date) + '</td>';
+            html += '<td>' + (trip.license_plate + ' ' + (trip.brand || '')).trim() + '</td>';
+            html += '<td>' + (trip.driver_name || '-') + '</td>';
+            html += '<td>' + (trip.departure_time || '-') + '</td>';
+            html += '<td>' + (trip.return_time || '-') + '</td>';
+            html += '<td>' + (trip.destination || '-') + '</td>';
+            html += '<td>' + (trip.requester_name || '-') + '</td>';
+            html += '<td style="text-align:right">' + mileStartHtml + '</td>';
+            html += '<td style="text-align:right">' + mileEndHtml + '</td>';
+            html += '<td style="text-align:right">' + (trip.distance != null && trip.distance >= 0 ? Number(trip.distance).toLocaleString() : '-') + '</td>';
+            html += '<td>' + statusBadge + noteHtml + '</td>';
+          }
           html += '</tr>';
         });
       }

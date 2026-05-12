@@ -281,15 +281,45 @@ export async function onRequest(context) {
     try { requirePermission(user, 'usage', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = extractParam(path, '/api/usage/');
     const body = await parseBody(request);
+
+    // Fetch old record for audit trail
+    const oldRecord = await dbFirst(env.DB, 'SELECT * FROM usage_records WHERE id = ?', [id]);
+    if (!oldRecord) return error('ไม่พบข้อมูลบันทึกการใช้งาน', 404);
+
     const sets = [];
     const params = [];
     const fields = ['car_id','driver_id','record_type','datetime','mileage','location','notes','queue_id'];
     for (const f of fields) {
       if (body[f] !== undefined) { sets.push(`${f} = ?`); params.push(body[f]); }
     }
-    if (!sets.length) return error('ไม่มีข้อมูลที่จะอัปเดต');
+    if (body.correction_note !== undefined) { sets.push('correction_note = ?'); params.push(body.correction_note); }
+    sets.push('updated_by = ?'); params.push(user.id || user.user_id || '');
+    sets.push('updated_at = ?'); params.push(now());
+    if (sets.length <= 2) return error('ไม่มีข้อมูลที่จะอัปเดต');
     params.push(id);
     await dbRun(env.DB, `UPDATE usage_records SET ${sets.join(', ')} WHERE id = ?`, params);
+
+    // Audit log — only if mileage was changed
+    if (body.mileage !== undefined && body.mileage !== oldRecord.mileage) {
+      const auditId = generateUUID();
+      await dbRun(env.DB,
+        `INSERT INTO audit_log (id, user_id, username, action, module, entity_id, details, created_at)
+         VALUES (?, ?, ?, 'UPDATE', 'usage_records', ?, ?, ?)`,
+        [auditId, user.id || '', user.username || '',
+         id,
+         JSON.stringify({
+           field: 'mileage',
+           old_value: oldRecord.mileage,
+           new_value: body.mileage,
+           correction_note: body.correction_note || '',
+           car_id: oldRecord.car_id,
+           record_type: oldRecord.record_type,
+           datetime: oldRecord.datetime
+         }),
+         now()]
+      );
+    }
+
     return success({ message: 'อัปเดตข้อมูลการใช้งานเรียบร้อย' });
   }
 
