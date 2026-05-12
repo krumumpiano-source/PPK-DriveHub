@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 
 <head>
@@ -495,14 +495,24 @@
             <option value="inspection">ตรวจสภาพ</option>
           </select>
         </div>
+        <div class="filter-group">
+          <label>👤 ค้นหาคนขับ / ทะเบียนรถ</label>
+          <input type="text" id="searchText" placeholder="พิมพ์ชื่อหรือทะเบียน..." oninput="applyFilter()">
+        </div>
         <div class="filter-group" style="justify-content: flex-end;">
-          <button class="btn btn-primary" onclick="applyFilter()">🔍 กรองข้อมูล</button>
+          <button class="btn btn-primary" onclick="loadRecords()">🔍 โหลดข้อมูล</button>
           <button class="btn btn-secondary" onclick="resetFilter()" style="margin-top:6px">↺ รีเซ็ต</button>
         </div>
       </div>
 
-      <div class="actions-bar">
-        <button class="btn btn-secondary" onclick="loadRecords()">🔃 รีเฟรช</button>
+      <div class="actions-bar" style="justify-content: space-between; flex-wrap:wrap;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn" id="btnModeAnomaly" onclick="setViewMode('anomaly')"
+            style="background:#e65100; color:white;">⚠️ เฉพาะรายการมีปัญหา</button>
+          <button class="btn btn-secondary" id="btnModeAll" onclick="setViewMode('all')">
+            📋 แสดงทั้งหมด</button>
+          <button class="btn" style="background:#eee; color:#666;" onclick="loadRecords()">🔃 รีเฟรช</button>
+        </div>
         <span id="resultCount" style="color: var(--color-text-muted); font-size: 0.9em;"></span>
       </div>
 
@@ -566,8 +576,12 @@
             <div class="info-value" id="infoOldMileage" style="font-family:monospace; font-size:1.1em; color:#c62828">—</div>
           </div>
           <div>
-            <div class="info-label">บริบทรถคันนี้</div>
-            <div class="info-value" id="infoContext" style="font-size:0.88em">—</div>
+            <div class="info-label">ผลการตรวจสอบ</div>
+            <div class="info-value" id="infoProblem" style="font-size:0.9em">—</div>
+          </div>
+          <div>
+            <div class="info-label">ช่วงเลขไมล์ที่ควรเป็น</div>
+            <div class="info-value" id="infoSuggest" style="color:#1565c0; font-family:monospace; font-size:1em">—</div>
           </div>
         </div>
 
@@ -598,11 +612,28 @@
     var allRecords = [];       // raw records from API (all types)
     var filteredRecords = [];  // after filter
     var anomalyMap = {};       // record.id → anomaly type
+    var contextMap = {};       // record.id → { prev, next }
     var vehicles = [];
     var vehiclesMap = {};
     var editTarget = null;     // current record being edited
+    var viewMode = 'anomaly';  // 'anomaly' = ปัญหาเท่านั้น, 'all' = ทั้งหมด
 
     var SPIKE_KM = 300;        // threshold for mileage spike warning
+
+    function setViewMode(mode) {
+      viewMode = mode;
+      var btnA = document.getElementById('btnModeAnomaly');
+      var btnB = document.getElementById('btnModeAll');
+      if (mode === 'anomaly') {
+        btnA.style.cssText = 'background:#c62828; color:white; font-weight:700; box-shadow:0 2px 6px rgba(198,40,40,.35);';
+        btnB.style.cssText = '';
+        btnB.className = 'btn btn-secondary';
+      } else {
+        btnB.style.cssText = 'background:#1565c0; color:white; font-weight:700;';
+        btnA.style.cssText = 'background:#eee; color:#666;';
+      }
+      applyFilter();
+    }
 
     document.addEventListener('DOMContentLoaded', function() {
       if (!requireAuth()) return;
@@ -614,12 +645,14 @@
       }
 
       var today = new Date();
-      var from = new Date(); from.setDate(from.getDate() - 60);
+      var from = new Date(); from.setDate(from.getDate() - 90);
       document.getElementById('dateFrom').value = fmt(from);
       document.getElementById('dateTo').value = fmt(today);
 
       loadVehicles();
       loadRecords();
+      // Apply default view mode highlight
+      setTimeout(function() { setViewMode('anomaly'); }, 50);
     });
 
     function fmt(d) {
@@ -696,9 +729,33 @@
       return q ? '?' + q : '';
     }
 
+    // ── Build prev/next context map ────────────────────────
+    function buildContextMap() {
+      contextMap = {};
+      var byCar = {};
+      allRecords.forEach(function(r) {
+        if (r.record_type === 'departure' || r.record_type === 'return') {
+          if (!byCar[r.car_id]) byCar[r.car_id] = [];
+          byCar[r.car_id].push(r);
+        }
+      });
+      Object.keys(byCar).forEach(function(carId) {
+        var sorted = byCar[carId].slice().sort(function(a, b) {
+          return (a.datetime || '').localeCompare(b.datetime || '');
+        });
+        sorted.forEach(function(r, i) {
+          contextMap[r.id] = {
+            prev: i > 0 ? sorted[i-1] : null,
+            next: i < sorted.length-1 ? sorted[i+1] : null
+          };
+        });
+      });
+    }
+
     // ── Anomaly detection ──────────────────────────────────
     function detectAnomalies() {
       anomalyMap = {};
+      buildContextMap();
 
       // Mark already-corrected records
       allRecords.forEach(function(r) {
@@ -788,24 +845,37 @@
 
     function applyFilter() {
       var anomalyFilter = document.getElementById('filterAnomaly').value;
+      var searchVal = (document.getElementById('searchText').value || '').trim().toLowerCase();
       filteredRecords = allRecords.filter(function(r) {
         var a = anomalyMap[r.id] || 'normal';
-        if (!anomalyFilter) return true;
-        if (anomalyFilter === 'normal') return a === 'normal' || a === undefined;
-        return a === anomalyFilter;
+        // view mode filter
+        if (viewMode === 'anomaly' && (a === 'normal' || a === undefined)) return false;
+        // anomaly dropdown filter
+        if (anomalyFilter) {
+          if (anomalyFilter === 'normal' && a !== 'normal' && a !== undefined) return false;
+          if (anomalyFilter !== 'normal' && a !== anomalyFilter) return false;
+        }
+        // text search
+        if (searchVal) {
+          var haystack = ((r.driver_name || '') + ' ' + (r.license_plate || '') + ' ' + (r.brand || '')).toLowerCase();
+          if (haystack.indexOf(searchVal) === -1) return false;
+        }
+        return true;
       });
-      document.getElementById('resultCount').textContent = 'แสดง ' + filteredRecords.length + ' จาก ' + allRecords.length + ' รายการ';
+      var modeLabel = viewMode === 'anomaly' ? ' (เฉพาะมีปัญหา)' : '';
+      document.getElementById('resultCount').textContent = 'แสดง ' + filteredRecords.length + ' จาก ' + allRecords.length + ' รายการ' + modeLabel;
       renderTable();
     }
 
     function resetFilter() {
       document.getElementById('filterAnomaly').value = '';
       document.getElementById('filterType').value = '';
+      document.getElementById('searchText').value = '';
       var today = new Date();
-      var from  = new Date(); from.setDate(from.getDate() - 60);
+      var from  = new Date(); from.setDate(from.getDate() - 90);
       document.getElementById('dateFrom').value = fmt(from);
       document.getElementById('dateTo').value   = fmt(today);
-      applyFilter();
+      setViewMode('anomaly');
     }
 
     function renderTable() {
@@ -839,10 +909,20 @@
         else if (anomaly === 'corrected') anomalyBadge = '<span class="badge badge-corrected">✅ แก้ไขแล้ว</span>';
         else                              anomalyBadge = '<span class="badge badge-ok">✅ ปกติ</span>';
 
+        var ctx = contextMap[r.id];
+        var prevM = ctx && ctx.prev && ctx.prev.mileage ? Number(ctx.prev.mileage).toLocaleString() : null;
+        var nextM = ctx && ctx.next && ctx.next.mileage ? Number(ctx.next.mileage).toLocaleString() : null;
         var mileageHtml = '';
         if (r.mileage) {
-          var cls = anomaly === 'corrected' ? 'corrected' : '';
-          mileageHtml = '<span class="mileage-cell ' + cls + '">' + Number(r.mileage).toLocaleString() + ' กม.</span>';
+          var cls = anomaly === 'corrected' ? 'corrected' : (anomaly === 'negative' ? 'style="color:#c62828"' : '');
+          mileageHtml = '<span class="mileage-cell">' + Number(r.mileage).toLocaleString() + ' กม.</span>';
+          if (prevM || nextM) {
+            mileageHtml += '<div style="font-size:0.75em; color:#aaa; margin-top:3px; font-family:monospace;">';
+            if (prevM) mileageHtml += '<span title="บันทึกก่อนหน้า">← ' + prevM + '</span>';
+            if (prevM && nextM) mileageHtml += ' | ';
+            if (nextM) mileageHtml += '<span title="บันทึกถัดไป">' + nextM + ' →</span>';
+            mileageHtml += '</div>';
+          }
         } else {
           mileageHtml = '<span class="mileage-cell missing">— ไม่มีข้อมูล —</span>';
         }
@@ -895,6 +975,21 @@
       document.getElementById('infoType').textContent      = typeLabel[r.record_type] || r.record_type;
       document.getElementById('infoOldMileage').textContent = r.mileage ? Number(r.mileage).toLocaleString() + ' กม.' : '— ไม่มีข้อมูล —';
 
+      // Problem description
+      var aType = anomalyMap[r.id] || 'normal';
+      var problemDesc = {
+        'missing':   '⚪ ไม่มีเลขไมล์ — กรุณากรอกเลขไมล์ที่ถูกต้อง',
+        'negative':  '🔻 เลขไมล์ย้อนกลับ — น้อยกว่าบันทึกก่อนหน้า',
+        'spike':     '📈 เลขไมล์กระโดดสูงผิดปกติ (>' + SPIKE_KM + 'กม. จากบันทึกก่อน)',
+        'corrected': '✅ เคยแก้ไขแล้วครั้งหนึ่งครั้ง',
+        'normal':    '✅ ปกติ'
+      };
+      document.getElementById('infoProblem').textContent = problemDesc[aType] || '—';
+      if (aType === 'negative') document.getElementById('infoProblem').style.color = '#c62828';
+      else if (aType === 'spike') document.getElementById('infoProblem').style.color = '#ad1457';
+      else if (aType === 'missing') document.getElementById('infoProblem').style.color = '#e65100';
+      else document.getElementById('infoProblem').style.color = '';
+
       // Build context: prev and next records for this car
       var carRecs = allRecords.filter(function(x) {
         return x.car_id === r.car_id && (x.record_type === 'departure' || x.record_type === 'return');
@@ -904,10 +999,11 @@
       var prevRec = idx > 0 ? carRecs[idx-1] : null;
       var nextRec = idx < carRecs.length-1 ? carRecs[idx+1] : null;
 
-      var ctxParts = [];
-      if (prevRec && prevRec.mileage) ctxParts.push('ก่อนหน้า: ' + Number(prevRec.mileage).toLocaleString() + ' กม. (' + fmtDatetimeThai(prevRec.datetime) + ')');
-      if (nextRec && nextRec.mileage) ctxParts.push('ถัดไป: '    + Number(nextRec.mileage).toLocaleString() + ' กม. (' + fmtDatetimeThai(nextRec.datetime) + ')');
-      document.getElementById('infoContext').textContent = ctxParts.length ? ctxParts.join(' | ') : 'ไม่มีข้อมูลบริบท';
+      // Suggested range
+      var suggestParts = [];
+      if (prevRec && prevRec.mileage) suggestParts.push('มากกว่า ' + Number(prevRec.mileage).toLocaleString() + ' กม.');
+      if (nextRec && nextRec.mileage) suggestParts.push('น้อยกว่า ' + Number(nextRec.mileage).toLocaleString() + ' กม.');
+      document.getElementById('infoSuggest').textContent = suggestParts.length ? suggestParts.join('  —  ') : 'ไม่มีบันทึกเปรียบเทียบ';
 
       // Pre-fill current mileage
       document.getElementById('inputMileage').value = r.mileage || '';
