@@ -436,8 +436,8 @@
     }
 
     function updateFilterVisibility() {
-      var showDate = ['fuel', 'repairs', 'quality', 'trips', 'expenses', 'offhours', 'audit'].includes(currentTab);
-      var showCar = ['fuel', 'trips', 'expenses'].includes(currentTab);
+      var showDate = ['fuel', 'repairs', 'quality', 'trips', 'expenses', 'offhours', 'audit', 'vehicles'].includes(currentTab);
+      var showCar = ['fuel', 'trips', 'expenses', 'vehicles'].includes(currentTab);
       var showDriver = ['fuel', 'trips'].includes(currentTab);
       var showExpense = currentTab === 'fuel';
       var showMonth = currentTab === 'scores';
@@ -557,29 +557,41 @@
     }
 
     async function renderVehicles() {
-      var r = await API.get('/api/reports/vehicles');
+      var dateFrom = document.getElementById('dateFrom').value;
+      var dateTo = document.getElementById('dateTo').value;
+      var carId = document.getElementById('filterCar').value;
+      var params = buildQuery({ date_from: dateFrom || undefined, date_to: dateTo || undefined, car_id: carId || undefined });
+      var r = await API.get('/api/reports/vehicles' + params);
       var rows = (r && r.data) ? r.data : (r || []);
       if (!Array.isArray(rows) || rows.length === 0) {
         return emptyState('🚗', 'ไม่พบข้อมูลรถ');
       }
+      var rangeLabel = (dateFrom && dateTo) ? ' (' + fmtDateTH(dateFrom) + ' – ' + fmtDateTH(dateTo) + ')' : '';
       var html = '<div class="report-section">';
-      html += '<div class="report-section-title">🚗 สรุปการใช้งานรถรายคัน</div>';
+      html += '<div class="report-section-title">🚗 สรุปการใช้งานรถรายคัน' + rangeLabel + '</div>';
       html += '<div style="overflow-x:auto"><table class="report-table">';
-      html += '<thead><tr><th>ทะเบียน</th><th>ยี่ห้อ/รุ่น</th><th>เลขไมล์ปัจจุบัน</th><th>จำนวนเที่ยว</th><th>น้ำมันรวม (ลิตร)</th><th>ค่าน้ำมันรวม (บาท)</th><th>จำนวนซ่อม</th><th>ค่าซ่อมรวม (บาท)</th><th>สถานะ</th></tr></thead><tbody>';
+      html += '<thead><tr>' +
+        '<th>ทะเบียน</th><th>ยี่ห้อ/รุ่น</th><th>สถานะ</th>' +
+        '<th>จำนวนเที่ยว</th><th>เลขไมล์ปัจจุบัน</th>' +
+        '<th>ซ่อม (ครั้ง)</th><th>ค่าซ่อมรวม (บาท)</th>' +
+        '<th>เชื้อเพลิงรวม (ลิตร)</th><th>ค่าเชื้อเพลิงรวม (บาท)</th>' +
+        '</tr></thead><tbody>';
       rows.forEach(function (v) {
         html += '<tr>';
         html += '<td><strong>' + htmlEsc(v.license_plate || '-') + '</strong></td>';
         html += '<td>' + htmlEsc((v.brand || '') + ' ' + (v.model || '') + (v.year ? ' (' + v.year + ')' : '')) + '</td>';
-        html += '<td>' + fmtNum(v.current_mileage || 0) + ' กม.</td>';
+        html += '<td>' + statusBadge(v.status) + '</td>';
         html += '<td>' + fmtNum(v.trip_count || 0) + '</td>';
-        html += '<td>' + fmtNum(v.total_fuel_liters || 0) + '</td>';
-        html += '<td>' + fmtMoney(v.total_fuel_cost || 0) + '</td>';
+        html += '<td>' + (v.current_mileage ? fmtNum(v.current_mileage) + ' กม.' : '-') + '</td>';
         html += '<td>' + fmtNum(v.repair_count || 0) + '</td>';
         html += '<td>' + fmtMoney(v.total_repair_cost || 0) + '</td>';
-        html += '<td>' + statusBadge(v.status) + '</td>';
+        html += '<td>' + fmtNum(v.total_fuel_liters || 0) + '</td>';
+        html += '<td>' + fmtMoney(v.total_fuel_cost || 0) + '</td>';
         html += '</tr>';
       });
-      html += '</tbody></table></div></div>';
+      html += '</tbody></table></div>';
+      html += '<div class="kpi-note">เชื้อเพลิงรวมและค่าซ่อมรวมนับจากช่วงวันที่ที่เลือก (ถ้าไม่เลือกวันที่ = ทุกช่วงเวลา)</div>';
+      html += '</div>';
       return html;
     }
 
