@@ -1406,20 +1406,23 @@
         <!-- ประเภทรายงาน -->
         <div class="form-group">
           <label><strong>ประเภทรายงาน</strong></label>
-          <div style="display:flex;gap:10px;">
-            <label id="em_type_trips_lbl" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:14px 10px;border:2px solid var(--color-primary);border-radius:10px;cursor:pointer;background:var(--color-primary);color:#fff;font-weight:600;transition:all 0.15s;">
-              <input type="radio" name="em_type_r" value="trips" checked onchange="onEmTypeChange()" style="display:none;">
-              <span style="font-size:1.5rem;">🚗</span>
-              <span>การใช้รถ</span>
-            </label>
-            <label id="em_type_fuel_lbl" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:14px 10px;border:2px solid var(--color-primary);border-radius:10px;cursor:pointer;background:#fff;color:var(--color-primary);font-weight:600;transition:all 0.15s;">
-              <input type="radio" name="em_type_r" value="fuel" onchange="onEmTypeChange()" style="display:none;">
-              <span style="font-size:1.5rem;">⛽</span>
-              <span>เชื้อเพลิง</span>
-            </label>
-          </div>
+          <select id="em_type" onchange="onEmTypeChange()">
+            <option value="trips">📋 รายเที่ยว (การใช้รถ)</option>
+            <option value="fuel">⛽ เชื้อเพลิง</option>
+            <option value="vehicles">🚗 การใช้งานรถ</option>
+            <option value="drivers">👤 คนขับ</option>
+            <option value="repairs">🔧 ซ่อมบำรุง</option>
+            <option value="expenses">💰 ค่าใช้จ่ายรวม</option>
+            <option value="offhours">🌙 นอกเวลาราชการ</option>
+            <option value="audit">🔍 ประวัติแก้ไข</option>
+            <option value="scores">⭐ คะแนนคนขับ</option>
+            <option value="quality">📊 คุณภาพข้อมูล</option>
+            <option value="overview">📈 ภาพรวม</option>
+            <option value="alerts">⚠️ แจ้งเตือน</option>
+          </select>
         </div>
         <!-- ช่วงเวลา -->
+        <div id="em_period_section">
         <div class="form-group">
           <label><strong>ช่วงเวลา</strong></label>
           <select id="em_period" onchange="onEmPeriodChange()">
@@ -1446,6 +1449,7 @@
             <input type="date" id="em_date_to">
           </div>
         </div>
+        </div><!-- end em_period_section -->
         <!-- รูปแบบไฟล์ -->
         <div class="form-group">
           <label><strong>รูปแบบไฟล์</strong></label>
@@ -1513,11 +1517,8 @@
   <script>
   // ═══ Advanced Export Modal ═══
   function openExportModal() {
-    var sel = (currentTab === 'fuel') ? 'fuel' : 'trips';
-    document.querySelectorAll('input[name="em_type_r"]').forEach(function(r){ r.checked = r.value === sel; });
-    _emUpdateTypeCards();
-    onEmPeriodChange();
-    onEmFormatChange();
+    document.getElementById('em_type').value = currentTab || 'trips';
+    onEmTypeChange();
     document.getElementById('exportModal').style.display = 'flex';
   }
   function closeExportModal() {
@@ -1537,9 +1538,9 @@
   function onEmFormatChange() {
     var fmt = document.querySelector('input[name="em_format"]:checked').value;
     var isPDF = fmt === 'pdf';
-    document.getElementById('em_signers').style.display = isPDF ? '' : 'none';
+    var type = document.getElementById('em_type').value;
+    document.getElementById('em_signers').style.display = (isPDF && (type === 'trips' || type === 'fuel')) ? '' : 'none';
     if (isPDF) {
-      var type = document.querySelector('input[name="em_type_r"]:checked').value;
       document.getElementById('em_queue_sigs').style.display = (type === 'fuel') ? 'none' : '';
       document.getElementById('em_fuel_sigs').style.display = (type === 'fuel') ? '' : 'none';
     }
@@ -1556,26 +1557,19 @@
   }
 
   function onEmTypeChange() {
-    _emUpdateTypeCards();
-    var fmt = document.querySelector('input[name="em_format"]:checked').value;
-    if (fmt === 'pdf') {
-      var type = document.querySelector('input[name="em_type_r"]:checked').value;
-      document.getElementById('em_queue_sigs').style.display = (type === 'fuel') ? 'none' : '';
-      document.getElementById('em_fuel_sigs').style.display = (type === 'fuel') ? '' : 'none';
+    var type = document.getElementById('em_type').value;
+    // Types that support date range
+    var hasDates = ['trips','fuel','repairs','expenses','offhours','audit','quality'].includes(type);
+    document.getElementById('em_period_section').style.display = hasDates ? '' : 'none';
+    // PDF only for trips/fuel
+    var hasPDF = type === 'trips' || type === 'fuel';
+    document.getElementById('em_format_pdf_lbl').style.opacity = hasPDF ? '1' : '0.4';
+    document.getElementById('em_format_pdf_lbl').style.pointerEvents = hasPDF ? '' : 'none';
+    if (!hasPDF) {
+      document.querySelector('input[name="em_format"][value="excel"]').checked = true;
     }
-  }
-  function _emUpdateTypeCards() {
-    var type = document.querySelector('input[name="em_type_r"]:checked').value;
-    var primary = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#1a73e8';
-    var tripsLbl = document.getElementById('em_type_trips_lbl');
-    var fuelLbl = document.getElementById('em_type_fuel_lbl');
-    if (type === 'trips') {
-      tripsLbl.style.background = primary; tripsLbl.style.color = '#fff';
-      fuelLbl.style.background = '#fff'; fuelLbl.style.color = primary;
-    } else {
-      fuelLbl.style.background = primary; fuelLbl.style.color = '#fff';
-      tripsLbl.style.background = '#fff'; tripsLbl.style.color = primary;
-    }
+    onEmFormatChange();
+    if (hasDates) onEmPeriodChange();
   }
 
   function _emComputeDateRange() {
@@ -1627,21 +1621,59 @@
     var btn = document.getElementById('em_submit_btn');
     btn.disabled = true; btn.textContent = '⏳ กำลังโหลด...';
     try {
-      var type = document.querySelector('input[name="em_type_r"]:checked').value;
+      var type = document.getElementById('em_type').value;
       var fmt = document.querySelector('input[name="em_format"]:checked').value;
-      var dr = _emComputeDateRange();
-      var dateLabel = dr.from + ' ถึง ' + dr.to;
+      var hasDates = ['trips','fuel','repairs','expenses','offhours','audit','quality'].includes(type);
+      var dr = hasDates ? _emComputeDateRange() : { from: '1970-01-01', to: new Date().toISOString().substr(0,10), label: 'ข้อมูลทั้งหมด' };
+      var dateLabel = dr.label || (dr.from + ' ถึง ' + dr.to);
       var qs = '?date_from='+encodeURIComponent(dr.from)+'&date_to='+encodeURIComponent(dr.to);
-      var endpoint = type === 'fuel' ? '/api/reports/fuel' : '/api/reports/trips';
-      var r = await API.get(endpoint + qs);
+
+      // DOM-based export for summary tabs
+      if (['overview','alerts','scores'].includes(type)) {
+        exportCurrentTable();
+        closeExportModal();
+        return;
+      }
+
+      var endpointMap = {
+        trips: '/api/reports/trips', fuel: '/api/reports/fuel',
+        vehicles: '/api/reports/vehicles', drivers: '/api/reports/drivers',
+        repairs: '/api/reports/repairs', expenses: '/api/reports/expenses',
+        offhours: '/api/reports/offhours', audit: '/api/reports/audit-export',
+        quality: '/api/reports/data-quality'
+      };
+      var endpoint = endpointMap[type];
+      var noDateTypes = ['vehicles','drivers'];
+      var urlParam = noDateTypes.includes(type) ? '' : qs;
+      var r = await API.get(endpoint + urlParam);
       var result = (r && r.data) ? r.data : (r || {});
-      var records = result.records || [];
-      if (records.length === 0) { alert('ไม่มีข้อมูลในช่วงเวลาที่เลือก'); return; }
 
       if (type === 'trips') {
-        _emExportTrips(records, result.summary || {}, dr, dateLabel, fmt);
-      } else {
-        _emExportFuel(records, result.summary || {}, dr, dateLabel, fmt);
+        var recs = result.records || []; if (!recs.length) { alert('ไม่มีข้อมูล'); return; }
+        _emExportTrips(recs, result.summary || {}, dr, dateLabel, fmt);
+      } else if (type === 'fuel') {
+        var recs = result.records || []; if (!recs.length) { alert('ไม่มีข้อมูล'); return; }
+        _emExportFuel(recs, result.summary || {}, dr, dateLabel, fmt);
+      } else if (type === 'vehicles') {
+        var recs = Array.isArray(result) ? result : (result.records || []); if (!recs.length) { alert('ไม่มีข้อมูล'); return; }
+        _emExportVehicles(recs, dateLabel);
+      } else if (type === 'drivers') {
+        var recs = Array.isArray(result) ? result : (result.records || []); if (!recs.length) { alert('ไม่มีข้อมูล'); return; }
+        _emExportDrivers(recs, dateLabel);
+      } else if (type === 'repairs') {
+        var recs = result.records || []; if (!recs.length) { alert('ไม่มีข้อมูล'); return; }
+        _emExportRepairs(recs, result.summary || {}, dr, dateLabel);
+      } else if (type === 'expenses') {
+        var cars = result.cars || []; if (!cars.length) { alert('ไม่มีข้อมูล'); return; }
+        _emExportExpenses(cars, result.grand_total || {}, dr, dateLabel);
+      } else if (type === 'offhours') {
+        var recs = result.records || []; if (!recs.length) { alert('ไม่มีข้อมูล'); return; }
+        _emExportOffhours(recs, dr, dateLabel);
+      } else if (type === 'audit') {
+        var recs = result.records || []; if (!recs.length) { alert('ไม่มีข้อมูล'); return; }
+        _emExportAudit(recs, result.summary || {}, dr, dateLabel);
+      } else if (type === 'quality') {
+        _emExportQuality(result, dr, dateLabel);
       }
       closeExportModal();
     } catch(e) {
@@ -1712,6 +1744,101 @@
         checkedBy: document.getElementById('em_supply_chief').value||'-'
       });
     }
+  }
+
+  function _emExportVehicles(records, dateLabel) {
+    var rn = document.getElementById('em_reporter_name').value||'-';
+    var rp = document.getElementById('em_reporter_pos').value||'-';
+    var headers = ['ทะเบียน','ยี่ห้อ','รุ่น','ปี','สถานะ','เลขไมล์ปัจจุบัน','ประเภทน้ำมัน','จำนวนเที่ยว','น้ำมันรวม(ลิตร)','ค่าน้ำมันรวม(บาท)','จำนวนซ่อม','ค่าซ่อมรวม(บาท)'];
+    var statMap = { active:'ใช้งาน', maintenance:'ซ่อมบำรุง', inactive:'ไม่ใช้งาน' };
+    var rows = records.map(function(v){ return [v.license_plate||'',v.brand||'',(v.model||'')+(v.year?' ('+v.year+')':''),v.year||'',statMap[v.status]||v.status||'',v.current_mileage||0,v.fuel_type||'',v.trip_count||0,Number(v.total_fuel_liters||0).toFixed(2),Number(v.total_fuel_cost||0).toFixed(2),v.repair_count||0,Number(v.total_repair_cost||0).toFixed(2)]; });
+    ExportUtils.exportExcelMultiSheet({ filename: 'รายงานการใช้งานรถ_'+new Date().toISOString().substr(0,10),
+      sheets:[{sheetName:'รายคัน',headers:headers,rows:rows}],
+      reportMeta:{reportedBy:rn,reportedByPosition:rp,dateRange:dateLabel,type:'การใช้งานรถ'} });
+  }
+
+  function _emExportDrivers(records, dateLabel) {
+    var rn = document.getElementById('em_reporter_name').value||'-';
+    var rp = document.getElementById('em_reporter_pos').value||'-';
+    var headers = ['ชื่อ-สกุล','เลขใบขับขี่','วันหมดอายุ','เบอร์โทร','จำนวนเที่ยว','แจ้งเหนื่อย','Discipline Score','สถานะ'];
+    var statMap = { active:'ปกติ', inactive:'พักงาน' };
+    var rows = records.map(function(d){ return [d.name||'',d.license_number||'',d.license_expiry||'',d.phone||'',d.trip_count||0,d.fatigue_reports||0,d.discipline_score!==null&&d.discipline_score!==undefined?d.discipline_score:'',statMap[d.status]||d.status||'']; });
+    ExportUtils.exportExcelMultiSheet({ filename: 'รายงานคนขับ_'+new Date().toISOString().substr(0,10),
+      sheets:[{sheetName:'คนขับ',headers:headers,rows:rows}],
+      reportMeta:{reportedBy:rn,reportedByPosition:rp,dateRange:dateLabel,type:'คนขับ'} });
+  }
+
+  function _emExportRepairs(records, summary, dr, dateLabel) {
+    var rn = document.getElementById('em_reporter_name').value||'-';
+    var rp = document.getElementById('em_reporter_pos').value||'-';
+    var headers = ['ลำดับ','วันที่แจ้ง','ทะเบียน','ยี่ห้อ','ประเภทปัญหา','อาการ','อู่/ผู้ซ่อม','ค่าใช้จ่าย(บาท)','สถานะ','หมายเหตุ'];
+    var statMap = { reported:'แจ้งซ่อม', in_progress:'กำลังซ่อม', completed:'เสร็จแล้ว', cancelled:'ยกเลิก' };
+    var rows = records.map(function(r,i){ return [i+1,r.date_reported||'',r.license_plate||r.car_id||'',r.brand||'',r.problem_type||'',r.description||'',r.garage||'',Number(r.cost||0).toFixed(2),statMap[r.status]||r.status||'',r.notes||'']; });
+    ExportUtils.exportExcelMultiSheet({ filename: 'รายงานซ่อมบำรุง_'+dr.from+'_'+dr.to,
+      sheets:[
+        {sheetName:'รายการ',headers:headers,rows:rows},
+        {sheetName:'สรุป',headers:['รายการ','ค่า'],rows:[['จำนวนทั้งหมด',summary.total||0],['ซ่อมเสร็จแล้ว',summary.completed||0],['กำลังดำเนินการ',summary.active||0],['ค่าซ่อมรวม(บาท)',Number(summary.total_cost||0).toFixed(2)]]}
+      ],
+      reportMeta:{reportedBy:rn,reportedByPosition:rp,dateRange:dateLabel,type:'ซ่อมบำรุง'} });
+  }
+
+  function _emExportExpenses(cars, grand, dr, dateLabel) {
+    var rn = document.getElementById('em_reporter_name').value||'-';
+    var rp = document.getElementById('em_reporter_pos').value||'-';
+    var headers = ['ทะเบียน','ยี่ห้อ','รุ่น','ปี','สถานะ','น้ำมัน(บาท)','ครั้งเติมน้ำมัน','ค่าซ่อม(บาท)','ครั้งซ่อม','ภาษี(บาท)','ประกัน(บาท)','ตรวจสภาพ(บาท)','รวม(บาท)','ระยะ(กม.)'];
+    var statMap = { active:'ใช้งาน', maintenance:'ซ่อมบำรุง', inactive:'ไม่ใช้งาน' };
+    var rows = cars.map(function(c){ return [c.license_plate||'',c.brand||'',c.model||'',c.year||'',statMap[c.status]||c.status||'',Number(c.total_fuel||0).toFixed(2),c.fuel_count||0,Number(c.total_repair||0).toFixed(2),c.repair_count||0,Number(c.total_tax||0).toFixed(2),Number(c.total_insurance||0).toFixed(2),Number(c.total_inspection||0).toFixed(2),Number(c.grand_total||0).toFixed(2),Number(c.total_km||0).toFixed(0)]; });
+    var sumRow = [['รวมทั้งหมด','','','','',Number(grand.total_fuel||0).toFixed(2),'',Number(grand.total_repair||0).toFixed(2),'',Number(grand.total_tax||0).toFixed(2),Number(grand.total_insurance||0).toFixed(2),Number(grand.total_inspection||0).toFixed(2),Number(grand.grand_total||0).toFixed(2),Number(grand.total_km||0).toFixed(0)]];
+    ExportUtils.exportExcelMultiSheet({ filename: 'รายงานค่าใช้จ่าย_'+dr.from+'_'+dr.to,
+      sheets:[
+        {sheetName:'รายคัน',headers:headers,rows:rows.concat(sumRow)},
+        {sheetName:'สรุป',headers:['ประเภท','รวม(บาท)'],rows:[['น้ำมัน',Number(grand.total_fuel||0).toFixed(2)],['ซ่อมบำรุง',Number(grand.total_repair||0).toFixed(2)],['ภาษี',Number(grand.total_tax||0).toFixed(2)],['ประกัน',Number(grand.total_insurance||0).toFixed(2)],['ตรวจสภาพ',Number(grand.total_inspection||0).toFixed(2)],['รวมทั้งหมด',Number(grand.grand_total||0).toFixed(2)]]}
+      ],
+      reportMeta:{reportedBy:rn,reportedByPosition:rp,dateRange:dateLabel,type:'ค่าใช้จ่าย'} });
+  }
+
+  function _emExportOffhours(records, dr, dateLabel) {
+    var rn = document.getElementById('em_reporter_name').value||'-';
+    var rp = document.getElementById('em_reporter_pos').value||'-';
+    var headers = ['ลำดับ','วันที่','วันในสัปดาห์','เวลาเริ่ม','เวลาสิ้นสุด','ทะเบียน','ยี่ห้อ','คนขับ','จุดหมาย','ภารกิจ','ผู้โดยสาร','สถานะ','หมายเหตุ'];
+    var statMap = { scheduled:'รอออก', ongoing:'ระหว่างเดินทาง', completed:'เสร็จสิ้น', cancelled:'ยกเลิก' };
+    var rows = records.map(function(r,i){ return [i+1,r.date||'',r.weekday_th||'',r.time_start||'',r.time_end||'',r.license_plate||'',r.brand||'',r.driver_name||'',r.destination||'',r.mission||'',r.passengers||'',statMap[r.status]||r.status||'',r.notes||'']; });
+    ExportUtils.exportExcelMultiSheet({ filename: 'รายงานนอกเวลา_'+dr.from+'_'+dr.to,
+      sheets:[{sheetName:'นอกเวลาราชการ',headers:headers,rows:rows}],
+      reportMeta:{reportedBy:rn,reportedByPosition:rp,dateRange:dateLabel,type:'นอกเวลาราชการ'} });
+  }
+
+  function _emExportAudit(records, summary, dr, dateLabel) {
+    var rn = document.getElementById('em_reporter_name').value||'-';
+    var rp = document.getElementById('em_reporter_pos').value||'-';
+    var headers = ['ลำดับ','วันที่-เวลา','ผู้ดำเนินการ','ชื่อผู้ใช้','ตาราง','รหัสข้อมูล','การกระทำ','ฟิลด์ที่เปลี่ยน','ค่าเดิม','ค่าใหม่','IP Address'];
+    var rows = records.map(function(r,i){ return [i+1,r.created_at||'',r.actor_name||'',r.actor_username||'',r.table_name||'',r.record_id||'',r.action||'',r.changed_fields||'',r.old_values||'',r.new_values||'',r.ip_address||'']; });
+    ExportUtils.exportExcelMultiSheet({ filename: 'ประวัติแก้ไข_'+dr.from+'_'+dr.to,
+      sheets:[
+        {sheetName:'ประวัติแก้ไข',headers:headers,rows:rows},
+        {sheetName:'สรุป',headers:['รายการ','ค่า'],rows:[['รายการทั้งหมด',summary.total||0],['ผู้ใช้งาน',summary.unique_users||0],['ตารางที่เกี่ยวข้อง',summary.tables_affected||0]]}
+      ],
+      reportMeta:{reportedBy:rn,reportedByPosition:rp,dateRange:dateLabel,type:'ประวัติแก้ไข'} });
+  }
+
+  function _emExportQuality(result, dr, dateLabel) {
+    var rn = document.getElementById('em_reporter_name').value||'-';
+    var rp = document.getElementById('em_reporter_pos').value||'-';
+    var ov = result.overview || {};
+    var gaps = result.vehicle_gaps || result.vehicleGaps || [];
+    var overviewRows = [
+      ['บันทึกทั้งหมด',ov.total_records||0],['ปกติ',ov.normal||0],['ออกอัตโนมัติ',ov.auto_departure||0],
+      ['กลับอัตโนมัติ',ov.auto_return||0],['ไม่มีการกลับ',ov.auto_unresolved||0],['ข้อมูลขาด',ov.gap_record||0],
+      ['กลับล่าช้า',ov.late_return||0],['ออกอย่างเดียว',ov.departure_only||0],['ข้อมูลย้อนหลัง',ov.historical||0]
+    ];
+    var gapHeaders = ['ทะเบียน','ยี่ห้อ','จำนวนปัญหา','รายละเอียด'];
+    var gapRows = gaps.map(function(g){ return [g.license_plate||'',g.brand||'',g.gap_count||0,g.gap_details||'']; });
+    ExportUtils.exportExcelMultiSheet({ filename: 'คุณภาพข้อมูล_'+dr.from+'_'+dr.to,
+      sheets:[
+        {sheetName:'สรุปคุณภาพ',headers:['รายการ','จำนวน'],rows:overviewRows},
+        {sheetName:'รายคัน',headers:gapHeaders,rows:gapRows}
+      ],
+      reportMeta:{reportedBy:rn,reportedByPosition:rp,dateRange:dateLabel,type:'คุณภาพข้อมูล'} });
   }
   </script>
 </body>
