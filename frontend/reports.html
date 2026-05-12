@@ -1788,6 +1788,22 @@
     var statMap = { active:'ใช้งาน', maintenance:'ซ่อมบำรุง', inactive:'ไม่ใช้งาน' };
     var NOT_RECORDED = 'พนักงานขับรถไม่บันทึก';
 
+    // ── helper: แปลงวันที่เป็น "12 พฤษภาคม 2569 (พ.ศ.)" ────
+    var thMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                    'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+    function toThaiDate(str) {
+      if (!str) return '-';
+      var d = new Date(str.substr(0,10)+'T00:00:00');
+      if (isNaN(d)) return str;
+      return d.getDate() + ' ' + thMonths[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+    }
+    function toTimeOnly(str) {
+      // returns HH:MM from datetime string, or NOT_RECORDED passthrough
+      if (!str || str === NOT_RECORDED) return str;
+      var m = str.match(/(\d{2}:\d{2})/);
+      return m ? m[1] : str;
+    }
+
     // ── helper: แปลงคุณภาพข้อมูลการสแกน ─────────────
     var qualityMap = {
       normal: 'บันทึกแล้ว', auto_departure: '⚠ ระบบบันทึกให้อัตโนมัติ',
@@ -1899,10 +1915,10 @@
       // เรียงตามวันที่จากเก่าไปใหม่
       all.sort(function(a, b) { return a._date < b._date ? -1 : a._date > b._date ? 1 : 0; });
       return all.map(function(r, i) {
-        return [i+1, r.date, r.driver, r.requester, r.passengers,
+        return [i+1, toThaiDate(r.date), r.driver, r.requester, r.passengers,
           r.destination, r.mission,
-          r.dep_time, r.dep_status, r.dep_mileage,
-          r.ret_time, r.ret_status, r.ret_mileage,
+          toTimeOnly(r.dep_time), r.dep_status, r.dep_mileage,
+          toTimeOnly(r.ret_time), r.ret_status, r.ret_mileage,
           r.km, r.type, r.notes];
       });
     }
@@ -1924,7 +1940,7 @@
       var infoRows = [
         ['ทะเบียน', plate, 'ยี่ห้อ/รุ่น', (v.brand||'')+(v.model?' '+v.model:'')+(v.year?' ('+v.year+')':'')],
         ['สถานะ', statMap[v.status]||v.status||'-', 'เลขไมล์ปัจจุบัน', v.current_mileage||0],
-        ['ช่วงเวลา', dateLabel, 'จำนวนเที่ยวรวม', totalTrips],
+        ['ช่วงเวลา', (dr ? toThaiDate(dr.from)+' ถึง '+toThaiDate(dr.to) : dateLabel), 'จำนวนเที่ยวรวม', totalTrips],
         [],
         logHeaders
       ];
