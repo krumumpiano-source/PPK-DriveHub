@@ -1423,6 +1423,7 @@
         <div class="form-group">
           <label><strong>ช่วงเวลา</strong></label>
           <select id="em_period" onchange="onEmPeriodChange()">
+            <option value="all">ทั้งหมด</option>
             <option value="current_filter">ใช้ตัวกรองปัจจุบันในหน้า</option>
             <option value="this_month">เดือนนี้</option>
             <option value="last_month">เดือนที่แล้ว</option>
@@ -1593,6 +1594,9 @@
     }
     function pad(n) { return String(n).padStart(2,'0'); }
     function fmt(d) { return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+    if (period === 'all') {
+      return { from: '2000-01-01', to: fmt(today) };
+    }
     if (period === 'current_filter') {
       return { from: document.getElementById('dateFrom').value || '2020-01-01', to: document.getElementById('dateTo').value || fmt(today) };
     }
