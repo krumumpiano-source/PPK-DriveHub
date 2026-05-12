@@ -390,7 +390,9 @@
         h+='<td><strong>'+htmlEsc(rec.license_plate||'-')+'</strong></td>';
         h+='<td>'+htmlEsc(rec.requester_display_name||rec.requested_by||'-')+'</td>';
         h+='<td style="max-width:200px"><div>'+htmlEsc(rec.destination||'-')+'</div>'+(rec.mission?'<div style="font-size:.8em;color:var(--color-text-muted);margin-top:2px">'+htmlEsc(rec.mission)+'</div>':'')+'</td>';
-        h+='<td>'+htmlEsc(rec.driver_name||'-')+'</td>';
+        var isAutoGap=rec.mission&&rec.mission.indexOf('ไม่บันทึกข้อมูล')>=0;
+        var driverCell=isAutoGap?'<span style="color:#9ca3af;font-style:italic">ไม่ทราบ</span>':htmlEsc(rec.driver_name||'-');
+        h+='<td>'+driverCell+'</td>';
         h+='<td style="white-space:nowrap">'+dep+'</td>';
         h+='<td style="white-space:nowrap">'+ret+'</td>';
         h+='<td style="white-space:nowrap">'+kmC+'</td>';
@@ -585,7 +587,9 @@
         var d=new Date(r.date);
         var thd=isNaN(d)?r.date||'':d.getDate()+' '+mth[d.getMonth()]+' '+(d.getFullYear()+543);
         var km=(r.mileage_start!=null&&r.mileage_end!=null&&r.mileage_end>r.mileage_start)?r.mileage_end-r.mileage_start:'';
-        return [thd,r.time_start||'',r.time_end||'',r.license_plate||'',r.requester_display_name||r.requested_by||'',r.destination||'',r.mission||'',r.driver_name||'',r.actual_departure?r.actual_departure.replace('T',' ').substr(0,16):'ไม่มีการบันทึก',r.actual_return?r.actual_return.replace('T',' ').substr(0,16):'ไม่มีการบันทึก',km,r.status||''];
+        var isAutoGap=r.mission&&r.mission.indexOf('ไม่บันทึกข้อมูล')>=0;
+        var driverExport=isAutoGap?'ไม่ทราบ':(r.driver_name||'-');
+        return [thd,r.time_start||'',r.time_end||'',r.license_plate||'',r.requester_display_name||r.requested_by||'',r.destination||'',r.mission||'',driverExport,r.actual_departure?r.actual_departure.replace('T',' ').substr(0,16):'ไม่มีการบันทึก',r.actual_return?r.actual_return.replace('T',' ').substr(0,16):'ไม่มีการบันทึก',km,r.status||''];
       });
       ExportUtils.exportExcel({filename:'การใช้งานรถ_'+ds,sheetName:'การใช้งานรถ',headers:hdr,rows:rows});
     }
