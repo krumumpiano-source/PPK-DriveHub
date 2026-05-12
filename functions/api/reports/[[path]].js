@@ -225,10 +225,12 @@ export async function onRequest(context) {
     try { requirePermission(user, 'reports', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const dateFrom = url.searchParams.get('date_from');
     const dateTo = url.searchParams.get('date_to');
+    const repCarId = url.searchParams.get('car_id');
     const where = [];
     const params = [];
     if (dateFrom) { where.push('rl.date_reported >= ?'); params.push(dateFrom); }
     if (dateTo) { where.push('rl.date_reported <= ?'); params.push(dateTo); }
+    if (repCarId) { where.push('rl.car_id = ?'); params.push(repCarId); }
     const rows = await dbAll(env.DB,
       `SELECT rl.*, c.license_plate, c.brand
        FROM repair_log rl
@@ -247,7 +249,22 @@ export async function onRequest(context) {
       params
     );
 
-    return success({ records: rows, summary });
+    // Per-vehicle summary
+    const byVehicle = await dbAll(env.DB,
+      `SELECT rl.car_id, c.license_plate, c.brand, c.model,
+       COUNT(*) AS repair_count,
+       COALESCE(SUM(rl.cost),0) AS total_cost,
+       SUM(CASE WHEN rl.status='completed' THEN 1 ELSE 0 END) AS completed,
+       SUM(CASE WHEN rl.status NOT IN ('completed','cancelled') THEN 1 ELSE 0 END) AS active
+       FROM repair_log rl
+       LEFT JOIN cars c ON rl.car_id = c.id
+       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+       GROUP BY rl.car_id
+       ORDER BY total_cost DESC`,
+      params
+    );
+
+    return success({ records: rows, summary, by_vehicle: byVehicle });
   }
 
   // ========== Maintenance Report ==========
@@ -894,6 +911,63 @@ export async function onRequest(context) {
       params
     );
     return success({ records: rows, total: rows.length });
+  }
+
+  // ========== Driver Summary Report ==========
+  if (path === '/api/reports/driver-summary' && method === 'GET') {
+    try { requirePermission(user, 'reports', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const dateFrom = url.searchParams.get('date_from');
+    const dateTo = url.searchParams.get('date_to');
+    const driverId = url.searchParams.get('driver_id');
+    const where = ['q.status IN (\'completed\',\'ongoing\')'];
+    const params = [];
+    if (dateFrom) { where.push('q.date >= ?'); params.push(dateFrom); }
+    if (dateTo) { where.push('q.date <= ?'); params.push(dateTo); }
+    if (driverId) { where.push('q.driver_id = ?'); params.push(driverId); }
+    const whereClause = 'WHERE ' + where.join(' AND ');
+
+    const rows = await dbAll(env.DB,
+      `SELECT
+       d.id AS driver_id,
+       d.name AS driver_name,
+       d.status AS driver_status,
+       d.license_expiry,
+       COUNT(DISTINCT q.id) AS trip_count,
+       COALESCE(SUM(CASE WHEN dep.mileage IS NOT NULL AND ret.mileage IS NOT NULL AND ret.mileage > dep.mileage
+                        THEN ret.mileage - dep.mileage ELSE 0 END), 0) AS total_km,
+       COUNT(DISTINCT CASE WHEN dep.mileage IS NOT NULL AND ret.mileage IS NOT NULL AND ret.mileage > dep.mileage
+                           THEN q.id END) AS trips_with_km,
+       COALESCE(SUM(CASE
+         WHEN dep.datetime IS NOT NULL AND ret.datetime IS NOT NULL
+         THEN ROUND((JULIANDAY(ret.datetime) - JULIANDAY(dep.datetime)) * 24, 2)
+         ELSE 0 END), 0) AS total_hours,
+       COUNT(DISTINCT CASE WHEN CAST(strftime('%w', q.date) AS INTEGER) NOT IN (0,6)
+                           THEN q.date END) AS weekday_trips,
+       COUNT(DISTINCT CASE WHEN CAST(strftime('%w', q.date) AS INTEGER) IN (0,6)
+                           THEN q.id END) AS weekend_trips,
+       SUM(CASE WHEN dep.datetime IS NULL AND ret.datetime IS NULL THEN 1 ELSE 0 END) AS trips_no_record,
+       SUM(CASE WHEN dep.datetime IS NULL OR ret.datetime IS NULL THEN 1 ELSE 0 END) AS trips_incomplete
+       FROM drivers d
+       LEFT JOIN queue q ON q.driver_id = d.id AND q.status IN ('completed','ongoing')
+         ${dateFrom ? 'AND q.date >= ?' : ''} ${dateTo ? 'AND q.date <= ?' : ''}
+       LEFT JOIN usage_records dep ON dep.queue_id = q.id AND dep.record_type = 'departure'
+       LEFT JOIN usage_records ret ON ret.queue_id = q.id AND ret.record_type = 'return'
+       ${driverId ? 'WHERE d.id = ?' : ''}
+       GROUP BY d.id
+       ORDER BY trip_count DESC`,
+      [...(dateFrom ? [dateFrom] : []), ...(dateTo ? [dateTo] : []), ...(driverId ? [driverId] : [])]
+    );
+
+    const summary = rows.reduce((acc, r) => {
+      acc.total_drivers += r.trip_count > 0 ? 1 : 0;
+      acc.total_trips += r.trip_count || 0;
+      acc.total_km += r.total_km || 0;
+      acc.total_hours += r.total_hours || 0;
+      acc.weekend_trips += r.weekend_trips || 0;
+      return acc;
+    }, { total_drivers: 0, total_trips: 0, total_km: 0, total_hours: 0, weekend_trips: 0 });
+
+    return success({ drivers: rows, summary, date_from: dateFrom, date_to: dateTo });
   }
 
   return error('Not Found', 404);
