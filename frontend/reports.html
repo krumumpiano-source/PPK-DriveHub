@@ -1439,12 +1439,18 @@
         <!-- รูปแบบไฟล์ -->
         <div class="form-group">
           <label><strong>รูปแบบไฟล์</strong></label>
-          <div style="display:flex;gap:12px;flex-wrap:wrap;">
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-              <input type="radio" name="em_format" value="excel" checked onchange="onEmFormatChange()"> Excel หลายแผ่น (.xlsx)
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <label class="em-format-btn" id="em_format_excel_lbl" style="flex:1;min-width:130px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:14px 10px;border:2px solid var(--color-primary);border-radius:10px;cursor:pointer;background:var(--color-primary);color:#fff;font-weight:600;transition:all 0.15s;">
+              <input type="radio" name="em_format" value="excel" checked onchange="onEmFormatChange()" style="display:none;">
+              <span style="font-size:1.5rem;">📊</span>
+              <span>Excel หลายแผ่น</span>
+              <span style="font-size:0.78rem;font-weight:400;opacity:0.85;">(.xlsx)</span>
             </label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-              <input type="radio" name="em_format" value="pdf" onchange="onEmFormatChange()"> PDF ทางการ (A4 landscape)
+            <label class="em-format-btn" id="em_format_pdf_lbl" style="flex:1;min-width:130px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:14px 10px;border:2px solid var(--color-primary);border-radius:10px;cursor:pointer;background:#fff;color:var(--color-primary);font-weight:600;transition:all 0.15s;">
+              <input type="radio" name="em_format" value="pdf" onchange="onEmFormatChange()" style="display:none;">
+              <span style="font-size:1.5rem;">📄</span>
+              <span>PDF ทางการ</span>
+              <span style="font-size:0.78rem;font-weight:400;opacity:0.7;">(A4 landscape)</span>
             </label>
           </div>
         </div>
@@ -1529,6 +1535,17 @@
     if (isPDF) {
       document.getElementById('em_queue_sigs').style.display = (type === 'fuel') ? 'none' : '';
       document.getElementById('em_fuel_sigs').style.display = (type === 'fuel') ? '' : 'none';
+    }
+    // Toggle card styles
+    var primary = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#1a73e8';
+    var excelLbl = document.getElementById('em_format_excel_lbl');
+    var pdfLbl = document.getElementById('em_format_pdf_lbl');
+    if (isPDF) {
+      excelLbl.style.background = '#fff'; excelLbl.style.color = primary;
+      pdfLbl.style.background = primary; pdfLbl.style.color = '#fff';
+    } else {
+      excelLbl.style.background = primary; excelLbl.style.color = '#fff';
+      pdfLbl.style.background = '#fff'; pdfLbl.style.color = primary;
     }
   }
 
