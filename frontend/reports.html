@@ -590,7 +590,7 @@
         var mm=String(dt.getMinutes()).padStart(2,'0');
         return dt.getDate()+' '+mth[dt.getMonth()]+' '+(dt.getFullYear()+543)+' '+hh+':'+mm+'น.';
       }
-      var hdr=['วันที่','เวลาสแกนออก','เวลาสแกนเข้า','ทะเบียน','ผู้ขอ','จุดหมาย','ภารกิจ','คนขับ','ก่อนออกเดินทาง','กลับมาจากเดินทาง','ระยะทาง (กม.)','หมายเหตุ'];
+      var hdr=['วันที่','เวลาสแกนออก','เวลาสแกนเข้า','ทะเบียน','ผู้ขอ','จุดหมาย','ภารกิจ','คนขับ','ก่อนออกเดินทาง','กลับมาจากเดินทาง','เลขไมล์ก่อนออก','เลขไมล์กลับมา','ระยะทาง (กม.)','หมายเหตุ'];
       var redCells=[];
       var rows=recs.map(function(r,i) {
         var d=new Date(r.date);
@@ -603,8 +603,8 @@
         else if(!r.actual_departure&&!r.actual_return) remark='พนักงานขับรถไม่บันทึกออกและกลับ';
         else if(!r.actual_departure) remark='พนักงานขับรถไม่บันทึกก่อนออกเดินทาง';
         else if(!r.actual_return) remark='พนักงานขับรถไม่บันทึกกลับมาจากเดินทาง';
-        if(remark) redCells.push({row:i,col:11});
-        return [thd,r.time_start||'',r.time_end||'',r.license_plate||'',r.requester_display_name||r.requested_by||'',r.destination||'',r.mission||'',driverExport,isAutoGap?'':fmtDT(r.actual_departure),isAutoGap?'':fmtDT(r.actual_return),km,remark];
+        if(remark) redCells.push({row:i,col:13});
+        return [thd,r.time_start||'',r.time_end||'',r.license_plate||'',r.requester_display_name||r.requested_by||'',r.destination||'',r.mission||'',driverExport,isAutoGap?'':fmtDT(r.actual_departure),isAutoGap?'':fmtDT(r.actual_return),isAutoGap?'':(r.mileage_start!=null?r.mileage_start:''),isAutoGap?'':(r.mileage_end!=null?r.mileage_end:''),km,remark];
       });
       ExportUtils.exportExcel({filename:'การใช้งานรถ_'+ds,sheetName:'การใช้งานรถ',headers:hdr,rows:rows,redCells:redCells});
     }
