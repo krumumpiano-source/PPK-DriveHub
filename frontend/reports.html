@@ -1948,7 +1948,9 @@
       sheets.push({ sheetName: sheetName, headers: null, rows: infoRows.concat(logRows) });
     });
 
-    ExportUtils.exportExcelMultiSheet({ filename: 'รายงานการใช้งานรถ_'+(dr?dr.from:'')+'_'+(dr?dr.to:''),
+    var fnFrom = dr ? (dr.from === '1970-01-01' ? 'ทั้งหมด' : toThaiDate(dr.from)) : '';
+    var fnTo = dr ? toThaiDate(dr.to) : '';
+    ExportUtils.exportExcelMultiSheet({ filename: 'รายงานการใช้งานรถ_'+fnFrom+'_'+fnTo,
       sheets: sheets,
       reportMeta:{reportedBy:rn,reportedByPosition:rp,dateRange:dateLabel,type:'การใช้งานรถ'} });
   }
