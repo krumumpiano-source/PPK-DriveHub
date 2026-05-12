@@ -247,7 +247,7 @@
     }
     function updateFilterVisibility() {
       var showCar=['trips','fuel','repairs'].indexOf(currentTab)>=0;
-      var showDrv=['trips','drivers'].indexOf(currentTab)>=0;
+      var showDrv=['drivers'].indexOf(currentTab)>=0;
       document.getElementById('fg-car').style.display=showCar?'':'none';
       document.getElementById('fg-driver').style.display=showDrv?'':'none';
     }
