@@ -767,17 +767,6 @@
       var startYear = fy - 543 - 1;
       var allRecords = ledgerData.records || [];
 
-      // Group records by month key (YYYY-MM)
-      var byMonth = {};
-      allRecords.forEach(function(r){
-        var k = (r.date || '').substr(0, 7);
-        if(!k) return;
-        (byMonth[k] = byMonth[k] || []).push(r);
-      });
-
-      var hd = ['วันที่','เวลา','เลขที่เอกสาร','ทะเบียนรถ','ยี่ห้อ/รุ่น','ผู้เติม','ประเภทน้ำมัน','ลิตร','ราคา/ลิตร (บาท)','จำนวนเงิน (บาท)','เลขไมล์ก่อน','เลขไมล์หลัง','ระยะวิ่ง (กม.)','อัตราสิ้นเปลือง (กม./ลิตร)','ปั๊ม','วัตถุประสงค์'];
-      var sheets = [];
-
       function fmtThaiDate(iso){
         if(!iso) return '';
         var p = iso.split('-');
@@ -786,11 +775,49 @@
       }
       function num(v){ return v==null||v===''?0:(+v); }
 
-      for (var i = 0; i < 12; i++){
-        var mo = fyMonthOrder[i];
+      // ───────── Pre-compute tank-to-tank mileage per record ─────────
+      // เลขไมล์ในระบบ = ไมล์ ณ ตู้หัวจ่าย (ก่อนเติม)
+      // ระยะทาง = ไมล์ของการเติมครั้งถัดไปของรถคันเดียวกัน − ไมล์ของการเติมครั้งนี้
+      // อัตราสิ้นเปลือง = ระยะทาง ÷ ลิตรที่เติมครั้งนี้
+      var byVehicleAll = {};
+      allRecords.forEach(function(r){
+        var lp = r.license_plate || '(ไม่ระบุทะเบียน)';
+        (byVehicleAll[lp] = byVehicleAll[lp] || []).push(r);
+      });
+      // เรียงและคำนวณ next_mileage + dist + kpl ลงใน record (mutating; ใช้ครั้งเดียว)
+      Object.keys(byVehicleAll).forEach(function(lp){
+        var arr = byVehicleAll[lp];
+        arr.sort(function(a,b){ return (a.date+(a.time||'')).localeCompare(b.date+(b.time||'')); });
+        for (var i = 0; i < arr.length; i++){
+          var mb = num(arr[i].mileage_before);
+          var nextMb = 0;
+          for (var j = i + 1; j < arr.length; j++){
+            var nm = num(arr[j].mileage_before);
+            if(nm > 0 && (mb === 0 || nm >= mb)){ nextMb = nm; break; }
+          }
+          arr[i].__next_mileage = nextMb;
+          arr[i].__dist = (mb > 0 && nextMb > mb) ? (nextMb - mb) : 0;
+          var l = num(arr[i].liters);
+          arr[i].__kpl = (arr[i].__dist > 0 && l > 0) ? +(arr[i].__dist / l).toFixed(2) : '';
+        }
+      });
+
+      // Group records by month key (YYYY-MM)
+      var byMonth = {};
+      allRecords.forEach(function(r){
+        var k = (r.date || '').substr(0, 7);
+        if(!k) return;
+        (byMonth[k] = byMonth[k] || []).push(r);
+      });
+
+      var hd = ['วันที่','เวลา','เลขที่เอกสาร','ทะเบียนรถ','ยี่ห้อ/รุ่น','ผู้เติม','ประเภทน้ำมัน','ลิตร','ราคา/ลิตร (บาท)','จำนวนเงิน (บาท)','เลขไมล์ก่อนเติม','ไมล์เติมครั้งถัดไป','ระยะทาง (กม.)','อัตราสิ้นเปลือง (กม./ลิตร)','ปั๊ม','วัตถุประสงค์'];
+      var sheets = [];
+
+      for (var ii = 0; ii < 12; ii++){
+        var mo = fyMonthOrder[ii];
         var ceYear = mo >= 10 ? startYear : startYear + 1;
         var key = ceYear + '-' + String(mo).padStart(2,'0');
-        var sheetName = thaiMonths[i] + ' ' + (ceYear + 543);
+        var sheetName = thaiMonths[ii] + ' ' + (ceYear + 543);
         var recs = (byMonth[key] || []).slice().sort(function(a,b){
           return (a.date+(a.time||'')).localeCompare(b.date+(b.time||''));
         });
@@ -799,9 +826,7 @@
         recs.forEach(function(r){
           var liters = num(r.liters);
           var amount = num(r.amount);
-          var mb = num(r.mileage_before), ma = num(r.mileage_after);
-          var dist = (mb > 0 && ma > mb) ? (ma - mb) : 0;
-          var kpl = (dist > 0 && liters > 0) ? (dist / liters) : (num(r.fuel_consumption_rate) || 0);
+          var dist = r.__dist || 0;
           if(dist > 0 && liters > 0){ sumKm += dist; sumLForKpl += liters; }
           sumL += liters; sumA += amount;
           rows.push([
@@ -816,9 +841,9 @@
             num(r.price_per_liter),
             amount,
             r.mileage_before || '',
-            r.mileage_after || '',
+            r.__next_mileage || '',
             dist || '',
-            kpl ? +kpl.toFixed(2) : '',
+            r.__kpl,
             r.gas_station_name || '',
             r.purpose_detail || r.purpose || ''
           ]);
@@ -837,15 +862,15 @@
       var monthMap = {};
       (ledgerData.monthly || []).forEach(function(m){ monthMap[m.month] = m; });
 
-      // คำนวณ km และ liters ที่ใช้คำนวณ kpl ได้ (มีไมล์ก่อน/หลังครบ) แยกตามเดือน
+      // คำนวณ km และ liters ที่ใช้คำนวณ kpl ได้ (tank-to-tank: ใช้ระยะทางที่คำนวณไว้ต่อ record) แยกตามเดือน
       var kplByMonth = {};
       allRecords.forEach(function(r){
         var k = (r.date || '').substr(0, 7);
         if(!k) return;
-        var mb = num(r.mileage_before), ma = num(r.mileage_after), l = num(r.liters);
-        if(mb > 0 && ma > mb && l > 0){
+        var l = num(r.liters);
+        if(r.__dist > 0 && l > 0){
           if(!kplByMonth[k]) kplByMonth[k] = { km: 0, liters: 0 };
-          kplByMonth[k].km += (ma - mb);
+          kplByMonth[k].km += r.__dist;
           kplByMonth[k].liters += l;
         }
       });
@@ -872,21 +897,9 @@
       sheets.unshift({ sheetName: 'สรุปทั้งปี', headers: summaryHd, rows: summaryRows });
 
       // ───────── Per-vehicle sheets — tank-to-tank consumption ─────────
-      // วิธีคำนวณ: ระยะทางที่ใช้น้ำมันลิตรของครั้งนี้ = ไมล์ของการเติมครั้งถัดไป − ไมล์ของการเติมครั้งนี้
-      // แล้ว อัตราสิ้นเปลือง = ระยะทางนั้น ÷ ลิตรที่เติมครั้งนี้
-      var byVehicle = {};
-      allRecords.forEach(function(r){
-        var lp = r.license_plate || '(ไม่ระบุทะเบียน)';
-        (byVehicle[lp] = byVehicle[lp] || []).push(r);
-      });
-
-      // คอลัมน์เพิ่ม: ระยะถึงเติมครั้งถัดไป + อัตราสิ้นเปลือง tank-to-tank
-      var vhd = ['วันที่','เวลา','เลขที่เอกสาร','ผู้เติม','ประเภทน้ำมัน','ลิตร','ราคา/ลิตร (บาท)','จำนวนเงิน (บาท)','เลขไมล์ก่อนเติม','ไมล์ครั้งถัดไป','ระยะทาง (กม.)','อัตราสิ้นเปลือง (กม./ลิตร)','ปั๊ม','วัตถุประสงค์'];
-
-      // เรียงทะเบียนรถ (เพื่อ sheet เรียงสวย)
-      var plates = Object.keys(byVehicle).sort();
-
-      // สรุปต่อคัน (เพิ่มไปท้ายชีตสรุปทั้งปี ผ่าน sheet ใหม่)
+      // ใช้ค่า __next_mileage / __dist / __kpl ที่คำนวณไว้แล้วใน byVehicleAll
+      var vhd = ['วันที่','เวลา','เลขที่เอกสาร','ผู้เติม','ประเภทน้ำมัน','ลิตร','ราคา/ลิตร (บาท)','จำนวนเงิน (บาท)','เลขไมล์ก่อนเติม','ไมล์เติมครั้งถัดไป','ระยะทาง (กม.)','อัตราสิ้นเปลือง (กม./ลิตร)','ปั๊ม','วัตถุประสงค์'];
+      var plates = Object.keys(byVehicleAll).sort();
       var perCarSummaryHd = ['ทะเบียนรถ','ยี่ห้อ/รุ่น','จำนวนครั้ง','รวมลิตร','รวมเงิน (บาท)','ระยะทางรวม (กม.)','อัตราสิ้นเปลืองเฉลี่ย (กม./ลิตร)'];
       var perCarSummaryRows = [];
 
@@ -896,26 +909,15 @@
       }
 
       plates.forEach(function(lp){
-        var recs = byVehicle[lp].slice().sort(function(a,b){
-          return (a.date+(a.time||'')).localeCompare(b.date+(b.time||''));
-        });
+        var recs = byVehicleAll[lp]; // already sorted
         var rows = [];
         var sumL = 0, sumA = 0, sumDist = 0, sumLForKpl = 0;
         var brand = '';
-        for (var i2 = 0; i2 < recs.length; i2++){
-          var r = recs[i2];
+        recs.forEach(function(r){
           if(!brand && r.brand) brand = r.brand;
           var liters = num(r.liters);
           var amount = num(r.amount);
-          var mb = num(r.mileage_before);
-          var nextMb = 0;
-          // หาไมล์ก่อนเติมของครั้งถัดไป (ที่มีค่า > mb)
-          for (var j2 = i2 + 1; j2 < recs.length; j2++){
-            var nm = num(recs[j2].mileage_before);
-            if(nm > 0 && (mb === 0 || nm >= mb)){ nextMb = nm; break; }
-          }
-          var dist = (mb > 0 && nextMb > mb) ? (nextMb - mb) : 0;
-          var kpl = (dist > 0 && liters > 0) ? +(dist / liters).toFixed(2) : '';
+          var dist = r.__dist || 0;
           if(dist > 0 && liters > 0){ sumDist += dist; sumLForKpl += liters; }
           sumL += liters; sumA += amount;
           rows.push([
@@ -927,14 +929,14 @@
             liters,
             num(r.price_per_liter),
             amount,
-            mb || '',
-            nextMb || '',
+            r.mileage_before || '',
+            r.__next_mileage || '',
             dist || '',
-            kpl,
+            r.__kpl,
             r.gas_station_name || '',
             r.purpose_detail || r.purpose || ''
           ]);
-        }
+        });
         if(rows.length === 0) return;
         var avgKpl2 = sumLForKpl > 0 ? +(sumDist / sumLForKpl).toFixed(2) : '';
         var avgPrice2 = sumL > 0 ? +(sumA / sumL).toFixed(2) : '';
