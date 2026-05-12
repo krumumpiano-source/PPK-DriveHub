@@ -202,6 +202,10 @@
         else if (me === ms)
           issues.push({msg:'เลขไมล์ออกและกลับเหมือนกัน ('+ms+') ระยะทาง 0 กม. — น่าจะพิมพ์ผิด', level:'warn'});
       }
+      if (me != null && r.next_dep_mileage != null && me > r.next_dep_mileage + 50) {
+        var over = me - r.next_dep_mileage;
+        issues.push({msg:'เลขไมล์กลับ ('+me+') สูงกว่าเลขไมล์ออกของคิวถัดไป ('+r.next_dep_mileage+') อยู่ '+over+' กม. — เลขไมล์กลับน่าจะพิมพ์ผิด', level:'error'});
+      }
       if (ms != null && r.prev_ret_mileage != null) {
         var gap = ms - r.prev_ret_mileage;
         if (gap > 50)
