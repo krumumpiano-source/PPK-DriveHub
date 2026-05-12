@@ -1839,85 +1839,83 @@
     // ── คอลัมน์สมุดบันทึกการใช้รถราชการ ─────────────
     // อ้างอิงตามระเบียบสำนักนายกรัฐมนตรีว่าด้วยรถราชการ
     var logHeaders = [
-      'ลำดับที่',
-      'วัน เดือน ปี',
-      'ชื่อผู้ขับรถ',
-      'ชื่อผู้ขอใช้รถ',
-      'จำนวนผู้โดยสาร',
-      'สถานที่ไป',
-      'วัตถุประสงค์/ภารกิจ',
-      'เวลาออก',
-      'สถานะการบันทึกออก',
-      'เลขไมล์ตอนออก',
-      'เวลากลับ',
-      'สถานะการบันทึกกลับ',
-      'เลขไมล์ตอนกลับ',
-      'ระยะทาง (กม.)',
-      'ประเภทการอนุมัติ',
-      'หมายเหตุ'
+      'ลำดับที่','วัน เดือน ปี','เวลา','ประเภทการบันทึก',
+      'ชื่อผู้ขับรถ','ชื่อผู้ขอใช้รถ',
+      'สถานที่ไป','วัตถุประสงค์/ภารกิจ',
+      'เลขไมล์รถ','ระยะทาง (กม.)',
+      'ประเภทการอนุมัติ','หมายเหตุ'
     ];
 
-    // รวม trip + scan เป็น unified row format แล้วเรียงตามวันที่
+    // สร้าง row แบบรายการสแกนแยก ออก/กลับ ทีละ row
     function buildUnifiedRows(carTrips, carScans) {
       var all = [];
-      carTrips.forEach(function(r) {
+
+      function pushRows(r, isQueue) {
         var hasDep = !!r.actual_departure;
         var hasRet = !!r.actual_return;
-        var autoNotes = [r.dep_auto_notes, r.ret_auto_notes, r.notes].filter(Boolean).join('; ');
+        var driver    = isQueue ? (r.driver_name || '-') : (r.driver_name || '-');
+        var requester = isQueue ? (r.requester_display_name || r.requested_by || '-') : (r.requester_name || '-');
+        var dest      = r.destination || '-';
+        var mission   = isQueue ? (r.mission || '-') : (r.purpose || '-');
+        var tripType  = isQueue ? 'ผ่านระบบคิว / มีใบอนุมัติ' : '⚠ สแกน QR โดยตรง / ไม่มีใบอนุมัติ';
         var km = r.km_used != null ? r.km_used
           : (r.mileage_end && r.mileage_start && r.mileage_end > r.mileage_start
               ? r.mileage_end - r.mileage_start : '-');
-        all.push({
-          _date: r.actual_departure || r.date || '',
-          date: r.date || '',
-          driver: r.driver_name || '-',
-          requester: r.requester_display_name || r.requested_by || '-',
-          passengers: r.passengers || '-',
-          destination: r.destination || '-',
-          mission: r.mission || '-',
-          dep_time: hasDep ? r.actual_departure.substr(0,16) : NOT_RECORDED,
-          dep_status: hasDep ? (qualityMap[r.dep_quality] || 'บันทึกแล้ว') : NOT_RECORDED,
-          dep_mileage: hasDep ? (r.mileage_start || '-') : NOT_RECORDED,
-          ret_time: hasRet ? r.actual_return.substr(0,16) : NOT_RECORDED,
-          ret_status: hasRet ? (qualityMap[r.ret_quality] || 'บันทึกแล้ว') : NOT_RECORDED,
-          ret_mileage: hasRet ? (r.mileage_end || '-') : NOT_RECORDED,
-          km: km,
-          type: 'ผ่านระบบคิว / มีใบอนุมัติ',
-          notes: autoNotes || '-'
-        });
-      });
-      carScans.forEach(function(r) {
-        var hasDep = !!r.actual_departure;
-        var hasRet = !!r.actual_return;
-        var autoNotes = [r.dep_auto_notes, r.ret_auto_notes, r.dep_notes, r.ret_notes].filter(Boolean).join('; ');
-        var km = r.km_used != null ? r.km_used : '-';
-        all.push({
-          _date: r.actual_departure || r.date || '',
-          date: r.date || '',
-          driver: r.driver_name || '-',
-          requester: r.requester_name || '-',
-          passengers: '-',
-          destination: r.destination || '-',
-          mission: r.purpose || '-',
-          dep_time: hasDep ? r.actual_departure.substr(0,16) : NOT_RECORDED,
-          dep_status: hasDep ? (qualityMap[r.dep_quality] || 'บันทึกแล้ว') : NOT_RECORDED,
-          dep_mileage: hasDep ? (r.mileage_start || '-') : NOT_RECORDED,
-          ret_time: hasRet ? r.actual_return.substr(0,16) : NOT_RECORDED,
-          ret_status: hasRet ? (qualityMap[r.ret_quality] || 'บันทึกแล้ว') : NOT_RECORDED,
-          ret_mileage: hasRet ? (r.mileage_end || '-') : NOT_RECORDED,
-          km: km,
-          type: '⚠ สแกน QR โดยตรง / ไม่มีใบอนุมัติ',
-          notes: autoNotes || '-'
-        });
-      });
+
+        if (!hasDep && !hasRet) {
+          // ลืมบันทึกทั้งคู่ หรือระบบยังไม่มีข้อมูล
+          var baseNotes = isQueue
+            ? [r.dep_auto_notes, r.ret_auto_notes, r.notes].filter(Boolean).join('; ')
+            : [r.dep_auto_notes, r.ret_auto_notes, r.dep_notes, r.ret_notes].filter(Boolean).join('; ');
+          all.push({ _date: r.date||'', date: r.date||'', time: '-',
+            scanType: NOT_RECORDED, driver, requester, dest, mission,
+            mileage: '-', km: '-', type: tripType,
+            notes: baseNotes || 'ไม่มีการบันทึกออก-กลับ' });
+          return;
+        }
+
+        if (hasDep) {
+          var depNotes = [];
+          if (r.dep_quality && r.dep_quality !== 'normal') depNotes.push(qualityMap[r.dep_quality] || r.dep_quality);
+          if (!hasRet) depNotes.push('⚠ ไม่มีบันทึกกลับ');
+          var extra = isQueue ? [r.dep_auto_notes, r.notes].filter(Boolean).join('; ')
+                              : [r.dep_auto_notes, r.dep_notes].filter(Boolean).join('; ');
+          if (extra) depNotes.push(extra);
+          all.push({ _date: r.actual_departure,
+            date: r.actual_departure.substr(0,10),
+            time: r.actual_departure.substr(11,5),
+            scanType: 'ก่อนออกเดินทาง',
+            driver, requester, dest, mission,
+            mileage: r.mileage_start || '-', km: '-',
+            type: tripType, notes: depNotes.join('; ') || '-' });
+        }
+
+        if (hasRet) {
+          var retNotes = [];
+          if (r.ret_quality && r.ret_quality !== 'normal') retNotes.push(qualityMap[r.ret_quality] || r.ret_quality);
+          if (!hasDep) retNotes.push('⚠ ไม่มีบันทึกออก');
+          var extra2 = isQueue ? [r.ret_auto_notes, r.notes].filter(Boolean).join('; ')
+                               : [r.ret_auto_notes, r.ret_notes].filter(Boolean).join('; ');
+          if (extra2) retNotes.push(extra2);
+          all.push({ _date: r.actual_return,
+            date: r.actual_return.substr(0,10),
+            time: r.actual_return.substr(11,5),
+            scanType: 'กลับมาจากเดินทาง',
+            driver, requester, dest, mission,
+            mileage: r.mileage_end || '-', km: km,
+            type: tripType, notes: retNotes.join('; ') || '-' });
+        }
+      }
+
+      carTrips.forEach(function(r) { pushRows(r, true); });
+      carScans.forEach(function(r) { pushRows(r, false); });
+
       // เรียงตามวันที่จากเก่าไปใหม่
       all.sort(function(a, b) { return a._date < b._date ? -1 : a._date > b._date ? 1 : 0; });
       return all.map(function(r, i) {
-        return [i+1, toThaiDate(r.date), r.driver, r.requester, r.passengers,
-          r.destination, r.mission,
-          toTimeOnly(r.dep_time), r.dep_status, r.dep_mileage,
-          toTimeOnly(r.ret_time), r.ret_status, r.ret_mileage,
-          r.km, r.type, r.notes];
+        return [i+1, toThaiDate(r.date), r.time, r.scanType,
+          r.driver, r.requester, r.dest, r.mission,
+          r.mileage, r.km, r.type, r.notes];
       });
     }
 
