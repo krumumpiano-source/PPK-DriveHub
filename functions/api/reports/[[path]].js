@@ -813,13 +813,31 @@ export async function onRequest(context) {
     const rows = await dbAll(env.DB,
       `WITH dep AS (
          SELECT *, ROW_NUMBER() OVER (PARTITION BY car_id ORDER BY datetime) AS rn
-         FROM usage_records
-         WHERE record_type = 'departure' AND queue_id IS NULL
+         FROM usage_records ur
+         WHERE record_type = 'departure'
+           AND queue_id IS NULL
+           AND data_quality != 'gap_record'
+           AND NOT EXISTS (
+             SELECT 1 FROM usage_records ur2
+             WHERE ur2.car_id = ur.car_id
+               AND ur2.queue_id IS NOT NULL
+               AND ur2.record_type = 'departure'
+               AND ABS(CAST((JULIANDAY(ur2.datetime) - JULIANDAY(ur.datetime)) * 86400 AS INTEGER)) <= 300
+           )
        ),
        ret AS (
          SELECT *, ROW_NUMBER() OVER (PARTITION BY car_id ORDER BY datetime) AS rn
-         FROM usage_records
-         WHERE record_type = 'return' AND queue_id IS NULL
+         FROM usage_records ur
+         WHERE record_type = 'return'
+           AND queue_id IS NULL
+           AND data_quality != 'gap_record'
+           AND NOT EXISTS (
+             SELECT 1 FROM usage_records ur2
+             WHERE ur2.car_id = ur.car_id
+               AND ur2.queue_id IS NOT NULL
+               AND ur2.record_type = 'return'
+               AND ABS(CAST((JULIANDAY(ur2.datetime) - JULIANDAY(ur.datetime)) * 86400 AS INTEGER)) <= 300
+           )
        )
        SELECT
          dep.id,
