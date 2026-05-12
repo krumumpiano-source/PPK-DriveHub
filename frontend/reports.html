@@ -582,16 +582,23 @@
       var recs=p.records||[];
       if (!recs.length) { alert('ไม่มีข้อมูล'); return; }
       var mth=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-      var hdr=['วันที่','เวลานัดออก','เวลานัดกลับ','ทะเบียน','ผู้ขอ','จุดหมาย','ภารกิจ','คนขับ','บันทึกออก (สแกน)','บันทึกกลับ (สแกน)','ระยะทาง (กม.)','สถานะ'];
-      var rows=recs.map(function(r) {
+      var hdr=['วันที่','เวลานัดออก','เวลานัดกลับ','ทะเบียน','ผู้ขอ','จุดหมาย','ภารกิจ','คนขับ','บันทึกออก (สแกน)','บันทึกกลับ (สแกน)','ระยะทาง (กม.)','หมายเหตุ'];
+      var redCells=[];
+      var rows=recs.map(function(r,i) {
         var d=new Date(r.date);
         var thd=isNaN(d)?r.date||'':d.getDate()+' '+mth[d.getMonth()]+' '+(d.getFullYear()+543);
         var km=(r.mileage_start!=null&&r.mileage_end!=null&&r.mileage_end>r.mileage_start)?r.mileage_end-r.mileage_start:'';
         var isAutoGap=r.mission&&r.mission.indexOf('ไม่บันทึกข้อมูล')>=0;
         var driverExport=isAutoGap?'ไม่ทราบ':(r.driver_name||'-');
-        return [thd,r.time_start||'',r.time_end||'',r.license_plate||'',r.requester_display_name||r.requested_by||'',r.destination||'',r.mission||'',driverExport,r.actual_departure?r.actual_departure.replace('T',' ').substr(0,16):'ไม่มีการบันทึก',r.actual_return?r.actual_return.replace('T',' ').substr(0,16):'ไม่มีการบันทึก',km,r.status||''];
+        var remark='';
+        if(isAutoGap) remark='มีการใช้รถโดยไม่บันทึกข้อมูล';
+        else if(!r.actual_departure&&!r.actual_return) remark='พนักงานขับรถไม่บันทึกออกและกลับ';
+        else if(!r.actual_departure) remark='พนักงานขับรถไม่บันทึกก่อนออกเดินทาง';
+        else if(!r.actual_return) remark='พนักงานขับรถไม่บันทึกกลับมาจากเดินทาง';
+        if(remark) redCells.push({row:i,col:11});
+        return [thd,r.time_start||'',r.time_end||'',r.license_plate||'',r.requester_display_name||r.requested_by||'',r.destination||'',r.mission||'',driverExport,r.actual_departure?r.actual_departure.replace('T',' ').substr(0,16):'ไม่มีการบันทึก',r.actual_return?r.actual_return.replace('T',' ').substr(0,16):'ไม่มีการบันทึก',km,remark];
       });
-      ExportUtils.exportExcel({filename:'การใช้งานรถ_'+ds,sheetName:'การใช้งานรถ',headers:hdr,rows:rows});
+      ExportUtils.exportExcel({filename:'การใช้งานรถ_'+ds,sheetName:'การใช้งานรถ',headers:hdr,rows:rows,redCells:redCells});
     }
 
     function exportDriversExcel(p,ds) {

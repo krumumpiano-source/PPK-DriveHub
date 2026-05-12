@@ -25,6 +25,13 @@
   async function exportExcel(opts){
     await loadScript(XLSX_URL);
     var ws=XLSX.utils.aoa_to_sheet([opts.headers].concat(opts.rows));
+    // Apply red font to specific cells: opts.redCells = [{row, col}] (0-based, row 0 = first data row after header)
+    if(opts.redCells&&opts.redCells.length){
+      opts.redCells.forEach(function(rc){
+        var addr=XLSX.utils.encode_cell({r:rc.row+1,c:rc.col});// +1 for header row
+        if(ws[addr])ws[addr].s={font:{color:{rgb:'FF0000'},bold:true}};
+      });
+    }
     var wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb,ws,opts.sheetName||'Sheet1');
     XLSX.writeFile(wb,(opts.filename||'export')+'.xlsx');
