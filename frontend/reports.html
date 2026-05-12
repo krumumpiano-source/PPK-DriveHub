@@ -1406,10 +1406,18 @@
         <!-- ประเภทรายงาน -->
         <div class="form-group">
           <label><strong>ประเภทรายงาน</strong></label>
-          <select id="em_type">
-            <option value="trips">รายงานการใช้รถ (queue)</option>
-            <option value="fuel">รายงานเชื้อเพลิง (fuel)</option>
-          </select>
+          <div style="display:flex;gap:10px;">
+            <label id="em_type_trips_lbl" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:14px 10px;border:2px solid var(--color-primary);border-radius:10px;cursor:pointer;background:var(--color-primary);color:#fff;font-weight:600;transition:all 0.15s;">
+              <input type="radio" name="em_type_r" value="trips" checked onchange="onEmTypeChange()" style="display:none;">
+              <span style="font-size:1.5rem;">🚗</span>
+              <span>การใช้รถ</span>
+            </label>
+            <label id="em_type_fuel_lbl" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:14px 10px;border:2px solid var(--color-primary);border-radius:10px;cursor:pointer;background:#fff;color:var(--color-primary);font-weight:600;transition:all 0.15s;">
+              <input type="radio" name="em_type_r" value="fuel" onchange="onEmTypeChange()" style="display:none;">
+              <span style="font-size:1.5rem;">⛽</span>
+              <span>เชื้อเพลิง</span>
+            </label>
+          </div>
         </div>
         <!-- ช่วงเวลา -->
         <div class="form-group">
@@ -1425,6 +1433,7 @@
             <option value="fiscal_year">ปีงบประมาณปัจจุบัน</option>
             <option value="custom">กำหนดเอง</option>
           </select>
+          <div id="em_date_preview" style="font-size:0.82rem;color:var(--color-text-muted,#666);margin-top:6px;padding:4px 10px;background:var(--color-bg-light);border-radius:6px;display:none;"></div>
         </div>
         <div id="em_custom_dates" style="display:none;" class="form-row">
           <div>
@@ -1454,17 +1463,23 @@
             </label>
           </div>
         </div>
-        <!-- ข้อมูลผู้รับรอง (แสดงเฉพาะ PDF) -->
-        <div id="em_signers" style="display:none;background:var(--color-bg-light);padding:12px;border-radius:8px;margin-top:8px;">
-          <div style="font-weight:600;margin-bottom:8px;">✍️ ลายมือชื่อในเอกสาร</div>
-          <div class="form-group">
-            <label>ผู้จัดทำ / ผู้ขอ</label>
-            <input type="text" id="em_prepared_by" placeholder="ชื่อ-สกุล">
+        <!-- ผู้ออกรายงาน — กรอกครั้งเดียว ใช้ได้ทั้ง Excel และ PDF -->
+        <div class="form-group">
+          <label><strong>👤 ผู้ออกรายงาน</strong></label>
+          <div class="form-row">
+            <div>
+              <label>ชื่อ-สกุล</label>
+              <input type="text" id="em_reporter_name" placeholder="ชื่อ-สกุล">
+            </div>
+            <div>
+              <label>ตำแหน่ง</label>
+              <input type="text" id="em_reporter_pos" placeholder="ตำแหน่งงาน">
+            </div>
           </div>
-          <div class="form-group">
-            <label>ตำแหน่งผู้จัดทำ</label>
-            <input type="text" id="em_prepared_by_pos" placeholder="ตำแหน่งงาน">
-          </div>
+        </div>
+        <!-- ลายเซ็นในเอกสาร PDF เท่านั้น -->
+        <div id="em_signers" style="display:none;background:var(--color-bg-light);padding:12px;border-radius:8px;">
+          <div style="font-weight:600;margin-bottom:8px;">✍️ ลายเซ็นในเอกสาร PDF</div>
           <div id="em_queue_sigs">
             <div class="form-group">
               <label>หน.งานยานพาหนะ</label>
@@ -1486,20 +1501,6 @@
             </div>
           </div>
         </div>
-        <!-- ข้อมูลผู้ออกรายงาน (Excel) -->
-        <div id="em_reporter" style="background:var(--color-bg-light);padding:12px;border-radius:8px;margin-top:8px;">
-          <div style="font-weight:600;margin-bottom:8px;">👤 ผู้ออกรายงาน</div>
-          <div class="form-row">
-            <div>
-              <label>ชื่อ-สกุล</label>
-              <input type="text" id="em_reporter_name" placeholder="ชื่อ-สกุล">
-            </div>
-            <div>
-              <label>ตำแหน่ง</label>
-              <input type="text" id="em_reporter_pos" placeholder="ตำแหน่งงาน">
-            </div>
-          </div>
-        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-primary" onclick="runAdvancedExport()" id="em_submit_btn">📥 ดาวน์โหลด</button>
@@ -1511,10 +1512,10 @@
   <script>
   // ═══ Advanced Export Modal ═══
   function openExportModal() {
-    // Pre-select type based on currentTab
-    var typeMap = { fuel: 'fuel', trips: 'trips' };
-    var sel = typeMap[currentTab] || 'trips';
-    document.getElementById('em_type').value = sel;
+    var sel = (currentTab === 'fuel') ? 'fuel' : 'trips';
+    document.querySelectorAll('input[name="em_type_r"]').forEach(function(r){ r.checked = r.value === sel; });
+    _emUpdateTypeCards();
+    onEmPeriodChange();
     onEmFormatChange();
     document.getElementById('exportModal').style.display = 'flex';
   }
@@ -1524,19 +1525,23 @@
   function onEmPeriodChange() {
     var v = document.getElementById('em_period').value;
     document.getElementById('em_custom_dates').style.display = (v === 'custom') ? '' : 'none';
+    var preview = document.getElementById('em_date_preview');
+    if (v === 'custom') {
+      preview.style.display = 'none';
+    } else {
+      var dr = _emComputeDateRange();
+      if (dr) { preview.style.display = ''; preview.textContent = '📅 ' + dr.from + ' ถึง ' + dr.to; }
+    }
   }
   function onEmFormatChange() {
     var fmt = document.querySelector('input[name="em_format"]:checked').value;
     var isPDF = fmt === 'pdf';
     document.getElementById('em_signers').style.display = isPDF ? '' : 'none';
-    document.getElementById('em_reporter').style.display = isPDF ? 'none' : '';
-    // Show fuel vs queue sig fields
-    var type = document.getElementById('em_type').value;
     if (isPDF) {
+      var type = document.querySelector('input[name="em_type_r"]:checked').value;
       document.getElementById('em_queue_sigs').style.display = (type === 'fuel') ? 'none' : '';
       document.getElementById('em_fuel_sigs').style.display = (type === 'fuel') ? '' : 'none';
     }
-    // Toggle card styles
     var primary = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#1a73e8';
     var excelLbl = document.getElementById('em_format_excel_lbl');
     var pdfLbl = document.getElementById('em_format_pdf_lbl');
@@ -1546,6 +1551,29 @@
     } else {
       excelLbl.style.background = primary; excelLbl.style.color = '#fff';
       pdfLbl.style.background = '#fff'; pdfLbl.style.color = primary;
+    }
+  }
+
+  function onEmTypeChange() {
+    _emUpdateTypeCards();
+    var fmt = document.querySelector('input[name="em_format"]:checked').value;
+    if (fmt === 'pdf') {
+      var type = document.querySelector('input[name="em_type_r"]:checked').value;
+      document.getElementById('em_queue_sigs').style.display = (type === 'fuel') ? 'none' : '';
+      document.getElementById('em_fuel_sigs').style.display = (type === 'fuel') ? '' : 'none';
+    }
+  }
+  function _emUpdateTypeCards() {
+    var type = document.querySelector('input[name="em_type_r"]:checked').value;
+    var primary = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#1a73e8';
+    var tripsLbl = document.getElementById('em_type_trips_lbl');
+    var fuelLbl = document.getElementById('em_type_fuel_lbl');
+    if (type === 'trips') {
+      tripsLbl.style.background = primary; tripsLbl.style.color = '#fff';
+      fuelLbl.style.background = '#fff'; fuelLbl.style.color = primary;
+    } else {
+      fuelLbl.style.background = primary; fuelLbl.style.color = '#fff';
+      tripsLbl.style.background = '#fff'; tripsLbl.style.color = primary;
     }
   }
 
@@ -1595,7 +1623,7 @@
     var btn = document.getElementById('em_submit_btn');
     btn.disabled = true; btn.textContent = '⏳ กำลังโหลด...';
     try {
-      var type = document.getElementById('em_type').value;
+      var type = document.querySelector('input[name="em_type_r"]:checked').value;
       var fmt = document.querySelector('input[name="em_format"]:checked').value;
       var dr = _emComputeDateRange();
       var dateLabel = dr.from + ' ถึง ' + dr.to;
@@ -1643,8 +1671,8 @@
         title: 'รายงานการใช้รถราชการ', subtitle: 'ช่วงวันที่ '+dateLabel,
         headers: headers, rows: rows, dateRange: dateLabel, reportType: 'queue',
         filename: 'รายงานการใช้รถ_'+dr.from+'_'+dr.to,
-        preparedBy: document.getElementById('em_prepared_by').value||'-',
-        preparedByPos: document.getElementById('em_prepared_by_pos').value||'-',
+        preparedBy: document.getElementById('em_reporter_name').value||'-',
+        preparedByPos: document.getElementById('em_reporter_pos').value||'-',
         checkedBy: document.getElementById('em_checked_by').value||'-',
         approvedBy: document.getElementById('em_approved_by').value||'-',
         directorBy: document.getElementById('em_director_by').value||'-'
@@ -1675,8 +1703,8 @@
         title: 'รายงานการเบิกจ่ายเชื้อเพลิง', subtitle: 'ช่วงวันที่ '+dateLabel,
         headers: headers, rows: rows, dateRange: dateLabel, reportType: 'fuel',
         filename: 'รายงานน้ำมัน_'+dr.from+'_'+dr.to,
-        preparedBy: document.getElementById('em_prepared_by').value||'-',
-        preparedByPos: document.getElementById('em_prepared_by_pos').value||'-',
+        preparedBy: document.getElementById('em_reporter_name').value||'-',
+        preparedByPos: document.getElementById('em_reporter_pos').value||'-',
         checkedBy: document.getElementById('em_supply_chief').value||'-'
       });
     }
