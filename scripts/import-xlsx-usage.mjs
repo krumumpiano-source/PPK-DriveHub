@@ -159,6 +159,34 @@ function processSheet(rows, sheetName, plate, carId, stats) {
   }
   if (dataStart < 0) { console.warn(`   ⚠ [${sheetName}] ไม่พบ header row`); return { trips, gaps, skipped, unknownDrv }; }
 
+  // ── Pre-pass: เติมไมล์กลับ (col H) สำหรับแถวที่ H ว่าง แต่ G มีค่า ──
+  // ใช้ไมล์ออก (col G) ของ trip ถัดไปเป็นค่า
+  {
+    const isNum = v => /^\d[\d,]*$/.test(String(v||'').trim().replace(/,/g,''));
+    let filledCount = 0;
+    for (let i = dataStart; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r || !String(r[0]||'').match(/^\d+$/)) continue;
+      const dr = String(r[1]||'').trim();
+      if (!dr || dr.includes('ไม่มีข้อมูล')) continue; // skip gap markers
+      if (!isNum(r[7]) && isNum(r[6])) {
+        // หา trip ถัดไปที่มีไมล์ออก
+        for (let j = i + 1; j < rows.length; j++) {
+          const nr = rows[j];
+          if (!nr || !String(nr[0]||'').match(/^\d+$/)) continue;
+          const ndr = String(nr[1]||'').trim();
+          if (!ndr || ndr.includes('ไม่มีข้อมูล')) continue;
+          if (isNum(nr[6])) {
+            rows[i] = [...r]; rows[i][7] = nr[6]; // fill col H
+            filledCount++;
+            break;
+          }
+        }
+      }
+    }
+    if (filledCount > 0) console.log(`   [${sheetName}] auto-fill return mileage: ${filledCount} rows`);
+  }
+
   // Pre-pass: หา datetime ของ trip ถัดไปสำหรับแต่ละ gap row
   // เพื่อใช้กำหนด datetime ของ csv_gap records
   const nextTripStart = new Array(rows.length).fill(null); // { date, time }

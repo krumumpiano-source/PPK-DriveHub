@@ -871,6 +871,83 @@
       summaryRows.push(['รวมทั้งปี', totC, totL, totA, grandAvgPrice, grandAvgKpl]);
       sheets.unshift({ sheetName: 'สรุปทั้งปี', headers: summaryHd, rows: summaryRows });
 
+      // ───────── Per-vehicle sheets — tank-to-tank consumption ─────────
+      // วิธีคำนวณ: ระยะทางที่ใช้น้ำมันลิตรของครั้งนี้ = ไมล์ของการเติมครั้งถัดไป − ไมล์ของการเติมครั้งนี้
+      // แล้ว อัตราสิ้นเปลือง = ระยะทางนั้น ÷ ลิตรที่เติมครั้งนี้
+      var byVehicle = {};
+      allRecords.forEach(function(r){
+        var lp = r.license_plate || '(ไม่ระบุทะเบียน)';
+        (byVehicle[lp] = byVehicle[lp] || []).push(r);
+      });
+
+      // คอลัมน์เพิ่ม: ระยะถึงเติมครั้งถัดไป + อัตราสิ้นเปลือง tank-to-tank
+      var vhd = ['วันที่','เวลา','เลขที่เอกสาร','ผู้เติม','ประเภทน้ำมัน','ลิตร','ราคา/ลิตร (บาท)','จำนวนเงิน (บาท)','เลขไมล์ก่อนเติม','ไมล์ครั้งถัดไป','ระยะทาง (กม.)','อัตราสิ้นเปลือง (กม./ลิตร)','ปั๊ม','วัตถุประสงค์'];
+
+      // เรียงทะเบียนรถ (เพื่อ sheet เรียงสวย)
+      var plates = Object.keys(byVehicle).sort();
+
+      // สรุปต่อคัน (เพิ่มไปท้ายชีตสรุปทั้งปี ผ่าน sheet ใหม่)
+      var perCarSummaryHd = ['ทะเบียนรถ','ยี่ห้อ/รุ่น','จำนวนครั้ง','รวมลิตร','รวมเงิน (บาท)','ระยะทางรวม (กม.)','อัตราสิ้นเปลืองเฉลี่ย (กม./ลิตร)'];
+      var perCarSummaryRows = [];
+
+      function sanitizeSheetName(name){
+        // Excel sheet names: ≤ 31 chars, no : \ / ? * [ ]
+        return String(name).replace(/[:\\\/\?\*\[\]]/g, ' ').slice(0, 31);
+      }
+
+      plates.forEach(function(lp){
+        var recs = byVehicle[lp].slice().sort(function(a,b){
+          return (a.date+(a.time||'')).localeCompare(b.date+(b.time||''));
+        });
+        var rows = [];
+        var sumL = 0, sumA = 0, sumDist = 0, sumLForKpl = 0;
+        var brand = '';
+        for (var i2 = 0; i2 < recs.length; i2++){
+          var r = recs[i2];
+          if(!brand && r.brand) brand = r.brand;
+          var liters = num(r.liters);
+          var amount = num(r.amount);
+          var mb = num(r.mileage_before);
+          var nextMb = 0;
+          // หาไมล์ก่อนเติมของครั้งถัดไป (ที่มีค่า > mb)
+          for (var j2 = i2 + 1; j2 < recs.length; j2++){
+            var nm = num(recs[j2].mileage_before);
+            if(nm > 0 && (mb === 0 || nm >= mb)){ nextMb = nm; break; }
+          }
+          var dist = (mb > 0 && nextMb > mb) ? (nextMb - mb) : 0;
+          var kpl = (dist > 0 && liters > 0) ? +(dist / liters).toFixed(2) : '';
+          if(dist > 0 && liters > 0){ sumDist += dist; sumLForKpl += liters; }
+          sumL += liters; sumA += amount;
+          rows.push([
+            fmtThaiDate(r.date),
+            r.time || '',
+            r.document_number || '',
+            r.driver_name || '',
+            r.fuel_type || '',
+            liters,
+            num(r.price_per_liter),
+            amount,
+            mb || '',
+            nextMb || '',
+            dist || '',
+            kpl,
+            r.gas_station_name || '',
+            r.purpose_detail || r.purpose || ''
+          ]);
+        }
+        if(rows.length === 0) return;
+        var avgKpl2 = sumLForKpl > 0 ? +(sumDist / sumLForKpl).toFixed(2) : '';
+        var avgPrice2 = sumL > 0 ? +(sumA / sumL).toFixed(2) : '';
+        rows.push(['','','','','รวม', sumL, avgPrice2, sumA, '', '', sumDist || '', avgKpl2, '', '']);
+        sheets.push({ sheetName: sanitizeSheetName('รถ ' + lp), headers: vhd, rows: rows });
+
+        perCarSummaryRows.push([lp, brand || '-', recs.length, sumL, sumA, sumDist || 0, avgKpl2 || '-']);
+      });
+
+      // เรียงสรุปต่อคันตามอัตราสิ้นเปลือง (มากไปน้อย)
+      perCarSummaryRows.sort(function(a,b){ return (parseFloat(b[6])||0) - (parseFloat(a[6])||0); });
+      sheets.splice(1, 0, { sheetName: 'สรุปต่อคัน', headers: perCarSummaryHd, rows: perCarSummaryRows });
+
       ExportUtils.exportExcelSheets({
         filename: 'ทะเบียนน้ำมัน_ปีงบ_' + fy,
         sheets: sheets
