@@ -10,6 +10,8 @@
     window.currentPage = 'reports';
     window.REQUIRE_AUTH = true;
   </script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
   <link rel="stylesheet" href="common.css">
   <script src="js/api.js"></script>
   <script src="js/export-utils.js?v=3"></script>
@@ -577,12 +579,13 @@
     function exportTripsExcel(p,ds) {
       var recs=p.records||[];
       if (!recs.length) { alert('ไม่มีข้อมูล'); return; }
-      var wds=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
-      var hdr=['วันที่','วัน','เวลาเริ่ม','เวลาจบ','ทะเบียน','ผู้ขอ','จุดหมาย','ภารกิจ','คนขับ','บันทึกออก','บันทึกกลับ','ระยะทาง (กม.)','สถานะ'];
+      var mth=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+      var hdr=['วันที่','เวลาเริ่ม','เวลาจบ','ทะเบียน','ผู้ขอ','จุดหมาย','ภารกิจ','คนขับ','บันทึกออก','บันทึกกลับ','ระยะทาง (กม.)','สถานะ'];
       var rows=recs.map(function(r) {
         var d=new Date(r.date);
+        var thd=isNaN(d)?r.date||'':d.getDate()+' '+mth[d.getMonth()]+' '+(d.getFullYear()+543);
         var km=(r.mileage_start!=null&&r.mileage_end!=null&&r.mileage_end>r.mileage_start)?r.mileage_end-r.mileage_start:'';
-        return [r.date||'',isNaN(d)?'':wds[d.getDay()],r.time_start||'',r.time_end||'',r.license_plate||'',r.requester_display_name||r.requested_by||'',r.destination||'',r.mission||'',r.driver_name||'',r.actual_departure?r.actual_departure.replace('T',' ').substr(0,16):'ไม่มีการบันทึก',r.actual_return?r.actual_return.replace('T',' ').substr(0,16):'ไม่มีการบันทึก',km,r.status||''];
+        return [thd,r.time_start||'',r.time_end||'',r.license_plate||'',r.requester_display_name||r.requested_by||'',r.destination||'',r.mission||'',r.driver_name||'',r.actual_departure?r.actual_departure.replace('T',' ').substr(0,16):'ไม่มีการบันทึก',r.actual_return?r.actual_return.replace('T',' ').substr(0,16):'ไม่มีการบันทึก',km,r.status||''];
       });
       ExportUtils.exportExcel({filename:'การใช้งานรถ_'+ds,sheetName:'การใช้งานรถ',headers:hdr,rows:rows});
     }
