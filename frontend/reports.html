@@ -604,7 +604,7 @@
         else if(!r.actual_departure) remark='พนักงานขับรถไม่บันทึกก่อนออกเดินทาง';
         else if(!r.actual_return) remark='พนักงานขับรถไม่บันทึกกลับมาจากเดินทาง';
         if(remark) redCells.push({row:i,col:11});
-        return [thd,r.time_start||'',r.time_end||'',r.license_plate||'',r.requester_display_name||r.requested_by||'',r.destination||'',r.mission||'',driverExport,fmtDT(r.actual_departure),fmtDT(r.actual_return),km,remark];
+        return [thd,r.time_start||'',r.time_end||'',r.license_plate||'',r.requester_display_name||r.requested_by||'',r.destination||'',r.mission||'',driverExport,isAutoGap?'':fmtDT(r.actual_departure),isAutoGap?'':fmtDT(r.actual_return),km,remark];
       });
       ExportUtils.exportExcel({filename:'การใช้งานรถ_'+ds,sheetName:'การใช้งานรถ',headers:hdr,rows:rows,redCells:redCells});
     }
