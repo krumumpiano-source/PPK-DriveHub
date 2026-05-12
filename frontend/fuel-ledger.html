@@ -332,7 +332,7 @@
       var sel = document.getElementById('fySelect');
       var now = new Date();
       var currentFY = now.getFullYear() + 543 + (now.getMonth() >= 9 ? 1 : 0);
-      for (var y = currentFY; y >= currentFY - 5; y--) {
+      for (var y = currentFY; y >= currentFY - 10; y--) {
         var opt = document.createElement('option');
         opt.value = y;
         opt.textContent = y;
@@ -785,20 +785,30 @@
         (byVehicleAll[lp] = byVehicleAll[lp] || []).push(r);
       });
       // เรียงและคำนวณ next_mileage + dist + kpl ลงใน record (mutating; ใช้ครั้งเดียว)
+      // ลำดับ fallback: 1) tank-to-tank (ไมล์เติมครั้งถัดไป) 2) mileage_after ที่บันทึกไว้ 3) fuel_consumption_rate ที่บันทึกไว้
       Object.keys(byVehicleAll).forEach(function(lp){
         var arr = byVehicleAll[lp];
         arr.sort(function(a,b){ return (a.date+(a.time||'')).localeCompare(b.date+(b.time||'')); });
         for (var i = 0; i < arr.length; i++){
           var mb = num(arr[i].mileage_before);
+          var ma = num(arr[i].mileage_after);
           var nextMb = 0;
           for (var j = i + 1; j < arr.length; j++){
             var nm = num(arr[j].mileage_before);
             if(nm > 0 && (mb === 0 || nm >= mb)){ nextMb = nm; break; }
           }
           arr[i].__next_mileage = nextMb;
-          arr[i].__dist = (mb > 0 && nextMb > mb) ? (nextMb - mb) : 0;
+          var dist = (mb > 0 && nextMb > mb) ? (nextMb - mb) : 0;
+          // Fallback: ใช้ mileage_after ในรายการเดียวกัน (กรณีไม่มีครั้งถัดไป — เช่น รายการล่าสุด)
+          var distFromAfter = (mb > 0 && ma > mb) ? (ma - mb) : 0;
+          arr[i].__dist = dist;
+          arr[i].__dist_fallback = distFromAfter;
           var l = num(arr[i].liters);
-          arr[i].__kpl = (arr[i].__dist > 0 && l > 0) ? +(arr[i].__dist / l).toFixed(2) : '';
+          var kpl = '';
+          if(dist > 0 && l > 0) kpl = +(dist / l).toFixed(2);
+          else if(distFromAfter > 0 && l > 0) kpl = +(distFromAfter / l).toFixed(2);
+          else if(num(arr[i].fuel_consumption_rate) > 0) kpl = +num(arr[i].fuel_consumption_rate).toFixed(2);
+          arr[i].__kpl = kpl;
         }
       });
 
