@@ -189,11 +189,69 @@
     }
     function htmlEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+    // ── แทรกบันทึก "ใช้รถโดยไม่บันทึกข้อมูล" ระหว่างคิวที่ไมล์ไม่ต่อเนื่อง ─
+    // จัดกลุ่มตามทะเบียน เรียงเวลา ถ้าพบว่าไมล์ออกของคิวถัดไป > ไมล์กลับของคิวก่อน
+    // เกิน GAP_THRESHOLD กม. → แทรก record สังเคราะห์ระหว่างกลาง
+    function preprocessTripsWithGaps(records) {
+      if (!records || !records.length) return records || [];
+      var GAP_THRESHOLD = 5;
+      var byCar = {}, keys = [];
+      records.forEach(function(rec){
+        var cid = rec.license_plate || rec.car_id || '_';
+        if (!byCar[cid]) { byCar[cid] = []; keys.push(cid); }
+        byCar[cid].push(rec);
+      });
+      keys.forEach(function(cid){
+        byCar[cid].sort(function(a,b){
+          return ((a.date||'')+' '+(a.time_start||'')).localeCompare((b.date||'')+' '+(b.time_start||''));
+        });
+      });
+      var result = [];
+      keys.forEach(function(cid){
+        var list = byCar[cid];
+        for (var i=0; i<list.length; i++) {
+          result.push(list[i]);
+          if (i+1 < list.length) {
+            var cur = list[i], nxt = list[i+1];
+            if (cur.mileage_end!=null && nxt.mileage_start!=null) {
+              var gap = nxt.mileage_start - cur.mileage_end;
+              if (gap > GAP_THRESHOLD) {
+                result.push({
+                  _synthetic: true,
+                  date: nxt.date,
+                  time_start: cur.time_end || cur.time_start || '',
+                  time_end: nxt.time_start || '',
+                  license_plate: cur.license_plate,
+                  car_id: cur.car_id,
+                  requester_display_name: '-',
+                  requested_by: '-',
+                  destination: '-',
+                  mission: 'มีการใช้รถโดยไม่บันทึกข้อมูล',
+                  driver_name: 'ไม่ทราบ',
+                  driver_id: null,
+                  actual_departure: null,
+                  actual_return: null,
+                  mileage_start: cur.mileage_end,
+                  mileage_end: nxt.mileage_start,
+                  status: 'completed'
+                });
+              }
+            }
+          }
+        }
+      });
+      result.sort(function(a,b){
+        return ((a.date||'')+' '+(a.time_start||'')).localeCompare((b.date||'')+' '+(b.time_start||''));
+      });
+      return result;
+    }
+
     // ── ตรวจสอบความผิดปกติของเลขไมล์ ──────────────────────────────
     // r = record (มี mileage_start, mileage_end, prev_ret_mileage, next_dep_mileage)
     // avgKm = ระยะทางเฉลี่ยของรถคันนี้ (null = ไม่ตรวจ outlier)
     // คืน array of {msg, level} เมื่อพบความผิดปกติ
     function detectMileageAnomalies(r, avgKm) {
+      if (r._synthetic) return [];
       var issues = [];
       var ms = r.mileage_start, me = r.mileage_end;
       if (ms != null && me != null) {
@@ -345,6 +403,8 @@
       var r=await API.get('/api/reports/trips'+params);
       var payload=(r&&r.data)?r.data:(r||{});
       var records=payload.records||[];
+      records = preprocessTripsWithGaps(records);
+      payload.records = records;
       var summary=payload.summary||{};
       _lastPayload={tab:'trips',payload:payload,range:range};
 
@@ -361,26 +421,21 @@
       });
 
       function inferKm(rec,all) {
-        if (rec.mileage_start!=null && rec.mileage_end!=null && rec.mileage_end>rec.mileage_start)
-          return {km:rec.mileage_end-rec.mileage_start,inferred:false};
-        if (!all) return {km:null,inferred:false};
-        var idx=all.indexOf(rec);
-        if (idx<0) return {km:null,inferred:false};
-        var prevMile=null;
-        for (var i=idx-1;i>=0;i--) {
-          if (all[i].mileage_end!=null) { prevMile=all[i].mileage_end; break; }
+        var ms=rec.mileage_start, me=rec.mileage_end;
+        // หาไมล์กลับของคิวก่อนหน้า / ไมล์ออกของคิวถัดไป (รถคันเดียวกัน)
+        var prevRet=null, nextDep=null;
+        if (all) {
+          var idx=all.indexOf(rec);
+          if (idx>=0) {
+            for (var i=idx-1; i>=0; i--) { if (all[i].mileage_end!=null) { prevRet=all[i].mileage_end; break; } }
+            for (var j=idx+1; j<all.length; j++) { if (all[j].mileage_start!=null) { nextDep=all[j].mileage_start; break; } }
+          }
         }
-        var nextMile=null;
-        for (var j=idx+1;j<all.length;j++) {
-          if (all[j].mileage_start!=null) { nextMile=all[j].mileage_start; break; }
-        }
-        if (prevMile!=null && nextMile!=null && nextMile>prevMile) {
-          var mb=0;
-          for (var k=idx-1;k>=0;k--) { if (all[k].mileage_end!=null) break; mb++; }
-          for (var l=idx+1;l<all.length;l++) { if (all[l].mileage_start!=null) break; mb++; }
-          if (mb===0) return {km:nextMile-prevMile,inferred:true};
-        }
-        return {km:null,inferred:false};
+        var effS = ms!=null ? ms : prevRet;
+        var effE = me!=null ? me : nextDep;
+        var inferred = (ms==null || me==null);
+        if (effS!=null && effE!=null && effE>=effS) return {km:effE-effS, inferred:inferred};
+        return {km:null, inferred:false};
       }
 
       var processed=records.map(function(rec) {
@@ -655,6 +710,7 @@
       // Pre-compute avg km per car (เฉพาะค่าจริง) สำหรับ outlier detection
       var _carKms={};
       recs.forEach(function(r){
+        if(r._synthetic) return;
         var ms=r.mileage_start,me=r.mileage_end;
         if(ms!=null&&me!=null&&me>ms){var k=r.license_plate||'_';if(!_carKms[k])_carKms[k]=[];_carKms[k].push(me-ms);}
       });
