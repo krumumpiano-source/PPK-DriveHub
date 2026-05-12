@@ -15,3 +15,5 @@ Thumbs.db
 driver-test*.log
 test-output*.txt
 *.log
+
+response.txt
