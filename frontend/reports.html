@@ -582,7 +582,15 @@
       var recs=p.records||[];
       if (!recs.length) { alert('ไม่มีข้อมูล'); return; }
       var mth=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-      var hdr=['วันที่','เวลาสแกนออก','เวลาสแกนเข้า','ทะเบียน','ผู้ขอ','จุดหมาย','ภารกิจ','คนขับ','บันทึกออก (สแกน)','บันทึกกลับ (สแกน)','ระยะทาง (กม.)','หมายเหตุ'];
+      function fmtDT(s){
+        if(!s) return 'ไม่มีการบันทึก';
+        var dt=new Date(s);
+        if(isNaN(dt)) return s;
+        var hh=String(dt.getHours()).padStart(2,'0');
+        var mm=String(dt.getMinutes()).padStart(2,'0');
+        return dt.getDate()+' '+mth[dt.getMonth()]+' '+(dt.getFullYear()+543)+' '+hh+':'+mm+'น.';
+      }
+      var hdr=['วันที่','เวลาสแกนออก','เวลาสแกนเข้า','ทะเบียน','ผู้ขอ','จุดหมาย','ภารกิจ','คนขับ','ก่อนออกเดินทาง','กลับมาจากเดินทาง','ระยะทาง (กม.)','หมายเหตุ'];
       var redCells=[];
       var rows=recs.map(function(r,i) {
         var d=new Date(r.date);
@@ -596,7 +604,7 @@
         else if(!r.actual_departure) remark='พนักงานขับรถไม่บันทึกก่อนออกเดินทาง';
         else if(!r.actual_return) remark='พนักงานขับรถไม่บันทึกกลับมาจากเดินทาง';
         if(remark) redCells.push({row:i,col:11});
-        return [thd,r.time_start||'',r.time_end||'',r.license_plate||'',r.requester_display_name||r.requested_by||'',r.destination||'',r.mission||'',driverExport,r.actual_departure?r.actual_departure.replace('T',' ').substr(0,16):'ไม่มีการบันทึก',r.actual_return?r.actual_return.replace('T',' ').substr(0,16):'ไม่มีการบันทึก',km,remark];
+        return [thd,r.time_start||'',r.time_end||'',r.license_plate||'',r.requester_display_name||r.requested_by||'',r.destination||'',r.mission||'',driverExport,fmtDT(r.actual_departure),fmtDT(r.actual_return),km,remark];
       });
       ExportUtils.exportExcel({filename:'การใช้งานรถ_'+ds,sheetName:'การใช้งานรถ',headers:hdr,rows:rows,redCells:redCells});
     }
