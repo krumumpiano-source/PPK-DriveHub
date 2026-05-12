@@ -1827,15 +1827,13 @@
     });
 
     // ── Sheet 1: สรุปภาพรวม ──────────────────────────
-    var summaryHeaders = ['ทะเบียน','ยี่ห้อ','รุ่น','ปี','สถานะรถ','เลขไมล์ปัจจุบัน',
-      'จำนวนเที่ยวรวม','จำนวนครั้งซ่อม','ค่าซ่อมรวม (บาท)'];
+    var summaryHeaders = ['ทะเบียน','ยี่ห้อ','รุ่น','ปี','สถานะรถ','เลขไมล์ปัจจุบัน','จำนวนเที่ยวรวม'];
     var summaryRows = records.map(function(v) {
       var plate = v.license_plate || String(v.id) || 'ไม่ระบุ';
       var scanCount = (scanByPlate[plate] || []).length;
       var totalTrips = (v.trip_count || 0) + scanCount;
       return [v.license_plate||'',v.brand||'',v.model||'',v.year||'',
-        statMap[v.status]||v.status||'',v.current_mileage||0,
-        totalTrips,v.repair_count||0,Number(v.total_repair_cost||0).toFixed(2)];
+        statMap[v.status]||v.status||'',v.current_mileage||0,totalTrips];
     });
 
     // ── คอลัมน์สมุดบันทึกการใช้รถราชการ ─────────────
