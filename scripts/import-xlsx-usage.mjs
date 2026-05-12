@@ -51,6 +51,7 @@ const DRIVER_MAP = {
   'นายมานพ โลหะกิจ':       'd4db9fee-d77e-4ea6-b979-0a180c865e62',
   'นายสุมงคล จ่อยพิรัตน์': 'legacy-sumongkol-jorpirat',
   'นายพงศธร โพธิแก้ว':     'legacy-pongsathorn-photikaew',
+  'นายกฤศ วงค์เรือง':       'legacy-krit-wongruang',
 };
 
 const UNKNOWN_DRIVER_NAMES = new Set();
@@ -130,12 +131,25 @@ function processFile(path, stats) {
   if (!carId) { console.warn(`⚠ Skip (unknown plate "${plate}"): ${filename}`); return; }
 
   const wb = XLSX.read(readFileSync(path), { type: 'buffer' });
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  // อ่านเป็น array of arrays, raw=false ให้แปลง date/number เป็น string ตามที่แสดง
-  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
+  console.log(`\n📄 ${filename}  → ${plate}  (sheets=${wb.SheetNames.length})`);
 
-  console.log(`\n📄 ${filename}  → ${plate}`);
+  let trips = 0, gaps = 0, skipped = 0, unknownDrv = 0;
 
+  for (const sheetName of wb.SheetNames) {
+    const ws = wb.Sheets[sheetName];
+    // อ่านเป็น array of arrays, raw=false ให้แปลง date/number เป็น string ตามที่แสดง
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
+    const sheetStats = processSheet(rows, sheetName, plate, carId, stats);
+    trips += sheetStats.trips;
+    gaps += sheetStats.gaps;
+    skipped += sheetStats.skipped;
+    unknownDrv += sheetStats.unknownDrv;
+  }
+
+  console.log(`   TOTAL: trips=${trips} gaps=${gaps} skipped=${skipped} unknownDriver=${unknownDrv}`);
+}
+
+function processSheet(rows, sheetName, plate, carId, stats) {
   let trips = 0, gaps = 0, skipped = 0, unknownDrv = 0;
 
   // หา header row (มี "ลำดับ" ใน column A)
@@ -143,7 +157,7 @@ function processFile(path, stats) {
   for (let i = 0; i < Math.min(rows.length, 5); i++) {
     if (rows[i][0] && String(rows[i][0]).includes('ลำดับ')) { dataStart = i + 1; break; }
   }
-  if (dataStart < 0) { console.warn(`   ⚠ ไม่พบ header row`); return; }
+  if (dataStart < 0) { console.warn(`   ⚠ [${sheetName}] ไม่พบ header row`); return { trips, gaps, skipped, unknownDrv }; }
 
   // Pre-pass: หา datetime ของ trip ถัดไปสำหรับแต่ละ gap row
   // เพื่อใช้กำหนด datetime ของ csv_gap records
@@ -293,7 +307,8 @@ function processFile(path, stats) {
     trips++;
   }
 
-  console.log(`   trips=${trips} gaps=${gaps} skipped=${skipped} unknownDriver=${unknownDrv}`);
+  console.log(`   [${sheetName}] trips=${trips} gaps=${gaps} skipped=${skipped} unknownDriver=${unknownDrv}`);
+  return { trips, gaps, skipped, unknownDrv };
 }
 
 // ── Main ──

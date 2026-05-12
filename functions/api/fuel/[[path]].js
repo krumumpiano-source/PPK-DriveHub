@@ -615,6 +615,20 @@ export async function onRequest(context) {
        WHERE date >= ? AND date <= ? AND deleted_at IS NULL`,
       [dateFrom, dateTo]);
 
+    // All records (for detailed export per month)
+    const records = await dbAll(env.DB,
+      `SELECT fl.date, fl.time, fl.document_number, fl.fuel_type,
+        fl.liters, fl.price_per_liter, fl.amount,
+        fl.mileage_before, fl.mileage_after, fl.fuel_consumption_rate,
+        fl.gas_station_name, fl.purpose, fl.purpose_detail,
+        c.license_plate, c.brand,
+        COALESCE(d.name, fl.driver_name_manual) AS driver_name
+       FROM fuel_log fl
+       LEFT JOIN cars c ON fl.car_id = c.id
+       LEFT JOIN drivers d ON fl.driver_id = d.id
+       WHERE fl.date >= ? AND fl.date <= ? AND fl.deleted_at IS NULL
+       ORDER BY fl.date, fl.time`, [dateFrom, dateTo]);
+
     return success({
       fiscal_year_be: fyBE,
       date_from: dateFrom,
@@ -622,7 +636,8 @@ export async function onRequest(context) {
       monthly,
       by_fuel_type: byFuelType,
       by_vehicle: byVehicle,
-      grand_total: grand
+      grand_total: grand,
+      records
     });
   }
 

@@ -765,23 +765,88 @@
       if(!ledgerData){alert('กรุณาโหลดข้อมูลก่อน');return}
       var fy = ledgerData.fiscal_year_be;
       var startYear = fy - 543 - 1;
-      var monthMap = {};
-      (ledgerData.monthly || []).forEach(function(m){ monthMap[m.month] = m; });
-      var hd=['เดือน','จำนวน (ลิตร)','จำนวนเงิน (บาท)','รับเข้า (ลิตร)','รับเข้า (บาท)','หมายเหตุ'];
-      var rows=[];
-      var totalL=0, totalA=0;
-      for (var i=0; i<12; i++){
+      var allRecords = ledgerData.records || [];
+
+      // Group records by month key (YYYY-MM)
+      var byMonth = {};
+      allRecords.forEach(function(r){
+        var k = (r.date || '').substr(0, 7);
+        if(!k) return;
+        (byMonth[k] = byMonth[k] || []).push(r);
+      });
+
+      var hd = ['วันที่','เวลา','เลขที่เอกสาร','ทะเบียนรถ','ยี่ห้อ/รุ่น','ผู้เติม','ประเภทน้ำมัน','ลิตร','ราคา/ลิตร (บาท)','จำนวนเงิน (บาท)','เลขไมล์ก่อน','เลขไมล์หลัง','ปั๊ม','วัตถุประสงค์'];
+      var sheets = [];
+
+      function fmtThaiDate(iso){
+        if(!iso) return '';
+        var p = iso.split('-');
+        if(p.length<3) return iso;
+        return p[2]+'/'+p[1]+'/'+(parseInt(p[0])+543);
+      }
+      function num(v){ return v==null||v===''?0:(+v); }
+
+      for (var i = 0; i < 12; i++){
         var mo = fyMonthOrder[i];
         var ceYear = mo >= 10 ? startYear : startYear + 1;
         var key = ceYear + '-' + String(mo).padStart(2,'0');
-        var row = monthMap[key] || { total_liters: 0, total_amount: 0 };
-        var liters = +row.total_liters || 0;
-        var amount = +row.total_amount || 0;
-        totalL += liters; totalA += amount;
-        rows.push([thaiMonths[i] + ' ' + (ceYear + 543), liters, amount, liters, amount, '']);
+        var sheetName = thaiMonths[i] + ' ' + (ceYear + 543);
+        var recs = (byMonth[key] || []).slice().sort(function(a,b){
+          return (a.date+(a.time||'')).localeCompare(b.date+(b.time||''));
+        });
+        var rows = [];
+        var sumL = 0, sumA = 0;
+        recs.forEach(function(r){
+          var liters = num(r.liters);
+          var amount = num(r.amount);
+          sumL += liters; sumA += amount;
+          rows.push([
+            fmtThaiDate(r.date),
+            r.time || '',
+            r.document_number || '',
+            r.license_plate || '',
+            r.brand || '',
+            r.driver_name || '',
+            r.fuel_type || '',
+            liters,
+            num(r.price_per_liter),
+            amount,
+            r.mileage_before || '',
+            r.mileage_after || '',
+            r.gas_station_name || '',
+            r.purpose_detail || r.purpose || ''
+          ]);
+        });
+        if(rows.length === 0){
+          rows.push(['(ไม่มีข้อมูลเดือนนี้)','','','','','','','','','','','','','']);
+        } else {
+          rows.push(['','','','','','รวม','', sumL, '', sumA, '', '', '', '']);
+        }
+        sheets.push({ sheetName: sheetName, headers: hd, rows: rows });
       }
-      rows.push(['รวมทั้งปี', totalL, totalA, totalL, totalA, '']);
-      ExportUtils.exportExcel({filename:'ทะเบียนน้ำมัน_'+fy,sheetName:'ทะเบียนควบคุม',headers:hd,rows:rows});
+
+      // Summary sheet (yearly overview)
+      var monthMap = {};
+      (ledgerData.monthly || []).forEach(function(m){ monthMap[m.month] = m; });
+      var summaryHd = ['เดือน','จำนวนครั้ง','ลิตร','จำนวนเงิน (บาท)'];
+      var summaryRows = [];
+      var totL = 0, totA = 0, totC = 0;
+      for (var j = 0; j < 12; j++){
+        var mo2 = fyMonthOrder[j];
+        var ceYear2 = mo2 >= 10 ? startYear : startYear + 1;
+        var k2 = ceYear2 + '-' + String(mo2).padStart(2,'0');
+        var row = monthMap[k2] || { count:0, total_liters:0, total_amount:0 };
+        var l = num(row.total_liters), a = num(row.total_amount), c = +row.count||0;
+        totL += l; totA += a; totC += c;
+        summaryRows.push([thaiMonths[j] + ' ' + (ceYear2 + 543), c, l, a]);
+      }
+      summaryRows.push(['รวมทั้งปี', totC, totL, totA]);
+      sheets.unshift({ sheetName: 'สรุปทั้งปี', headers: summaryHd, rows: summaryRows });
+
+      ExportUtils.exportExcelSheets({
+        filename: 'ทะเบียนน้ำมัน_ปีงบ_' + fy,
+        sheets: sheets
+      });
     }
     window.exportLedgerExcel = exportLedgerExcel;
 
