@@ -112,9 +112,10 @@ export async function onRequest(context) {
         fuel_type, gas_station_name, gas_station_address, gas_station_tax_id,
         receipt_number, pump_meter_number, receipt_image, receipt_pdf,
         fuel_consumption_rate, expense_type, notes, created_by, created_at, updated_at,
-        document_number, anomaly_flag, purpose, purpose_detail, driver_name_manual)
+        document_number, anomaly_flag, purpose, purpose_detail, driver_name_manual,
+        signed_supply_chief)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-               ?, 0, ?, ?, ?)`,
+               ?, 0, ?, ?, ?, ?)`,
       [id, dateStr, body.time || ts.substr(11, 5),
        body.car_id, body.driver_id || null,
        mileageBefore, mileageAfter,
@@ -126,7 +127,8 @@ export async function onRequest(context) {
        fuelConsumptionRate, body.expense_type || 'procurement',
        body.notes || '', body.created_by || user?.id || 'qr', ts, ts,
        documentNumber, body.purpose, body.purpose_detail || null,
-       body.driver_name_manual || null]
+       body.driver_name_manual || null,
+       body.signed_supply_chief || null]
     );
 
     // --- Anomaly Detection ---
@@ -251,7 +253,8 @@ export async function onRequest(context) {
     const fields = ['date','time','car_id','driver_id','mileage_before','mileage_after',
       'liters','price_per_liter','amount','fuel_type','gas_station_name','gas_station_address',
       'gas_station_tax_id','receipt_number','pump_meter_number','receipt_image','receipt_pdf',
-      'fuel_consumption_rate','expense_type','notes','purpose','purpose_detail','driver_name_manual'];
+      'fuel_consumption_rate','expense_type','notes','purpose','purpose_detail','driver_name_manual',
+      'signed_supply_chief'];
     for (const f of fields) {
       if (body[f] !== undefined) {
         sets.push(`${f} = ?`);

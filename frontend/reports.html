@@ -344,7 +344,7 @@
         <button class="btn btn-secondary" onclick="loadReport()">
           🔃 รีเฟรช
         </button>
-        <button class="btn btn-primary" onclick="exportCurrent()">
+        <button class="btn btn-primary" onclick="openExportModal()">
           📊 Export Excel (.xlsx)
         </button>
         <button class="btn btn-secondary" id="btnPrint" onclick="printFuelReport()" style="display:none">
@@ -1394,6 +1394,277 @@
   <div style="background: var(--color-bg-light); padding: 20px; text-align: center; color: var(--color-text-muted); font-size: 0.9em; margin-top: 20px;">
     <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
   </div>
+
+  <!-- ═══ Advanced Export Modal ═══ -->
+  <div id="exportModal" class="modal-overlay" onclick="if(event.target===this)closeExportModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:none;align-items:center;justify-content:center;">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:560px;width:95%;max-height:90vh;overflow-y:auto;">
+      <div class="modal-header">
+        <span>📊 ส่งออกรายงาน</span>
+        <button class="modal-close" onclick="closeExportModal()">×</button>
+      </div>
+      <div class="modal-body" style="padding:16px;">
+        <!-- ประเภทรายงาน -->
+        <div class="form-group">
+          <label><strong>ประเภทรายงาน</strong></label>
+          <select id="em_type">
+            <option value="trips">รายงานการใช้รถ (queue)</option>
+            <option value="fuel">รายงานเชื้อเพลิง (fuel)</option>
+          </select>
+        </div>
+        <!-- ช่วงเวลา -->
+        <div class="form-group">
+          <label><strong>ช่วงเวลา</strong></label>
+          <select id="em_period" onchange="onEmPeriodChange()">
+            <option value="current_filter">ใช้ตัวกรองปัจจุบันในหน้า</option>
+            <option value="this_month">เดือนนี้</option>
+            <option value="last_month">เดือนที่แล้ว</option>
+            <option value="q1">ไตรมาส 1 (ต.ค.–ธ.ค.)</option>
+            <option value="q2">ไตรมาส 2 (ม.ค.–มี.ค.)</option>
+            <option value="q3">ไตรมาส 3 (เม.ย.–มิ.ย.)</option>
+            <option value="q4">ไตรมาส 4 (ก.ค.–ก.ย.)</option>
+            <option value="fiscal_year">ปีงบประมาณปัจจุบัน</option>
+            <option value="custom">กำหนดเอง</option>
+          </select>
+        </div>
+        <div id="em_custom_dates" style="display:none;" class="form-row">
+          <div>
+            <label>จากวันที่</label>
+            <input type="date" id="em_date_from">
+          </div>
+          <div>
+            <label>ถึงวันที่</label>
+            <input type="date" id="em_date_to">
+          </div>
+        </div>
+        <!-- รูปแบบไฟล์ -->
+        <div class="form-group">
+          <label><strong>รูปแบบไฟล์</strong></label>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+              <input type="radio" name="em_format" value="excel" checked onchange="onEmFormatChange()"> Excel หลายแผ่น (.xlsx)
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+              <input type="radio" name="em_format" value="pdf" onchange="onEmFormatChange()"> PDF ทางการ (A4 landscape)
+            </label>
+          </div>
+        </div>
+        <!-- ข้อมูลผู้รับรอง (แสดงเฉพาะ PDF) -->
+        <div id="em_signers" style="display:none;background:var(--color-bg-light);padding:12px;border-radius:8px;margin-top:8px;">
+          <div style="font-weight:600;margin-bottom:8px;">✍️ ลายมือชื่อในเอกสาร</div>
+          <div class="form-group">
+            <label>ผู้จัดทำ / ผู้ขอ</label>
+            <input type="text" id="em_prepared_by" placeholder="ชื่อ-สกุล">
+          </div>
+          <div class="form-group">
+            <label>ตำแหน่งผู้จัดทำ</label>
+            <input type="text" id="em_prepared_by_pos" placeholder="ตำแหน่งงาน">
+          </div>
+          <div id="em_queue_sigs">
+            <div class="form-group">
+              <label>หน.งานยานพาหนะ</label>
+              <input type="text" id="em_checked_by" placeholder="ชื่อ-สกุล">
+            </div>
+            <div class="form-group">
+              <label>รองผอ.ฝ่ายบริหาร</label>
+              <input type="text" id="em_approved_by" placeholder="ชื่อ-สกุล">
+            </div>
+            <div class="form-group">
+              <label>ผอ.โรงเรียน</label>
+              <input type="text" id="em_director_by" placeholder="ชื่อ-สกุล">
+            </div>
+          </div>
+          <div id="em_fuel_sigs" style="display:none;">
+            <div class="form-group">
+              <label>หัวหน้าพัสดุ</label>
+              <input type="text" id="em_supply_chief" placeholder="ชื่อ-สกุล">
+            </div>
+          </div>
+        </div>
+        <!-- ข้อมูลผู้ออกรายงาน (Excel) -->
+        <div id="em_reporter" style="background:var(--color-bg-light);padding:12px;border-radius:8px;margin-top:8px;">
+          <div style="font-weight:600;margin-bottom:8px;">👤 ผู้ออกรายงาน</div>
+          <div class="form-row">
+            <div>
+              <label>ชื่อ-สกุล</label>
+              <input type="text" id="em_reporter_name" placeholder="ชื่อ-สกุล">
+            </div>
+            <div>
+              <label>ตำแหน่ง</label>
+              <input type="text" id="em_reporter_pos" placeholder="ตำแหน่งงาน">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="runAdvancedExport()" id="em_submit_btn">📥 ดาวน์โหลด</button>
+        <button class="btn btn-secondary" onclick="closeExportModal()">ยกเลิก</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  // ═══ Advanced Export Modal ═══
+  function openExportModal() {
+    // Pre-select type based on currentTab
+    var typeMap = { fuel: 'fuel', trips: 'trips' };
+    var sel = typeMap[currentTab] || 'trips';
+    document.getElementById('em_type').value = sel;
+    onEmFormatChange();
+    document.getElementById('exportModal').style.display = 'flex';
+  }
+  function closeExportModal() {
+    document.getElementById('exportModal').style.display = 'none';
+  }
+  function onEmPeriodChange() {
+    var v = document.getElementById('em_period').value;
+    document.getElementById('em_custom_dates').style.display = (v === 'custom') ? '' : 'none';
+  }
+  function onEmFormatChange() {
+    var fmt = document.querySelector('input[name="em_format"]:checked').value;
+    var isPDF = fmt === 'pdf';
+    document.getElementById('em_signers').style.display = isPDF ? '' : 'none';
+    document.getElementById('em_reporter').style.display = isPDF ? 'none' : '';
+    // Show fuel vs queue sig fields
+    var type = document.getElementById('em_type').value;
+    if (isPDF) {
+      document.getElementById('em_queue_sigs').style.display = (type === 'fuel') ? 'none' : '';
+      document.getElementById('em_fuel_sigs').style.display = (type === 'fuel') ? '' : 'none';
+    }
+  }
+
+  function _emComputeDateRange() {
+    var period = document.getElementById('em_period').value;
+    var today = new Date();
+    var y = today.getFullYear(), m = today.getMonth();
+    // Thai fiscal year: Oct–Sep; fiscal year CE = Thai year - 543
+    // Fiscal year starts Oct (m=9) of the previous calendar year
+    var fiscalStart, fiscalEnd;
+    if (m >= 9) { // Oct–Dec: fiscal year starts this October
+      fiscalStart = new Date(y, 9, 1);
+      fiscalEnd = new Date(y + 1, 8, 30);
+    } else { // Jan–Sep
+      fiscalStart = new Date(y - 1, 9, 1);
+      fiscalEnd = new Date(y, 8, 30);
+    }
+    function pad(n) { return String(n).padStart(2,'0'); }
+    function fmt(d) { return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+    if (period === 'current_filter') {
+      return { from: document.getElementById('dateFrom').value || '2020-01-01', to: document.getElementById('dateTo').value || fmt(today) };
+    }
+    if (period === 'custom') {
+      return { from: document.getElementById('em_date_from').value || '2020-01-01', to: document.getElementById('em_date_to').value || fmt(today) };
+    }
+    if (period === 'this_month') {
+      return { from: fmt(new Date(y,m,1)), to: fmt(new Date(y,m+1,0)) };
+    }
+    if (period === 'last_month') {
+      var lm = m === 0 ? new Date(y-1,11,1) : new Date(y,m-1,1);
+      return { from: fmt(lm), to: fmt(new Date(lm.getFullYear(),lm.getMonth()+1,0)) };
+    }
+    // Fiscal quarters (within current fiscal year)
+    var fy = fiscalStart.getFullYear();
+    var quarters = {
+      q1: { from: fmt(new Date(fy,9,1)),   to: fmt(new Date(fy,11,31)) },
+      q2: { from: fmt(new Date(fy+1,0,1)), to: fmt(new Date(fy+1,2,31)) },
+      q3: { from: fmt(new Date(fy+1,3,1)), to: fmt(new Date(fy+1,5,30)) },
+      q4: { from: fmt(new Date(fy+1,6,1)), to: fmt(new Date(fy+1,8,30)) }
+    };
+    if (quarters[period]) return quarters[period];
+    if (period === 'fiscal_year') return { from: fmt(fiscalStart), to: fmt(fiscalEnd) };
+    return { from: '2020-01-01', to: fmt(today) };
+  }
+
+  async function runAdvancedExport() {
+    var btn = document.getElementById('em_submit_btn');
+    btn.disabled = true; btn.textContent = '⏳ กำลังโหลด...';
+    try {
+      var type = document.getElementById('em_type').value;
+      var fmt = document.querySelector('input[name="em_format"]:checked').value;
+      var dr = _emComputeDateRange();
+      var dateLabel = dr.from + ' ถึง ' + dr.to;
+      var qs = '?date_from='+encodeURIComponent(dr.from)+'&date_to='+encodeURIComponent(dr.to);
+      var endpoint = type === 'fuel' ? '/api/reports/fuel' : '/api/reports/trips';
+      var r = await API.get(endpoint + qs);
+      var result = (r && r.data) ? r.data : (r || {});
+      var records = result.records || [];
+      if (records.length === 0) { alert('ไม่มีข้อมูลในช่วงเวลาที่เลือก'); return; }
+
+      if (type === 'trips') {
+        _emExportTrips(records, result.summary || {}, dr, dateLabel, fmt);
+      } else {
+        _emExportFuel(records, result.summary || {}, dr, dateLabel, fmt);
+      }
+      closeExportModal();
+    } catch(e) {
+      alert('เกิดข้อผิดพลาด: ' + e.message);
+    } finally {
+      btn.disabled = false; btn.textContent = '📥 ดาวน์โหลด';
+    }
+  }
+
+  function _emExportTrips(records, summary, dr, dateLabel, fmt) {
+    var reporterName = document.getElementById('em_reporter_name').value || '-';
+    var reporterPos  = document.getElementById('em_reporter_pos').value || '-';
+    var headers = ['ลำดับ','วันที่','เวลาเริ่ม','เวลาสิ้นสุด','ทะเบียน','ผู้ขับ','ผู้ขอ','จุดหมาย','ภารกิจ','ประเภทภารกิจ','เลขที่คำสั่ง','ผู้โดยสาร','ระยะ(กม.)','สถานะ','หน.ยานพาหนะ','รองผอ.บริหาร','ผอ.รร.','หมายเหตุ'];
+    var rows = records.map(function(r,i){
+      var km = (r.mileage_end && r.mileage_start && r.mileage_end > r.mileage_start) ? (r.mileage_end - r.mileage_start) : (r.km_used || '-');
+      var statusMap = { scheduled:'รอออก', ongoing:'ระหว่างเดินทาง', completed:'เสร็จสิ้น', cancelled:'ยกเลิก', frozen:'ระงับ' };
+      return [i+1, r.date||'', r.time_start||'', r.time_end||'', r.license_plate||r.car_id||'', r.driver_name||'', r.requested_by||r.requester_display_name||'', r.destination||'', r.mission||'', r.purpose_category||'', r.travel_order_number||'', r.passengers||'', km, statusMap[r.status]||r.status||'', r.signed_vehicle_chief||'', r.signed_deputy_director||'', r.signed_director||'', r.notes||''];
+    });
+    var summaryRow = ['สรุป','ทั้งหมด: '+(summary.total||0),'เสร็จ: '+(summary.completed||0),'ยกเลิก: '+(summary.cancelled||0),'รวมระยะ(กม.): '+(summary.total_km||0)];
+    if (fmt === 'excel') {
+      ExportUtils.exportExcelMultiSheet({
+        filename: 'รายงานการใช้รถ_'+dr.from+'_'+dr.to,
+        sheets: [
+          { sheetName: 'รายการ', headers: headers, rows: rows },
+          { sheetName: 'สรุป', headers: ['รายการ','ค่า'], rows: [['จำนวนทั้งหมด',summary.total||0],['เสร็จสิ้น',summary.completed||0],['ยกเลิก',summary.cancelled||0],['รอดำเนินการ',summary.pending||0],['รวมระยะ (กม.)',summary.total_km||0]] }
+        ],
+        reportMeta: { reportedBy: reporterName, reportedByPosition: reporterPos, dateRange: dateLabel, type: 'การใช้รถราชการ' }
+      });
+    } else {
+      ExportUtils.exportOfficialPDF({
+        title: 'รายงานการใช้รถราชการ', subtitle: 'ช่วงวันที่ '+dateLabel,
+        headers: headers, rows: rows, dateRange: dateLabel, reportType: 'queue',
+        filename: 'รายงานการใช้รถ_'+dr.from+'_'+dr.to,
+        preparedBy: document.getElementById('em_prepared_by').value||'-',
+        preparedByPos: document.getElementById('em_prepared_by_pos').value||'-',
+        checkedBy: document.getElementById('em_checked_by').value||'-',
+        approvedBy: document.getElementById('em_approved_by').value||'-',
+        directorBy: document.getElementById('em_director_by').value||'-'
+      });
+    }
+  }
+
+  function _emExportFuel(records, summary, dr, dateLabel, fmt) {
+    var reporterName = document.getElementById('em_reporter_name').value || '-';
+    var reporterPos  = document.getElementById('em_reporter_pos').value || '-';
+    var headers = ['ลำดับ','เลขที่','วันที่','ทะเบียน','ผู้เบิก','ประเภทเบิก','ประเภทน้ำมัน','ลิตร','ราคา/ลิตร','รวม(บาท)','ปั๊ม','เลขที่ใบเสร็จ','เลขหัวจ่าย','เลขไมล์ก่อน','เลขไมล์หลัง','อัตราสิ้นเปลือง','หัวหน้าพัสดุ','ผิดปกติ'];
+    var expLabels = typeof _expenseLabels !== 'undefined' ? _expenseLabels : {};
+    var rows = records.map(function(r,i){
+      var rate = r.fuel_consumption_rate ? Number(r.fuel_consumption_rate).toFixed(2) : '-';
+      return [i+1, r.document_number||'', r.date||'', r.license_plate||r.car_id||'', r.driver_name||r.driver_name_manual||'', expLabels[r.expense_type]||r.expense_type||'', r.fuel_type||'', r.liters||0, r.price_per_liter||0, r.amount||0, r.gas_station_name||'', r.receipt_number||'', r.pump_meter_number||'', r.mileage_before||0, r.mileage_after||0, rate, r.signed_supply_chief||'', r.anomaly_flag?'ใช่':''];
+    });
+    if (fmt === 'excel') {
+      ExportUtils.exportExcelMultiSheet({
+        filename: 'รายงานน้ำมัน_'+dr.from+'_'+dr.to,
+        sheets: [
+          { sheetName: 'รายการ', headers: headers, rows: rows },
+          { sheetName: 'สรุป', headers: ['รายการ','ค่า'], rows: [['จำนวนครั้ง',summary.count||0],['รวมลิตร',Number(summary.total_liters||0).toFixed(2)],['รวมเงิน(บาท)',Number(summary.total_amount||0).toFixed(2)],['ผิดปกติ',summary.anomaly_count||0]] }
+        ],
+        reportMeta: { reportedBy: reporterName, reportedByPosition: reporterPos, dateRange: dateLabel, type: 'เชื้อเพลิง' }
+      });
+    } else {
+      ExportUtils.exportOfficialPDF({
+        title: 'รายงานการเบิกจ่ายเชื้อเพลิง', subtitle: 'ช่วงวันที่ '+dateLabel,
+        headers: headers, rows: rows, dateRange: dateLabel, reportType: 'fuel',
+        filename: 'รายงานน้ำมัน_'+dr.from+'_'+dr.to,
+        preparedBy: document.getElementById('em_prepared_by').value||'-',
+        preparedByPos: document.getElementById('em_prepared_by_pos').value||'-',
+        checkedBy: document.getElementById('em_supply_chief').value||'-'
+      });
+    }
+  }
+  </script>
 </body>
 
 </html>

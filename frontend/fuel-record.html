@@ -278,6 +278,12 @@
         <div class="help-text" style="color: var(--color-danger-dark);">* บังคับแนบใบเสร็จตามระเบียบพัสดุ</div>
       </div>
 
+      <!-- ส่วนเซ็นอนุมัติ -->
+      <div class="form-group">
+        <label>หัวหน้าพัสดุผู้อนุมัติ</label>
+        <input type="text" id="signedSupplyChief" placeholder="ชื่อ-สกุล หัวหน้าพัสดุ (ถ้ามี)">
+      </div>
+
       <div class="btn-row">
         <button type="button" class="btn btn-secondary" id="cancelBtn">ยกเลิก</button>
         <button type="submit" class="btn btn-primary">บันทึกการเติมน้ำมัน</button>
@@ -582,6 +588,7 @@
         fuel_type: document.getElementById('fuelType').value,
         purpose: purpose,
         purpose_detail: purposeDetail || null,
+        signed_supply_chief: (document.getElementById('signedSupplyChief') || {}).value || null,
         mileage_before: parseInt(document.getElementById('mileageBefore').value, 10),
         mileage_after: parseInt(document.getElementById('mileageBefore').value, 10),
         liters: parseFloat(document.getElementById('liters').value),

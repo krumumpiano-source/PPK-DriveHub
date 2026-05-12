@@ -127,14 +127,20 @@ export async function onRequest(context) {
     await dbRun(env.DB,
       `INSERT INTO queue (id, date, time_start, time_end, car_id, driver_id,
         requester_id, requested_by, mission, destination, passengers,
-        status, notes, backup_driver_id, created_by, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?, ?, ?, ?, ?)`,
+        status, notes, backup_driver_id,
+        travel_order_number, purpose_category,
+        signed_vehicle_chief, signed_deputy_director, signed_director,
+        created_by, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, body.date, timeStart, timeEnd,
        body.car_id, body.driver_id || null,
        body.requester_id || user.id, body.requested_by || body.requester_name || user.displayName || '',
        body.mission || body.purpose || '', body.destination || '',
        body.passengers || body.passenger_count || '',
-       body.notes || '', body.backup_driver_id || null, user.id, ts, ts]
+       body.notes || '', body.backup_driver_id || null,
+       body.travel_order_number || null, body.purpose_category || null,
+       body.signed_vehicle_chief || null, body.signed_deputy_director || null, body.signed_director || null,
+       user.id, ts, ts]
     );
 
     // Resolve names for notifications
@@ -178,7 +184,9 @@ export async function onRequest(context) {
 
     const fields = ['date','time_start','time_end','car_id','driver_id',
       'requester_id','requested_by','mission','destination','passengers',
-      'status','cancel_reason','notes','backup_driver_id'];
+      'status','cancel_reason','notes','backup_driver_id',
+      'travel_order_number','purpose_category',
+      'signed_vehicle_chief','signed_deputy_director','signed_director'];
     for (const f of fields) {
       if (body[f] !== undefined) { sets.push(`${f} = ?`); params.push(body[f]); }
     }

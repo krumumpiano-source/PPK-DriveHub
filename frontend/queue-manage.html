@@ -925,6 +925,33 @@
             <label>หมายเหตุ</label>
             <textarea id="create_notes" rows="2" placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)"></textarea>
           </div>
+          <div class="form-group">
+            <label>ประเภทภารกิจ</label>
+            <select id="create_purpose_category">
+              <option value="">-- ไม่ระบุ --</option>
+              <option value="ราชการปกติ">ราชการปกติ</option>
+              <option value="ประชุม">ประชุม</option>
+              <option value="อบรม">อบรม</option>
+              <option value="ศึกษาดูงาน">ศึกษาดูงาน</option>
+              <option value="อื่นๆ">อื่นๆ</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>เลขที่คำสั่งเดินทาง</label>
+            <input type="text" id="create_travel_order_number" placeholder="เช่น คส. 123/2568">
+          </div>
+          <div class="form-group">
+            <label>หัวหน้างานยานพาหนะ (ผู้อนุมัติ ①)</label>
+            <input type="text" id="create_signed_vehicle_chief" placeholder="ชื่อ-สกุล">
+          </div>
+          <div class="form-group">
+            <label>รองผอ.ฝ่ายบริหาร (ผู้อนุมัติ ②)</label>
+            <input type="text" id="create_signed_deputy_director" placeholder="ชื่อ-สกุล">
+          </div>
+          <div class="form-group">
+            <label>ผอ.โรงเรียน (ผู้อนุมัติ ③)</label>
+            <input type="text" id="create_signed_director" placeholder="ชื่อ-สกุล">
+          </div>
         </div>
 
         <div id="createProgressContainer" style="display: none;">
@@ -1026,6 +1053,33 @@
           <div class="form-group">
             <label>หมายเหตุ</label>
             <textarea id="edit_notes" rows="2" placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)"></textarea>
+          </div>
+          <div class="form-group">
+            <label>ประเภทภารกิจ</label>
+            <select id="edit_purpose_category">
+              <option value="">-- ไม่ระบุ --</option>
+              <option value="ราชการปกติ">ราชการปกติ</option>
+              <option value="ประชุม">ประชุม</option>
+              <option value="อบรม">อบรม</option>
+              <option value="ศึกษาดูงาน">ศึกษาดูงาน</option>
+              <option value="อื่นๆ">อื่นๆ</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>เลขที่คำสั่งเดินทาง</label>
+            <input type="text" id="edit_travel_order_number" placeholder="เช่น คส. 123/2568">
+          </div>
+          <div class="form-group">
+            <label>หัวหน้างานยานพาหนะ (ผู้อนุมัติ ①)</label>
+            <input type="text" id="edit_signed_vehicle_chief" placeholder="ชื่อ-สกุล">
+          </div>
+          <div class="form-group">
+            <label>รองผอ.ฝ่ายบริหาร (ผู้อนุมัติ ②)</label>
+            <input type="text" id="edit_signed_deputy_director" placeholder="ชื่อ-สกุล">
+          </div>
+          <div class="form-group">
+            <label>ผอ.โรงเรียน (ผู้อนุมัติ ③)</label>
+            <input type="text" id="edit_signed_director" placeholder="ชื่อ-สกุล">
           </div>
         </div>
 
@@ -2108,6 +2162,11 @@
         requester_name: requested_by,
         passenger_count: parseInt(passenger_count) || 0,
         notes: document.getElementById('create_notes').value.trim() || '',
+        purpose_category: document.getElementById('create_purpose_category').value.trim() || '',
+        travel_order_number: document.getElementById('create_travel_order_number').value.trim() || '',
+        signed_vehicle_chief: document.getElementById('create_signed_vehicle_chief').value.trim() || '',
+        signed_deputy_director: document.getElementById('create_signed_deputy_director').value.trim() || '',
+        signed_director: document.getElementById('create_signed_director').value.trim() || '',
         allow_flexible: false,
         emergency_override: false
       };
@@ -2449,6 +2508,11 @@
           document.getElementById('edit_requested_by').value = editingQueueData.requested_by || '';
           document.getElementById('edit_passenger_count').value = editingQueueData.passengers || editingQueueData.passenger_count || '';
           document.getElementById('edit_notes').value = editingQueueData.notes || '';
+          document.getElementById('edit_purpose_category').value = editingQueueData.purpose_category || '';
+          document.getElementById('edit_travel_order_number').value = editingQueueData.travel_order_number || '';
+          document.getElementById('edit_signed_vehicle_chief').value = editingQueueData.signed_vehicle_chief || '';
+          document.getElementById('edit_signed_deputy_director').value = editingQueueData.signed_deputy_director || '';
+          document.getElementById('edit_signed_director').value = editingQueueData.signed_director || '';
 
           setTimeout(function () {
             checkEditPassengerCount();
@@ -2531,7 +2595,12 @@
         destination: destination,
         requested_by: requested_by,
         passengers: parseInt(passenger_count) || 0,
-        notes: document.getElementById('edit_notes').value.trim() || ''
+        notes: document.getElementById('edit_notes').value.trim() || '',
+        purpose_category: document.getElementById('edit_purpose_category').value.trim() || '',
+        travel_order_number: document.getElementById('edit_travel_order_number').value.trim() || '',
+        signed_vehicle_chief: document.getElementById('edit_signed_vehicle_chief').value.trim() || '',
+        signed_deputy_director: document.getElementById('edit_signed_deputy_director').value.trim() || '',
+        signed_director: document.getElementById('edit_signed_director').value.trim() || ''
       };
 
       saveFormMemory({

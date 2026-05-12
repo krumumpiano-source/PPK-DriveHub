@@ -97,10 +97,12 @@ export async function onRequest(context) {
       `SELECT fl.id, fl.date, fl.car_id, c.license_plate, c.brand,
        COALESCE(d.name, fl.driver_name_manual) AS driver_name, fl.driver_id,
        fl.liters, fl.price_per_liter, fl.amount,
-       fl.fuel_type, fl.gas_station_name, fl.mileage_before, fl.mileage_after,
+       fl.fuel_type, fl.gas_station_name, fl.gas_station_tax_id,
+       fl.mileage_before, fl.mileage_after,
        fl.fuel_consumption_rate, fl.expense_type, fl.document_number,
        fl.purpose, fl.purpose_detail, fl.driver_name_manual, fl.anomaly_flag,
-       fl.receipt_number, fl.receipt_image
+       fl.receipt_number, fl.pump_meter_number, fl.receipt_image,
+       fl.signed_supply_chief
        FROM fuel_log fl
        LEFT JOIN cars c ON fl.car_id = c.id
        LEFT JOIN drivers d ON fl.driver_id = d.id
@@ -625,6 +627,8 @@ export async function onRequest(context) {
       `SELECT q.id, q.date, q.time_start, q.time_end, q.status,
        q.mission, q.destination, q.passengers, q.notes, q.cancel_reason,
        q.requested_by, q.requester_id,
+       q.purpose_category, q.travel_order_number,
+       q.signed_vehicle_chief, q.signed_deputy_director, q.signed_director,
        c.license_plate, c.brand, c.model,
        d.name AS driver_name,
        bd.name AS backup_driver_name,
@@ -781,6 +785,30 @@ export async function onRequest(context) {
       params
     );
     return success({ records: rows, summary });
+  }
+
+  // ========== Check Log (ตรวจสภาพรถ) — ใช้ใน audit export ==========
+  if (path === '/api/reports/check-log' && method === 'GET') {
+    try { requirePermission(user, 'reports', 'view'); } catch { return error('\u0e44\u0e21\u0e48\u0e21\u0e35\u0e2a\u0e34\u0e17\u0e18\u0e34\u0e4c', 403); }
+    const dateFrom = url.searchParams.get('date_from');
+    const dateTo = url.searchParams.get('date_to');
+    const carId = url.searchParams.get('car_id');
+    const where = [];
+    const params = [];
+    if (dateFrom) { where.push('cl.created_at >= ?'); params.push(dateFrom); }
+    if (dateTo) { where.push('cl.created_at <= ?'); params.push(dateTo + ' 23:59:59'); }
+    if (carId) { where.push('cl.car_id = ?'); params.push(carId); }
+    const rows = await dbAll(env.DB,
+      `SELECT cl.id, cl.car_id, cl.created_at, cl.overall_status, cl.inspector,
+       cl.notes, cl.image_url,
+       c.license_plate, c.brand, c.model
+       FROM check_log cl
+       LEFT JOIN cars c ON cl.car_id = c.id
+       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+       ORDER BY cl.created_at DESC`,
+      params
+    );
+    return success({ records: rows, total: rows.length });
   }
 
   return error('Not Found', 404);
