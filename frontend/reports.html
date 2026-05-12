@@ -198,14 +198,16 @@
       var ms = r.mileage_start, me = r.mileage_end;
       if (ms != null && me != null) {
         if (me < ms)
-          issues.push({msg:'เลขไมล์กลับ ('+me+') น้อยกว่าออก ('+ms+')', level:'error'});
+          issues.push({msg:'เลขไมล์กลับ ('+me+') น้อยกว่าตอนออก ('+ms+') — น่าจะพิมพ์ผิด', level:'error'});
         else if (me === ms)
-          issues.push({msg:'เลขไมล์ออก = กลับ (0 กม.)', level:'warn'});
+          issues.push({msg:'เลขไมล์ออกและกลับเหมือนกัน ('+ms+') ระยะทาง 0 กม. — น่าจะพิมพ์ผิด', level:'warn'});
       }
       if (ms != null && r.prev_ret_mileage != null) {
         var gap = ms - r.prev_ret_mileage;
-        if (Math.abs(gap) > 50)
-          issues.push({msg:'ไมล์ไม่ต่อเนื่อง ('+(gap>0?'+':'')+gap+' จากคิวก่อน)', level:'warn'});
+        if (gap > 50)
+          issues.push({msg:'เลขไมล์ออก ('+ms+') สูงกว่าตอนกลับจากเที่ยวก่อน ('+r.prev_ret_mileage+') อยู่ '+gap+' กม. — อาจมีการใช้รถโดยไม่บันทึก หรือพิมพ์ผิด', level:'warn'});
+        else if (gap < -50)
+          issues.push({msg:'เลขไมล์ออก ('+ms+') ต่ำกว่าตอนกลับจากเที่ยวก่อน ('+r.prev_ret_mileage+') อยู่ '+Math.abs(gap)+' กม. — น่าจะพิมพ์ผิด', level:'warn'});
       }
       if (avgKm && avgKm > 0) {
         var effS = ms!=null?ms:(r.prev_ret_mileage!=null?r.prev_ret_mileage:null);
@@ -214,7 +216,7 @@
           var km = effE - effS;
           var threshold = Math.max(200, avgKm * 3);
           if (km > threshold)
-            issues.push({msg:'ระยะทาง '+km+' กม. ผิดปกติมาก (เฉลี่ย '+Math.round(avgKm)+' กม.)', level:'warn'});
+            issues.push({msg:'ระยะทางเที่ยวนี้ '+km+' กม. สูงผิดปกติ (ปกติเฉลี่ย '+Math.round(avgKm)+' กม.) — กรุณาตรวจสอบ', level:'warn'});
         }
       }
       return issues;
