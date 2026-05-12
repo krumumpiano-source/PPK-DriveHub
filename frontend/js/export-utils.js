@@ -22,18 +22,38 @@
    * @param {string[]} opts.headers - column headers
    * @param {Array[]} opts.rows - 2D array of cell values
    */
-  async function exportExcel(opts){
-    await loadScript(XLSX_URL);
-    var ws=XLSX.utils.aoa_to_sheet([opts.headers].concat(opts.rows));
-    // Apply red font to specific cells: opts.redCells = [{row, col}] (0-based, row 0 = first data row after header)
-    if(opts.redCells&&opts.redCells.length){
-      opts.redCells.forEach(function(rc){
-        var addr=XLSX.utils.encode_cell({r:rc.row+1,c:rc.col});// +1 for header row
+  function _buildSheet(headers,rows,redCells){
+    var ws=XLSX.utils.aoa_to_sheet([headers].concat(rows));
+    if(redCells&&redCells.length){
+      redCells.forEach(function(rc){
+        var addr=XLSX.utils.encode_cell({r:rc.row+1,c:rc.col});
         if(ws[addr])ws[addr].s={font:{color:{rgb:'FF0000'},bold:true}};
       });
     }
+    return ws;
+  }
+
+  async function exportExcel(opts){
+    await loadScript(XLSX_URL);
+    var ws=_buildSheet(opts.headers,opts.rows,opts.redCells);
     var wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb,ws,opts.sheetName||'Sheet1');
+    XLSX.writeFile(wb,(opts.filename||'export')+'.xlsx');
+  }
+
+  /**
+   * Export multiple sheets into one Excel file
+   * @param {Object} opts
+   * @param {string} opts.filename
+   * @param {Array}  opts.sheets - [{sheetName, headers, rows, redCells}]
+   */
+  async function exportExcelSheets(opts){
+    await loadScript(XLSX_URL);
+    var wb=XLSX.utils.book_new();
+    opts.sheets.forEach(function(sh){
+      var ws=_buildSheet(sh.headers,sh.rows,sh.redCells);
+      XLSX.utils.book_append_sheet(wb,ws,sh.sheetName||'Sheet1');
+    });
     XLSX.writeFile(wb,(opts.filename||'export')+'.xlsx');
   }
 
@@ -193,5 +213,5 @@
 
   function _esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-  window.ExportUtils={exportExcel:exportExcel,exportPDF:exportPDF,exportCSV:exportCSV,exportExcelMultiSheet:exportExcelMultiSheet,exportOfficialPDF:exportOfficialPDF};
+  window.ExportUtils={exportExcel:exportExcel,exportExcelSheets:exportExcelSheets,exportPDF:exportPDF,exportCSV:exportCSV,exportExcelMultiSheet:exportExcelMultiSheet,exportOfficialPDF:exportOfficialPDF};
 })();

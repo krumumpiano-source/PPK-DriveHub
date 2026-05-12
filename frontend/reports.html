@@ -591,22 +591,45 @@
         return dt.getDate()+' '+mth[dt.getMonth()]+' '+(dt.getFullYear()+543)+' '+hh+':'+mm+'น.';
       }
       var hdr=['วันที่','เวลาสแกนออก','เวลาสแกนเข้า','ทะเบียน','ผู้ขอ','จุดหมาย','ภารกิจ','คนขับ','ก่อนออกเดินทาง','กลับมาจากเดินทาง','เลขไมล์ก่อนออก','เลขไมล์กลับมา','ระยะทาง (กม.)','หมายเหตุ'];
-      var redCells=[];
-      var rows=recs.map(function(r,i) {
-        var d=new Date(r.date);
-        var thd=isNaN(d)?r.date||'':d.getDate()+' '+mth[d.getMonth()]+' '+(d.getFullYear()+543);
-        var km=(r.mileage_start!=null&&r.mileage_end!=null&&r.mileage_end>r.mileage_start)?r.mileage_end-r.mileage_start:'';
-        var isAutoGap=r.mission&&r.mission.indexOf('ไม่บันทึกข้อมูล')>=0;
-        var driverExport=isAutoGap?'ไม่ทราบ':(r.driver_name||'-');
-        var remark='';
-        if(isAutoGap) remark='มีการใช้รถโดยไม่บันทึกข้อมูล';
-        else if(!r.actual_departure&&!r.actual_return) remark='พนักงานขับรถไม่บันทึกออกและกลับ';
-        else if(!r.actual_departure) remark='พนักงานขับรถไม่บันทึกก่อนออกเดินทาง';
-        else if(!r.actual_return) remark='พนักงานขับรถไม่บันทึกกลับมาจากเดินทาง';
-        if(remark) redCells.push({row:i,col:13});
-        return [thd,r.time_start||'',r.time_end||'',r.license_plate||'',r.requester_display_name||r.requested_by||'',r.destination||'',r.mission||'',driverExport,isAutoGap?'':fmtDT(r.actual_departure),isAutoGap?'':fmtDT(r.actual_return),isAutoGap?'':(r.mileage_start!=null?r.mileage_start:''),isAutoGap?'':(r.mileage_end!=null?r.mileage_end:''),km,remark];
-      });
-      ExportUtils.exportExcel({filename:'การใช้งานรถ_'+ds,sheetName:'การใช้งานรถ',headers:hdr,rows:rows,redCells:redCells});
+      function buildRows(list){
+        var redCells=[];
+        var rows=list.map(function(r,i){
+          var d=new Date(r.date);
+          var thd=isNaN(d)?r.date||'':d.getDate()+' '+mth[d.getMonth()]+' '+(d.getFullYear()+543);
+          var km=(r.mileage_start!=null&&r.mileage_end!=null&&r.mileage_end>r.mileage_start)?r.mileage_end-r.mileage_start:'';
+          var isAutoGap=r.mission&&r.mission.indexOf('ไม่บันทึกข้อมูล')>=0;
+          var driverExport=isAutoGap?'ไม่ทราบ':(r.driver_name||'-');
+          var remark='';
+          if(isAutoGap) remark='มีการใช้รถโดยไม่บันทึกข้อมูล';
+          else if(!r.actual_departure&&!r.actual_return) remark='พนักงานขับรถไม่บันทึกออกและกลับ';
+          else if(!r.actual_departure) remark='พนักงานขับรถไม่บันทึกก่อนออกเดินทาง';
+          else if(!r.actual_return) remark='พนักงานขับรถไม่บันทึกกลับมาจากเดินทาง';
+          if(remark) redCells.push({row:i,col:13});
+          return [thd,r.time_start||'',r.time_end||'',r.license_plate||'',r.requester_display_name||r.requested_by||'',r.destination||'',r.mission||'',driverExport,isAutoGap?'':fmtDT(r.actual_departure),isAutoGap?'':fmtDT(r.actual_return),isAutoGap?'':(r.mileage_start!=null?r.mileage_start:''),isAutoGap?'':(r.mileage_end!=null?r.mileage_end:''),km,remark];
+        });
+        return {rows:rows,redCells:redCells};
+      }
+      var carFilter=document.getElementById('filterCar').value;
+      if (!carFilter) {
+        // แยก sheet ตามทะเบียน
+        var groups={}; var order=[];
+        recs.forEach(function(r){
+          var k=r.license_plate||'ไม่ระบุ';
+          if(!groups[k]){groups[k]=[];order.push(k);}
+          groups[k].push(r);
+        });
+        // sheet แรก = ทั้งหมด
+        var allBuilt=buildRows(recs);
+        var sheets=[{sheetName:'ทั้งหมด',headers:hdr,rows:allBuilt.rows,redCells:allBuilt.redCells}];
+        order.forEach(function(k){
+          var built=buildRows(groups[k]);
+          sheets.push({sheetName:k,headers:hdr,rows:built.rows,redCells:built.redCells});
+        });
+        ExportUtils.exportExcelSheets({filename:'การใช้งานรถ_'+ds,sheets:sheets});
+      } else {
+        var built=buildRows(recs);
+        ExportUtils.exportExcel({filename:'การใช้งานรถ_'+ds,sheetName:recs[0]&&recs[0].license_plate||'การใช้งานรถ',headers:hdr,rows:built.rows,redCells:built.redCells});
+      }
     }
 
     function exportDriversExcel(p,ds) {
