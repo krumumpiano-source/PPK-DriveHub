@@ -775,7 +775,7 @@
         (byMonth[k] = byMonth[k] || []).push(r);
       });
 
-      var hd = ['วันที่','เวลา','เลขที่เอกสาร','ทะเบียนรถ','ยี่ห้อ/รุ่น','ผู้เติม','ประเภทน้ำมัน','ลิตร','ราคา/ลิตร (บาท)','จำนวนเงิน (บาท)','เลขไมล์ก่อน','เลขไมล์หลัง','ปั๊ม','วัตถุประสงค์'];
+      var hd = ['วันที่','เวลา','เลขที่เอกสาร','ทะเบียนรถ','ยี่ห้อ/รุ่น','ผู้เติม','ประเภทน้ำมัน','ลิตร','ราคา/ลิตร (บาท)','จำนวนเงิน (บาท)','เลขไมล์ก่อน','เลขไมล์หลัง','ระยะวิ่ง (กม.)','อัตราสิ้นเปลือง (กม./ลิตร)','ปั๊ม','วัตถุประสงค์'];
       var sheets = [];
 
       function fmtThaiDate(iso){
@@ -795,10 +795,14 @@
           return (a.date+(a.time||'')).localeCompare(b.date+(b.time||''));
         });
         var rows = [];
-        var sumL = 0, sumA = 0;
+        var sumL = 0, sumA = 0, sumKm = 0, sumLForKpl = 0;
         recs.forEach(function(r){
           var liters = num(r.liters);
           var amount = num(r.amount);
+          var mb = num(r.mileage_before), ma = num(r.mileage_after);
+          var dist = (mb > 0 && ma > mb) ? (ma - mb) : 0;
+          var kpl = (dist > 0 && liters > 0) ? (dist / liters) : (num(r.fuel_consumption_rate) || 0);
+          if(dist > 0 && liters > 0){ sumKm += dist; sumLForKpl += liters; }
           sumL += liters; sumA += amount;
           rows.push([
             fmtThaiDate(r.date),
@@ -813,24 +817,42 @@
             amount,
             r.mileage_before || '',
             r.mileage_after || '',
+            dist || '',
+            kpl ? +kpl.toFixed(2) : '',
             r.gas_station_name || '',
             r.purpose_detail || r.purpose || ''
           ]);
         });
         if(rows.length === 0){
-          rows.push(['(ไม่มีข้อมูลเดือนนี้)','','','','','','','','','','','','','']);
+          rows.push(['(ไม่มีข้อมูลเดือนนี้)','','','','','','','','','','','','','','','']);
         } else {
-          rows.push(['','','','','','รวม','', sumL, '', sumA, '', '', '', '']);
+          var avgKpl = (sumKm > 0 && sumLForKpl > 0) ? +(sumKm / sumLForKpl).toFixed(2) : '';
+          var avgPrice = sumL > 0 ? +(sumA / sumL).toFixed(2) : '';
+          rows.push(['','','','','','รวม','', sumL, avgPrice, sumA, '', '', sumKm || '', avgKpl, '', '']);
         }
         sheets.push({ sheetName: sheetName, headers: hd, rows: rows });
       }
 
-      // Summary sheet (yearly overview)
+      // Summary sheet (yearly overview) — เพิ่มคอลัมน์อัตราสิ้นเปลืองเฉลี่ย
       var monthMap = {};
       (ledgerData.monthly || []).forEach(function(m){ monthMap[m.month] = m; });
-      var summaryHd = ['เดือน','จำนวนครั้ง','ลิตร','จำนวนเงิน (บาท)'];
+
+      // คำนวณ km และ liters ที่ใช้คำนวณ kpl ได้ (มีไมล์ก่อน/หลังครบ) แยกตามเดือน
+      var kplByMonth = {};
+      allRecords.forEach(function(r){
+        var k = (r.date || '').substr(0, 7);
+        if(!k) return;
+        var mb = num(r.mileage_before), ma = num(r.mileage_after), l = num(r.liters);
+        if(mb > 0 && ma > mb && l > 0){
+          if(!kplByMonth[k]) kplByMonth[k] = { km: 0, liters: 0 };
+          kplByMonth[k].km += (ma - mb);
+          kplByMonth[k].liters += l;
+        }
+      });
+
+      var summaryHd = ['เดือน','จำนวนครั้ง','ลิตร','จำนวนเงิน (บาท)','ราคาเฉลี่ย/ลิตร','อัตราสิ้นเปลืองเฉลี่ย (กม./ลิตร)'];
       var summaryRows = [];
-      var totL = 0, totA = 0, totC = 0;
+      var totL = 0, totA = 0, totC = 0, totKm = 0, totLForKpl = 0;
       for (var j = 0; j < 12; j++){
         var mo2 = fyMonthOrder[j];
         var ceYear2 = mo2 >= 10 ? startYear : startYear + 1;
@@ -838,9 +860,15 @@
         var row = monthMap[k2] || { count:0, total_liters:0, total_amount:0 };
         var l = num(row.total_liters), a = num(row.total_amount), c = +row.count||0;
         totL += l; totA += a; totC += c;
-        summaryRows.push([thaiMonths[j] + ' ' + (ceYear2 + 543), c, l, a]);
+        var kp = kplByMonth[k2];
+        var avgPrice = l > 0 ? +(a / l).toFixed(2) : '';
+        var avgKpl = (kp && kp.liters > 0) ? +(kp.km / kp.liters).toFixed(2) : '';
+        if(kp){ totKm += kp.km; totLForKpl += kp.liters; }
+        summaryRows.push([thaiMonths[j] + ' ' + (ceYear2 + 543), c, l, a, avgPrice, avgKpl]);
       }
-      summaryRows.push(['รวมทั้งปี', totC, totL, totA]);
+      var grandAvgPrice = totL > 0 ? +(totA / totL).toFixed(2) : '';
+      var grandAvgKpl = totLForKpl > 0 ? +(totKm / totLForKpl).toFixed(2) : '';
+      summaryRows.push(['รวมทั้งปี', totC, totL, totA, grandAvgPrice, grandAvgKpl]);
       sheets.unshift({ sheetName: 'สรุปทั้งปี', headers: summaryHd, rows: summaryRows });
 
       ExportUtils.exportExcelSheets({
