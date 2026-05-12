@@ -92,7 +92,7 @@
         ['\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48\u0e2d\u0e2d\u0e01: '+new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'})+' | \u0e0a\u0e48\u0e27\u0e07\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25: '+(meta.dateRange||'-')+' | \u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17: '+(meta.type||'-')],
         []
       ];
-      var data=headerRows.concat([s.headers]).concat(s.rows);
+      var data=s.headers ? headerRows.concat([s.headers]).concat(s.rows) : headerRows.concat(s.rows);
       var ws=XLSX.utils.aoa_to_sheet(data);
       XLSX.utils.book_append_sheet(wb,ws,s.sheetName||'Sheet1');
     });
