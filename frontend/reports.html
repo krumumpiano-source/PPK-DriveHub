@@ -1684,7 +1684,11 @@
         _emExportFuel(recs, result.summary || {}, dr, dateLabel, fmt);
       } else if (type === 'vehicles') {
         var recs = Array.isArray(result) ? result : (result.records || []); if (!recs.length) { alert('ไม่มีข้อมูล'); return; }
-        _emExportVehicles(recs, dateLabel);
+        // Also fetch detailed trip records for the same period/car
+        var tripsR = await API.get('/api/reports/trips' + urlParam);
+        var tripsResult = (tripsR && tripsR.data) ? tripsR.data : (tripsR || {});
+        var tripRecs = tripsResult.records || [];
+        _emExportVehicles(recs, tripRecs, dateLabel, dr);
       } else if (type === 'drivers') {
         var recs = Array.isArray(result) ? result : (result.records || []); if (!recs.length) { alert('ไม่มีข้อมูล'); return; }
         _emExportDrivers(recs, dateLabel);
@@ -1774,16 +1778,50 @@
     }
   }
 
-  function _emExportVehicles(records, dateLabel) {
+  function _emExportVehicles(records, tripRecords, dateLabel, dr) {
     var rn = document.getElementById('em_reporter_name').value||'-';
     var rp = document.getElementById('em_reporter_pos').value||'-';
     var statMap = { active:'ใช้งาน', maintenance:'ซ่อมบำรุง', inactive:'ไม่ใช้งาน' };
-    var headers = ['ทะเบียน','ยี่ห้อ','รุ่น','ปี','สถานะ','เลขไมล์ปัจจุบัน','ประเภทน้ำมัน','จำนวนเที่ยว','น้ำมันรวม(ลิตร)','ค่าน้ำมัน(บาท)','อัตราสิ้นเปลือง(กม./ลิตร)','จำนวนซ่อม','ค่าซ่อม(บาท)'];
+
+    // ── Sheet 1: สรุปรายคัน ──────────────────────────
+    var summaryHeaders = ['ทะเบียน','ยี่ห้อ','รุ่น','ปี','สถานะ','เลขไมล์ปัจจุบัน','ประเภทน้ำมัน','จำนวนเที่ยว','น้ำมันรวม(ลิตร)','ค่าน้ำมัน(บาท)','อัตราสิ้นเปลือง(กม./ลิตร)','จำนวนซ่อม','ค่าซ่อม(บาท)'];
     var summaryRows = records.map(function(v) {
       return [v.license_plate||'',v.brand||'',v.model||'',v.year||'',statMap[v.status]||v.status||'',v.current_mileage||0,v.fuel_type||'',v.trip_count||0,Number(v.total_fuel_liters||0).toFixed(2),Number(v.total_fuel_cost||0).toFixed(2),v.avg_consumption>0?Number(v.avg_consumption).toFixed(2):'-',v.repair_count||0,Number(v.total_repair_cost||0).toFixed(2)];
     });
 
-    var sheets = [{ sheetName:'สรุปทุกคัน', headers:headers, rows:summaryRows }];
+    // ── Sheet 2: รายเที่ยวละเอียด ────────────────────
+    var qualityMap = {
+      normal: 'สแกนเอง', auto_departure: '⚠ ระบบออกให้(ลืมสแกน)', auto_return: '⚠ ระบบกลับให้(ลืมสแกน)',
+      auto_unresolved: '⚠ ระบบจัดการ', gap_record: '❌ ข้อมูลขาด', late_return: '⏰ กลับล่าช้า', historical: 'บันทึกย้อนหลัง'
+    };
+    var tripHeaders = ['ลำดับ','วันที่','ทะเบียน','ยี่ห้อ/รุ่น','คนขับ','ผู้ขอใช้รถ','จุดหมาย/ภารกิจ','ผู้โดยสาร',
+      'เวลาตามคิว(เริ่ม)','เวลาตามคิว(สิ้นสุด)',
+      'เวลาออกจริง','สถานะออก','เลขไมล์ออก',
+      'เวลากลับจริง','สถานะกลับ','เลขไมล์กลับ',
+      'ระยะทาง(กม.)','หมายเหตุระบบ','หมายเหตุผู้ขับ','สถานะคิว'];
+    var statusQueueMap = { scheduled:'รอออก', ongoing:'ระหว่างเดินทาง', completed:'เสร็จสิ้น', cancelled:'ยกเลิก', frozen:'ระงับ' };
+    var tripRows = (tripRecords || []).map(function(r, i) {
+      var depQuality = qualityMap[r.dep_quality] || (r.dep_quality || (r.actual_departure ? 'สแกนเอง' : '-'));
+      var retQuality = qualityMap[r.ret_quality] || (r.ret_quality || (r.actual_return ? 'สแกนเอง' : '-'));
+      var autoNotes = [r.dep_auto_notes, r.ret_auto_notes].filter(Boolean).join(' | ');
+      var driverNotes = [r.dep_notes, r.ret_notes].filter(Boolean).join(' | ');
+      var km = r.km_used != null ? r.km_used : (r.mileage_end && r.mileage_start && r.mileage_end > r.mileage_start ? r.mileage_end - r.mileage_start : '-');
+      return [
+        i+1, r.date||'',
+        r.license_plate||r.car_id||'', (r.brand||'')+(r.model?' '+r.model:''),
+        r.driver_name||'', r.requester_display_name||r.requested_by||'',
+        (r.destination||'')+(r.mission?' — '+r.mission:''), r.passengers||'',
+        r.time_start||'', r.time_end||'',
+        r.actual_departure ? r.actual_departure.substr(0,16) : '-', r.actual_departure ? depQuality : 'ไม่มีข้อมูล', r.mileage_start||'-',
+        r.actual_return ? r.actual_return.substr(0,16) : '-', r.actual_return ? retQuality : 'ไม่มีข้อมูล', r.mileage_end||'-',
+        km, autoNotes||'-', driverNotes||'-', statusQueueMap[r.status]||r.status||''
+      ];
+    });
+
+    var sheets = [
+      { sheetName:'สรุปรายคัน', headers:summaryHeaders, rows:summaryRows },
+      { sheetName:'รายเที่ยวละเอียด', headers:tripHeaders, rows:tripRows }
+    ];
 
     // Per-vehicle sheets (only when exporting all cars)
     var selCarId = document.getElementById('em_car_id').value;
@@ -1807,28 +1845,9 @@
         ];
         sheets.push({ sheetName: sheetName, headers:['รายการ','ข้อมูล'], rows: cardRows });
       });
-    } else if (selCarId && records.length === 1) {
-      // Single car — card-style detail as second sheet
-      var v = records[0];
-      var cardRows = [
-        ['ทะเบียน', v.license_plate||'-'],
-        ['ยี่ห้อ/รุ่น', (v.brand||'') + (v.model?' '+v.model:'') + (v.year?' ('+v.year+')':'')],
-        ['สถานะ', statMap[v.status]||v.status||'-'],
-        ['ประเภทน้ำมัน', v.fuel_type||'-'],
-        ['เลขไมล์ปัจจุบัน', v.current_mileage||0],
-        ['',''],
-        ['ช่วงเวลา', dateLabel],
-        ['จำนวนเที่ยว', v.trip_count||0],
-        ['น้ำมันรวม (ลิตร)', Number(v.total_fuel_liters||0).toFixed(2)],
-        ['ค่าน้ำมันรวม (บาท)', Number(v.total_fuel_cost||0).toFixed(2)],
-        ['อัตราสิ้นเปลืองเฉลี่ย', v.avg_consumption>0?Number(v.avg_consumption).toFixed(2)+' กม./ลิตร':'-'],
-        ['จำนวนครั้งซ่อม', v.repair_count||0],
-        ['ค่าซ่อมรวม (บาท)', Number(v.total_repair_cost||0).toFixed(2)]
-      ];
-      sheets.push({ sheetName:'รายละเอียด', headers:['รายการ','ข้อมูล'], rows: cardRows });
     }
 
-    ExportUtils.exportExcelMultiSheet({ filename: 'รายงานการใช้งานรถ_'+new Date().toISOString().substr(0,10),
+    ExportUtils.exportExcelMultiSheet({ filename: 'รายงานการใช้งานรถ_'+(dr?dr.from:'')+'_'+(dr?dr.to:''),
       sheets: sheets,
       reportMeta:{reportedBy:rn,reportedByPosition:rp,dateRange:dateLabel,type:'การใช้งานรถ'} });
   }

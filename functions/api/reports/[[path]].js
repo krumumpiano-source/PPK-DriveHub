@@ -646,9 +646,13 @@ export async function onRequest(context) {
        dep.datetime AS actual_departure,
        dep.mileage AS mileage_start,
        dep.data_quality AS dep_quality,
+       dep.auto_notes AS dep_auto_notes,
+       dep.notes AS dep_notes,
        ret.datetime AS actual_return,
        ret.mileage AS mileage_end,
        ret.data_quality AS ret_quality,
+       ret.auto_notes AS ret_auto_notes,
+       ret.notes AS ret_notes,
        (CASE WHEN dep.mileage IS NOT NULL AND ret.mileage IS NOT NULL AND ret.mileage > dep.mileage
              THEN ret.mileage - dep.mileage ELSE NULL END) AS km_used
        FROM queue q
