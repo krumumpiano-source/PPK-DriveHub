@@ -103,7 +103,7 @@ async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report
   }
   report.fetched = rows.length;
 
-  // โหลด form_timestamps ที่มีอยู่แล้วทั้งหมดใน 1 query (แทนที่จะ query ทีละแถว)
+  // โหลด form_timestamps ที่มีอยู่แล้วทั้งหมดใน 1 query
   const existingRows = await dbAll(db,
     `SELECT record_type || '|' || form_timestamp AS key
      FROM usage_records
@@ -111,6 +111,32 @@ async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report
     [carId]
   );
   const existingKeys = new Set(existingRows.map(r => r.key));
+
+  // โหลด driver map ทั้งหมดใน 1 query (ลด D1 calls)
+  const allDrivers = await dbAll(db,
+    `SELECT id, name, COALESCE(title,'') AS title,
+            COALESCE(first_name,'') AS first_name,
+            COALESCE(last_name,'') AS last_name
+     FROM drivers WHERE deactivated_at IS NULL`,
+    []
+  );
+  function findDriverLocal(rawName) {
+    const name = normalizeName(rawName);
+    if (!name) return null;
+    for (const d of allDrivers) {
+      const full = (d.title + ' ' + d.first_name + ' ' + d.last_name).replace(/\s+/g, ' ').trim();
+      const firstLast = (d.first_name + ' ' + d.last_name).replace(/\s+/g, ' ').trim();
+      if (d.name === name || full === name || firstLast === name) return d.id;
+    }
+    const stripped = name.replace(/^(นาย|นาง|นางสาว|น\.ส\.|ดร\.|ครู)\s*/, '').trim();
+    if (stripped && stripped !== name) {
+      for (const d of allDrivers) {
+        const firstLast = (d.first_name + ' ' + d.last_name).replace(/\s+/g, ' ').trim();
+        if (d.name === stripped || firstLast === stripped) return d.id;
+      }
+    }
+    return null;
+  }
 
   for (const r of rows) {
     if (!r || r.length === 0) continue;
@@ -120,12 +146,11 @@ async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report
     const recordType = statusToRecordType(r[COL.STATUS]);
     if (!recordType) { report.skipped++; continue; }
 
-    // dedup ใน memory แทน query D1
     if (existingKeys.has(recordType + '|' + formTimestamp)) { report.skipped++; continue; }
 
     const datetime = parseFormDate(r[COL.DATE], tsRaw) || parseFormDate(tsRaw, '');
     const mileage = parseMileage(r[COL.MILEAGE]);
-    const driverId = await findDriverByName(db, r[COL.DRIVER]);
+    const driverId = findDriverLocal(r[COL.DRIVER]);
     const requester = normalizeName(r[COL.REQUESTER]);
     const destination = normalizeName(r[COL.DEST]);
     const driverName = normalizeName(r[COL.DRIVER]);
@@ -146,7 +171,6 @@ async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report
          requester || null, destination || null, driverName || null,
          formTimestamp, ts]
       );
-      // mark as inserted in memory set to avoid re-insert within same sync
       existingKeys.add(recordType + '|' + formTimestamp);
 
       if (mileage) {
@@ -156,11 +180,6 @@ async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report
           [mileage, ts, carId, mileage]
         );
       }
-      // Auto-Heal: สร้าง record ที่หายไปอัตโนมัติ
-      try {
-        const healed = await autoHeal(db, { id, car_id: carId, driver_id: driverId, record_type: recordType, datetime: datetime || ts, mileage: mileage || null, queue_id: null }, env);
-        if (healed.length > 0) report.auto_healed = (report.auto_healed || 0) + healed.length;
-      } catch (_) {}
       report.inserted++;
     } catch (e) {
       if (String(e.message).includes('UNIQUE')) {
