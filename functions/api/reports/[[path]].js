@@ -431,40 +431,65 @@ export async function onRequest(context) {
     try { requirePermission(user, 'reports', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const dpDateFrom = url.searchParams.get('date_from') || new Date(Date.now() - 90 * 86400000).toISOString().substr(0, 10);
     const dpDateTo = url.searchParams.get('date_to') || now().substr(0, 10);
+    const dpDateToFull = dpDateTo + ' 23:59:59';
     const dpDrivers = await dbAll(env.DB, "SELECT id, name, status FROM drivers ORDER BY name", []);
-    const dpResults = [];
+    if (!dpDrivers.length) return success([]);
 
+    // Bulk queries (all drivers at once) run in parallel — replaces N×13 sequential queries
+    const [svRows, uAllRows, uGoodRows, ddRows, cdRows, qsRows, rcRows, tkRows, faRows, fgRows, feRows, alRows, rfRows, rtRows] = await Promise.all([
+      dbAll(env.DB, `SELECT driver_id, AVG((politeness_score+safety_score+punctuality_score+cleanliness_score+appearance_score+overall_score)/6.0) AS avg_score, COUNT(*) AS cnt FROM survey_responses WHERE created_at>=? AND created_at<=? GROUP BY driver_id`, [dpDateFrom, dpDateToFull]),
+      dbAll(env.DB, `SELECT driver_id, COUNT(*) AS total FROM usage_records WHERE datetime>=? AND datetime<=? GROUP BY driver_id`, [dpDateFrom, dpDateToFull]),
+      dbAll(env.DB, `SELECT driver_id, COUNT(*) AS cnt FROM usage_records WHERE datetime>=? AND datetime<=? AND data_quality='normal' GROUP BY driver_id`, [dpDateFrom, dpDateToFull]),
+      dbAll(env.DB, `SELECT driver_id, COUNT(DISTINCT date) AS cnt FROM queue WHERE date>=? AND date<=? AND status IN ('completed','ongoing') GROUP BY driver_id`, [dpDateFrom, dpDateTo]),
+      dbAll(env.DB, `SELECT q2.driver_id, COUNT(DISTINCT DATE(cl.created_at)) AS cnt FROM check_log cl JOIN (SELECT DISTINCT driver_id, car_id FROM queue WHERE date>=? AND date<=? AND status IN ('completed','ongoing')) q2 ON cl.car_id=q2.car_id WHERE cl.created_at>=? AND cl.created_at<=? GROUP BY q2.driver_id`, [dpDateFrom, dpDateTo, dpDateFrom, dpDateToFull]),
+      dbAll(env.DB, `SELECT q.driver_id, COUNT(ur.datetime) AS total_dep, SUM(CASE WHEN CAST((julianday(ur.datetime)-julianday(q.date||'T'||q.time_start))*1440 AS INTEGER)<=15 THEN 1 ELSE 0 END) AS on_time FROM queue q JOIN usage_records ur ON ur.queue_id=q.id AND ur.record_type='departure' WHERE q.date>=? AND q.date<=? AND q.status IN ('completed','ongoing') AND q.time_start IS NOT NULL GROUP BY q.driver_id`, [dpDateFrom, dpDateTo]),
+      dbAll(env.DB, `SELECT q2.driver_id, COALESCE(SUM(rl.cost),0) AS tc, COUNT(rl.id) AS cnt FROM repair_log rl JOIN (SELECT DISTINCT driver_id, car_id FROM queue) q2 ON rl.car_id=q2.car_id WHERE rl.date_reported>=? AND rl.date_reported<=? GROUP BY q2.driver_id`, [dpDateFrom, dpDateTo]),
+      dbAll(env.DB, `SELECT r.driver_id, COALESCE(SUM(r.mileage-d.mileage),0) AS km FROM usage_records r JOIN usage_records d ON d.queue_id=r.queue_id AND d.record_type='departure' WHERE r.record_type='return' AND r.datetime>=? AND r.datetime<=? AND d.mileage IS NOT NULL AND r.mileage>d.mileage GROUP BY r.driver_id`, [dpDateFrom, dpDateToFull]),
+      dbAll(env.DB, `SELECT driver_id, COUNT(*) AS total FROM fuel_log WHERE date>=? AND date<=? AND deleted_at IS NULL GROUP BY driver_id`, [dpDateFrom, dpDateTo]),
+      dbAll(env.DB, `SELECT driver_id, COUNT(*) AS cnt FROM fuel_log WHERE date>=? AND date<=? AND deleted_at IS NULL AND mileage_before IS NOT NULL AND mileage_after IS NOT NULL GROUP BY driver_id`, [dpDateFrom, dpDateTo]),
+      dbAll(env.DB, `SELECT driver_id, AVG(fuel_consumption_rate) AS avg_rate FROM fuel_log WHERE date>=? AND date<=? AND fuel_consumption_rate>0 AND deleted_at IS NULL GROUP BY driver_id`, [dpDateFrom, dpDateTo]),
+      dbAll(env.DB, `SELECT q2.driver_id, COUNT(ia.id) AS cnt FROM inspection_alerts ia JOIN (SELECT DISTINCT driver_id, car_id FROM queue WHERE date>=? AND date<=? AND status IN ('completed','ongoing')) q2 ON ia.car_id=q2.car_id WHERE ia.created_at>=? AND ia.created_at<=? GROUP BY q2.driver_id`, [dpDateFrom, dpDateTo, dpDateFrom, dpDateToFull]),
+      dbAll(env.DB, `SELECT reporter_name, COUNT(*) AS cnt FROM repair_log WHERE date_reported>=? AND date_reported<=? AND reporter_name IS NOT NULL GROUP BY reporter_name`, [dpDateFrom, dpDateTo]),
+      dbAll(env.DB, `SELECT q2.driver_id, AVG(JULIANDAY(COALESCE(rl.date_completed,rl.date_reported))-JULIANDAY(rl.date_reported)) AS avg_days FROM repair_log rl JOIN (SELECT DISTINCT driver_id, car_id FROM queue WHERE date>=? AND date<=? AND status IN ('completed','ongoing')) q2 ON rl.car_id=q2.car_id WHERE rl.date_reported>=? GROUP BY q2.driver_id`, [dpDateFrom, dpDateTo, dpDateFrom]),
+    ]);
+
+    const svMap={}, uAllMap={}, uGoodMap={}, ddMap={}, cdMap={}, qsMap={}, rcMap={}, tkMap={}, faMap={}, fgMap={}, feMap={}, alMap={}, rtMap={};
+    for(const r of svRows) svMap[r.driver_id]=r;
+    for(const r of uAllRows) uAllMap[r.driver_id]=r;
+    for(const r of uGoodRows) uGoodMap[r.driver_id]=r;
+    for(const r of ddRows) ddMap[r.driver_id]=r;
+    for(const r of cdRows) cdMap[r.driver_id]=r;
+    for(const r of qsRows) qsMap[r.driver_id]=r;
+    for(const r of rcRows) rcMap[r.driver_id]=r;
+    for(const r of tkRows) tkMap[r.driver_id]=r;
+    for(const r of faRows) faMap[r.driver_id]=r;
+    for(const r of fgRows) fgMap[r.driver_id]=r;
+    for(const r of feRows) feMap[r.driver_id]=r;
+    for(const r of alRows) alMap[r.driver_id]=r;
+    for(const r of rtRows) rtMap[r.driver_id]=r;
+
+    const dpResults = [];
     for (const drv of dpDrivers) {
       const did = drv.id;
-      const sv = await dbFirst(env.DB, `SELECT AVG((politeness_score+safety_score+punctuality_score+cleanliness_score+appearance_score+overall_score)/6.0) AS avg_score, COUNT(*) AS cnt FROM survey_responses WHERE driver_id=? AND created_at>=? AND created_at<=?`, [did, dpDateFrom, dpDateTo+' 23:59:59']);
-      const uAll = await dbFirst(env.DB, `SELECT COUNT(*) AS total FROM usage_records WHERE driver_id=? AND datetime>=? AND datetime<=?`, [did, dpDateFrom, dpDateTo+' 23:59:59']);
-      const uGood = await dbFirst(env.DB, `SELECT COUNT(*) AS cnt FROM usage_records WHERE driver_id=? AND datetime>=? AND datetime<=? AND data_quality='normal'`, [did, dpDateFrom, dpDateTo+' 23:59:59']);
-      const dd = await dbFirst(env.DB, `SELECT COUNT(DISTINCT date) AS cnt FROM queue WHERE driver_id=? AND date>=? AND date<=? AND status IN ('completed','ongoing')`, [did, dpDateFrom, dpDateTo]);
-      const cd = await dbFirst(env.DB, `SELECT COUNT(DISTINCT DATE(created_at)) AS cnt FROM check_log WHERE car_id IN (SELECT car_id FROM queue WHERE driver_id=? AND date>=? AND date<=?) AND created_at>=? AND created_at<=?`, [did, dpDateFrom, dpDateTo, dpDateFrom, dpDateTo+' 23:59:59']);
-      const qs = await dbAll(env.DB, `SELECT q.id, q.date, q.time_start, ur.datetime AS dep FROM queue q LEFT JOIN usage_records ur ON ur.queue_id=q.id AND ur.record_type='departure' WHERE q.driver_id=? AND q.date>=? AND q.date<=? AND q.status IN ('completed','ongoing')`, [did, dpDateFrom, dpDateTo]);
-      let ot=0; for(const s of qs){if(!s.dep||!s.time_start)continue;if((new Date(s.dep)-new Date(s.date+'T'+s.time_start))/60000<=15)ot++;}
-      const rc = await dbFirst(env.DB, `SELECT COALESCE(SUM(rl.cost),0) AS tc, COUNT(*) AS cnt FROM repair_log rl JOIN queue q ON rl.car_id=q.car_id WHERE q.driver_id=? AND rl.date_reported>=? AND rl.date_reported<=?`, [did, dpDateFrom, dpDateTo]);
-      const tk = await dbFirst(env.DB, `SELECT COALESCE(SUM(r.mileage - d.mileage),0) AS km FROM usage_records r LEFT JOIN usage_records d ON d.queue_id=r.queue_id AND d.record_type='departure' WHERE r.driver_id=? AND r.record_type='return' AND r.datetime>=? AND r.datetime<=? AND d.mileage IS NOT NULL AND r.mileage>d.mileage`, [did, dpDateFrom, dpDateTo+' 23:59:59']);
-      const fa = await dbFirst(env.DB, `SELECT COUNT(*) AS total FROM fuel_log WHERE driver_id=? AND date>=? AND date<=? AND deleted_at IS NULL`, [did, dpDateFrom, dpDateTo]);
-      const fg = await dbFirst(env.DB, `SELECT COUNT(*) AS cnt FROM fuel_log WHERE driver_id=? AND date>=? AND date<=? AND deleted_at IS NULL AND mileage_before IS NOT NULL AND mileage_after IS NOT NULL`, [did, dpDateFrom, dpDateTo]);
-      const fe = await dbFirst(env.DB, `SELECT AVG(fuel_consumption_rate) AS avg_rate FROM fuel_log WHERE driver_id=? AND date>=? AND date<=? AND fuel_consumption_rate>0 AND deleted_at IS NULL`, [did, dpDateFrom, dpDateTo]);
-      const al = await dbFirst(env.DB, `SELECT COUNT(*) AS cnt FROM inspection_alerts WHERE car_id IN (SELECT car_id FROM queue WHERE driver_id=? AND date>=? AND date<=?) AND created_at>=? AND created_at<=?`, [did, dpDateFrom, dpDateTo, dpDateFrom, dpDateTo+' 23:59:59']);
-      const rf = await dbFirst(env.DB, `SELECT COUNT(*) AS cnt FROM repair_log WHERE reporter_name LIKE ? AND date_reported>=? AND date_reported<=?`, ['%'+(drv.name||'').split(' ')[0]+'%', dpDateFrom, dpDateTo]);
-      const rt = await dbFirst(env.DB, `SELECT AVG(JULIANDAY(COALESCE(date_completed,date_reported))-JULIANDAY(date_reported)) AS avg_days FROM repair_log WHERE car_id IN (SELECT car_id FROM queue WHERE driver_id=? AND date>=? AND date<=?) AND date_reported>=?`, [did, dpDateFrom, dpDateTo, dpDateFrom]);
-
+      const firstName = (drv.name||'').split(' ')[0];
+      const rfCnt = rfRows.filter(r=>r.reporter_name&&r.reporter_name.includes(firstName)).reduce((s,r)=>s+(r.cnt||0),0);
+      const sv=svMap[did], uAll=uAllMap[did], uGood=uGoodMap[did], dd=ddMap[did], cd=cdMap[did];
+      const qs=qsMap[did], rc=rcMap[did], tk=tkMap[did], fa=faMap[did], fg=fgMap[did];
+      const fe=feMap[did], al=alMap[did], rt=rtMap[did];
       const dims=[];
       dims.push({name:'survey',score:Math.min(sv?.avg_score||0,5),count:sv?.cnt||0,hasData:(sv?.cnt||0)>0});
       dims.push({name:'usage_quality',score:uAll?.total>0?((uGood?.cnt||0)/uAll.total)*5:0,count:uAll?.total||0,hasData:(uAll?.total||0)>0});
       dims.push({name:'daily_check',score:dd?.cnt>0?Math.min(((cd?.cnt||0)/dd.cnt)*5,5):0,count:dd?.cnt||0,hasData:(dd?.cnt||0)>0});
-      dims.push({name:'punctuality',score:qs.length>0?(ot/qs.length)*5:0,count:qs.length,hasData:qs.length>0});
+      const totalDep=qs?.total_dep||0, onTime=qs?.on_time||0;
+      dims.push({name:'punctuality',score:totalDep>0?(onTime/totalDep)*5:0,count:totalDep,hasData:totalDep>0});
       const cpk=(tk?.km||0)>0?(rc?.tc||0)/tk.km:0;
       const vcHas=(tk?.km||0)>0||(rc?.cnt||0)>0;
       dims.push({name:'vehicle_care',score:vcHas?Math.min(cpk===0?5:Math.max(5-cpk,0),5):0,hasData:vcHas});
       dims.push({name:'fuel_records',score:fa?.total>0?((fg?.cnt||0)/fa.total)*5:0,count:fa?.total||0,hasData:(fa?.total||0)>0});
       const er=fe?.avg_rate||0;
       dims.push({name:'fuel_efficiency',score:er>0?Math.min((er/8)*5,5):0,hasData:er>0});
-      const rrHas=(al?.cnt||0)>0||(rf?.cnt||0)>0;
-      dims.push({name:'repair_reporting',score:al?.cnt>0?Math.min(((rf?.cnt||0)/al.cnt)*5,5):(rf?.cnt>0?5:0),hasData:rrHas});
+      const rrHas=(al?.cnt||0)>0||rfCnt>0;
+      dims.push({name:'repair_reporting',score:al?.cnt>0?Math.min((rfCnt/al.cnt)*5,5):(rfCnt>0?5:0),hasData:rrHas});
       const atd=rt?.avg_days||0;
       dims.push({name:'repair_turnaround',score:rc?.cnt>0?(atd<=1?5:atd<=3?4:atd<=7?3:atd<=14?2:1):0,hasData:(rc?.cnt||0)>0});
       const dimsWithData=dims.filter(d=>d.hasData);
