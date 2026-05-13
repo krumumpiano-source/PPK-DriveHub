@@ -1,10 +1,11 @@
-// Refactored: ฟังก์ชัน sync หลัก ใช้ร่วมกันทั้ง public cron + admin manual
+﻿// Refactored: ฟังก์ชัน sync หลัก ใช้ร่วมกันทั้ง public cron + admin manual
 // ตั้ง env vars:
 //   GOOGLE_SERVICE_ACCOUNT_JSON  = JSON string ของ service account
 //   GFORM_SHEET_MAP              = JSON: { "<license_plate>": "<spreadsheet_id>", ... }
 
 import { dbFirst, dbRun, generateUUID, now } from '../_helpers.js';
 import { getGoogleAccessToken, readSheet } from './google-auth.js';
+import { autoHeal } from './auto-heal.js';
 
 const COL = { TS: 0, DRIVER: 1, STATUS: 2, DATE: 3, REQUESTER: 4, DEST: 5, MILEAGE: 6 };
 const RANGE = 'A2:H';
@@ -151,6 +152,11 @@ async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report
           [mileage, ts, carId, mileage]
         );
       }
+      // Auto-Heal: สร้าง record ที่หายไปอัตโนมัติ
+      try {
+        const healed = await autoHeal(db, { id, car_id: carId, driver_id: driverId, record_type: recordType, datetime: datetime || ts, mileage: mileage || null, queue_id: null });
+        if (healed.length > 0) report.auto_healed = (report.auto_healed || 0) + healed.length;
+      } catch (_) {}
       report.inserted++;
     } catch (e) {
       if (String(e.message).includes('UNIQUE')) {
