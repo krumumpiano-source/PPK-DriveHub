@@ -22,10 +22,7 @@ export async function onRequest(context) {
   // ============================================================
   if (path === '/api/admin/gform-sync/run' && method === 'POST') {
     try {
-      const result = await runGoogleFormSync(env, 'manual', user.email || user.id || null);
-      await writeAuditLog(env.DB, user.id, user.displayName, 'gform_sync_run', 'admin', result.logId, {
-        inserted: result.rows_inserted, skipped: result.rows_skipped, failed: result.rows_failed,
-      });
+      const result = await runGoogleFormSync(env, 'manual', user.id || null);
       return success(result);
     } catch (e) {
       return error('Sync failed: ' + e.message, 500);
