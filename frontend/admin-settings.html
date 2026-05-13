@@ -236,6 +236,46 @@
     width: 100%;
     }
     }
+
+    .settings-tabs-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    padding-bottom: 4px;
+    border-bottom: 2px solid #e9ecef;
+    }
+
+    .tab-btn {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 24px;
+    font-size: 0.92em;
+    font-weight: 600;
+    cursor: pointer;
+    background: #e9ecef;
+    color: #495057;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+    background: var(--gradient-primary);
+    color: white;
+    box-shadow: var(--shadow-sm, 0 2px 6px rgba(0,0,0,0.15));
+    }
+
+    .tab-btn:hover:not(.active) {
+    background: #dee2e6;
+    }
+
+    @media (max-width: 600px) {
+    .settings-tabs-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    }
+    }
   </style>
 </head>
 
@@ -253,9 +293,17 @@
 
           <div id="loading" class="loading">กำลังโหลดข้อมูล...</div>
 
+          <div class="settings-tabs-bar" id="settingsTabsBar" style="display:none;">
+            <button type="button" class="tab-btn active" onclick="switchTab('queue')">🔄 คิว &amp; คนขับ</button>
+            <button type="button" class="tab-btn" onclick="switchTab('maint-notify')">🔧 แจ้งเตือนซ่อมบำรุง</button>
+            <button type="button" class="tab-btn" onclick="switchTab('maint-profile')">🏭 Profile ซ่อมบำรุง</button>
+            <button type="button" class="tab-btn" onclick="switchTab('tax-fuel')">📋 ภาษี/ประกัน/น้ำมัน</button>
+            <button type="button" class="tab-btn" onclick="switchTab('data')">📊 นำเข้าข้อมูล</button>
+          </div>
+
           <div id="settingsContent" style="display: none;">
             <!-- การเวียนคิว -->
-            <div class="settings-section">
+            <div class="settings-section" data-tab="queue">
               <div class="section-title">🔄 การเวียนคิว</div>
 
               <div class="form-row">
@@ -274,7 +322,7 @@
             </div>
 
             <!-- การพักทุกระยะ -->
-            <div class="settings-section">
+            <div class="settings-section" data-tab="queue">
               <div class="section-title">⏸️ การพักทุกระยะ</div>
 
               <div class="form-group">
@@ -292,7 +340,7 @@
             </div>
 
             <!-- การแจ้งเตือนซ่อมบำรุง -->
-            <div class="settings-section">
+            <div class="settings-section" data-tab="maint-notify">
               <div class="section-title">🔧 การแจ้งเตือนซ่อมบำรุง</div>
 
               <div class="form-row">
@@ -328,7 +376,7 @@
             </div>
 
             <!-- ระยะซ่อมบำรุงตามยี่ห้อ/รุ่นรถ -->
-            <div class="settings-section">
+            <div class="settings-section" data-tab="maint-profile">
               <div class="section-title">🏭 ระยะซ่อมบำรุงตามยี่ห้อ/รุ่นรถ</div>
               <div class="help-text" style="margin-bottom:10px;">
                 ระบบค้นหาค่าตามลำดับ: ➊ ค่าเฉพาะรถคัน → ➋ ยี่ห้อ+รุ่น → ➌ ยี่ห้อ(ค่ากลาง *) → ➍ ค่าเริ่มต้น<br>
@@ -339,7 +387,7 @@
               <div id="brandProfileContent"></div>
             </div>
 
-            <div class="settings-section">
+            <div class="settings-section" data-tab="maint-profile">
               <div class="section-title">🚐 ระยะซ่อมบำรุงแยกรายคัน</div>
               <div class="help-text" style="margin-bottom:10px;">
                 ใช้ override เฉพาะรถคันนั้น เช่น รถตู้เบนซิน 5,000 กม. แต่ดีเซล 10,000 กม. หากเว้นว่างไว้ ระบบจะสืบทอดจากยี่ห้อ/รุ่นอัตโนมัติ
@@ -363,7 +411,7 @@
             </div>
 
             <!-- การแจ้งเตือนภาษีและประกัน -->
-            <div class="settings-section">
+            <div class="settings-section" data-tab="tax-fuel">
               <div class="section-title">📄 การแจ้งเตือนภาษีและประกัน</div>
 
               <div class="form-row">
@@ -382,7 +430,7 @@
             </div>
 
             <!-- ตั้งค่าประเภทน้ำมัน -->
-            <div class="settings-section">
+            <div class="settings-section" data-tab="tax-fuel">
               <div class="section-title">⛽ ตั้งค่าประเภทน้ำมัน</div>
               <div class="help-text" style="margin-bottom:15px;">รายการประเภทน้ำมันที่แสดงในหน้าบันทึกน้ำมัน สามารถเพิ่ม แก้ไข หรือลบได้</div>
               <div id="fuelTypesList"></div>
@@ -393,7 +441,7 @@
             </div>
 
             <!-- ===== ซิงก์ Google Form ===== -->
-            <div class="settings-section" id="gformSyncSection">
+            <div class="settings-section" id="gformSyncSection" data-tab="data">
               <div class="section-title">🔗 ซิงก์ข้อมูลจาก Google Form (ระบบเก่า)</div>
               <div class="help-text" style="margin-bottom:15px;">
                 ดึงข้อมูลการใช้รถจาก Google Form ทั้ง 7 คัน เข้าระบบอัตโนมัติทุก 5 นาที (ผ่าน GitHub Actions)<br>
@@ -423,14 +471,14 @@
             </div>
 
             <!-- ปุ่มบันทึก -->
-            <div class="btn-row">
+            <div class="btn-row" id="tabSaveRow">
               <button type="button" class="btn btn-danger" onclick="resetToDefault()">
                 🔄 รีเซ็ตเป็นค่าเริ่มต้น
               </button>
               <button type="button" class="btn btn-secondary" onclick="window.location.href='dashboard.html'">
                 ← ยกเลิก
               </button>
-              <button type="button" class="btn btn-primary" onclick="saveSettings()">
+              <button type="button" class="btn btn-primary" onclick="saveCurrentTab()">
                 💾 บันทึกการตั้งค่า
               </button>
             </div>
@@ -467,6 +515,7 @@
         var _vehicles = [];
         var _activeVehicleId = null;
         var _vehicleProfileItems = [];
+        var _activeTab = 'queue';
 
         var categoryLabels = {
           fluid: '💧 น้ำมัน/ของเหลว',
@@ -557,8 +606,11 @@
         function showSettingsForm() {
           var loadingEl = document.getElementById('loading');
           var contentEl = document.getElementById('settingsContent');
+          var tabBar = document.getElementById('settingsTabsBar');
           if (loadingEl) loadingEl.style.display = 'none';
           if (contentEl) contentEl.style.display = 'block';
+          if (tabBar) tabBar.style.display = '';
+          switchTab(_activeTab || 'queue');
         }
 
         async function loadMaintenanceSettings() {
@@ -1215,6 +1267,124 @@
           renderFuelTypes();
           saveFuelTypes();
           showAlert('\u0e25\u0e1a\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08', 'success');
+        }
+
+        // ============================================================
+        // Tab navigation
+        // ============================================================
+        function switchTab(name) {
+          _activeTab = name;
+          var sections = document.querySelectorAll('.settings-section[data-tab]');
+          sections.forEach(function(sec) {
+            sec.style.display = sec.getAttribute('data-tab') === name ? '' : 'none';
+          });
+          var tabBtns = document.querySelectorAll('.tab-btn');
+          tabBtns.forEach(function(btn) {
+            var isActive = btn.getAttribute('onclick') === "switchTab('" + name + "')";
+            if (isActive) { btn.classList.add('active'); } else { btn.classList.remove('active'); }
+          });
+          var saveRow = document.getElementById('tabSaveRow');
+          if (saveRow) saveRow.style.display = name === 'data' ? 'none' : '';
+        }
+
+        // ============================================================
+        // Per-tab save functions
+        // ============================================================
+        async function saveTabQueue() {
+          var el = function(id) { return document.getElementById(id); };
+          if (typeof apiCall !== 'function') { showAlert('ระบบยังไม่พร้อม กรุณารีเฟรชหน้า', 'error'); return; }
+          try {
+            await apiCall('updateSystemSetting', { key: 'max_car_usage_per_week', value: parseInt(el('max_car_usage_per_week').value, 10) || 3 });
+            await apiCall('updateSystemSetting', { key: 'max_driver_long_jobs_per_week', value: parseInt(el('max_driver_long_jobs_per_week').value, 10) || 2 });
+            await apiCall('updateSystemSetting', { key: 'fatigue_distance_threshold', value: parseInt(el('fatigue_distance_threshold').value, 10) || 400 });
+            await apiCall('updateSystemSetting', { key: 'recovery_day_enabled', value: el('recovery_day_enabled') ? el('recovery_day_enabled').checked : true });
+            showAlert('บันทึกการตั้งค่าคิว & คนขับสำเร็จ', 'success');
+          } catch (err) {
+            showAlert(typeof handleError !== 'undefined' ? handleError(err) : 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'error');
+          }
+        }
+
+        async function saveTabMaintNotify() {
+          var el = function(id) { return document.getElementById(id); };
+          if (typeof apiCall !== 'function') { showAlert('ระบบยังไม่พร้อม กรุณารีเฟรชหน้า', 'error'); return; }
+          try {
+            await apiCall('updateSystemSetting', { key: 'pm_advance_days', value: parseInt(el('pm_advance_days').value, 10) || 7 });
+            await apiCall('updateSystemSetting', { key: 'pm_advance_km', value: parseInt(el('pm_advance_km').value, 10) || 100 });
+            await apiCall('updateSystemSetting', { key: 'emergency_auto_lock', value: el('emergency_auto_lock') ? el('emergency_auto_lock').checked : true });
+            var bulkItems = [];
+            maintenanceItems.forEach(function(item) {
+              var kmEl = el('ms_' + item.item_key + '_km');
+              var moEl = el('ms_' + item.item_key + '_mo');
+              if (kmEl && moEl) {
+                bulkItems.push({ id: item.id, interval_km: parseInt(kmEl.value, 10) || 0, interval_months: parseInt(moEl.value, 10) || 0, enabled: item.enabled });
+              }
+            });
+            if (bulkItems.length) {
+              await apiCall('bulkUpdateMaintenanceSettings', { items: bulkItems });
+            }
+            showAlert('บันทึกการตั้งค่าแจ้งเตือนซ่อมบำรุงสำเร็จ', 'success');
+          } catch (err) {
+            showAlert(typeof handleError !== 'undefined' ? handleError(err) : 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'error');
+          }
+        }
+
+        async function saveTabMaintProfile() {
+          if (typeof apiCall !== 'function') { showAlert('ระบบยังไม่พร้อม กรุณารีเฟรชหน้า', 'error'); return; }
+          try {
+            var profileInputs = document.querySelectorAll('[data-profile-id]');
+            var profileUpdates = {};
+            profileInputs.forEach(function(inp) {
+              var pid = inp.getAttribute('data-profile-id');
+              var field = inp.getAttribute('data-field');
+              if (!profileUpdates[pid]) profileUpdates[pid] = { id: pid };
+              var val = inp.value.trim();
+              profileUpdates[pid][field] = val === '' ? null : (parseInt(val, 10) || 0);
+            });
+            for (var pid in profileUpdates) {
+              await apiCall('updateMaintenanceProfile', profileUpdates[pid]);
+            }
+            if (_activeVehicleId) {
+              var vehicleMap = {};
+              var vehicleInputs = document.querySelectorAll('[data-vehicle-item]');
+              vehicleInputs.forEach(function(inp) {
+                var itemKey = inp.getAttribute('data-vehicle-item');
+                var field = inp.getAttribute('data-vehicle-field');
+                if (!vehicleMap[itemKey]) vehicleMap[itemKey] = { item_key: itemKey, interval_km: null, interval_months: null };
+                var raw = inp.value;
+                vehicleMap[itemKey][field] = raw === '' ? null : (parseInt(raw, 10) || 0);
+              });
+              var vehicleUpdates = [];
+              for (var itemKey in vehicleMap) vehicleUpdates.push(vehicleMap[itemKey]);
+              await apiCall('bulkUpdateMaintenanceVehicleProfiles', { car_id: _activeVehicleId, items: vehicleUpdates });
+              await selectVehicleProfile(_activeVehicleId);
+            }
+            showAlert('บันทึก Profile ซ่อมบำรุงสำเร็จ', 'success');
+          } catch (err) {
+            showAlert(typeof handleError !== 'undefined' ? handleError(err) : 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'error');
+          }
+        }
+
+        async function saveTabTaxFuel() {
+          var el = function(id) { return document.getElementById(id); };
+          if (typeof apiCall !== 'function') { showAlert('ระบบยังไม่พร้อม กรุณารีเฟรชหน้า', 'error'); return; }
+          try {
+            await apiCall('updateSystemSetting', { key: 'tax_alert_months', value: parseInt(el('tax_alert_months').value, 10) || 3 });
+            await apiCall('updateSystemSetting', { key: 'insurance_alert_months', value: parseInt(el('insurance_alert_months').value, 10) || 3 });
+            await apiCall('updateSystemSetting', { key: 'fuel_types_list', value: JSON.stringify(_fuelTypes) });
+            showAlert('บันทึกการตั้งค่าภาษี/ประกัน/น้ำมันสำเร็จ', 'success');
+          } catch (err) {
+            showAlert(typeof handleError !== 'undefined' ? handleError(err) : 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'error');
+          }
+        }
+
+        async function saveCurrentTab() {
+          switch (_activeTab) {
+            case 'queue': await saveTabQueue(); break;
+            case 'maint-notify': await saveTabMaintNotify(); break;
+            case 'maint-profile': await saveTabMaintProfile(); break;
+            case 'tax-fuel': await saveTabTaxFuel(); break;
+            default: break;
+          }
         }
       </script>
 
