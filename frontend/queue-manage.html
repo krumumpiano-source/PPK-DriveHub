@@ -1131,6 +1131,7 @@
   </div>
   <script>
     var queues = [];
+    var gformRecords = [];
     var vehicles = [];
     var drivers = [];
     var vehiclesMap = {};
@@ -1672,6 +1673,16 @@
           queues = [];
         }
 
+        // Fetch Google Form usage records (queue_id IS NULL)
+        try {
+          var gfResult = await API.get('/api/usage?date_from=' + filters.date_from + '&date_to=' + filters.date_to + '&record_type=departure');
+          if (gfResult && gfResult.success && gfResult.data) {
+            var raw = Array.isArray(gfResult.data) ? gfResult.data : (gfResult.data.records || []);
+            // keep only records with no queue_id (Google Form source)
+            gformRecords = raw.filter(function(r) { return !r.queue_id; });
+          } else { gformRecords = []; }
+        } catch(e) { gformRecords = []; }
+
         // Always render calendar, even if no queues
         renderCalendar();
 
@@ -1806,6 +1817,16 @@
 
           html += '<div class="queue-item" onclick="openEditModal(\'' + queue.id + '\'); event.stopPropagation();">';
           html += '<span class="queue-plate">' + licensePlate + '</span> ' + driverName;
+          html += '</div>';
+        });
+
+        // Google Form records (no queue)
+        var dayGform = gformRecords.filter(function(r) { return r.datetime && r.datetime.substr(0,10) === dateStr; });
+        dayGform.forEach(function(r) {
+          var plate = r.license_plate || '-';
+          var drvName = r.driver_name || r.driver_name_manual || '-';
+          html += '<div class="queue-item" style="background:#e0f2fe;color:#0369a1;border-left:3px solid #38bdf8;" title="บันทึกจาก Google Form">';
+          html += '<span class="queue-plate" style="background:#bae6fd;color:#0c4a6e;">' + plate + '</span> ' + drvName;
           html += '</div>';
         });
 
