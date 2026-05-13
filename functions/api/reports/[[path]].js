@@ -734,7 +734,78 @@ export async function onRequest(context) {
        ${where.length ? 'WHERE ' + where.join(' AND ') : ''}`,
       params
     );
-    return success({ records: rows, summary });
+
+    // Also fetch Google Form records (usage_records with no queue_id)
+    const gfWhere = ["dep.queue_id IS NULL", "dep.record_type = 'departure'"];
+    const gfParams = [];
+    if (dateFrom) { gfWhere.push('DATE(dep.datetime) >= ?'); gfParams.push(dateFrom); }
+    if (dateTo) { gfWhere.push('DATE(dep.datetime) <= ?'); gfParams.push(dateTo); }
+    if (carId) { gfWhere.push('dep.car_id = ?'); gfParams.push(carId); }
+    if (driverId) { gfWhere.push('dep.driver_id = ?'); gfParams.push(driverId); }
+    const gfRows = await dbAll(env.DB,
+      `SELECT dep.id, DATE(dep.datetime) AS date, TIME(dep.datetime) AS time_start,
+       dep.destination, dep.requester_name AS requested_by,
+       c.license_plate, c.brand, c.model,
+       COALESCE(d.name, dep.driver_name_manual) AS driver_name,
+       dep.datetime AS actual_departure, dep.mileage AS mileage_start,
+       dep.data_quality AS dep_quality, dep.auto_notes AS dep_auto_notes, dep.notes AS dep_notes,
+       (SELECT r.datetime FROM usage_records r WHERE r.car_id=dep.car_id AND r.record_type='return'
+        AND r.queue_id IS NULL AND r.datetime>dep.datetime ORDER BY r.datetime ASC LIMIT 1) AS actual_return,
+       (SELECT r.mileage FROM usage_records r WHERE r.car_id=dep.car_id AND r.record_type='return'
+        AND r.queue_id IS NULL AND r.datetime>dep.datetime ORDER BY r.datetime ASC LIMIT 1) AS mileage_end,
+       (SELECT r.data_quality FROM usage_records r WHERE r.car_id=dep.car_id AND r.record_type='return'
+        AND r.queue_id IS NULL AND r.datetime>dep.datetime ORDER BY r.datetime ASC LIMIT 1) AS ret_quality,
+       (SELECT r.notes FROM usage_records r WHERE r.car_id=dep.car_id AND r.record_type='return'
+        AND r.queue_id IS NULL AND r.datetime>dep.datetime ORDER BY r.datetime ASC LIMIT 1) AS ret_notes
+       FROM usage_records dep
+       LEFT JOIN cars c ON dep.car_id = c.id
+       LEFT JOIN drivers d ON dep.driver_id = d.id
+       WHERE ${gfWhere.join(' AND ')}
+       ORDER BY dep.datetime DESC LIMIT 1000`,
+      gfParams
+    );
+    const gfNormalized = gfRows.map(r => ({
+      id: 'gf-' + r.id,
+      date: r.date,
+      time_start: r.time_start ? r.time_start.substr(0, 5) : null,
+      time_end: r.actual_return ? r.actual_return.substr(11, 5) : null,
+      status: r.actual_return ? 'completed' : 'ongoing',
+      mission: r.destination,
+      destination: r.destination,
+      passengers: null, notes: r.dep_notes, cancel_reason: null,
+      requested_by: r.requested_by, requester_id: null,
+      purpose_category: null, travel_order_number: null,
+      signed_vehicle_chief: 0, signed_deputy_director: 0, signed_director: 0,
+      license_plate: r.license_plate, brand: r.brand, model: r.model,
+      driver_name: r.driver_name,
+      backup_driver_name: null, requester_display_name: null,
+      created_by_name: null, updated_by_name: null,
+      created_at: r.actual_departure, updated_at: r.actual_departure,
+      actual_departure: r.actual_departure,
+      mileage_start: r.mileage_start,
+      dep_quality: r.dep_quality, dep_auto_notes: r.dep_auto_notes, dep_notes: r.dep_notes,
+      actual_return: r.actual_return,
+      mileage_end: r.mileage_end,
+      ret_quality: r.ret_quality, ret_auto_notes: null, ret_notes: r.ret_notes,
+      km_used: (r.mileage_start && r.mileage_end && r.mileage_end > r.mileage_start)
+        ? r.mileage_end - r.mileage_start : null,
+      next_dep_mileage: null, prev_ret_mileage: null,
+      record_source: 'google_form',
+    }));
+    const allRows = [...rows, ...gfNormalized].sort((a, b) => {
+      const ad = a.actual_departure || (a.date + 'T' + (a.time_start || '00:00'));
+      const bd2 = b.actual_departure || (b.date + 'T' + (b.time_start || '00:00'));
+      return bd2.localeCompare(ad);
+    });
+    const gfCompleted = gfNormalized.filter(r => r.actual_return).length;
+    const combinedSummary = {
+      total: (summary?.total || 0) + gfNormalized.length,
+      completed: (summary?.completed || 0) + gfCompleted,
+      cancelled: summary?.cancelled || 0,
+      pending: (summary?.pending || 0) + gfNormalized.filter(r => !r.actual_return).length,
+      total_km: (summary?.total_km || 0) + gfNormalized.reduce((s, r) => s + (r.km_used || 0), 0),
+    };
+    return success({ records: allRows, summary: combinedSummary });
   }
 
   // ========== รายงานค่าใช้จ่ายรวม (ตามช่วงเวลา/รถ) ==========
