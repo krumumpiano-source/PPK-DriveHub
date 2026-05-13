@@ -56,6 +56,7 @@ function statusToRecordType(status) {
 async function findDriverByName(db, rawName) {
   const name = normalizeName(rawName);
   if (!name) return null;
+  // ลอง exact match ก่อน (title+first+last, first+last, name)
   let row = await dbFirst(db,
     `SELECT id FROM drivers
      WHERE deactivated_at IS NULL
@@ -65,22 +66,19 @@ async function findDriverByName(db, rawName) {
     [name, name, name]
   );
   if (row) return row.id;
+  // ลอง stripped (ตัดคำนำหน้าออก) exact match
   const stripped = name.replace(/^(นาย|นาง|นางสาว|น\.ส\.|ดร\.|ครู)\s*/, '').trim();
-  if (stripped !== name) {
+  if (stripped && stripped !== name) {
     row = await dbFirst(db,
       `SELECT id FROM drivers
        WHERE deactivated_at IS NULL
-         AND (name LIKE ? OR (COALESCE(first_name,'') || ' ' || COALESCE(last_name,'')) = ?)
+         AND ((COALESCE(first_name,'') || ' ' || COALESCE(last_name,'')) = ? OR name = ?)
        LIMIT 1`,
-      [`%${stripped}%`, stripped]
+      [stripped, stripped]
     );
     if (row) return row.id;
   }
-  row = await dbFirst(db,
-    `SELECT id FROM drivers WHERE deactivated_at IS NULL AND name LIKE ? LIMIT 1`,
-    [`%${name}%`]
-  );
-  return row?.id || null;
+  return null;
 }
 
 async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report) {
