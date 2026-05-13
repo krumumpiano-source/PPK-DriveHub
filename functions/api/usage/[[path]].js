@@ -36,13 +36,15 @@ export async function onRequest(context) {
     const id = generateUUID();
     const ts = now();
     await dbRun(env.DB,
-      `INSERT INTO usage_records (id, car_id, driver_id, record_type, datetime, mileage, location, notes, queue_id, data_quality, requester_name, record_source, purpose, destination, driver_name_manual, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'normal', ?, 'qr_manual', ?, ?, ?, ?)`,
+      `INSERT INTO usage_records (id, car_id, driver_id, record_type, datetime, mileage, location, notes, queue_id, data_quality, requester_name, record_source, purpose, destination, driver_name_manual, passengers, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'normal', ?, 'qr_manual', ?, ?, ?, ?, ?)`,
       [id, body.car_id, body.driver_id || null, body.record_type,
        body.datetime || ts, body.mileage || null,
        body.location || '', body.notes || '', body.queue_id || null,
        body.requester_name || null,
-       body.purpose || null, body.destination || null, body.driver_name_manual || null, ts]
+       body.purpose || null, body.destination || null, body.driver_name_manual || null,
+       body.passengers || null,
+       body.passengers || null, ts]
     );
     // Update car mileage if provided
     if (body.mileage && body.mileage > 0) {
@@ -134,15 +136,17 @@ export async function onRequest(context) {
 
     const id = generateUUID();
     const ts = now();
-    await dbRun(env.DB,
-      `INSERT INTO usage_records (id, car_id, driver_id, record_type, datetime, mileage, location, notes, queue_id, data_quality, requester_name, record_source, purpose, destination, driver_name_manual, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'normal', ?, ?, ?, ?, ?, ?)`,
+    await dbRun(env.DB,passengers, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'normal', ?, ?, ?, ?, ?, ?, ?)`,
       [id, body.car_id, body.driver_id || null, body.record_type,
        body.datetime || ts, body.mileage || null,
        body.location || '', body.notes || '', body.queue_id || null,
        body.requester_name || null,
        body.record_source || 'qr_logged_in',
-       body.purpose || null, body.destination || null, body.driver_name_manual || null, ts]
+       body.purpose || null, body.destination || null, body.driver_name_manual || null,
+       body.passengers
+       body.purpose || null, body.destination || null, body.driver_name_manual || null,
+       body.passengers || null, ts]
     );
     if (body.mileage && body.mileage > 0) {
       await dbRun(env.DB,

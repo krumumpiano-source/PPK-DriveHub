@@ -533,6 +533,11 @@
         </div>
 
         <div class="form-group">
+          <label for="passengers">ผู้โดยสาร</label>
+          <input type="text" id="passengers" name="passengers" placeholder="ชื่อผู้โดยสาร (ถ้ามี) คั่นด้วยเครื่องหมายจุลภาค">
+        </div>
+
+        <div class="form-group">
           <label for="purpose">วัตถุประสงค์ <span class="required">*</span></label>
           <select id="purpose" name="purpose" required>
             <option value="">-- เลือกวัตถุประสงค์ --</option>
@@ -783,6 +788,7 @@
         mileage: parseInt(mileageRaw),
         requester_name: (document.getElementById('requester_name').value || '').trim() || undefined,
         destination: (document.getElementById('destination').value || '').trim() || undefined,
+        passengers: (document.getElementById('passengers') && document.getElementById('passengers').value || '').trim() || undefined,
         purpose: document.getElementById('purpose').value || undefined,
         notes: ''
       };

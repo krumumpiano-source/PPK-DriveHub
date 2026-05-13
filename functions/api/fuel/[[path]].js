@@ -737,6 +737,77 @@ export async function onRequest(context) {
     });
   }
 
+  // ========== FUEL BUDGET ==========
+
+  // --- GET /api/fuel/budgets ---
+  if (path === '/api/fuel/budgets' && method === 'GET') {
+    try { requirePermission(user, 'fuel', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const fyBE = url.searchParams.get('fiscal_year_be');
+    const where = [];
+    const params = [];
+    if (fyBE) { where.push('fiscal_year_be = ?'); params.push(parseInt(fyBE)); }
+    const rows = await dbAll(env.DB,
+      `SELECT * FROM fuel_budget ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY fiscal_year_be DESC, fuel_type`,
+      params
+    );
+    return success(rows);
+  }
+
+  // --- POST /api/fuel/budgets ---
+  if (path === '/api/fuel/budgets' && method === 'POST') {
+    try { requirePermission(user, 'fuel', 'create'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const body = await parseBody(request);
+    if (!body?.fiscal_year_be || !body?.allocated_amount) return error('กรุณาระบุปีงบประมาณและวงเงินจัดสรร');
+    if (body.allocated_amount <= 0) return error('วงเงินจัดสรรต้องมากกว่า 0');
+    const id = generateUUID();
+    const ts = now();
+    await dbRun(env.DB,
+      `INSERT INTO fuel_budget (id, fiscal_year_be, fuel_type, allocated_liters, allocated_amount, notes, created_by, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, body.fiscal_year_be, body.fuel_type || null,
+       body.allocated_liters || null, body.allocated_amount,
+       body.notes || null, user.id, ts, ts]
+    );
+    await writeAuditLog(env, { action: 'create', table_name: 'fuel_budget', record_id: id, user_id: user.id, new_values: body });
+    return success({ id, message: 'บันทึกวงเงินจัดสรรเรียบร้อย' }, 201);
+  }
+
+  // --- PUT /api/fuel/budgets/:id ---
+  if (path.match(/^\/api\/fuel\/budgets\/[^/]+$/) && method === 'PUT') {
+    try { requirePermission(user, 'fuel', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const id = path.split('/').pop();
+    const body = await parseBody(request);
+    const existing = await dbFirst(env.DB, `SELECT id FROM fuel_budget WHERE id = ?`, [id]);
+    if (!existing) return error('ไม่พบข้อมูล', 404);
+    if (body.allocated_amount !== undefined && body.allocated_amount <= 0) return error('วงเงินจัดสรรต้องมากกว่า 0');
+    const ts = now();
+    await dbRun(env.DB,
+      `UPDATE fuel_budget SET fiscal_year_be = COALESCE(?, fiscal_year_be),
+        fuel_type = COALESCE(?, fuel_type),
+        allocated_liters = COALESCE(?, allocated_liters),
+        allocated_amount = COALESCE(?, allocated_amount),
+        notes = COALESCE(?, notes),
+        updated_at = ?
+       WHERE id = ?`,
+      [body.fiscal_year_be || null, body.fuel_type || null,
+       body.allocated_liters || null, body.allocated_amount || null,
+       body.notes || null, ts, id]
+    );
+    await writeAuditLog(env, { action: 'update', table_name: 'fuel_budget', record_id: id, user_id: user.id, new_values: body });
+    return success({ message: 'อัปเดตวงเงินจัดสรรเรียบร้อย' });
+  }
+
+  // --- DELETE /api/fuel/budgets/:id ---
+  if (path.match(/^\/api\/fuel\/budgets\/[^/]+$/) && method === 'DELETE') {
+    try { requirePermission(user, 'fuel', 'delete'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const id = path.split('/').pop();
+    const existing = await dbFirst(env.DB, `SELECT id FROM fuel_budget WHERE id = ?`, [id]);
+    if (!existing) return error('ไม่พบข้อมูล', 404);
+    await dbRun(env.DB, `DELETE FROM fuel_budget WHERE id = ?`, [id]);
+    await writeAuditLog(env, { action: 'delete', table_name: 'fuel_budget', record_id: id, user_id: user.id });
+    return success({ message: 'ลบวงเงินจัดสรรเรียบร้อย' });
+  }
+
   return error('Not Found', 404);
   } catch (e) {
     console.error('API Error:', e);

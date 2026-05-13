@@ -165,6 +165,7 @@ function renderNavigation() {
         if (hasQueue) nav += _sidebarItem('queue-manage.html', 'queue', '📅', 'จัดการคิวรถ');
         if (hasUsage) nav += _sidebarItem('usage-log.html', 'usage-log', '📝', 'บันทึกการใช้รถ');
         if (hasHistory) nav += _sidebarItem('driver-history.html', 'driver-history', '📋', 'คิวและประวัติส่วนตัว');
+        nav += _sidebarItem('qr-scan.html', 'qr-scan', '📱', 'สแกน QR Code');
     }
 
     // ── 2. ระบบน้ำมัน ──
@@ -177,21 +178,15 @@ function renderNavigation() {
 
     // ── 3. ระบบซ่อม ──
     var hasRepair = hasModulePermission('repair', 'view') || hasPermission(['admin']);
-    var hasTax = hasModulePermission('vehicles', 'view') || hasPermission(['admin']);
     var isDriver = user.role === 'driver' || !!user.driver_id;
-    if (hasRepair || hasTax || isDriver) {
+    if (hasRepair || isDriver) {
         nav += _sidebarSection('ระบบซ่อมและตรวจสภาพ');
         if (hasRepair) nav += _sidebarItem('repair.html', 'repair', '🔧', 'บันทึกการซ่อม');
         else if (isDriver) nav += _sidebarItem('repair.html', 'repair', '🔧', 'แจ้งซ่อม');
-        if (hasTax) nav += _sidebarItem('tax-insurance.html', 'tax-insurance', '📄', 'ภาษี/ประกัน/ตรอ.');
         nav += _sidebarItem('incident.html', 'incident', '🚨', 'รายงานเหตุการณ์');
     }
 
-    // ── 4. สแกน QR Code ──
-    nav += _sidebarSection('สแกน QR Code');
-    nav += _sidebarItem('qr-scan.html', 'qr-scan', '📱', 'สแกน QR Code');
-
-    // ── 5. รายงานและสถิติ ──
+    // ── 4. รายงานและสถิติ ──
     if (hasModulePermission('reports', 'view') || hasPermission(['admin'])) {
         nav += _sidebarSection('รายงานและสถิติ');
         nav += _sidebarItem('reports.html', 'reports', '📊', 'รายงานและสถิติ');
@@ -201,21 +196,29 @@ function renderNavigation() {
         nav += _sidebarItem('basic-info.html', 'basic-info', '📋', 'ข้อมูลรถและพนักงาน');
     }
 
-    // ── 6. ตั้งค่าส่วนตัว ──
+    // ── 5. ตั้งค่าส่วนตัว ──
     nav += _sidebarSection('ตั้งค่าส่วนตัว');
     nav += _sidebarItem('profile.html', 'profile', '👤', 'โปรไฟล์ของฉัน');
     nav += _sidebarItem('notifications.html', 'notifications', '🔔', 'การแจ้งเตือน');
     nav += _sidebarItem('change-password.html', 'change-password', '🔑', 'เปลี่ยนรหัสผ่าน');
-    nav += _sidebarItem('user-guide.html', 'user-guide', '📖', 'วิธีใช้งาน');
-    nav += _sidebarItem('about.html', 'about', 'ℹ️', 'เกี่ยวกับโปรแกรม');
 
-    // ── 7. ผู้ดูแลระบบ ──
+    // ── 6. ผู้ดูแลระบบ ──
     if (hasPermission(['admin', 'super_admin'])) {
         nav += _sidebarSection('ผู้ดูแลระบบ');
+
+        // — ยานพาหนะ —
+        nav += '<div class="sidebar-sub-label">ยานพาหนะ</div>';
         nav += _sidebarItem('vehicles.html', 'vehicles', '🚙', 'จัดการข้อมูลรถ');
         nav += _sidebarItem('drivers.html', 'drivers', '👷', 'จัดการพนักงานขับรถ');
+        nav += _sidebarItem('tax-insurance.html', 'tax-insurance', '📄', 'ภาษี/ประกัน/ตรอ.');
         nav += _sidebarItem('qr-manage.html', 'qr-manage', '📱', 'จัดการ QR Code');
+
+        // — ผู้ใช้งาน —
+        nav += '<div class="sidebar-sub-label">ผู้ใช้งาน</div>';
         nav += _sidebarItem('user-management.html', 'user-management', '👥', 'จัดการผู้ใช้');
+
+        // — ระบบ —
+        nav += '<div class="sidebar-sub-label">ระบบ</div>';
         nav += _sidebarItem('admin-settings.html', 'settings', '⚙️', 'ตั้งค่าระบบ');
         nav += _sidebarItem('mileage-correction.html', 'mileage-correction', '🔧', 'แก้ไขเลขไมล์');
         nav += _sidebarItem('audit-log.html', 'audit-log', '📜', 'บันทึกกิจกรรม');
@@ -231,6 +234,12 @@ function renderNavigation() {
         nav += '<button class="role-preview-btn" onclick="previewRole(\'staff\')"><span class="rp-icon">👤</span>เจ้าหน้าที่</button>';
         nav += '</div>';
     }
+
+    // ── ช่วยเหลือ ──
+    nav += _sidebarSection('ช่วยเหลือ');
+    nav += _sidebarItem('user-guide.html', 'user-guide', '📖', 'วิธีใช้งาน');
+    nav += _sidebarItem('glossary.html', 'glossary', '📚', 'อภิธานศัพท์');
+    nav += _sidebarItem('about.html', 'about', 'ℹ️', 'เกี่ยวกับโปรแกรม');
 
     nav += '<div class="sidebar-divider"></div>';
     nav += '<a class="sidebar-item sidebar-item-logout" href="#" onclick="logout();return false;">' +

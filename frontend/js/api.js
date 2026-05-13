@@ -153,6 +153,10 @@ const ACTION_MAP = {
   'resolveFuelInvoice':  (d) => API.put(`/api/fuel/invoices/${d.id}/resolve`, d),
   'getFuelLedger':        (d) => API.get('/api/fuel/ledger' + _q(d)),
   'getFuelMonthlySummary': (d) => API.get('/api/fuel/monthly-summary' + _q(d)),
+  'getFuelBudgets':       (d) => API.get('/api/fuel/budgets' + _q(d)),
+  'createFuelBudget':     (d) => API.post('/api/fuel/budgets', d),
+  'updateFuelBudget':     (d) => API.put(`/api/fuel/budgets/${d.id}`, d),
+  'deleteFuelBudget':     (d) => API.del(`/api/fuel/budgets/${d.id}`),
 
   // Repair
   'getRepairs':          (d) => API.get('/api/repair/log' + _q(d)),

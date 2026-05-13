@@ -233,6 +233,16 @@ img { max-width: 100%; height: auto; }
   margin-left: 4px;
 }
 
+.sidebar-sub-label {
+  padding: 10px 20px 3px;
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(165, 180, 252, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  user-select: none;
+}
+
 .sidebar-item {
   display: flex;
   align-items: center;

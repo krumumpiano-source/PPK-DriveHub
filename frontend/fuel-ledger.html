@@ -89,6 +89,7 @@
         <button class="tab-btn" data-tab="annual" onclick="switchTab('annual')">📊 สรุปประจำปี</button>
         <button class="tab-btn" data-tab="monthly" onclick="switchTab('monthly')">📄 สรุปรายเดือน</button>
         <button class="tab-btn" data-tab="purchase" onclick="switchTab('purchase')">📝 รายงานขอซื้อ</button>
+        <button class="tab-btn" data-tab="budget" onclick="switchTab('budget')">💰 งบประมาณ</button>
       </div>
 
       <!-- Tab 1: ทะเบียนควบคุมการจัดซื้อน้ำมัน -->
@@ -108,6 +109,7 @@
                 <th rowspan="2">เดือน</th>
                 <th colspan="2">รับ (จัดซื้อ)</th>
                 <th colspan="2">จ่าย (เบิกใช้)</th>
+                <th colspan="2" style="background:#e8f5e9;">คงเหลือสะสม</th>
                 <th rowspan="2">หมายเหตุ</th>
               </tr>
               <tr>
@@ -115,10 +117,12 @@
                 <th>จำนวนเงิน (บาท)</th>
                 <th>จำนวน (ลิตร)</th>
                 <th>จำนวนเงิน (บาท)</th>
+                <th style="background:#e8f5e9;">ลิตรสะสม</th>
+                <th style="background:#e8f5e9;">เงินสะสม (บาท)</th>
               </tr>
             </thead>
             <tbody id="ledgerBody">
-              <tr><td colspan="6" style="text-align:center;padding:30px;color:var(--color-text-muted);">กดปุ่ม 🔍 โหลดข้อมูล</td></tr>
+              <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--color-text-muted);">กดปุ่ม 🔍 โหลดข้อมูล</td></tr>
             </tbody>
             <tfoot id="ledgerFoot"></tfoot>
           </table>
@@ -241,6 +245,79 @@
           <div style="width:30%;"><div style="border-bottom:1px dotted #000;height:40px;"></div><div style="margin-top:4px;">ผู้จัดทำ</div><div style="font-size:11px;color:#666;">(.........................................)</div></div>
           <div style="width:30%;"><div style="border-bottom:1px dotted #000;height:40px;"></div><div style="margin-top:4px;">หัวหน้าเจ้าหน้าที่</div><div style="font-size:11px;color:#666;">(.........................................)</div></div>
           <div style="width:30%;"><div style="border-bottom:1px dotted #000;height:40px;"></div><div style="margin-top:4px;">ผู้อำนวยการโรงเรียน</div><div style="font-size:11px;color:#666;">(.........................................)</div></div>
+        </div>
+      </div>
+
+      <!-- Tab 5: งบประมาณน้ำมัน -->
+      <div id="tabBudget" class="tab-panel">
+        <div style="text-align:center;margin-bottom:16px;">
+          <h2 style="font-size:18px;margin:0;">💰 วงเงินจัดสรรน้ำมันเชื้อเพลิง</h2>
+          <p style="font-size:14px;color:var(--color-text-muted);margin:4px 0;">โรงเรียนพะเยาพิทยาคม</p>
+        </div>
+
+        <div class="filter-row no-print" style="margin-bottom:16px;">
+          <label>ปีงบประมาณ พ.ศ.:</label>
+          <select id="budgetFY" style="padding:8px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:14px;"></select>
+          <button class="btn-print" onclick="loadBudget()">🔍 โหลด</button>
+          <button class="btn-print" onclick="showBudgetForm()" style="background:#1565c0;">+ ตั้งวงเงิน</button>
+        </div>
+
+        <!-- Budget vs Actual comparison -->
+        <div id="budgetComparison"></div>
+
+        <!-- Form เพิ่ม/แก้ไขวงเงิน -->
+        <div id="budgetFormWrap" style="display:none;" class="card">
+          <h3 id="budgetFormTitle">ตั้งวงเงินจัดสรรน้ำมัน</h3>
+          <div class="filter-row" style="flex-direction:column;align-items:flex-start;gap:12px;">
+            <div style="display:flex;gap:12px;flex-wrap:wrap;width:100%;">
+              <div style="flex:1;min-width:150px;">
+                <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">ปีงบประมาณ พ.ศ.</label>
+                <select id="bfFY" style="width:100%;padding:8px;border:1px solid var(--color-border);border-radius:8px;font-size:14px;"></select>
+              </div>
+              <div style="flex:2;min-width:200px;">
+                <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">วงเงินที่ได้รับจัดสรร (บาท) <span style="color:red;">*</span></label>
+                <input type="number" id="bfAmount" min="0" step="0.01" placeholder="เช่น 150000.00" style="width:100%;padding:8px;border:1px solid var(--color-border);border-radius:8px;font-size:14px;">
+              </div>
+              <div style="flex:2;min-width:200px;">
+                <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">วงเงินลิตร (ถ้ามี)</label>
+                <input type="number" id="bfLiters" min="0" step="0.01" placeholder="เช่น 5000.00" style="width:100%;padding:8px;border:1px solid var(--color-border);border-radius:8px;font-size:14px;">
+              </div>
+              <div style="flex:2;min-width:200px;">
+                <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">หมายเหตุ</label>
+                <input type="text" id="bfNotes" placeholder="เช่น งบดำเนินงาน ปี 2569" style="width:100%;padding:8px;border:1px solid var(--color-border);border-radius:8px;font-size:14px;">
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-print" onclick="saveBudget()">💾 บันทึก</button>
+              <button class="btn-print" onclick="document.getElementById('budgetFormWrap').style.display='none'" style="background:#555;">✕ ยกเลิก</button>
+            </div>
+          </div>
+          <input type="hidden" id="bfEditId">
+        </div>
+
+        <!-- Budget table -->
+        <div class="card" style="margin-top:16px;">
+          <h3>รายการวงเงินตามปีงบประมาณ</h3>
+          <div style="overflow-x:auto;">
+            <table class="ledger-table" id="budgetListTable">
+              <thead>
+                <tr>
+                  <th>ปีงบประมาณ</th>
+                  <th>วงเงินจัดสรร (บาท)</th>
+                  <th>วงเงินจัดสรร (ลิตร)</th>
+                  <th>ใช้จริง (บาท)</th>
+                  <th>ใช้จริง (ลิตร)</th>
+                  <th>คงเหลือ (บาท)</th>
+                  <th>% ใช้</th>
+                  <th>หมายเหตุ</th>
+                  <th class="no-print">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="budgetListBody">
+                <tr><td colspan="9" style="text-align:center;padding:30px;color:var(--color-text-muted);">กดปุ่ม 🔍 โหลดข้อมูล</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -387,7 +464,7 @@
       }
     }
 
-    var tabIds = { ledger: 'tabLedger', annual: 'tabAnnual', monthly: 'tabMonthly', purchase: 'tabPurchase' };
+    var tabIds = { ledger: 'tabLedger', annual: 'tabAnnual', monthly: 'tabMonthly', purchase: 'tabPurchase', budget: 'tabBudget' };
     function switchTab(tab) {
       document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
       document.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.remove('active'); });
@@ -401,6 +478,7 @@
     function loadAll() {
       loadLedger();
       loadMonthlySummary();
+      loadBudget();
     }
     window.loadAll = loadAll;
 
@@ -441,6 +519,7 @@
 
       var html = '';
       var totalLiters = 0, totalAmount = 0;
+      var runLiters = 0, runAmount = 0;
       var startYear = fy - 543 - 1; // CE year of Oct
 
       for (var i = 0; i < 12; i++) {
@@ -450,14 +529,18 @@
         var row = monthMap[key] || { total_liters: 0, total_amount: 0 };
         totalLiters += row.total_liters;
         totalAmount += row.total_amount;
+        runLiters += row.total_liters;
+        runAmount += row.total_amount;
 
-        // School goes to gas station only → receive = dispense (ซื้อเท่าไหร่ก็ใช้เท่านั้น)
+        // School goes to gas station only → receive = dispense (ซื้อเท่าไหร่ก็ใช้เท่านั้น
         html += '<tr>' +
           '<td style="text-align:center;">' + thaiMonths[i] + ' ' + (ceYear + 543) + '</td>' +
           '<td class="num">' + row.total_liters.toFixed(2) + '</td>' +
           '<td class="num">' + row.total_amount.toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td>' +
           '<td class="num">' + row.total_liters.toFixed(2) + '</td>' +
           '<td class="num">' + row.total_amount.toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td>' +
+          '<td class="num" style="background:#e8f5e9;font-weight:600;">' + runLiters.toFixed(2) + '</td>' +
+          '<td class="num" style="background:#e8f5e9;font-weight:600;">' + runAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td>' +
           '<td></td></tr>';
       }
 
@@ -469,6 +552,8 @@
         '<td class="num">' + totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td>' +
         '<td class="num">' + totalLiters.toFixed(2) + '</td>' +
         '<td class="num">' + totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td>' +
+        '<td class="num" style="background:#c8e6c9;">' + runLiters.toFixed(2) + '</td>' +
+        '<td class="num" style="background:#c8e6c9;">' + runAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td>' +
         '<td></td></tr>';
     }
 
@@ -696,6 +781,151 @@
       document.getElementById('purchaseAmountText').textContent = totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 });
       document.getElementById('purchaseAmountWords').textContent = numberToThaiWords(totalAmount);
     }
+
+    /* ═══ Tab 5: งบประมาณน้ำมัน ═══ */
+    var budgetData = [];
+
+    function buildBudgetFYSelects() {
+      var selects = [document.getElementById('budgetFY'), document.getElementById('bfFY')];
+      var now = new Date();
+      var currentFY = now.getFullYear() + 543 + (now.getMonth() >= 9 ? 1 : 0);
+      selects.forEach(function(sel) {
+        if (!sel) return;
+        sel.innerHTML = '';
+        for (var y = currentFY; y >= currentFY - 10; y--) {
+          var opt = document.createElement('option');
+          opt.value = y; opt.textContent = 'พ.ศ. ' + y;
+          sel.appendChild(opt);
+        }
+      });
+    }
+
+    function loadBudget() {
+      var budgetFYEl = document.getElementById('budgetFY');
+      var fy = budgetFYEl ? budgetFYEl.value : (document.getElementById('fySelect') ? document.getElementById('fySelect').value : null);
+      if (!fy) return;
+      var body = document.getElementById('budgetListBody');
+      if (body) body.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;">⏳ กำลังโหลด...</td></tr>';
+      Promise.all([
+        apiCall('getFuelBudgets', { fiscal_year_be: parseInt(fy) }),
+        apiCall('getFuelLedger', { fiscal_year_be: parseInt(fy) })
+      ]).then(function(results) {
+        var bRes = results[0], lRes = results[1];
+        var budgets = (bRes.success && bRes.data) ? bRes.data : [];
+        var ledger = (lRes.success && lRes.data) ? lRes.data : null;
+        var actualAmount = ledger && ledger.grand_total ? (ledger.grand_total.total_amount || 0) : 0;
+        var actualLiters = ledger && ledger.grand_total ? (ledger.grand_total.total_liters || 0) : 0;
+        budgetData = budgets;
+        renderBudgetList(budgets, actualAmount, actualLiters);
+        renderBudgetComparison(budgets, actualAmount, actualLiters, parseInt(fy));
+      }).catch(function(err) {
+        if (body) body.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--color-danger-dark);">❌ ' + (err.message || 'โหลดไม่สำเร็จ') + '</td></tr>';
+      });
+    }
+    window.loadBudget = loadBudget;
+
+    function renderBudgetComparison(budgets, actualAmount, actualLiters, fy) {
+      var cmp = document.getElementById('budgetComparison');
+      if (!cmp) return;
+      var totalAllocated = budgets.reduce(function(s, b) { return s + (b.allocated_amount || 0); }, 0);
+      var pct = totalAllocated > 0 ? Math.min(100, actualAmount / totalAllocated * 100) : 0;
+      var color = pct > 90 ? '#c62828' : pct > 70 ? '#f57c00' : '#2e7d32';
+      var remaining = totalAllocated - actualAmount;
+      cmp.innerHTML = '<div class="summary-cards" style="margin-bottom:16px;">' +
+        '<div class="summary-card"><div class="label">วงเงินจัดสรร (บาท)</div><div class="value" style="color:#1565c0;">' + totalAllocated.toLocaleString('th-TH', {minimumFractionDigits:2}) + '</div></div>' +
+        '<div class="summary-card"><div class="label">ใช้จริง (บาท)</div><div class="value" style="color:' + color + ';">' + actualAmount.toLocaleString('th-TH', {minimumFractionDigits:2}) + '</div></div>' +
+        '<div class="summary-card"><div class="label">คงเหลือ (บาท)</div><div class="value" style="color:' + (remaining >= 0 ? '#2e7d32' : '#c62828') + ';">' + remaining.toLocaleString('th-TH', {minimumFractionDigits:2}) + '</div></div>' +
+        '<div class="summary-card"><div class="label">% ใช้ไป</div><div class="value" style="color:' + color + ';">' + pct.toFixed(1) + '%</div></div>' +
+        '</div>' +
+        (totalAllocated > 0 ? '<div style="background:#f5f5f5;border-radius:8px;padding:4px 8px;margin-bottom:12px;"><div style="height:18px;background:' + color + ';border-radius:6px;width:' + pct.toFixed(1) + '%;transition:width .5s;min-width:2px;"></div></div>' : '');
+    }
+
+    function renderBudgetList(budgets, actualAmount, actualLiters) {
+      var body = document.getElementById('budgetListBody');
+      if (!body) return;
+      if (!budgets.length) {
+        body.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--color-text-muted);">ยังไม่มีข้อมูลวงเงิน — กดปุ่ม &quot;+ ตั้งวงเงิน&quot;</td></tr>';
+        return;
+      }
+      var html = '';
+      budgets.forEach(function(b) {
+        var used = actualAmount;
+        var usedL = actualLiters;
+        var rem = (b.allocated_amount || 0) - used;
+        var pct = b.allocated_amount > 0 ? (used / b.allocated_amount * 100).toFixed(1) : '-';
+        var remColor = rem >= 0 ? 'var(--color-secondary-dark)' : 'var(--color-danger)';
+        html += '<tr>' +
+          '<td style="text-align:center;">พ.ศ. ' + b.fiscal_year_be + '</td>' +
+          '<td class="num">' + (b.allocated_amount || 0).toLocaleString('th-TH', {minimumFractionDigits:2}) + '</td>' +
+          '<td class="num">' + (b.allocated_liters ? (+b.allocated_liters).toFixed(2) : '-') + '</td>' +
+          '<td class="num">' + used.toLocaleString('th-TH', {minimumFractionDigits:2}) + '</td>' +
+          '<td class="num">' + (usedL ? (+usedL).toFixed(2) : '-') + '</td>' +
+          '<td class="num" style="color:' + remColor + ';font-weight:700;">' + rem.toLocaleString('th-TH', {minimumFractionDigits:2}) + '</td>' +
+          '<td class="num">' + pct + '%</td>' +
+          '<td>' + (b.notes || '-') + '</td>' +
+          '<td class="no-print" style="text-align:center;">' +
+            '<button onclick="editBudget(\'' + b.id + '\')" style="padding:4px 10px;border:1px solid #1565c0;border-radius:6px;background:#fff;color:#1565c0;cursor:pointer;margin-right:4px;">✏️</button>' +
+            '<button onclick="deleteBudget(\'' + b.id + '\')" style="padding:4px 10px;border:1px solid var(--color-danger);border-radius:6px;background:#fff;color:var(--color-danger);cursor:pointer;">🗑️</button>' +
+          '</td></tr>';
+      });
+      body.innerHTML = html;
+    }
+
+    function showBudgetForm() {
+      document.getElementById('budgetFormTitle').textContent = 'ตั้งวงเงินจัดสรรน้ำมัน';
+      document.getElementById('bfEditId').value = '';
+      document.getElementById('bfAmount').value = '';
+      document.getElementById('bfLiters').value = '';
+      document.getElementById('bfNotes').value = '';
+      document.getElementById('budgetFormWrap').style.display = '';
+    }
+    window.showBudgetForm = showBudgetForm;
+
+    function editBudget(id) {
+      var b = budgetData.find(function(x) { return x.id === id; });
+      if (!b) return;
+      document.getElementById('budgetFormTitle').textContent = 'แก้ไขวงเงินจัดสรรน้ำมัน';
+      document.getElementById('bfEditId').value = b.id;
+      var fySel = document.getElementById('bfFY');
+      if (fySel) fySel.value = b.fiscal_year_be;
+      document.getElementById('bfAmount').value = b.allocated_amount || '';
+      document.getElementById('bfLiters').value = b.allocated_liters || '';
+      document.getElementById('bfNotes').value = b.notes || '';
+      document.getElementById('budgetFormWrap').style.display = '';
+    }
+    window.editBudget = editBudget;
+
+    function saveBudget() {
+      var id = document.getElementById('bfEditId').value;
+      var fy = parseInt(document.getElementById('bfFY').value);
+      var amount = parseFloat(document.getElementById('bfAmount').value);
+      var litersVal = parseFloat(document.getElementById('bfLiters').value);
+      var liters = isNaN(litersVal) ? null : litersVal;
+      var notes = document.getElementById('bfNotes').value.trim();
+      if (!fy || isNaN(amount) || amount <= 0) { alert('กรุณาระบุปีงบประมาณและวงเงินจัดสรร'); return; }
+      var action = id ? 'updateFuelBudget' : 'createFuelBudget';
+      var data = { fiscal_year_be: fy, allocated_amount: amount, allocated_liters: liters, notes: notes };
+      if (id) data.id = id;
+      apiCall(action, data).then(function() {
+        document.getElementById('budgetFormWrap').style.display = 'none';
+        loadBudget();
+        showAlert('บันทึกวงเงินเรียบร้อย', 'success');
+      }).catch(function(err) { alert(err.message || 'บันทึกไม่สำเร็จ'); });
+    }
+    window.saveBudget = saveBudget;
+
+    function deleteBudget(id) {
+      if (!confirm('ยืนยันลบวงเงินนี้?')) return;
+      apiCall('deleteFuelBudget', { id: id }).then(function() {
+        loadBudget();
+        showAlert('ลบวงเงินเรียบร้อย', 'success');
+      }).catch(function(err) { alert(err.message || 'ลบไม่สำเร็จ'); });
+    }
+    window.deleteBudget = deleteBudget;
+
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(buildBudgetFYSelects, 200);
+    });
 
     /* ═══════════════════════════════════════════════════
        พิมพ์เอกสารราชการ — TH Sarabun New, A4, รูปแบบบันทึกข้อความ

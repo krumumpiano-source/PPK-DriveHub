@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>สมุดบันทึกการใช้รถราชการ - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'vehicle-logbook'; window.REQUIRE_AUTH = true;</script>
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="js/api.js"></script>
+  <script src="js/export-utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
+  <script src="common.js"></script>
+  <style>
+    .header { background: var(--gradient-primary); color: white; padding: 30px; text-align: center; }
+    .header h1 { font-size: 2em; margin-bottom: 8px; }
+    .header p { font-size: 1em; opacity: 0.92; }
+    .content { padding: 24px; }
+
+    .filter-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 20px;
+      background: var(--color-bg-light); padding: 16px; border-radius: var(--radius-xl); }
+    .filter-row .fg { display: flex; flex-direction: column; gap: 4px; }
+    .filter-row label { font-weight: 600; font-size: 13px; }
+    .filter-row input, .filter-row select { padding: 8px 12px; border: 1px solid var(--color-border);
+      border-radius: 8px; font-size: 14px; font-family: inherit; }
+
+    .btn-print { padding: 8px 20px; background: var(--color-primary); color: #fff; border: none;
+      border-radius: 8px; cursor: pointer; font-size: 14px; font-family: inherit; }
+    .btn-print:hover { opacity: .85; }
+
+    /* Stats bar */
+    .stats-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+    .stat-card { flex: 1; min-width: 120px; background: var(--color-bg-lighter); border-radius: 10px;
+      padding: 12px 16px; text-align: center; }
+    .stat-card .sl { font-size: 11px; color: var(--color-text-muted); }
+    .stat-card .sv { font-size: 1.3em; font-weight: 700; color: var(--color-primary); }
+
+    /* Logbook table */
+    .logbook-wrap { overflow-x: auto; }
+    table.logbook { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 1000px; }
+    table.logbook th { background: #1a5276; color: #fff; padding: 8px 6px; text-align: center;
+      border: 1px solid #154360; font-size: 12px; }
+    table.logbook td { padding: 7px 6px; border: 1px solid var(--color-border); vertical-align: middle; }
+    table.logbook tr:nth-child(even) td { background: #f9fbfd; }
+    table.logbook tr:hover td { background: #eaf4fb; }
+    table.logbook .num { text-align: right; }
+    table.logbook .ctr { text-align: center; }
+    table.logbook tfoot td { font-weight: 700; background: #eaf4fb; }
+
+    /* Status badges */
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .badge-complete { background: #e8f5e9; color: #2e7d32; }
+    .badge-depart-only { background: #fff3e0; color: #e65100; }
+    .badge-gap { background: #fce4ec; color: #b71c1c; }
+
+    /* Anomaly highlight */
+    .row-anomaly td { background: #fff8e1 !important; }
+    .row-gap td { background: #fce4ec !important; }
+
+    /* Pagination */
+    .pagination { display: flex; gap: 6px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
+    .pg-btn { padding: 6px 12px; border: 1px solid var(--color-border); border-radius: 6px;
+      background: #fff; cursor: pointer; font-size: 13px; }
+    .pg-btn.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .pg-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    @media print {
+      .header, .filter-row, .pagination, .no-print, #navigation, .stats-bar { display: none !important; }
+      .logbook-wrap { overflow: visible; }
+      table.logbook { min-width: unset; font-size: 10pt; }
+      table.logbook th { background: #000 !important; color: #fff !important; -webkit-print-color-adjust: exact; }
+      body { font-family: "TH Sarabun New", Sarabun, sans-serif; }
+      .print-title { display: block !important; text-align: center; font-size: 16pt; font-weight: 700; margin-bottom: 8pt; }
+      .print-sub { display: block !important; text-align: center; font-size: 12pt; margin-bottom: 4pt; }
+    }
+    .print-title, .print-sub { display: none; }
+    .info-footer { background: var(--color-bg-light); padding: 12px 24px; text-align: center;
+      color: var(--color-text-muted); font-size: 0.85em; margin-top: 20px; }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div id="navigation"></div>
+    <div class="header">
+      <h1>📓 สมุดบันทึกการใช้รถราชการ</h1>
+      <p>บันทึกการออก-กลับ แสดงระยะทาง ผู้ขับ ผู้โดยสาร และวัตถุประสงค์</p>
+    </div>
+
+    <div class="content">
+      <div id="alertContainer"></div>
+
+      <!-- Filters -->
+      <div class="filter-row no-print">
+        <div class="fg">
+          <label>รถ</label>
+          <select id="filterCar" style="min-width:160px;">
+            <option value="">— ทุกคัน —</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>จาก</label>
+          <input type="date" id="dateFrom" class="thai-datepicker">
+        </div>
+        <div class="fg">
+          <label>ถึง</label>
+          <input type="date" id="dateTo" class="thai-datepicker">
+        </div>
+        <div class="fg">
+          <label>คนขับ</label>
+          <input type="text" id="filterDriver" placeholder="ค้นหาชื่อคนขับ" style="min-width:140px;">
+        </div>
+        <div class="fg">
+          <label>วัตถุประสงค์</label>
+          <select id="filterPurpose" style="min-width:160px;">
+            <option value="">ทั้งหมด</option>
+            <option value="school_passenger">ภารกิจโดยสาร</option>
+            <option value="official_document">รับส่งเอกสาร</option>
+            <option value="other">อื่นๆ</option>
+          </select>
+        </div>
+        <div class="fg" style="justify-content:flex-end;gap:6px;flex-direction:row;flex-wrap:wrap;">
+          <button class="btn-print" onclick="loadLogbook()">🔍 แสดง</button>
+          <button class="btn-print" onclick="window.print()" style="background:#555;">🖨️ พิมพ์</button>
+          <button class="btn-print" onclick="exportExcel()" style="background:#217346;">📥 Excel</button>
+        </div>
+      </div>
+
+      <!-- Print header (visible only when printing) -->
+      <div class="print-title">สมุดบันทึกการใช้รถราชการ</div>
+      <div class="print-sub">โรงเรียนพะเยาพิทยาคม</div>
+      <div class="print-sub" id="printPeriod"></div>
+
+      <!-- Stats -->
+      <div class="stats-bar" id="statsBar" style="display:none;"></div>
+
+      <!-- Table -->
+      <div id="tableWrap" class="logbook-wrap">
+        <div style="text-align:center;padding:40px;color:var(--color-text-muted);">
+          เลือกช่วงวันที่แล้วกด <strong>🔍 แสดง</strong>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination no-print" id="pagination"></div>
+    </div>
+
+    <!-- Signature block (print only) -->
+    <div style="display:none;" class="sig-print" id="sigBlock">
+      <div style="display:flex;justify-content:space-between;margin:40px 24px 20px;text-align:center;font-size:13px;">
+        <div style="width:30%;">
+          <div style="border-bottom:1px dotted #000;height:36px;"></div>
+          <div style="margin-top:4px;font-weight:600;">ผู้จัดทำ</div>
+          <div style="font-size:11px;color:#666;">(.........................................)</div>
+        </div>
+        <div style="width:30%;">
+          <div style="border-bottom:1px dotted #000;height:36px;"></div>
+          <div style="margin-top:4px;font-weight:600;">ผู้ตรวจสอบ</div>
+          <div style="font-size:11px;color:#666;">(.........................................)</div>
+        </div>
+        <div style="width:30%;">
+          <div style="border-bottom:1px dotted #000;height:36px;"></div>
+          <div style="margin-top:4px;font-weight:600;">ผู้อำนวยการโรงเรียน</div>
+          <div style="font-size:11px;color:#666;">(.........................................)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-footer">
+      <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+    </div>
+  </div>
+
+  <script>
+    var allTrips = [];
+    var filteredTrips = [];
+    var vehicles = [];
+    var PAGE_SIZE = 50;
+    var currentPage = 1;
+
+    var TH_MONTHS = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+      'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+    var PURPOSE_LABELS = {
+      school_passenger: 'ภารกิจโดยสาร',
+      official_document: 'รับส่งเอกสาร',
+      other: 'อื่นๆ'
+    };
+
+    function fmtDateThai(s) {
+      if (!s) return '-';
+      var p = s.split(/[T ]/)[0].split('-');
+      return parseInt(p[2]) + ' ' + TH_MONTHS[parseInt(p[1])] + ' ' + (parseInt(p[0]) + 543);
+    }
+    function fmtTime(s) {
+      if (!s) return '-';
+      var t = s.split(/[T ]/);
+      return t.length > 1 ? t[1].substr(0,5) : s.substr(0,5);
+    }
+    function fmtLocalDate(d) {
+      return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    }
+
+    function waitForCommon() {
+      return new Promise(function(r) {
+        if (typeof apiCall === 'function') { r(); return; }
+        var c = 0, t = setInterval(function() {
+          if (typeof apiCall === 'function' || ++c > 50) { clearInterval(t); r(); }
+        }, 100);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', async function() {
+      await waitForCommon();
+      if (typeof requireAuth === 'function' && !requireAuth()) return;
+      // Default dates: this month
+      var now = new Date();
+      document.getElementById('dateFrom').value = fmtLocalDate(new Date(now.getFullYear(), now.getMonth(), 1));
+      document.getElementById('dateTo').value = fmtLocalDate(now);
+      setTimeout(function() {
+        if (typeof initAllThaiDateTimePickers === 'function') initAllThaiDateTimePickers();
+      }, 400);
+      await loadVehicles();
+      loadLogbook();
+    });
+
+    async function loadVehicles() {
+      try {
+        var r = await apiCall('getVehicles', {});
+        if (r.success && r.data && r.data.vehicles) {
+          vehicles = r.data.vehicles;
+          var sel = document.getElementById('filterCar');
+          vehicles.forEach(function(v) {
+            var o = document.createElement('option');
+            o.value = v.id;
+            o.textContent = v.license_plate + (v.brand ? ' ' + v.brand : '');
+            sel.appendChild(o);
+          });
+        }
+      } catch(e) { console.error('loadVehicles', e); }
+    }
+
+    async function loadLogbook() {
+      var carId = document.getElementById('filterCar').value;
+      var dateFrom = document.getElementById('dateFrom').value;
+      var dateTo = document.getElementById('dateTo').value;
+      if (!dateFrom || !dateTo) { alert('กรุณาเลือกช่วงวันที่'); return; }
+
+      document.getElementById('tableWrap').innerHTML = '<div style="text-align:center;padding:40px;color:var(--color-text-muted);">⏳ กำลังโหลด...</div>';
+      document.getElementById('statsBar').style.display = 'none';
+
+      try {
+        var params = { date_from: dateFrom, date_to: dateTo };
+        if (carId) params.car_id = carId;
+        // Load departure and return records
+        var [depRes, retRes] = await Promise.all([
+          apiCall('getUsageRecords', Object.assign({}, params, { record_type: 'departure', limit: 2000 })),
+          apiCall('getUsageRecords', Object.assign({}, params, { record_type: 'return', limit: 2000 }))
+        ]);
+
+        var departures = depRes.success ? (Array.isArray(depRes.data) ? depRes.data : []) : [];
+        var returns = retRes.success ? (Array.isArray(retRes.data) ? retRes.data : []) : [];
+
+        allTrips = pairTrips(departures, returns);
+        applyFilter();
+      } catch(e) {
+        document.getElementById('tableWrap').innerHTML = '<div style="text-align:center;padding:40px;color:var(--color-danger-dark);">❌ ' + (e.message || 'โหลดไม่สำเร็จ') + '</div>';
+      }
+    }
+    window.loadLogbook = loadLogbook;
+
+    // จับคู่ departure กับ return ของรถคันเดียวกัน ตามลำดับเวลา
+    function pairTrips(departures, returns) {
+      // Group by car_id
+      var depByCar = {}, retByCar = {};
+      departures.forEach(function(d) {
+        (depByCar[d.car_id] = depByCar[d.car_id] || []).push(d);
+      });
+      returns.forEach(function(r) {
+        (retByCar[r.car_id] = retByCar[r.car_id] || []).push(r);
+      });
+
+      var trips = [];
+      Object.keys(depByCar).forEach(function(carId) {
+        var deps = depByCar[carId].slice().sort(function(a,b) { return a.datetime.localeCompare(b.datetime); });
+        var rets = (retByCar[carId] || []).slice().sort(function(a,b) { return a.datetime.localeCompare(b.datetime); });
+        var usedRet = {};
+
+        deps.forEach(function(dep) {
+          // หา return แรกที่เกิดหลัง departure
+          var matched = null;
+          for (var i = 0; i < rets.length; i++) {
+            if (!usedRet[rets[i].id] && rets[i].datetime >= dep.datetime) {
+              matched = rets[i];
+              usedRet[rets[i].id] = true;
+              break;
+            }
+          }
+          var dist = null;
+          if (dep.mileage && matched && matched.mileage && matched.mileage > dep.mileage) {
+            dist = matched.mileage - dep.mileage;
+          }
+          trips.push({
+            id: dep.id,
+            car_id: dep.car_id,
+            license_plate: dep.license_plate || '',
+            brand: dep.brand || '',
+            driver_name: dep.driver_name || dep.driver_name_manual || '-',
+            depart_datetime: dep.datetime,
+            depart_mileage: dep.mileage,
+            return_datetime: matched ? matched.datetime : null,
+            return_mileage: matched ? matched.mileage : null,
+            distance: dist,
+            purpose: dep.purpose || matched && matched.purpose || '',
+            purpose_detail: dep.purpose_detail || (matched && matched.purpose_detail) || '',
+            destination: dep.destination || (matched && matched.destination) || '',
+            requester_name: dep.requester_name || (matched && matched.requester_name) || '',
+            passengers: dep.passengers || (matched && matched.passengers) || '',
+            notes: dep.notes || '',
+            queue_id: dep.queue_id,
+            status: matched ? 'complete' : 'depart_only',
+            data_quality: dep.data_quality || ''
+          });
+        });
+
+        // Unmatched returns (มี return แต่ไม่มี departure ในช่วงนี้)
+        rets.forEach(function(ret) {
+          if (!usedRet[ret.id]) {
+            trips.push({
+              id: ret.id,
+              car_id: ret.car_id,
+              license_plate: ret.license_plate || '',
+              brand: ret.brand || '',
+              driver_name: ret.driver_name || ret.driver_name_manual || '-',
+              depart_datetime: null,
+              depart_mileage: null,
+              return_datetime: ret.datetime,
+              return_mileage: ret.mileage,
+              distance: null,
+              purpose: ret.purpose || '',
+              destination: ret.destination || '',
+              requester_name: ret.requester_name || '',
+              passengers: ret.passengers || '',
+              notes: ret.notes || '',
+              status: 'gap',
+              data_quality: ret.data_quality || ''
+            });
+          }
+        });
+      });
+
+      // Sort by depart_datetime desc (latest first), then by return if no depart
+      trips.sort(function(a, b) {
+        var da = a.depart_datetime || a.return_datetime || '';
+        var db = b.depart_datetime || b.return_datetime || '';
+        return db.localeCompare(da);
+      });
+      return trips;
+    }
+
+    function applyFilter() {
+      var driverQ = document.getElementById('filterDriver').value.trim().toLowerCase();
+      var purposeQ = document.getElementById('filterPurpose').value;
+      filteredTrips = allTrips.filter(function(t) {
+        if (driverQ && t.driver_name.toLowerCase().indexOf(driverQ) === -1) return false;
+        if (purposeQ && t.purpose !== purposeQ) return false;
+        return true;
+      });
+      currentPage = 1;
+      renderStats();
+      renderTable();
+      renderPagination();
+    }
+    window.applyFilter = applyFilter;
+
+    function renderStats() {
+      var total = filteredTrips.length;
+      var complete = filteredTrips.filter(function(t) { return t.status === 'complete'; }).length;
+      var totalDist = filteredTrips.reduce(function(s,t) { return s + (t.distance || 0); }, 0);
+      var sb = document.getElementById('statsBar');
+      sb.style.display = 'flex';
+      sb.innerHTML =
+        '<div class="stat-card"><div class="sl">เที่ยวทั้งหมด</div><div class="sv">' + total + '</div></div>' +
+        '<div class="stat-card"><div class="sl">ครบทั้งออก-กลับ</div><div class="sv" style="color:#2e7d32;">' + complete + '</div></div>' +
+        '<div class="stat-card"><div class="sl">ออกยังไม่กลับ</div><div class="sv" style="color:#e65100;">' + (total - complete - filteredTrips.filter(function(t){return t.status==='gap';}).length) + '</div></div>' +
+        '<div class="stat-card"><div class="sl">ระยะทางรวม (กม.)</div><div class="sv" style="color:#1565c0;">' + totalDist.toLocaleString() + '</div></div>';
+
+      var dateFrom = document.getElementById('dateFrom').value;
+      var dateTo = document.getElementById('dateTo').value;
+      document.getElementById('printPeriod').textContent = (dateFrom ? fmtDateThai(dateFrom) : '') + ' — ' + (dateTo ? fmtDateThai(dateTo) : '');
+    }
+
+    function renderTable() {
+      var start = (currentPage - 1) * PAGE_SIZE;
+      var pageData = filteredTrips.slice(start, start + PAGE_SIZE);
+
+      if (!pageData.length) {
+        document.getElementById('tableWrap').innerHTML =
+          '<div style="text-align:center;padding:40px;color:var(--color-text-muted);">ไม่มีข้อมูลในช่วงเวลาที่เลือก</div>';
+        return;
+      }
+
+      var html = '<table class="logbook">' +
+        '<thead><tr>' +
+        '<th rowspan="2" style="width:36px;">ลำดับ</th>' +
+        '<th rowspan="2">ทะเบียนรถ</th>' +
+        '<th rowspan="2">คนขับ</th>' +
+        '<th rowspan="2">ผู้ขอใช้/ผู้โดยสาร</th>' +
+        '<th colspan="2">ออกเดินทาง</th>' +
+        '<th colspan="2">กลับมาถึง</th>' +
+        '<th rowspan="2">ปลายทาง/ภารกิจ</th>' +
+        '<th rowspan="2">ระยะทาง<br>(กม.)</th>' +
+        '<th rowspan="2">สถานะ</th>' +
+        '<th rowspan="2" class="no-print">หมายเหตุ</th>' +
+        '</tr><tr>' +
+        '<th>วัน/เดือน/ปี</th><th>เวลา / ไมล์</th>' +
+        '<th>วัน/เดือน/ปี</th><th>เวลา / ไมล์</th>' +
+        '</tr></thead><tbody>';
+
+      pageData.forEach(function(t, i) {
+        var rowClass = t.status === 'gap' ? 'row-gap' : (t.data_quality === 'gap_record' ? 'row-anomaly' : '');
+        var depDate = t.depart_datetime ? fmtDateThai(t.depart_datetime) : '-';
+        var depTime = t.depart_datetime ? fmtTime(t.depart_datetime) : '-';
+        var depMile = t.depart_mileage ? t.depart_mileage.toLocaleString() : '-';
+        var retDate = t.return_datetime ? fmtDateThai(t.return_datetime) : '-';
+        var retTime = t.return_datetime ? fmtTime(t.return_datetime) : '-';
+        var retMile = t.return_mileage ? t.return_mileage.toLocaleString() : '-';
+        var purposeLabel = PURPOSE_LABELS[t.purpose] || t.purpose_detail || t.purpose || '-';
+        var destText = [t.destination, t.purpose_detail].filter(Boolean).join(' · ') || purposeLabel;
+        var passengerText = [t.requester_name, t.passengers].filter(Boolean).join(', ') || '-';
+        var badge = t.status === 'complete'
+          ? '<span class="badge badge-complete">✅ ครบ</span>'
+          : t.status === 'gap'
+            ? '<span class="badge badge-gap">⚠️ ไม่มีออก</span>'
+            : '<span class="badge badge-depart-only">🚗 ยังไม่กลับ</span>';
+
+        html += '<tr class="' + rowClass + '">' +
+          '<td class="ctr">' + (start + i + 1) + '</td>' +
+          '<td>' + t.license_plate + (t.brand ? '<br><span style="font-size:11px;color:#888;">' + t.brand + '</span>' : '') + '</td>' +
+          '<td>' + t.driver_name + '</td>' +
+          '<td style="font-size:12px;">' + passengerText + '</td>' +
+          '<td>' + depDate + '</td>' +
+          '<td class="num">' + depTime + '<br><span style="font-size:11px;color:#888;">' + depMile + ' กม.</span></td>' +
+          '<td>' + retDate + '</td>' +
+          '<td class="num">' + retTime + '<br><span style="font-size:11px;color:#888;">' + retMile + ' กม.</span></td>' +
+          '<td style="max-width:160px;">' + destText + '</td>' +
+          '<td class="num">' + (t.distance != null ? t.distance.toLocaleString() : '-') + '</td>' +
+          '<td class="ctr">' + badge + '</td>' +
+          '<td class="no-print" style="font-size:11px;color:#888;max-width:100px;">' + (t.notes || '') + '</td>' +
+          '</tr>';
+      });
+
+      // Footer totals
+      var totalDist = filteredTrips.reduce(function(s,t) { return s + (t.distance || 0); }, 0);
+      html += '</tbody><tfoot><tr>' +
+        '<td colspan="9" style="text-align:center;">รวม ' + filteredTrips.length + ' เที่ยว</td>' +
+        '<td class="num">' + totalDist.toLocaleString() + '</td>' +
+        '<td colspan="2"></td></tr></tfoot></table>';
+
+      document.getElementById('tableWrap').innerHTML = html;
+
+      // Signature block: show when printing
+      document.getElementById('sigBlock').style.display = 'block';
+    }
+
+    function renderPagination() {
+      var totalPages = Math.ceil(filteredTrips.length / PAGE_SIZE);
+      var pg = document.getElementById('pagination');
+      if (totalPages <= 1) { pg.innerHTML = ''; return; }
+      var html = '<span style="font-size:13px;color:var(--color-text-muted);">หน้า ' + currentPage + '/' + totalPages + ' (ทั้งหมด ' + filteredTrips.length + ' รายการ)</span>';
+      html += ' <button class="pg-btn" ' + (currentPage === 1 ? 'disabled' : '') + ' onclick="goPage(' + (currentPage-1) + ')">◀ ก่อนหน้า</button>';
+      for (var p = Math.max(1, currentPage-2); p <= Math.min(totalPages, currentPage+2); p++) {
+        html += ' <button class="pg-btn ' + (p === currentPage ? 'active' : '') + '" onclick="goPage(' + p + ')">' + p + '</button>';
+      }
+      html += ' <button class="pg-btn" ' + (currentPage === totalPages ? 'disabled' : '') + ' onclick="goPage(' + (currentPage+1) + ')">ถัดไป ▶</button>';
+      pg.innerHTML = html;
+    }
+
+    function goPage(p) {
+      currentPage = p;
+      renderTable();
+      renderPagination();
+      window.scrollTo(0, 0);
+    }
+    window.goPage = goPage;
+
+    function exportExcel() {
+      if (!filteredTrips.length) { alert('ไม่มีข้อมูล'); return; }
+      var headers = ['ลำดับ','ทะเบียนรถ','ยี่ห้อ','คนขับ','ผู้ขอใช้รถ','ผู้โดยสาร',
+        'วันที่ออก','เวลาออก','ไมล์ออก',
+        'วันที่กลับ','เวลากลับ','ไมล์กลับ',
+        'ปลายทาง','วัตถุประสงค์','ระยะทาง (กม.)','สถานะ','หมายเหตุ'];
+      var rows = filteredTrips.map(function(t, i) {
+        return [
+          i+1, t.license_plate, t.brand, t.driver_name, t.requester_name, t.passengers,
+          t.depart_datetime ? t.depart_datetime.split('T')[0] : '',
+          t.depart_datetime ? fmtTime(t.depart_datetime) : '',
+          t.depart_mileage || '',
+          t.return_datetime ? t.return_datetime.split('T')[0] : '',
+          t.return_datetime ? fmtTime(t.return_datetime) : '',
+          t.return_mileage || '',
+          t.destination, PURPOSE_LABELS[t.purpose] || t.purpose || '',
+          t.distance != null ? t.distance : '',
+          t.status === 'complete' ? 'ครบ' : t.status === 'gap' ? 'ไม่มีออก' : 'ยังไม่กลับ',
+          t.notes || ''
+        ];
+      });
+      if (typeof ExportUtils !== 'undefined' && ExportUtils.exportExcelSheets) {
+        ExportUtils.exportExcelSheets({
+          filename: 'สมุดบันทึกใช้รถ_' + (document.getElementById('dateFrom').value || 'all'),
+          sheets: [{ sheetName: 'บันทึกการใช้รถ', headers: headers, rows: rows }]
+        });
+      } else {
+        // Fallback CSV
+        var csv = [headers].concat(rows).map(function(r) {
+          return r.map(function(c) { return '"' + String(c||'').replace(/"/g, '""') + '"'; }).join(',');
+        }).join('\n');
+        var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'สมุดบันทึกใช้รถ.csv';
+        a.click();
+      }
+    }
+    window.exportExcel = exportExcel;
+  </script>
+</body>
+
+</html>
