@@ -7,8 +7,7 @@ import { dbFirst, dbRun, generateUUID, now } from '../_helpers.js';
 import { getGoogleAccessToken, readSheet } from './google-auth.js';
 
 const COL = { TS: 0, DRIVER: 1, STATUS: 2, DATE: 3, REQUESTER: 4, DEST: 5, MILEAGE: 6 };
-const SHEET_NAME = 'Form_Responses1';
-const RANGE = `${SHEET_NAME}!A2:H`;
+const RANGE = 'A2:H';
 
 function normalizeName(s) {
   if (!s) return '';
@@ -85,8 +84,10 @@ async function findDriverByName(db, rawName) {
 
 async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report) {
   const car = await dbFirst(db,
-    `SELECT id FROM cars WHERE license_plate = ? OR registration_number = ? LIMIT 1`,
-    [licensePlate, licensePlate]
+    `SELECT id FROM cars WHERE license_plate = ? OR registration_number = ?
+     OR REPLACE(license_plate,' ','') = REPLACE(?,' ','')
+     LIMIT 1`,
+    [licensePlate, licensePlate, licensePlate]
   );
   if (!car) {
     report.error = `ไม่พบรถทะเบียน "${licensePlate}" ในระบบ`;
