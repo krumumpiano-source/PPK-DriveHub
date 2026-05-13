@@ -1,5 +1,5 @@
-// Auto-Heal shared logic — ใช้ร่วมกันระหว่าง usage API และ gform-sync
-import { dbFirst, dbRun, generateUUID, now, notifyAllAdmins } from '../_helpers.js';
+﻿// Auto-Heal shared logic — ใช้ร่วมกันระหว่าง usage API และ gform-sync
+import { dbFirst, dbRun, generateUUID, now, notifyAllAdmins, sendTelegramMessage } from '../_helpers.js';
 
 const SCORE_DEDUCT_AUTO = 1;
 
@@ -11,7 +11,7 @@ async function deductScore(db, driverId) {
   );
 }
 
-export async function autoHeal(db, newRecord) {
+export async function autoHeal(db, newRecord, env) {
   const healed = [];
   const ts = now();
 
@@ -101,12 +101,35 @@ export async function autoHeal(db, newRecord) {
 
   if (healed.length > 0) {
     const car = await dbFirst(db, 'SELECT license_plate FROM cars WHERE id = ?', [newRecord.car_id]);
+    const carLabel = car?.license_plate || newRecord.car_id;
     const types = healed.map(h => h.type).join(', ');
     await notifyAllAdmins(db, 'data_quality',
-      'Auto-Heal: ' + (car?.license_plate || newRecord.car_id),
-      'ระบบสร้างข้อมูลอัตโนมัติ (' + types + ') สำหรับรถ ' + (car?.license_plate || '') + ' — กรุณาตรวจสอบในบันทึกการใช้งาน'
+      'Auto-Heal: ' + carLabel,
+      'ระบบสร้างข้อมูลอัตโนมัติ (' + types + ') สำหรับรถ ' + carLabel + ' — กรุณาตรวจสอบในบันทึกการใช้งาน'
     );
-  }
 
+    // Telegram notification
+    if (env) {
+      for (const h of healed) {
+        let driverId = null;
+        let msg = '';
+        if (h.type === 'auto_return') {
+          // driver forgot to record return
+          const dep = await dbFirst(db, 'SELECT driver_id, datetime FROM usage_records WHERE id = ?', [h.for_departure]);
+          driverId = dep?.driver_id;
+          const driver = driverId ? await dbFirst(db, 'SELECT COALESCE(name, first_name || \' \' || last_name) AS name FROM drivers WHERE id = ?', [driverId]) : null;
+          msg = `⚠️ <b>ลืมบันทึกกลับจากเดินทาง</b>\n🚗 รถ: ${carLabel}\n👤 พนักงาน: ${driver?.name || '-'}\n📅 วันออก: ${(dep?.datetime || '').substring(0, 10)}\n📌 ระบบสร้าง "กลับ" อัตโนมัติแล้ว — กรุณาตรวจสอบ`;
+        } else if (h.type === 'auto_departure') {
+          // driver forgot to record departure
+          driverId = newRecord.driver_id;
+          const driver = driverId ? await dbFirst(db, 'SELECT COALESCE(name, first_name || \' \' || last_name) AS name FROM drivers WHERE id = ?', [driverId]) : null;
+          msg = `⚠️ <b>ลืมบันทึกก่อนออกเดินทาง</b>\n🚗 รถ: ${carLabel}\n👤 พนักงาน: ${driver?.name || '-'}\n📅 วันกลับ: ${(newRecord.datetime || '').substring(0, 10)}\n📌 ระบบสร้าง "ออก" อัตโนมัติแล้ว — กรุณาตรวจสอบ`;
+        } else if (h.type === 'gap_record') {
+          msg = `🔍 <b>พบการใช้รถที่ไม่มีบันทึก</b>\n🚗 รถ: ${carLabel}\n📏 ช่วงห่าง: ${h.gap_km} กม.\n📌 ระบบสร้าง gap record อัตโนมัติแล้ว — กรุณาตรวจสอบ`;
+        }
+        if (msg) await sendTelegramMessage(env, msg);
+      }
+    }
+  }
   return healed;
 }

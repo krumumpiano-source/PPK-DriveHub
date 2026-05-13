@@ -154,7 +154,7 @@ async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report
       }
       // Auto-Heal: สร้าง record ที่หายไปอัตโนมัติ
       try {
-        const healed = await autoHeal(db, { id, car_id: carId, driver_id: driverId, record_type: recordType, datetime: datetime || ts, mileage: mileage || null, queue_id: null });
+        const healed = await autoHeal(db, { id, car_id: carId, driver_id: driverId, record_type: recordType, datetime: datetime || ts, mileage: mileage || null, queue_id: null }, env);
         if (healed.length > 0) report.auto_healed = (report.auto_healed || 0) + healed.length;
       } catch (_) {}
       report.inserted++;
