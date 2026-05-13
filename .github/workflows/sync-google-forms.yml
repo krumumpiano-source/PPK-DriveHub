@@ -1,0 +1,25 @@
+name: Sync Google Form to DriveHub
+
+on:
+  schedule:
+    # ทุก 5 นาที (เวลา UTC แต่ cron ทุก 5 นาทีเหมือนกันทุก timezone)
+    - cron: '*/5 * * * *'
+  workflow_dispatch:    # ให้กดรันมือได้จาก Actions tab
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger sync endpoint
+        run: |
+          set -e
+          response=$(curl -sS -w "\n%{http_code}" -X POST \
+            -H "X-Cron-Token: ${{ secrets.SYNC_CRON_TOKEN }}" \
+            "https://ppk-drivehub.pages.dev/api/cron/sync-google-forms")
+          body=$(echo "$response" | head -n -1)
+          code=$(echo "$response" | tail -n 1)
+          echo "HTTP $code"
+          echo "$body"
+          if [ "$code" != "200" ]; then
+            exit 1
+          fi

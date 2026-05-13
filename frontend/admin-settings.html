@@ -392,6 +392,36 @@
               </div>
             </div>
 
+            <!-- ===== ซิงก์ Google Form ===== -->
+            <div class="settings-section" id="gformSyncSection">
+              <div class="section-title">🔗 ซิงก์ข้อมูลจาก Google Form (ระบบเก่า)</div>
+              <div class="help-text" style="margin-bottom:15px;">
+                ดึงข้อมูลการใช้รถจาก Google Form ทั้ง 7 คัน เข้าระบบอัตโนมัติทุก 5 นาที (ผ่าน GitHub Actions)<br>
+                ข้อมูลที่นำเข้าแล้วจะไม่นำเข้าซ้ำ — ระบบตรวจ duplicate ด้วยประทับเวลาของ Form
+              </div>
+
+              <!-- Config status -->
+              <div id="gformConfigStatus" style="margin-bottom:16px; padding:12px; background:#f8f9fa; border-radius:8px; font-size:0.9em;">
+                <span style="color:#999">กำลังตรวจสอบการตั้งค่า…</span>
+              </div>
+
+              <!-- ปุ่ม Sync ตอนนี้ -->
+              <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+                <button type="button" class="btn btn-primary" id="gformSyncBtn" onclick="triggerGformSync()">
+                  ⚡ Sync ตอนนี้
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="loadGformLog()">
+                  🔄 รีเฟรช Log
+                </button>
+              </div>
+
+              <!-- Log ล่าสุด -->
+              <div style="font-weight:600; margin-bottom:8px; color:var(--color-text);">ประวัติการ Sync ล่าสุด</div>
+              <div id="gformLogTable" style="overflow-x:auto;">
+                <span style="color:#999; font-size:0.9em;">กำลังโหลด…</span>
+              </div>
+            </div>
+
             <!-- ปุ่มบันทึก -->
             <div class="btn-row">
               <button type="button" class="btn btn-danger" onclick="resetToDefault()">
@@ -479,6 +509,8 @@
 
           loadSettings();
           loadFuelTypes();
+          loadGformConfig();
+          loadGformLog();
         });
 
         function renderMaintenanceItems() {
@@ -975,6 +1007,97 @@
           } catch (err) {
             console.error('Error saving settings:', err);
             showAlert(typeof handleError !== 'undefined' ? handleError(err) : 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'error');
+          }
+        }
+
+        // ============================================================
+        // Google Form Sync
+        // ============================================================
+        async function loadGformConfig() {
+          var el = document.getElementById('gformConfigStatus');
+          if (!el) return;
+          try {
+            var r = await apiCall('getGformSyncConfig', {});
+            if (!r || !r.success) { el.innerHTML = '<span style="color:#e74c3c">โหลดการตั้งค่าไม่สำเร็จ</span>'; return; }
+            var d = r.data;
+            var rows = [];
+            rows.push('<b>Service Account:</b> ' + (d.has_service_account ? '<span style="color:#27ae60">✓ ตั้งค่าแล้ว</span>' : '<span style="color:#e74c3c">✗ ยังไม่ตั้ง <code>GOOGLE_SERVICE_ACCOUNT_JSON</code></span>'));
+            rows.push('<b>Cron Token:</b> ' + (d.has_cron_token ? '<span style="color:#27ae60">✓ ตั้งค่าแล้ว</span>' : '<span style="color:#e74c3c">✗ ยังไม่ตั้ง <code>SYNC_CRON_TOKEN</code></span>'));
+            if (d.sheet_map_error) {
+              rows.push('<b>Sheet Map:</b> <span style="color:#e74c3c">JSON ผิดรูปแบบ: ' + escHtml(d.sheet_map_error) + '</span>');
+            } else if (d.sheet_map) {
+              var plates = Object.keys(d.sheet_map);
+              rows.push('<b>Sheet Map:</b> <span style="color:#27ae60">✓ ' + plates.length + ' คัน: ' + plates.map(function(p){return escHtml(p);}).join(', ') + '</span>');
+            } else {
+              rows.push('<b>Sheet Map:</b> <span style="color:#e74c3c">✗ ยังไม่ตั้ง <code>GFORM_SHEET_MAP</code></span>');
+            }
+            var ready = d.has_service_account && d.has_cron_token && d.sheet_map && !d.sheet_map_error;
+            el.innerHTML = rows.join('<br>') + '<br><br><b>สถานะ:</b> ' + (ready ? '<span style="color:#27ae60;font-weight:bold;">✓ พร้อมใช้งาน</span>' : '<span style="color:#e67e22;font-weight:bold;">⚠ ยังตั้งค่าไม่ครบ ดูคู่มือด้านล่าง</span>');
+            document.getElementById('gformSyncBtn').disabled = !ready;
+          } catch (e) {
+            el.innerHTML = '<span style="color:#e74c3c">โหลดไม่สำเร็จ: ' + escHtml(e.message) + '</span>';
+          }
+        }
+
+        async function loadGformLog() {
+          var tbl = document.getElementById('gformLogTable');
+          if (!tbl) return;
+          tbl.innerHTML = '<span style="color:#999;font-size:0.9em;">กำลังโหลด…</span>';
+          try {
+            var r = await apiCall('getGformSyncLog', { limit: 10 });
+            if (!r || !r.success || !r.data || r.data.length === 0) {
+              tbl.innerHTML = '<div style="color:#999;font-size:0.9em;padding:10px;">ยังไม่มีประวัติการ Sync</div>';
+              return;
+            }
+            var statusLabel = { success:'<span style="color:#27ae60">✓ สำเร็จ</span>', error:'<span style="color:#e74c3c">✗ ผิดพลาด</span>', partial:'<span style="color:#e67e22">⚠ บางส่วน</span>', running:'<span style="color:#3498db">⏳ กำลังทำ</span>' };
+            var html = '<table style="width:100%;border-collapse:collapse;font-size:0.85em;">';
+            html += '<thead><tr style="background:#f0f0f0;"><th style="padding:8px 10px;text-align:left;">เวลาเริ่ม</th><th>ประเภท</th><th>สถานะ</th><th>นำเข้า</th><th>ข้าม</th><th>ผิดพลาด</th><th>รายละเอียด</th></tr></thead><tbody>';
+            r.data.forEach(function(log) {
+              var dt = log.started_at ? new Date(log.started_at).toLocaleString('th-TH') : '-';
+              var trigger = log.trigger_source === 'manual' ? '👤 manual' : (log.trigger_source === 'cron' ? '⏰ cron' : log.trigger_source || '-');
+              var detail = '';
+              if (log.error_message) {
+                detail = '<span style="color:#e74c3c" title="' + escHtml(log.error_message) + '">ดูข้อผิดพลาด</span>';
+              } else if (log.details) {
+                var plates = Object.keys(log.details);
+                detail = plates.map(function(p){
+                  var s = log.details[p];
+                  return escHtml(p) + ':+' + (s.inserted||0);
+                }).join(' ');
+              }
+              html += '<tr style="border-bottom:1px solid #eee;">';
+              html += '<td style="padding:7px 10px;white-space:nowrap;">' + dt + '</td>';
+              html += '<td style="padding:7px 10px;text-align:center;">' + trigger + '</td>';
+              html += '<td style="padding:7px 10px;text-align:center;">' + (statusLabel[log.status] || log.status) + '</td>';
+              html += '<td style="padding:7px 10px;text-align:center;color:#27ae60;font-weight:bold;">' + (log.rows_inserted || 0) + '</td>';
+              html += '<td style="padding:7px 10px;text-align:center;color:#999;">' + (log.rows_skipped || 0) + '</td>';
+              html += '<td style="padding:7px 10px;text-align:center;color:#e74c3c;">' + (log.rows_failed || 0) + '</td>';
+              html += '<td style="padding:7px 10px;">' + detail + '</td>';
+              html += '</tr>';
+            });
+            html += '</tbody></table>';
+            tbl.innerHTML = html;
+          } catch (e) {
+            tbl.innerHTML = '<span style="color:#e74c3c;font-size:0.9em;">โหลด log ไม่สำเร็จ: ' + escHtml(e.message) + '</span>';
+          }
+        }
+
+        async function triggerGformSync() {
+          var btn = document.getElementById('gformSyncBtn');
+          if (btn) { btn.disabled = true; btn.textContent = '⏳ กำลัง Sync…'; }
+          try {
+            var r = await apiCall('runGformSync', {});
+            if (r && r.success) {
+              var d = r.data;
+              showAlert('Sync สำเร็จ — นำเข้า ' + (d.rows_inserted||0) + ' รายการ, ข้าม ' + (d.rows_skipped||0) + ' (ซ้ำ), ผิดพลาด ' + (d.rows_failed||0), 'success');
+            } else {
+              showAlert('Sync ไม่สำเร็จ: ' + (r && r.error ? r.error : 'ไม่ทราบสาเหตุ'), 'error');
+            }
+          } catch (e) {
+            showAlert('Sync ไม่สำเร็จ: ' + e.message, 'error');
+          } finally {
+            if (btn) { btn.disabled = false; btn.textContent = '⚡ Sync ตอนนี้'; }
+            loadGformLog();
           }
         }
 

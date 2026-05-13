@@ -5,6 +5,7 @@ import {
   extractParam, writeAuditLog, validatePasswordComplexity,
   sendTelegramMessage, createNotification
 } from '../../_helpers.js';
+import { runGoogleFormSync } from '../../_lib/gform-sync.js';
 
 export async function onRequest(context) {
   try {
@@ -16,6 +17,47 @@ export async function onRequest(context) {
 
   try { requireAdmin(user); } catch { return error('ต้องเป็น Admin เท่านั้น', 403); }
 
+  // ============================================================
+  // Google Form sync
+  // ============================================================
+  if (path === '/api/admin/gform-sync/run' && method === 'POST') {
+    try {
+      const result = await runGoogleFormSync(env, 'manual', user.email || user.id || null);
+      await writeAuditLog(env.DB, user.id, user.displayName, 'gform_sync_run', 'admin', result.logId, {
+        inserted: result.rows_inserted, skipped: result.rows_skipped, failed: result.rows_failed,
+      });
+      return success(result);
+    } catch (e) {
+      return error('Sync failed: ' + e.message, 500);
+    }
+  }
+
+  if (path === '/api/admin/gform-sync/log' && method === 'GET') {
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100);
+    const logs = await dbAll(env.DB,
+      `SELECT id, started_at, finished_at, status, trigger_source, triggered_by,
+              sheets_processed, rows_fetched, rows_inserted, rows_skipped, rows_failed,
+              error_message, details
+       FROM gform_sync_log ORDER BY started_at DESC LIMIT ?`,
+      [limit]
+    );
+    return success(logs.map(l => ({ ...l, details: l.details ? JSON.parse(l.details) : null })));
+  }
+
+  if (path === '/api/admin/gform-sync/config' && method === 'GET') {
+    // คืนสถานะ config (ไม่เปิดเผย service account JSON)
+    let sheetMap = null, sheetMapError = null;
+    if (env.GFORM_SHEET_MAP) {
+      try { sheetMap = JSON.parse(env.GFORM_SHEET_MAP); }
+      catch (e) { sheetMapError = e.message; }
+    }
+    return success({
+      has_service_account: !!env.GOOGLE_SERVICE_ACCOUNT_JSON,
+      has_cron_token: !!env.SYNC_CRON_TOKEN,
+      sheet_map: sheetMap,
+      sheet_map_error: sheetMapError,
+    });
+  }
 
   if (path === '/api/admin/users' && method === 'GET') {
     const includeInactive = url.searchParams.get('include_inactive') === 'true';
