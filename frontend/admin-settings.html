@@ -459,14 +459,22 @@
                   ⚡ Sync ตอนนี้
                 </button>
                 <button type="button" class="btn btn-secondary" onclick="loadGformLog()">
-                  🔄 รีเฟรช Log
+                  🔄 รีเฟรช
                 </button>
               </div>
 
-              <!-- Log ล่าสุด -->
-              <div style="font-weight:600; margin-bottom:8px; color:var(--color-text);">ประวัติการ Sync ล่าสุด</div>
-              <div id="gformLogTable" style="overflow-x:auto;">
-                <span style="color:#999; font-size:0.9em;">กำลังโหลด…</span>
+              <!-- สถานะ Sync ล่าสุด (summary card) -->
+              <div id="gformLastSync" style="margin-bottom:12px; padding:12px 16px; background:#f8f9fa; border-radius:8px; font-size:0.92em;">
+                <span style="color:#999;">กำลังโหลด…</span>
+              </div>
+
+              <!-- ประวัติ (collapsible) -->
+              <div>
+                <button type="button" onclick="toggleGformLog()" id="gformLogToggleBtn"
+                  style="background:none;border:none;cursor:pointer;color:var(--color-primary);font-weight:600;font-size:0.9em;padding:4px 0;font-family:inherit;">
+                  ▶ ดูประวัติการ Sync
+                </button>
+                <div id="gformLogTable" style="display:none; overflow-x:auto; margin-top:10px;"></div>
               </div>
             </div>
 
@@ -1092,16 +1100,36 @@
         }
 
         async function loadGformLog() {
+          var summary = document.getElementById('gformLastSync');
           var tbl = document.getElementById('gformLogTable');
-          if (!tbl) return;
-          tbl.innerHTML = '<span style="color:#999;font-size:0.9em;">กำลังโหลด…</span>';
+          if (!summary || !tbl) return;
+          summary.innerHTML = '<span style="color:#999;font-size:0.9em;">กำลังโหลด…</span>';
+          tbl.innerHTML = '';
           try {
-            var r = await apiCall('getGformSyncLog', { limit: 10 });
+            var r = await apiCall('getGformSyncLog', { limit: 20 });
             if (!r || !r.success || !r.data || r.data.length === 0) {
-              tbl.innerHTML = '<div style="color:#999;font-size:0.9em;padding:10px;">ยังไม่มีประวัติการ Sync</div>';
+              summary.innerHTML = '<span style="color:#999;">ยังไม่มีประวัติการ Sync</span>';
               return;
             }
-            var statusLabel = { success:'<span style="color:#27ae60">✓ สำเร็จ</span>', error:'<span style="color:#e74c3c">✗ ผิดพลาด</span>', partial:'<span style="color:#e67e22">⚠ บางส่วน</span>', running:'<span style="color:#3498db">⏳ กำลังทำ</span>' };
+            var statusLabel = { success:'<span style="color:#27ae60;font-weight:bold;">✓ สำเร็จ</span>', error:'<span style="color:#e74c3c;font-weight:bold;">✗ ผิดพลาด</span>', partial:'<span style="color:#e67e22;font-weight:bold;">⚠ บางส่วน</span>', running:'<span style="color:#3498db;font-weight:bold;">⏳ กำลังทำ</span>' };
+            var statusIcon = { success:'color:#27ae60', error:'color:#e74c3c', partial:'color:#e67e22', running:'color:#3498db' };
+
+            // --- Summary card: latest entry ---
+            var last = r.data[0];
+            var lastDt = last.started_at ? new Date(last.started_at).toLocaleString('th-TH') : '-';
+            var lastTrigger = last.trigger_source === 'manual' ? '👤 manual' : (last.trigger_source === 'cron' ? '⏰ อัตโนมัติ' : last.trigger_source || '-');
+            var summaryStyle = statusIcon[last.status] || '';
+            summary.innerHTML =
+              '<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;">' +
+              '<div><span style="color:var(--color-text-muted);font-size:0.85em;">Sync ล่าสุด</span><br><b style="font-size:0.95em;">' + lastDt + '</b></div>' +
+              '<div><span style="color:var(--color-text-muted);font-size:0.85em;">สถานะ</span><br>' + (statusLabel[last.status] || last.status) + '</div>' +
+              '<div><span style="color:var(--color-text-muted);font-size:0.85em;">ประเภท</span><br><span style="font-size:0.9em;">' + lastTrigger + '</span></div>' +
+              '<div><span style="color:var(--color-text-muted);font-size:0.85em;">นำเข้า</span><br><b style="color:#27ae60;">' + (last.rows_inserted || 0) + '</b></div>' +
+              '<div><span style="color:var(--color-text-muted);font-size:0.85em;">ข้าม</span><br><span style="color:#999;">' + (last.rows_skipped || 0) + '</span></div>' +
+              '<div><span style="color:var(--color-text-muted);font-size:0.85em;">ผิดพลาด</span><br><span style="color:#e74c3c;">' + (last.rows_failed || 0) + '</span></div>' +
+              '</div>';
+
+            // --- History table (hidden by default) ---
             var html = '<table style="width:100%;border-collapse:collapse;font-size:0.85em;">';
             html += '<thead><tr style="background:#f0f0f0;"><th style="padding:8px 10px;text-align:left;">เวลาเริ่ม</th><th>ประเภท</th><th>สถานะ</th><th>นำเข้า</th><th>ข้าม</th><th>ผิดพลาด</th><th>รายละเอียด</th></tr></thead><tbody>';
             r.data.forEach(function(log) {
@@ -1112,10 +1140,7 @@
                 detail = '<span style="color:#e74c3c" title="' + escHtml(log.error_message) + '">ดูข้อผิดพลาด</span>';
               } else if (log.details) {
                 var plates = Object.keys(log.details);
-                detail = plates.map(function(p){
-                  var s = log.details[p];
-                  return escHtml(p) + ':+' + (s.inserted||0);
-                }).join(' ');
+                detail = plates.map(function(p){ var s = log.details[p]; return escHtml(p) + ':+' + (s.inserted||0); }).join(' ');
               }
               html += '<tr style="border-bottom:1px solid #eee;">';
               html += '<td style="padding:7px 10px;white-space:nowrap;">' + dt + '</td>';
@@ -1129,8 +1154,26 @@
             });
             html += '</tbody></table>';
             tbl.innerHTML = html;
+
+            // Update toggle button label
+            var btn = document.getElementById('gformLogToggleBtn');
+            if (btn) btn.textContent = (tbl.style.display === 'none' ? '▶' : '▼') + ' ดูประวัติการ Sync (' + r.data.length + ' รายการ)';
+
           } catch (e) {
-            tbl.innerHTML = '<span style="color:#e74c3c;font-size:0.9em;">โหลด log ไม่สำเร็จ: ' + escHtml(e.message) + '</span>';
+            summary.innerHTML = '<span style="color:#e74c3c;font-size:0.9em;">โหลด log ไม่สำเร็จ: ' + escHtml(e.message) + '</span>';
+          }
+        }
+
+        function toggleGformLog() {
+          var tbl = document.getElementById('gformLogTable');
+          var btn = document.getElementById('gformLogToggleBtn');
+          if (!tbl) return;
+          var isOpen = tbl.style.display !== 'none';
+          tbl.style.display = isOpen ? 'none' : 'block';
+          if (btn) {
+            var count = tbl.querySelector('tbody') ? tbl.querySelector('tbody').querySelectorAll('tr').length : '';
+            var countLabel = count ? ' (' + count + ' รายการ)' : '';
+            btn.textContent = (isOpen ? '▶' : '▼') + ' ดูประวัติการ Sync' + countLabel;
           }
         }
 
