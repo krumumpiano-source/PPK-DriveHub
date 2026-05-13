@@ -3,7 +3,7 @@
 //   GOOGLE_SERVICE_ACCOUNT_JSON  = JSON string ของ service account
 //   GFORM_SHEET_MAP              = JSON: { "<license_plate>": "<spreadsheet_id>", ... }
 
-import { dbFirst, dbRun, generateUUID, now } from '../_helpers.js';
+import { dbAll, dbFirst, dbRun, generateUUID, now } from '../_helpers.js';
 import { getGoogleAccessToken, readSheet } from './google-auth.js';
 import { autoHeal } from './auto-heal.js';
 
@@ -103,6 +103,15 @@ async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report
   }
   report.fetched = rows.length;
 
+  // โหลด form_timestamps ที่มีอยู่แล้วทั้งหมดใน 1 query (แทนที่จะ query ทีละแถว)
+  const existingRows = await dbAll(db,
+    `SELECT record_type || '|' || form_timestamp AS key
+     FROM usage_records
+     WHERE record_source = 'google_form' AND car_id = ? AND form_timestamp IS NOT NULL`,
+    [carId]
+  );
+  const existingKeys = new Set(existingRows.map(r => r.key));
+
   for (const r of rows) {
     if (!r || r.length === 0) continue;
     const tsRaw = r[COL.TS];
@@ -111,13 +120,8 @@ async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report
     const recordType = statusToRecordType(r[COL.STATUS]);
     if (!recordType) { report.skipped++; continue; }
 
-    const existing = await dbFirst(db,
-      `SELECT id FROM usage_records
-       WHERE record_source = 'google_form' AND car_id = ? AND record_type = ? AND form_timestamp = ?
-       LIMIT 1`,
-      [carId, recordType, formTimestamp]
-    );
-    if (existing) { report.skipped++; continue; }
+    // dedup ใน memory แทน query D1
+    if (existingKeys.has(recordType + '|' + formTimestamp)) { report.skipped++; continue; }
 
     const datetime = parseFormDate(r[COL.DATE], tsRaw) || parseFormDate(tsRaw, '');
     const mileage = parseMileage(r[COL.MILEAGE]);
@@ -142,6 +146,8 @@ async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report
          requester || null, destination || null, driverName || null,
          formTimestamp, ts]
       );
+      // mark as inserted in memory set to avoid re-insert within same sync
+      existingKeys.add(recordType + '|' + formTimestamp);
 
       if (mileage) {
         await dbRun(db,
