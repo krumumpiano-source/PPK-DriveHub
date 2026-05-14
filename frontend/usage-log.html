@@ -462,21 +462,7 @@
       var month = String(date.getMonth() + 1).padStart(2, '0');
       var day = String(date.getDate()).padStart(2, '0');
       return year + '-' + month + '-' + day;
-    }
-
-    function formatDateThai(dateStr) {
-      if (!dateStr) return '-';
-      try {
-        var date = new Date(dateStr + 'T00:00:00');
-        var thaiMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-        var day = date.getDate();
-        var month = thaiMonths[date.getMonth()];
-        var year = date.getFullYear() + 543;
-        return day + ' ' + month + ' ' + year;
-      } catch (e) {
-        return dateStr;
-      }
-    }
+    }
 
     async function loadVehicles() {
       try {

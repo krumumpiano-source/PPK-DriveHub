@@ -478,16 +478,7 @@
         return ((d.name || d.full_name || '') + ' ' + (d.phone || '') + ' ' + (d.license_number || '')).toLowerCase().indexOf(q) !== -1;
       });
       renderDrivers(filtered);
-    }
-
-    function formatDateThai(dateStr) {
-      if (!dateStr) return '-';
-      try {
-        var d = new Date(dateStr + 'T00:00:00');
-        var months = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-        return d.getDate() + ' ' + months[d.getMonth()] + ' ' + (d.getFullYear() + 543);
-      } catch (e) { return dateStr; }
-    }
+    }
 
     var fuelMap = { diesel: 'ดีเซล', gasoline: 'เบนซิน', hybrid: 'ไฮบริด', electric: 'ไฟฟ้า' };
 

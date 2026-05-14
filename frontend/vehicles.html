@@ -1134,14 +1134,7 @@
         if (result.success && result.data && result.data.vehicles && result.data.vehicles.length > 0) {
           var html = '';
           result.data.vehicles.forEach(function (v) {
-            var deactivatedDate = '';
-            if (v.deactivated_at) {
-              try {
-                var _d = new Date(v.deactivated_at);
-                var _mn = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-                deactivatedDate = _d.getDate() + ' ' + _mn[_d.getMonth()] + ' ' + (_d.getFullYear() + 543);
-              } catch(e) { deactivatedDate = v.deactivated_at; }
-            }
+            var deactivatedDate = v.deactivated_at ? formatDateThai(v.deactivated_at.substring(0, 10)) : '';
             html += '<div class="vehicle-card" style="border-color:#fecaca;">';
             html += '<div class="vehicle-card-header" style="background:#fef2f2;">';
             html += '<div class="vehicle-license" style="color:#991b1b;">' + (v.license_plate || '-') + '</div>';

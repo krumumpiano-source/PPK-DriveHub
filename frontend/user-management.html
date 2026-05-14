@@ -725,7 +725,7 @@
         var r = _requests[i];
         var rawName = (r.name || '').trim();
         var nameWithTitle = (r.title ? r.title : '') + (rawName || r.email || '—');
-        var date = r.created_at ? (function(s){ var _d=new Date(s); var _mn=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม']; return _d.getDate()+' '+_mn[_d.getMonth()]+' '+(_d.getFullYear()+543); })(r.created_at) : '';
+        var date = r.created_at ? formatDateThai(r.created_at.substring(0, 10)) : '-';
         html += '<div class="request-card">';
         html += '<div class="request-info">';
         html += '<div class="request-name">' + escHtml(nameWithTitle) + '</div>';

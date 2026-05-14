@@ -1516,21 +1516,7 @@
         hideLoading('historyList');
         document.getElementById('historyList').innerHTML = '<div class="empty-state">' + handleError(error) + '</div>';
       }
-    }
-
-    function formatDateThai(dateStr) {
-      if (!dateStr) return '-';
-      try {
-        var date = new Date(dateStr + 'T00:00:00');
-        var thaiMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-        var day = date.getDate();
-        var month = thaiMonths[date.getMonth()];
-        var year = date.getFullYear() + 543;
-        return day + ' ' + month + ' ' + year;
-      } catch (e) {
-        return dateStr;
-      }
-    }
+    }
 
     function showLoading(elementId) {
       document.getElementById(elementId).innerHTML = '<div class="loading">กำลังโหลดข้อมูล...</div>';

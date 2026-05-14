@@ -174,19 +174,8 @@
     function fmtDate(d) { return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
     function fmtNum(n) { return Number(n||0).toLocaleString('th-TH'); }
     function fmtMoney(n) { return Number(n||0).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-    function fmtDateTH(s) {
-      if (!s) return '-';
-      var d = new Date(s);
-      if (isNaN(d)) return String(s);
-      var m = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-      return d.getDate()+' '+m[d.getMonth()]+' '+(d.getFullYear()+543);
-    }
-    function fmtDateTimeTH(s) {
-      if (!s) return null;
-      var d = new Date(s);
-      if (isNaN(d)) return String(s);
-      return fmtDateTH(s)+' '+pad(d.getHours())+':'+pad(d.getMinutes());
-    }
+    function fmtDateTH(s) { return formatDateThai(s); }
+    function fmtDateTimeTH(s) { return s ? formatDateTimeThai(s) : null; }
     function htmlEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
     // ── แทรกบันทึก "ใช้รถโดยไม่บันทึกข้อมูล" ระหว่างคิวที่ไมล์ไม่ต่อเนื่อง ─
@@ -697,14 +686,9 @@
     function exportTripsExcel(p,ds) {
       var recs=p.records||[];
       if (!recs.length) { alert('ไม่มีข้อมูล'); return; }
-      var mth=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
       function fmtDT(s){
         if(!s) return 'ไม่มีการบันทึก';
-        var dt=new Date(s);
-        if(isNaN(dt)) return s;
-        var hh=String(dt.getHours()).padStart(2,'0');
-        var mm=String(dt.getMinutes()).padStart(2,'0');
-        return dt.getDate()+' '+mth[dt.getMonth()]+' '+(dt.getFullYear()+543)+' '+hh+':'+mm+'น.';
+        return formatDateTimeThai(s);
       }
       var hdr=['วันที่','เวลาสแกนออก','เวลาสแกนเข้า','ทะเบียน','ผู้ขอ','จุดหมาย','ภารกิจ','คนขับ','ก่อนออกเดินทาง','กลับมาจากเดินทาง','เลขไมล์ก่อนออก','เลขไมล์กลับมา','ระยะทาง (กม.)','หมายเหตุ'];
       // Pre-compute avg km per car (เฉพาะค่าจริง) สำหรับ outlier detection
@@ -720,7 +704,7 @@
         var redCells=[];
         var rows=list.map(function(r,i){
           var d=new Date(r.date);
-          var thd=isNaN(d)?r.date||'':d.getDate()+' '+mth[d.getMonth()]+' '+(d.getFullYear()+543);
+          var thd=isNaN(d)?r.date||'':formatDateThai(r.date);
           // คำนวณระยะทาง: ใช้ไมล์จริงก่อน ถ้าขาดให้ใช้ประมาณ (prev_ret / next_dep) แต่ไม่แสดงในช่องเลขไมล์
           var ms=r.mileage_start, me=r.mileage_end;
           var effStart=ms!=null?ms:(r.prev_ret_mileage!=null?r.prev_ret_mileage:null);
@@ -818,11 +802,9 @@
     function buildPrintTrips(p) {
       var recs=p.records||[];
       if (!recs.length) return '<p>ไม่มีข้อมูล</p>';
-      var mth=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
       function fmtDT(s){
         if(!s) return 'ไม่มีการบันทึก';
-        var dt=new Date(s); if(isNaN(dt)) return s;
-        return dt.getDate()+' '+mth[dt.getMonth()]+' '+(dt.getFullYear()+543)+' '+String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0')+'น.';
+        return formatDateTimeThai(s);
       }
       var h='<table><thead><tr>'
         +'<th>ที่</th><th>วันที่</th><th>สแกนออก</th><th>สแกนเข้า</th><th>ทะเบียน</th>'
@@ -832,7 +814,7 @@
         +'</tr></thead><tbody>';
       recs.forEach(function(r,i) {
         var d=new Date(r.date);
-        var thd=isNaN(d)?r.date||'':d.getDate()+' '+mth[d.getMonth()]+' '+(d.getFullYear()+543);
+        var thd=isNaN(d)?r.date||'':formatDateThai(r.date);
         var effStart=r.mileage_start!=null?r.mileage_start:(r.prev_ret_mileage!=null?r.prev_ret_mileage:null);
         var effEnd=r.mileage_end!=null?r.mileage_end:(r.next_dep_mileage!=null?r.next_dep_mileage:null);
         var km=(effStart!=null&&effEnd!=null&&effEnd>effStart)?effEnd-effStart:'-';

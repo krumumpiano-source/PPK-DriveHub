@@ -656,21 +656,7 @@
       return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
     }
 
-    function fmtDateThai(s) {
-      if (!s) return '-';
-      var months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-      var d = new Date(s.length <= 10 ? s + 'T00:00:00' : s);
-      return d.getDate() + ' ' + months[d.getMonth()] + ' ' + (d.getFullYear()+543);
-    }
-
-    function fmtDatetimeThai(s) {
-      if (!s) return '-';
-      var d = new Date(s.length <= 10 ? s + 'T00:00:00' : s);
-      var months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-      var date = d.getDate() + ' ' + months[d.getMonth()] + ' ' + (d.getFullYear()+543);
-      var time = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
-      return date + ' ' + time;
-    }
+    function fmtDatetimeThai(s) { return formatDateTimeThai(s); }
 
     async function loadVehicles() {
       try {

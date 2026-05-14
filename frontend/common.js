@@ -547,10 +547,26 @@ function showConfirm(message, onConfirm, onCancel) {
 
 
 function formatDateThai(dateString) {
-    if (!dateString) return '';
-    var d = new Date(dateString + 'T00:00:00');
-    var months = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-    return d.getDate() + ' ' + months[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+    if (!dateString) return '-';
+    try {
+        var s = String(dateString).substring(0, 10);
+        var d = new Date(s + 'T00:00:00');
+        if (isNaN(d.getTime())) return String(dateString);
+        var months = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+        return d.getDate() + ' ' + months[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+    } catch (e) { return String(dateString); }
+}
+
+function formatDateTimeThai(dateTimeString) {
+    if (!dateTimeString) return '-';
+    try {
+        var d = new Date(dateTimeString);
+        if (isNaN(d.getTime())) return String(dateTimeString);
+        var months = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+        var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+        return d.getDate() + ' ' + months[d.getMonth()] + ' ' + (d.getFullYear() + 543) +
+            ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ' น.';
+    } catch (e) { return String(dateTimeString); }
 }
 
 // ===== Audit Meta Display: บันทึกโดย/แก้ไขโดย =====
