@@ -998,16 +998,6 @@
                 html += '</div>';
               });
 
-              // Google Form records
-              var dayGform = gformRecords.filter(function(r) { return r.datetime && r.datetime.substr(0, 10) === dateStr; });
-              dayGform.slice(0, Math.max(0, 3 - displayQueues.length)).forEach(function(r) {
-                html += '<div class="queue-item" style="background:#e0f2fe;border-left:3px solid #38bdf8;">';
-                html += '<div class="queue-plate" style="background:#bae6fd;color:#0c4a6e;">' + (r.license_plate || '-') + '</div>';
-                html += '<div class="queue-driver">' + (r.driver_name || r.driver_name_manual || '-') + '</div>';
-                html += '<div class="queue-destination">' + (r.destination || r.location || '-') + '</div>';
-                html += '</div>';
-              });
-
               html += '</div>'; // .calendar-day
             });
 
