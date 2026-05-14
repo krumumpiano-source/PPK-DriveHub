@@ -180,6 +180,30 @@
     font-size: 0.85em;
     }
 
+    /* รถที่ยังออกอยู่ / ยังไม่กลับ */
+    .queue-item.queue-item-overdue {
+    background: #fff3e0;
+    border-left: 3px solid #f57c00;
+    }
+    .queue-item.queue-item-overdue .queue-plate {
+    color: #bf360c;
+    font-weight: 700;
+    }
+    .queue-item.queue-item-overdue .queue-overdue-label {
+    color: #bf360c;
+    font-weight: 700;
+    font-size: 0.9em;
+    }
+    /* รถที่กำลังออก (ongoing วันนี้) */
+    .queue-item.queue-item-active {
+    background: #e8f5e9;
+    border-left: 3px solid #2e7d32;
+    }
+    .queue-item.queue-item-active .queue-plate {
+    color: #1b5e20;
+    font-weight: 700;
+    }
+
     .availability-section {
     margin-top: 40px;
     display: grid;
@@ -817,6 +841,16 @@
             html += '<div class="calendar-day ' + statusClass + '">';
             html += '<div class="calendar-day-number">' + day + '</div>';
 
+            // แสดง banner เตือนถ้าวันนี้มีรถยังไม่กลับ
+            if (isToday) {
+              var overdueCount = dayQueues.filter(function(q) {
+                return q.status === 'ongoing' && (q.date || q.departure_date) < dateStr;
+              }).length;
+              if (overdueCount > 0) {
+                html += '<div style="font-size:0.65em;background:#ffccbc;color:#bf360c;border-radius:3px;padding:2px 5px;margin-bottom:4px;font-weight:700;">⚠️ ยังไม่กลับ ' + overdueCount + ' คัน</div>';
+              }
+            }
+
             var displayQueues = dayQueues.slice(0, 3);
             displayQueues.forEach(function (queue) {
               var vehicle = vehiclesMap[queue.car_id];
@@ -824,12 +858,30 @@
               var plate = queue.license_plate || (vehicle && vehicle.license_plate) || (queue.car_id ? queue.car_id.substring(0, 8) : '-');
               var driverName = queue.driver_name || (driver && (driver.name || driver.full_name)) || (queue.driver_id ? queue.driver_id.substring(0, 8) : '-');
               var destination = queue.destination || queue.mission || '-';
+              var qDate = queue.date || queue.departure_date;
+              var isCarryover = queue.status === 'ongoing' && qDate < dateStr;
+              var isOngoingToday = queue.status === 'ongoing' && qDate === dateStr;
 
-              html += '<div class="queue-item">';
-              html += '<div class="queue-plate">' + plate + '</div>';
-              html += '<div class="queue-driver">' + driverName + '</div>';
-              html += '<div class="queue-destination">' + destination + '</div>';
-              html += '</div>';
+              if (isCarryover) {
+                var daysOut = Math.round((new Date(dateStr) - new Date(qDate)) / 86400000);
+                html += '<div class="queue-item queue-item-overdue">';
+                html += '<div class="queue-plate">⚠️ ' + plate + '</div>';
+                html += '<div class="queue-driver">' + driverName + '</div>';
+                html += '<div class="queue-overdue-label">ยังไม่กลับ · ' + daysOut + ' วัน</div>';
+                html += '</div>';
+              } else if (isOngoingToday) {
+                html += '<div class="queue-item queue-item-active">';
+                html += '<div class="queue-plate">🚗 ' + plate + '</div>';
+                html += '<div class="queue-driver">' + driverName + '</div>';
+                html += '<div class="queue-destination">' + destination + '</div>';
+                html += '</div>';
+              } else {
+                html += '<div class="queue-item">';
+                html += '<div class="queue-plate">' + plate + '</div>';
+                html += '<div class="queue-driver">' + driverName + '</div>';
+                html += '<div class="queue-destination">' + destination + '</div>';
+                html += '</div>';
+              }
             });
 
             // Google Form records for this day
