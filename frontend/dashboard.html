@@ -695,11 +695,13 @@
             var availableDrivers = [];
 
             // Compute availability from loaded data
-            // รวม ongoing trips ที่ออกไปก่อนหน้า (multi-day / ยังไม่กลับ)
+            // รวม queues ที่ยังไม่ปิด (ทั้ง ongoing และ scheduled ที่ date ผ่านมาแล้ว)
             var todayQueues = queues.filter(function (q) {
               if (q.status === 'cancelled' || q.status === 'completed') return false;
-              if ((q.date || q.departure_date) === today) return true;
-              return q.status === 'ongoing';
+              var qDate = q.date || q.departure_date;
+              if (qDate === today) return true;      // คิววันนี้
+              if (qDate < today) return true;        // คิวผ่านมาแล้ว ยังไม่ปิด = ยังไม่กลับ
+              return false;
             });
             var busyCarIds = {};
             var busyDriverIds = {};
@@ -804,8 +806,8 @@
             var dayQueues = queues.filter(function (q) {
               var qDate = q.date || q.departure_date;
               if (qDate === dateStr) return true;
-              // ongoing trip ที่ออกก่อน dateStr และยังไม่กลับ — แสดงในทุกวันที่คาบเกี่ยวถึงวันนี้
-              if (q.status === 'ongoing' && qDate < dateStr && dateStr <= todayStr) return true;
+              // queue ที่ยังไม่ปิด (ทั้ง ongoing และ scheduled) ออกก่อน dateStr — แสดงทุกวันระหว่างออก → วันนี้
+              if (q.status !== 'completed' && q.status !== 'cancelled' && qDate < dateStr && dateStr <= todayStr) return true;
               return false;
             });
 
@@ -844,7 +846,8 @@
             // แสดง banner เตือนถ้าวันนี้มีรถยังไม่กลับ
             if (isToday) {
               var overdueCount = dayQueues.filter(function(q) {
-                return q.status === 'ongoing' && (q.date || q.departure_date) < dateStr;
+                var qd = q.date || q.departure_date;
+                return q.status !== 'completed' && q.status !== 'cancelled' && qd < dateStr;
               }).length;
               if (overdueCount > 0) {
                 html += '<div style="font-size:0.65em;background:#ffccbc;color:#bf360c;border-radius:3px;padding:2px 5px;margin-bottom:4px;font-weight:700;">⚠️ ยังไม่กลับ ' + overdueCount + ' คัน</div>';
@@ -859,8 +862,8 @@
               var driverName = queue.driver_name || (driver && (driver.name || driver.full_name)) || (queue.driver_id ? queue.driver_id.substring(0, 8) : '-');
               var destination = queue.destination || queue.mission || '-';
               var qDate = queue.date || queue.departure_date;
-              var isCarryover = queue.status === 'ongoing' && qDate < dateStr;
-              var isOngoingToday = queue.status === 'ongoing' && qDate === dateStr;
+              var isCarryover = queue.status !== 'completed' && queue.status !== 'cancelled' && qDate < dateStr;
+              var isOngoingToday = (queue.status === 'ongoing' || queue.status === 'scheduled') && qDate === dateStr;
 
               if (isCarryover) {
                 var daysOut = Math.round((new Date(dateStr) - new Date(qDate)) / 86400000);
