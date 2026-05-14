@@ -833,7 +833,22 @@
           var tripBars = [];
           var tripBarCarIds = {};
 
-          // เฉพาะ queue ที่ status=ongoing และออกก่อนวันนี้ (กำลังเดินทางข้ามวัน)
+          // Source 1: carsOut — QR-confirmed departure, no return scan (source of truth)
+          carsOut.forEach(function(r) {
+            var dep = r.last_departure ? r.last_departure.substr(0, 10) : null;
+            if (!dep || dep >= todayStr) return;
+            tripBars.push({
+              car_id: r.car_id,
+              plate: r.license_plate || r.car_id.substr(0, 8),
+              driver: r.driver_name || '-',
+              startDate: dep,
+              endDate: todayStr,
+              daysOut: Math.round((new Date(todayStr) - new Date(dep)) / 86400000)
+            });
+            tripBarCarIds[r.car_id] = true;
+          });
+
+          // Source 2: queues ที่ status=ongoing และออกก่อนวันนี้ (ไม่รวม scheduled)
           queues.forEach(function(q) {
             if (q.status !== 'ongoing') return;
             var qDate = q.date || q.departure_date;
