@@ -137,9 +137,16 @@ export async function onRequest(context) {
            SELECT 1 FROM usage_records ur2
            WHERE ur2.car_id = ur.car_id
              AND ur2.record_type = 'return'
-             AND ur2.datetime > ur.datetime
+             AND ur2.datetime >= ur.datetime
              AND ur2.data_quality != 'gap_record'
          )
+         AND ur.datetime = (
+           SELECT MAX(ur3.datetime) FROM usage_records ur3
+           WHERE ur3.car_id = ur.car_id
+             AND ur3.record_type = 'departure'
+             AND ur3.data_quality NOT IN ('gap_record','auto_departure')
+         )
+       GROUP BY ur.car_id
        ORDER BY ur.datetime ASC`,
       []
     );
