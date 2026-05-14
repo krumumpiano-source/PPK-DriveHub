@@ -13,7 +13,7 @@
             try {
                 var res = await API.get('/api/setup');
                 if (res.success && res.data && res.data.needs_setup) {
-                    window.location.href = 'setup.html';
+                    window.location.href = 'admin-settings.html';
                     return;
                 }
             } catch(e) { /* ignore — proceed to auth check */ }

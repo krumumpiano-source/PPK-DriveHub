@@ -239,7 +239,6 @@ function renderNavigation() {
     nav += _sidebarSection('ช่วยเหลือ');
     nav += _sidebarItem('user-guide.html', 'user-guide', '📖', 'วิธีใช้งาน');
     nav += _sidebarItem('glossary.html', 'glossary', '📚', 'อภิธานศัพท์');
-    nav += _sidebarItem('about.html', 'about', 'ℹ️', 'เกี่ยวกับโปรแกรม');
 
     nav += '<div class="sidebar-divider"></div>';
     nav += '<a class="sidebar-item sidebar-item-logout" href="#" onclick="logout();return false;">' +
