@@ -377,6 +377,7 @@
         var currentYear = currentDate.getFullYear();
         var currentMonth = currentDate.getMonth();
         var queues = [];
+        var gformRecords = [];
         var vehicles = [];
         var drivers = [];
         var vehiclesMap = {};
@@ -647,6 +648,15 @@
               queues = [];
             }
 
+            // Fetch Google Form usage records (no queue_id)
+            try {
+              var gfResult = await API.get('/api/usage?date_from=' + dateFrom + '&date_to=' + dateTo + '&record_type=departure');
+              if (gfResult && gfResult.success && gfResult.data) {
+                var gfRaw = Array.isArray(gfResult.data) ? gfResult.data : (gfResult.data.records || []);
+                gformRecords = gfRaw.filter(function(r) { return !r.queue_id; });
+              } else { gformRecords = []; }
+            } catch(e) { gformRecords = []; }
+
             try {
               var vehiclesResult = await apiCall('getVehicles', {});
               if (vehiclesResult && vehiclesResult.success && vehiclesResult.data) {
@@ -830,7 +840,25 @@
               html += '</div>';
             });
 
-            if (dayQueues.length > 3) {
+            // Google Form records for this day
+            var dayGform = gformRecords.filter(function(r) { return r.datetime && r.datetime.substr(0,10) === dateStr; });
+            var totalItems = dayQueues.length + dayGform.length;
+            var remainSlots = Math.max(0, 3 - displayQueues.length);
+            var displayGform = dayGform.slice(0, remainSlots);
+            displayGform.forEach(function(r) {
+              var plate = r.license_plate || '-';
+              var drvName = r.driver_name || r.driver_name_manual || '-';
+              var dest = r.destination || r.location || '-';
+              html += '<div class="queue-item" style="background:#e0f2fe;border-left:3px solid #38bdf8;">';
+              html += '<div class="queue-plate" style="background:#bae6fd;color:#0c4a6e;">' + plate + '</div>';
+              html += '<div class="queue-driver">' + drvName + '</div>';
+              html += '<div class="queue-destination">' + dest + '</div>';
+              html += '</div>';
+            });
+
+            if (totalItems > 3) {
+              html += '<div class="queue-item" style="font-size: 0.7em; color: var(--color-text-light);">+ ' + (totalItems - 3) + ' คิวเพิ่มเติม</div>';
+            } else if (dayQueues.length > 3) {
               html += '<div class="queue-item" style="font-size: 0.7em; color: var(--color-text-light);">+ ' + (dayQueues.length - 3) + ' คิวเพิ่มเติม</div>';
             }
 
