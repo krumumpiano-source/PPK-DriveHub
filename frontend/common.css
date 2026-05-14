@@ -21,6 +21,7 @@
   --color-text-light: #9ca3af;
 
   --gradient-primary: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  --gradient-info: linear-gradient(135deg, #3b82f6, #6366f1);
 
   --color-bg-light: #f8fafc;
   --color-bg-lighter: #f1f5f9;

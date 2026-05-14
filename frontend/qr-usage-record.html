@@ -53,24 +53,6 @@
       }
     }
 
-    .header {
-      background: var(--gradient-primary);
-      color: white;
-      padding: 20px 15px;
-      text-align: center;
-    }
-
-    .header h1 {
-      font-size: 1.5em;
-      margin-bottom: 8px;
-      font-weight: 700;
-    }
-
-    .header p {
-      font-size: 0.9em;
-      opacity: 0.95;
-    }
-
     .content {
       padding: 20px 15px;
     }
@@ -78,10 +60,6 @@
     @media (max-width: 480px) {
       .header {
         padding: 15px 12px;
-      }
-
-      .header h1 {
-        font-size: 1.3em;
       }
 
       .content {
@@ -432,11 +410,11 @@
 
 <body>
   <div class="container">
-    <div id="navigation"></div>
     <div class="header">
       <h1>📱 บันทึกการใช้รถ</h1>
       <p>สแกน QR Code ที่ติดรถ</p>
     </div>
+    <div id="navigation"></div>
 
     <div class="content">
       <div id="alert-container"></div>
@@ -879,7 +857,6 @@
     });
   </script>
 
-  <div id="navigation"></div>
   <div
     style="background: var(--color-bg-light); padding: 15px; text-align: center; color: var(--color-text-muted); font-size: 0.85em; margin-top: 15px; border-radius: 0 0 16px 16px; line-height: 1.5;">
     <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
