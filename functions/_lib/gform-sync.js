@@ -180,6 +180,36 @@ async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report
           [mileage, ts, carId, mileage]
         );
       }
+
+      // Auto-update queue status จาก google_form record (เหมือน QR scan)
+      if (recordType === 'departure') {
+        // scheduled → ongoing เมื่อออกเดินทาง
+        const schedQ = await dbFirst(db,
+          `SELECT id FROM queue WHERE car_id = ? AND status = 'scheduled'
+           ORDER BY date DESC, time_start DESC LIMIT 1`,
+          [carId]
+        );
+        if (schedQ) {
+          await dbRun(db,
+            `UPDATE queue SET status = 'ongoing', updated_at = ? WHERE id = ? AND status = 'scheduled'`,
+            [ts, schedQ.id]
+          );
+        }
+      } else if (recordType === 'return') {
+        // ongoing/scheduled → completed เมื่อกลับ
+        const openQ = await dbFirst(db,
+          `SELECT id FROM queue WHERE car_id = ? AND status IN ('ongoing','scheduled')
+           ORDER BY date DESC, time_start DESC LIMIT 1`,
+          [carId]
+        );
+        if (openQ) {
+          await dbRun(db,
+            `UPDATE queue SET status = 'completed', updated_at = ? WHERE id = ? AND status IN ('ongoing','scheduled')`,
+            [ts, openQ.id]
+          );
+        }
+      }
+
       report.inserted++;
     } catch (e) {
       if (String(e.message).includes('UNIQUE')) {
