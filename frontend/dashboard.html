@@ -833,24 +833,9 @@
           var tripBars = [];
           var tripBarCarIds = {};
 
-          // Source 1: carsOut (QR-confirmed)
-          carsOut.forEach(function(r) {
-            var dep = r.last_departure ? r.last_departure.substr(0, 10) : null;
-            if (!dep || dep >= todayStr) return;
-            tripBars.push({
-              car_id: r.car_id,
-              plate: r.license_plate || r.car_id.substr(0, 8),
-              driver: r.driver_name || '-',
-              startDate: dep,
-              endDate: todayStr,
-              daysOut: Math.round((new Date(todayStr) - new Date(dep)) / 86400000)
-            });
-            tripBarCarIds[r.car_id] = true;
-          });
-
-          // Source 2: open past-date queues (fallback — ถ้าไม่มี QR scan)
+          // เฉพาะ queue ที่ status=ongoing และออกก่อนวันนี้ (กำลังเดินทางข้ามวัน)
           queues.forEach(function(q) {
-            if (q.status === 'completed' || q.status === 'cancelled' || q.status === 'frozen') return;
+            if (q.status !== 'ongoing') return;
             var qDate = q.date || q.departure_date;
             if (!qDate || qDate >= todayStr) return;
             if (tripBarCarIds[q.car_id]) return;
