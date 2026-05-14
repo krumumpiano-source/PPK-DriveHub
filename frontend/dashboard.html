@@ -62,13 +62,61 @@
     }
 
     .calendar-grid {
+    border: 1px solid #e9ecef;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    background: var(--color-bg-gray);
+    }
+    .calendar-header-row {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 1px;
     background: var(--color-bg-gray);
-    border: 1px solid #e9ecef;
-    border-radius: var(--radius-xl);
+    }
+    .calendar-week {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    background: var(--color-bg-gray);
+    position: relative;
+    border-top: 1px solid #e0e0e0;
+    }
+    .calendar-trip-bars-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 0;
+    overflow: visible;
+    pointer-events: none;
+    z-index: 5;
+    }
+    .trip-bar {
+    position: absolute;
+    height: 20px;
+    background: linear-gradient(90deg, #c62828, #ef5350);
+    color: white;
+    font-size: 0.68em;
+    font-weight: 600;
+    padding: 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
     overflow: hidden;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(150,0,0,0.3);
+    pointer-events: auto;
+    cursor: default;
+    z-index: 6;
+    }
+    .trip-bar-plate { font-weight: 700; letter-spacing: 0.02em; }
+    .trip-bar-info  { opacity: 0.88; font-weight: 400; }
+    .overdue-banner {
+    font-size: 0.65em;
+    background: #ffccbc;
+    color: #bf360c;
+    border-radius: 3px;
+    padding: 2px 5px;
+    margin-bottom: 4px;
+    font-weight: 700;
     }
 
     .calendar-day-header {
@@ -83,7 +131,7 @@
     .calendar-day {
     background: white;
     min-height: 120px;
-    padding: 8px;
+    padding: 34px 8px 8px 8px;
     position: relative;
     cursor: pointer;
     transition: all 0.3s;
@@ -99,9 +147,11 @@
     }
 
     .calendar-day-number {
+    position: absolute;
+    top: 6px;
+    left: 8px;
     font-weight: 700;
     font-size: 1.1em;
-    margin-bottom: 5px;
     color: var(--color-text);
     }
 
@@ -760,26 +810,12 @@
 
         function renderCalendar() {
           var firstDay = new Date(currentYear, currentMonth, 1);
-          var lastDay = new Date(currentYear, currentMonth + 1, 0);
+          var lastDay  = new Date(currentYear, currentMonth + 1, 0);
           var firstDayOfWeek = firstDay.getDay();
           var daysInMonth = lastDay.getDate();
 
           document.getElementById('monthYear').textContent = thaiMonths[currentMonth] + ' ' + (currentYear + 543);
 
-          var html = '';
-
-          // Day headers
-          thaiDays.forEach(function (day) {
-            html += '<div class="calendar-day-header">' + day + '</div>';
-          });
-
-          // Empty cells for days before month starts
-          for (var i = 0; i < firstDayOfWeek; i++) {
-            var prevDate = new Date(currentYear, currentMonth, -i);
-            html += '<div class="calendar-day other-month"><div class="calendar-day-number">' + prevDate.getDate() + '</div></div>';
-          }
-
-          // Days of the month
           var today = new Date();
           today.setHours(0, 0, 0, 0);
           var todayStr = formatDate(today);
@@ -792,192 +828,214 @@
             return parseInt(parts[0]) * 60 + parseInt(parts[1] || 0);
           }
 
-          function isQueueCurrent(queue, dateStr) {
-            if (dateStr !== todayStr) return false;
-            if (queue.status === 'cancelled' || queue.status === 'completed') return false;
-            var startTime = queue.time_start || queue.departure_time;
-            var endTime = queue.time_end || queue.return_time;
-            if (!startTime) return false;
+          // === สร้าง trip bars (hotel-booking style) ===
+          // เฉพาะรถที่ออกไปก่อนวันนี้และยังไม่กลับ (multi-day)
+          var tripBars = [];
+          var tripBarCarIds = {};
 
-            var queueStart = parseTimeToMinutes(startTime);
-            var queueEnd = endTime ? parseTimeToMinutes(endTime) : (queueStart + 8 * 60);
-
-            return currentTimeMinutes >= queueStart && currentTimeMinutes <= queueEnd;
-          }
-
-          function isQueueUpcoming(queue, dateStr) {
-            if (dateStr !== todayStr) return false;
-            if (queue.status === 'cancelled' || queue.status === 'completed') return false;
-            var startTime = queue.time_start || queue.departure_time;
-            if (!startTime) return false;
-
-            var queueStart = parseTimeToMinutes(startTime);
-            // Upcoming: starts within next 2 hours
-            return queueStart > currentTimeMinutes && queueStart <= currentTimeMinutes + 120;
-          }
-
-          for (var day = 1; day <= daysInMonth; day++) {
-            var dateStr = formatDate(new Date(currentYear, currentMonth, day));
-            var dateObj = new Date(currentYear, currentMonth, day);
-            dateObj.setHours(0, 0, 0, 0);
-            var isToday = dateStr === todayStr;
-            var dayQueues = queues.filter(function (q) {
-              var qDate = q.date || q.departure_date;
-              if (qDate === dateStr) return true;
-              // queue ที่ยังไม่ปิด (ทั้ง ongoing และ scheduled) ออกก่อน dateStr — แสดงทุกวันระหว่างออก → วันนี้
-              if (q.status !== 'completed' && q.status !== 'cancelled' && qDate < dateStr && dateStr <= todayStr) return true;
-              return false;
+          // Source 1: carsOut (QR-confirmed)
+          carsOut.forEach(function(r) {
+            var dep = r.last_departure ? r.last_departure.substr(0, 10) : null;
+            if (!dep || dep >= todayStr) return;
+            tripBars.push({
+              car_id: r.car_id,
+              plate: r.license_plate || r.car_id.substr(0, 8),
+              driver: r.driver_name || '-',
+              startDate: dep,
+              endDate: todayStr,
+              daysOut: Math.round((new Date(todayStr) - new Date(dep)) / 86400000)
             });
+            tripBarCarIds[r.car_id] = true;
+          });
 
-            // Determine status
-            var statusClass = '';
-            if (isToday) {
-              statusClass = 'today';
-            } else if (dateObj < today) {
-              // Past date
-              statusClass = 'past';
-            } else {
-              // Future date - check queue status
-              var hasCurrent = false;
-              var hasUpcoming = false;
+          // Source 2: open past-date queues (fallback — ถ้าไม่มี QR scan)
+          queues.forEach(function(q) {
+            if (q.status === 'completed' || q.status === 'cancelled' || q.status === 'frozen') return;
+            var qDate = q.date || q.departure_date;
+            if (!qDate || qDate >= todayStr) return;
+            if (tripBarCarIds[q.car_id]) return;
+            var v = vehiclesMap[q.car_id];
+            var d = driversMap[q.driver_id];
+            tripBarCarIds[q.car_id] = true;
+            tripBars.push({
+              car_id: q.car_id,
+              plate: q.license_plate || (v && v.license_plate) || (q.car_id || '').substr(0, 8),
+              driver: q.driver_name || (d && (d.name || d.full_name)) || '-',
+              startDate: qDate,
+              endDate: todayStr,
+              daysOut: Math.round((new Date(todayStr) - new Date(qDate)) / 86400000)
+            });
+          });
 
-              dayQueues.forEach(function (queue) {
-                if (isQueueCurrent(queue, dateStr)) {
-                  hasCurrent = true;
-                } else if (isQueueUpcoming(queue, dateStr)) {
-                  hasUpcoming = true;
+          // === สร้าง grid slots ===
+          var gridSlots = [];
+          for (var i = 0; i < firstDayOfWeek; i++) gridSlots.push({ empty: true });
+          for (var d = 1; d <= daysInMonth; d++) {
+            gridSlots.push({ empty: false, day: d, date: formatDate(new Date(currentYear, currentMonth, d)) });
+          }
+          while (gridSlots.length % 7 !== 0) gridSlots.push({ empty: true });
+          var numWeeks = gridSlots.length / 7;
+
+          var BAR_TOP = 32;  // px: จุดเริ่มต้นของ bars (หลังเลขวัน)
+          var BAR_H   = 22;  // px: ความสูงต่อ bar (รวม gap)
+
+          // === Render ===
+          var html = '<div class="calendar-header-row">';
+          thaiDays.forEach(function(day) {
+            html += '<div class="calendar-day-header">' + day + '</div>';
+          });
+          html += '</div>';
+
+          for (var w = 0; w < numWeeks; w++) {
+            var weekSlots = gridSlots.slice(w * 7, (w + 1) * 7);
+            var weekDates = weekSlots.map(function(s) { return s.empty ? null : s.date; });
+            var weekRealDates = weekDates.filter(Boolean);
+            if (weekRealDates.length === 0) continue;
+            var weekStart = weekRealDates[0];
+            var weekEnd   = weekRealDates[weekRealDates.length - 1];
+
+            // หา bars ที่คาบสัปดาห์นี้
+            var weekBars = [];
+            tripBars.forEach(function(bar) {
+              if (bar.startDate > weekEnd || bar.endDate < weekStart) return;
+              var colStart = -1, colEnd = -1;
+              for (var c = 0; c < 7; c++) {
+                var s = weekSlots[c];
+                if (!s.empty && s.date >= bar.startDate && s.date <= bar.endDate) {
+                  if (colStart === -1) colStart = c;
+                  colEnd = c;
                 }
-              });
-
-              if (hasCurrent) {
-                statusClass = 'current';
-              } else if (hasUpcoming) {
-                statusClass = 'upcoming';
-              } else {
-                statusClass = 'future';
               }
-            }
-
-            html += '<div class="calendar-day ' + statusClass + '">';
-            html += '<div class="calendar-day-number">' + day + '</div>';
-
-            // Banner เตือนบนวันนี้: รวม carsOut (source of truth) + queue unclosed
-            if (isToday) {
-              var overdueFromQueues = dayQueues.filter(function(q) {
-                var qd = q.date || q.departure_date;
-                return q.status !== 'completed' && q.status !== 'cancelled' && qd < dateStr;
+              if (colStart === -1) return;
+              weekBars.push({
+                bar: bar, colStart: colStart, colEnd: colEnd,
+                isStart: bar.startDate >= weekStart,
+                isEnd: bar.endDate <= weekEnd
               });
-              // รวม car_id ที่ยังออกอยู่จาก carsOut (ไม่นับซ้ำกับ queue)
-              var overdueCarIds = {};
-              overdueFromQueues.forEach(function(q){ if(q.car_id) overdueCarIds[q.car_id]=true; });
-              var carsOutExtra = carsOut.filter(function(r){ return !overdueCarIds[r.car_id]; });
-              var totalOverdue = overdueFromQueues.length + carsOutExtra.length;
-              if (totalOverdue > 0) {
-                html += '<div style="font-size:0.65em;background:#ffccbc;color:#bf360c;border-radius:3px;padding:2px 5px;margin-bottom:4px;font-weight:700;">⚠️ ยังไม่กลับ ' + totalOverdue + ' คัน</div>';
-              }
-            }
-
-            // carsOut ที่ departure date ตรงกับ dateStr (แสดงบนวันที่ออก + วันนี้)
-            var dayCarsOut = carsOut.filter(function(r) {
-              var depDate = r.last_departure ? r.last_departure.substr(0,10) : null;
-              if (depDate === dateStr) return true;       // แสดงบนวันที่ออก
-              if (isToday && depDate < dateStr) return true; // แสดงซ้ำบนวันนี้ (ยังไม่กลับ)
-              return false;
             });
 
-            var shownCarIds = {};  // ป้องกันการแสดงซ้ำกับ dayQueues
-            dayQueues.forEach(function(q){ if(q.car_id) shownCarIds[q.car_id]=true; });
+            // นับ bars ที่ผ่านแต่ละ column
+            var colBarCount = [0, 0, 0, 0, 0, 0, 0];
+            weekBars.forEach(function(wb) {
+              for (var c = wb.colStart; c <= wb.colEnd; c++) colBarCount[c]++;
+            });
 
-            // คำนวณ slot ที่เหลือ
-            var maxSlots = 3;
-            var displayQueues = dayQueues.slice(0, maxSlots);
-            var usedSlots = displayQueues.length;
-            displayQueues.forEach(function (queue) {
-              var vehicle = vehiclesMap[queue.car_id];
-              var driver = driversMap[queue.driver_id];
-              var plate = queue.license_plate || (vehicle && vehicle.license_plate) || (queue.car_id ? queue.car_id.substring(0, 8) : '-');
-              var driverName = queue.driver_name || (driver && (driver.name || driver.full_name)) || (queue.driver_id ? queue.driver_id.substring(0, 8) : '-');
-              var destination = queue.destination || queue.mission || '-';
-              var qDate = queue.date || queue.departure_date;
-              var isCarryover = queue.status !== 'completed' && queue.status !== 'cancelled' && qDate < dateStr;
-              var isOngoingToday = (queue.status === 'ongoing' || queue.status === 'scheduled') && qDate === dateStr;
+            html += '<div class="calendar-week">';
 
-              if (isCarryover) {
-                var daysOut = Math.round((new Date(dateStr) - new Date(qDate)) / 86400000);
-                html += '<div class="queue-item queue-item-overdue">';
-                html += '<div class="queue-plate">⚠️ ' + plate + '</div>';
-                html += '<div class="queue-driver">' + driverName + '</div>';
-                html += '<div class="queue-overdue-label">ยังไม่กลับ · ' + daysOut + ' วัน</div>';
-                html += '</div>';
-              } else if (isOngoingToday) {
-                html += '<div class="queue-item queue-item-active">';
-                html += '<div class="queue-plate">🚗 ' + plate + '</div>';
+            // Day cells
+            weekSlots.forEach(function(slot, col) {
+              if (slot.empty) {
+                html += '<div class="calendar-day other-month"></div>';
+                return;
+              }
+              var dateStr = slot.date;
+              var dateObj = new Date(currentYear, currentMonth, slot.day);
+              dateObj.setHours(0, 0, 0, 0);
+              var isToday = dateStr === todayStr;
+
+              // Status class
+              var statusClass = isToday ? 'today' : (dateObj < today ? 'past' : '');
+              if (!statusClass) {
+                var futQ = queues.filter(function(q) {
+                  return (q.date || q.departure_date) === dateStr && q.status !== 'cancelled' && q.status !== 'completed';
+                });
+                var hasCurrent = futQ.some(function(q) {
+                  var st = parseTimeToMinutes(q.time_start || q.departure_time);
+                  if (!st) return false;
+                  var en = q.time_end ? parseTimeToMinutes(q.time_end) : (st + 480);
+                  return currentTimeMinutes >= st && currentTimeMinutes <= en;
+                });
+                var hasUpcoming = !hasCurrent && futQ.some(function(q) {
+                  var st = parseTimeToMinutes(q.time_start || q.departure_time);
+                  return st && st > currentTimeMinutes && st <= currentTimeMinutes + 120;
+                });
+                statusClass = hasCurrent ? 'current' : (hasUpcoming ? 'upcoming' : 'future');
+              }
+
+              // Spacer height เพื่อดัน queue cards ลงมาใต้ trip bars
+              var barsInCol = colBarCount[col];
+              var spacerPx  = barsInCol * BAR_H;
+
+              html += '<div class="calendar-day ' + statusClass + '">';
+              html += '<div class="calendar-day-number">' + slot.day + '</div>';
+              if (spacerPx > 0) html += '<div style="height:' + spacerPx + 'px;flex-shrink:0"></div>';
+
+              // Banner บนวันนี้
+              if (isToday && tripBars.length > 0) {
+                html += '<div class="overdue-banner">⚠️ ยังไม่กลับ ' + tripBars.length + ' คัน</div>';
+              }
+
+              // Single-day queue cards (วันเดียว)
+              var dayQueues = queues.filter(function(q) {
+                return (q.date || q.departure_date) === dateStr && q.status !== 'cancelled';
+              });
+              var displayQueues = dayQueues.slice(0, 3);
+              displayQueues.forEach(function(queue) {
+                var v2 = vehiclesMap[queue.car_id];
+                var d2 = driversMap[queue.driver_id];
+                var plate = queue.license_plate || (v2 && v2.license_plate) || (queue.car_id || '').substr(0, 8);
+                var driverName = queue.driver_name || (d2 && (d2.name || d2.full_name)) || '-';
+                var destination = queue.destination || queue.mission || '-';
+                var isActive = (queue.status === 'ongoing' || queue.status === 'scheduled') && isToday;
+                html += '<div class="queue-item' + (isActive ? ' queue-item-active' : '') + '">';
+                html += '<div class="queue-plate">' + (isActive ? '🚗 ' : '') + plate + '</div>';
                 html += '<div class="queue-driver">' + driverName + '</div>';
                 html += '<div class="queue-destination">' + destination + '</div>';
                 html += '</div>';
-              } else {
-                html += '<div class="queue-item">';
-                html += '<div class="queue-plate">' + plate + '</div>';
-                html += '<div class="queue-driver">' + driverName + '</div>';
-                html += '<div class="queue-destination">' + destination + '</div>';
-                html += '</div>';
+              });
+              if (dayQueues.length > 3) {
+                html += '<div style="font-size:0.7em;color:var(--color-text-light)">+ ' + (dayQueues.length - 3) + ' คิวเพิ่มเติม</div>';
               }
-            });
 
-            // carsOut cards (รถที่ยังออกอยู่จาก usage_records — ไม่ซ้ำกับ dayQueues)
-            dayCarsOut.forEach(function(r) {
-              if (shownCarIds[r.car_id]) return; // ซ้ำกับ queue แล้ว ข้าม
-              if (usedSlots >= maxSlots) return;
-              usedSlots++;
-              shownCarIds[r.car_id] = true;
-              var plate = r.license_plate || r.car_id.substring(0,8);
-              var driverName = r.driver_name || '-';
-              var depDate = r.last_departure ? r.last_departure.substr(0,10) : null;
-              var daysOut = depDate ? Math.round((new Date(dateStr) - new Date(depDate)) / 86400000) : 0;
-              if (daysOut > 0) {
-                html += '<div class="queue-item queue-item-overdue">';
-                html += '<div class="queue-plate">⚠️ ' + plate + '</div>';
-                html += '<div class="queue-driver">' + driverName + '</div>';
-                html += '<div class="queue-overdue-label">ยังไม่กลับ · ' + daysOut + ' วัน</div>';
-                html += '</div>';
-              } else {
+              // carsOut ที่ออกวันนี้ (ยังไม่ถึง multi-day)
+              carsOut.forEach(function(r) {
+                var dep = r.last_departure ? r.last_departure.substr(0, 10) : null;
+                if (dep !== dateStr || dep < todayStr) return;
                 html += '<div class="queue-item queue-item-active">';
-                html += '<div class="queue-plate">🚗 ' + plate + '</div>';
-                html += '<div class="queue-driver">' + driverName + '</div>';
-                html += '<div class="queue-overdue-label">กำลังออกอยู่</div>';
+                html += '<div class="queue-plate">🚗 ' + (r.license_plate || r.car_id.substr(0, 8)) + '</div>';
+                html += '<div class="queue-driver">' + (r.driver_name || '-') + '</div>';
+                html += '<div class="queue-destination">กำลังออกอยู่</div>';
                 html += '</div>';
-              }
+              });
+
+              // Google Form records
+              var dayGform = gformRecords.filter(function(r) { return r.datetime && r.datetime.substr(0, 10) === dateStr; });
+              dayGform.slice(0, Math.max(0, 3 - displayQueues.length)).forEach(function(r) {
+                html += '<div class="queue-item" style="background:#e0f2fe;border-left:3px solid #38bdf8;">';
+                html += '<div class="queue-plate" style="background:#bae6fd;color:#0c4a6e;">' + (r.license_plate || '-') + '</div>';
+                html += '<div class="queue-driver">' + (r.driver_name || r.driver_name_manual || '-') + '</div>';
+                html += '<div class="queue-destination">' + (r.destination || r.location || '-') + '</div>';
+                html += '</div>';
+              });
+
+              html += '</div>'; // .calendar-day
             });
 
-            // Google Form records for this day
-            var dayGform = gformRecords.filter(function(r) { return r.datetime && r.datetime.substr(0,10) === dateStr; });
-            var totalItems = dayQueues.length + dayGform.length;
-            var remainSlots = Math.max(0, 3 - displayQueues.length);
-            var displayGform = dayGform.slice(0, remainSlots);
-            displayGform.forEach(function(r) {
-              var plate = r.license_plate || '-';
-              var drvName = r.driver_name || r.driver_name_manual || '-';
-              var dest = r.destination || r.location || '-';
-              html += '<div class="queue-item" style="background:#e0f2fe;border-left:3px solid #38bdf8;">';
-              html += '<div class="queue-plate" style="background:#bae6fd;color:#0c4a6e;">' + plate + '</div>';
-              html += '<div class="queue-driver">' + drvName + '</div>';
-              html += '<div class="queue-destination">' + dest + '</div>';
-              html += '</div>';
-            });
-
-            if (totalItems > 3) {
-              html += '<div class="queue-item" style="font-size: 0.7em; color: var(--color-text-light);">+ ' + (totalItems - 3) + ' คิวเพิ่มเติม</div>';
-            } else if (dayQueues.length > 3) {
-              html += '<div class="queue-item" style="font-size: 0.7em; color: var(--color-text-light);">+ ' + (dayQueues.length - 3) + ' คิวเพิ่มเติม</div>';
+            // Trip bar overlay (absolute — spans ข้ามหลายวันแบบ hotel booking)
+            if (weekBars.length > 0) {
+              html += '<div class="calendar-trip-bars-overlay">';
+              weekBars.forEach(function(wb, idx) {
+                var leftPct  = (wb.colStart / 7 * 100).toFixed(3);
+                var widthPct = ((wb.colEnd - wb.colStart + 1) / 7 * 100).toFixed(3);
+                var topPx    = BAR_TOP + idx * BAR_H;
+                var brTL = wb.isStart ? '4px' : '0';
+                var brBL = wb.isStart ? '4px' : '0';
+                var brTR = wb.isEnd   ? '4px' : '0';
+                var brBR = wb.isEnd   ? '4px' : '0';
+                var borderR = brTL + ' ' + brTR + ' ' + brBR + ' ' + brBL;
+                var extraStyle = (!wb.isStart ? 'border-left:2px dashed rgba(255,255,255,0.4);margin-left:0;' : '') +
+                                 (!wb.isEnd   ? 'border-right:2px dashed rgba(255,255,255,0.4);' : '');
+                html += '<div class="trip-bar" style="left:calc(' + leftPct + '% + 2px);width:calc(' + widthPct + '% - 4px);top:' + topPx + 'px;border-radius:' + borderR + ';' + extraStyle + '">';
+                html += '<span class="trip-bar-plate">⚠️ ' + wb.bar.plate + '</span>';
+                if (wb.isStart || wb.colStart === 0) {
+                  html += '<span class="trip-bar-info"> ' + wb.bar.driver + ' · ' + wb.bar.daysOut + ' วัน</span>';
+                }
+                html += '</div>';
+              });
+              html += '</div>'; // .calendar-trip-bars-overlay
             }
 
-            html += '</div>';
-          }
-
-          // Empty cells for days after month ends
-          var remainingCells = 42 - (firstDayOfWeek + daysInMonth);
-          for (var i = 1; i <= remainingCells && remainingCells < 7; i++) {
-            html += '<div class="calendar-day other-month"><div class="calendar-day-number">' + i + '</div></div>';
+            html += '</div>'; // .calendar-week
           }
 
           document.getElementById('calendarGrid').innerHTML = html;
