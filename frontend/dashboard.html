@@ -671,8 +671,11 @@
             var availableDrivers = [];
 
             // Compute availability from loaded data
+            // รวม ongoing trips ที่ออกไปก่อนหน้า (multi-day / ยังไม่กลับ)
             var todayQueues = queues.filter(function (q) {
-              return (q.date || q.departure_date) === today && q.status !== 'cancelled' && q.status !== 'completed';
+              if (q.status === 'cancelled' || q.status === 'completed') return false;
+              if ((q.date || q.departure_date) === today) return true;
+              return q.status === 'ongoing';
             });
             var busyCarIds = {};
             var busyDriverIds = {};
@@ -774,7 +777,13 @@
             var dateObj = new Date(currentYear, currentMonth, day);
             dateObj.setHours(0, 0, 0, 0);
             var isToday = dateStr === todayStr;
-            var dayQueues = queues.filter(function (q) { return (q.date || q.departure_date) === dateStr; });
+            var dayQueues = queues.filter(function (q) {
+              var qDate = q.date || q.departure_date;
+              if (qDate === dateStr) return true;
+              // ongoing trip ที่ออกก่อน dateStr และยังไม่กลับ — แสดงในทุกวันที่คาบเกี่ยวถึงวันนี้
+              if (q.status === 'ongoing' && qDate < dateStr && dateStr <= todayStr) return true;
+              return false;
+            });
 
             // Determine status
             var statusClass = '';
