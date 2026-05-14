@@ -385,6 +385,8 @@
         var currentMonth = currentDate.getMonth();
         var queues = [];
         var gformRecords = [];
+        var carsOut = [];        // รถที่ออกไปแล้วยังไม่กลับ (from usage_records)
+        var carsOutMap = {};     // car_id → record
         var vehicles = [];
         var drivers = [];
         var vehiclesMap = {};
@@ -664,6 +666,17 @@
               } else { gformRecords = []; }
             } catch(e) { gformRecords = []; }
 
+            // Fetch รถที่ออกไปยังไม่กลับ (usage_records based — source of truth)
+            carsOut = [];
+            carsOutMap = {};
+            try {
+              var coResult = await API.get('/api/usage/cars-out');
+              if (coResult && coResult.success && Array.isArray(coResult.data)) {
+                carsOut = coResult.data;
+                carsOut.forEach(function(r) { carsOutMap[r.car_id] = r; });
+              }
+            } catch(e) { carsOut = []; }
+
             try {
               var vehiclesResult = await apiCall('getVehicles', {});
               if (vehiclesResult && vehiclesResult.success && vehiclesResult.data) {
@@ -694,21 +707,26 @@
             var availableVehicles = [];
             var availableDrivers = [];
 
-            // Compute availability from loaded data
-            // รวม queues ที่ยังไม่ปิด (ทั้ง ongoing และ scheduled ที่ date ผ่านมาแล้ว)
-            var todayQueues = queues.filter(function (q) {
-              if (q.status === 'cancelled' || q.status === 'completed') return false;
-              var qDate = q.date || q.departure_date;
-              if (qDate === today) return true;      // คิววันนี้
-              if (qDate < today) return true;        // คิวผ่านมาแล้ว ยังไม่ปิด = ยังไม่กลับ
-              return false;
-            });
+            // Compute availability — รวม 2 sources: queue (unclosed) + carsOut (usage_records)
             var busyCarIds = {};
             var busyDriverIds = {};
-            todayQueues.forEach(function (q) {
-              if (q.car_id) busyCarIds[q.car_id] = true;
-              if (q.driver_id) busyDriverIds[q.driver_id] = true;
+
+            // Source 1: queue ที่ยังไม่ปิด (today หรือ past ที่ยัง not completed/cancelled)
+            queues.forEach(function (q) {
+              if (q.status === 'cancelled' || q.status === 'completed') return;
+              var qDate = q.date || q.departure_date;
+              if (qDate <= today) {
+                if (q.car_id) busyCarIds[q.car_id] = true;
+                if (q.driver_id) busyDriverIds[q.driver_id] = true;
+              }
             });
+
+            // Source 2: usage_records — รถที่ออกไปแล้วยังไม่กลับจริงๆ (แม้ queue ถูกปิดแล้ว)
+            carsOut.forEach(function (r) {
+              busyCarIds[r.car_id] = true;
+              if (r.driver_id) busyDriverIds[r.driver_id] = true;
+            });
+
             availableVehicles = vehicles.filter(function (v) {
               return v.status === 'active' && !busyCarIds[v.id];
             });
@@ -843,18 +861,37 @@
             html += '<div class="calendar-day ' + statusClass + '">';
             html += '<div class="calendar-day-number">' + day + '</div>';
 
-            // แสดง banner เตือนถ้าวันนี้มีรถยังไม่กลับ
+            // Banner เตือนบนวันนี้: รวม carsOut (source of truth) + queue unclosed
             if (isToday) {
-              var overdueCount = dayQueues.filter(function(q) {
+              var overdueFromQueues = dayQueues.filter(function(q) {
                 var qd = q.date || q.departure_date;
                 return q.status !== 'completed' && q.status !== 'cancelled' && qd < dateStr;
-              }).length;
-              if (overdueCount > 0) {
-                html += '<div style="font-size:0.65em;background:#ffccbc;color:#bf360c;border-radius:3px;padding:2px 5px;margin-bottom:4px;font-weight:700;">⚠️ ยังไม่กลับ ' + overdueCount + ' คัน</div>';
+              });
+              // รวม car_id ที่ยังออกอยู่จาก carsOut (ไม่นับซ้ำกับ queue)
+              var overdueCarIds = {};
+              overdueFromQueues.forEach(function(q){ if(q.car_id) overdueCarIds[q.car_id]=true; });
+              var carsOutExtra = carsOut.filter(function(r){ return !overdueCarIds[r.car_id]; });
+              var totalOverdue = overdueFromQueues.length + carsOutExtra.length;
+              if (totalOverdue > 0) {
+                html += '<div style="font-size:0.65em;background:#ffccbc;color:#bf360c;border-radius:3px;padding:2px 5px;margin-bottom:4px;font-weight:700;">⚠️ ยังไม่กลับ ' + totalOverdue + ' คัน</div>';
               }
             }
 
-            var displayQueues = dayQueues.slice(0, 3);
+            // carsOut ที่ departure date ตรงกับ dateStr (แสดงบนวันที่ออก + วันนี้)
+            var dayCarsOut = carsOut.filter(function(r) {
+              var depDate = r.last_departure ? r.last_departure.substr(0,10) : null;
+              if (depDate === dateStr) return true;       // แสดงบนวันที่ออก
+              if (isToday && depDate < dateStr) return true; // แสดงซ้ำบนวันนี้ (ยังไม่กลับ)
+              return false;
+            });
+
+            var shownCarIds = {};  // ป้องกันการแสดงซ้ำกับ dayQueues
+            dayQueues.forEach(function(q){ if(q.car_id) shownCarIds[q.car_id]=true; });
+
+            // คำนวณ slot ที่เหลือ
+            var maxSlots = 3;
+            var displayQueues = dayQueues.slice(0, maxSlots);
+            var usedSlots = displayQueues.length;
             displayQueues.forEach(function (queue) {
               var vehicle = vehiclesMap[queue.car_id];
               var driver = driversMap[queue.driver_id];
@@ -883,6 +920,31 @@
                 html += '<div class="queue-plate">' + plate + '</div>';
                 html += '<div class="queue-driver">' + driverName + '</div>';
                 html += '<div class="queue-destination">' + destination + '</div>';
+                html += '</div>';
+              }
+            });
+
+            // carsOut cards (รถที่ยังออกอยู่จาก usage_records — ไม่ซ้ำกับ dayQueues)
+            dayCarsOut.forEach(function(r) {
+              if (shownCarIds[r.car_id]) return; // ซ้ำกับ queue แล้ว ข้าม
+              if (usedSlots >= maxSlots) return;
+              usedSlots++;
+              shownCarIds[r.car_id] = true;
+              var plate = r.license_plate || r.car_id.substring(0,8);
+              var driverName = r.driver_name || '-';
+              var depDate = r.last_departure ? r.last_departure.substr(0,10) : null;
+              var daysOut = depDate ? Math.round((new Date(dateStr) - new Date(depDate)) / 86400000) : 0;
+              if (daysOut > 0) {
+                html += '<div class="queue-item queue-item-overdue">';
+                html += '<div class="queue-plate">⚠️ ' + plate + '</div>';
+                html += '<div class="queue-driver">' + driverName + '</div>';
+                html += '<div class="queue-overdue-label">ยังไม่กลับ · ' + daysOut + ' วัน</div>';
+                html += '</div>';
+              } else {
+                html += '<div class="queue-item queue-item-active">';
+                html += '<div class="queue-plate">🚗 ' + plate + '</div>';
+                html += '<div class="queue-driver">' + driverName + '</div>';
+                html += '<div class="queue-overdue-label">กำลังออกอยู่</div>';
                 html += '</div>';
               }
             });

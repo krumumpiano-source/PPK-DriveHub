@@ -56,7 +56,48 @@ export async function onRequest(context) {
     // Auto-heal: detect and fix missing records
     const healed = await autoHeal(env.DB, { id, car_id: body.car_id, driver_id: body.driver_id || null, record_type: body.record_type, datetime: body.datetime || ts, mileage: body.mileage || null, queue_id: body.queue_id || null });
 
-    return success({ id, message: 'บันทึกการใช้งานเรียบร้อย', auto_healed: healed }, 201);
+    // Auto-complete queue เมื่อสแกนกลับ
+    let queueCompleted = false;
+    if (body.record_type === 'return') {
+      // หา queue ที่ผูกอยู่: ถ้ามี queue_id ตรงๆ ใช้เลย, ถ้าไม่มีให้ค้นจาก car_id ที่ยังไม่ปิด
+      let targetQueueId = body.queue_id || null;
+      if (!targetQueueId) {
+        const openQ = await dbFirst(env.DB,
+          `SELECT id FROM queue WHERE car_id = ? AND status IN ('ongoing','scheduled')
+           ORDER BY date DESC, time_start DESC LIMIT 1`,
+          [body.car_id]
+        );
+        if (openQ) targetQueueId = openQ.id;
+      }
+      if (targetQueueId) {
+        await dbRun(env.DB,
+          `UPDATE queue SET status = 'completed', updated_at = ? WHERE id = ? AND status IN ('ongoing','scheduled')`,
+          [ts, targetQueueId]
+        );
+        queueCompleted = true;
+      }
+    }
+
+    // Auto-set queue status = 'ongoing' เมื่อสแกนออก (ถ้ายังเป็น scheduled)
+    if (body.record_type === 'departure') {
+      let targetQueueId = body.queue_id || null;
+      if (!targetQueueId) {
+        const schedQ = await dbFirst(env.DB,
+          `SELECT id FROM queue WHERE car_id = ? AND status = 'scheduled'
+           ORDER BY date DESC, time_start DESC LIMIT 1`,
+          [body.car_id]
+        );
+        if (schedQ) targetQueueId = schedQ.id;
+      }
+      if (targetQueueId) {
+        await dbRun(env.DB,
+          `UPDATE queue SET status = 'ongoing', updated_at = ? WHERE id = ? AND status = 'scheduled'`,
+          [ts, targetQueueId]
+        );
+      }
+    }
+
+    return success({ id, message: 'บันทึกการใช้งานเรียบร้อย', auto_healed: healed, queue_completed: queueCompleted }, 201);
   }
 
   // PUBLIC — ดึงสถานะล่าสุดของรถ (ใช้โดยหน้า QR ไม่ต้อง login)
@@ -76,6 +117,33 @@ export async function onRequest(context) {
       mileage: lastRecord.mileage,
       datetime: lastRecord.datetime
     });
+  }
+
+  // PUBLIC — ดึงรายการรถที่ยังออกอยู่ (last record = departure, ไม่มี return ตามหลัง)
+  // ใช้โดย dashboard ต้อง login (user required)
+  if (path === '/api/usage/cars-out' && method === 'GET') {
+    if (!env.user) return error('Unauthorized', 401);
+    const rows = await dbAll(env.DB,
+      `SELECT ur.car_id, ur.datetime AS last_departure, ur.driver_id,
+              ur.driver_name_manual, ur.queue_id, ur.destination,
+              c.license_plate, c.brand, c.model,
+              COALESCE(d.name, ur.driver_name_manual) AS driver_name
+       FROM usage_records ur
+       JOIN cars c ON ur.car_id = c.id
+       LEFT JOIN drivers d ON ur.driver_id = d.id
+       WHERE ur.record_type = 'departure'
+         AND ur.data_quality NOT IN ('gap_record','auto_departure')
+         AND NOT EXISTS (
+           SELECT 1 FROM usage_records ur2
+           WHERE ur2.car_id = ur.car_id
+             AND ur2.record_type = 'return'
+             AND ur2.datetime > ur.datetime
+             AND ur2.data_quality != 'gap_record'
+         )
+       ORDER BY ur.datetime ASC`,
+      []
+    );
+    return success(rows);
   }
 
   if (!user) return error('Unauthorized', 401);
