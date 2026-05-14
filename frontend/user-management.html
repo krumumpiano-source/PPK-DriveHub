@@ -466,8 +466,10 @@
           <label>บทบาทในระบบ</label>
           <select id="editRole" onchange="onRoleChange()">
             <option value="admin">⚙️ ผู้ดูแลระบบ — เข้าถึงทุกอย่าง</option>
-            <option value="staff">👷 คณะทำงาน — กำหนดสิทธิ์เองได้</option>
-            <option value="viewer">👁️ ผู้ชม — ดูอย่างเดียวทุกเมนู</option>
+            <option value="staff">👷 คณะทำงาน — สร้างคิว บันทึกน้ำมัน ซ่อม รายงาน</option>
+            <option value="driver">🚘 พนักงานขับรถ — บันทึกการใช้รถ เชื้อเพลิง ซ่อม</option>
+            <option value="manager">👔 ผู้บริหาร — ดูได้ทุกเมนู แก้ไขไม่ได้</option>
+            <option value="viewer">👁️ ผู้ขอใช้รถ — ส่งคำร้องขอใช้รถ ดูข้อมูล</option>
           </select>
         </div>
 
@@ -481,7 +483,10 @@
           ⚙️ ผู้ดูแลระบบมีสิทธิ์เข้าถึงทุกเมนูโดยอัตโนมัติ ไม่ต้องตั้งค่าเพิ่มเติม
         </div>
         <div class="admin-note" id="viewerPermNote" style="display:none;">
-          👁️ ผู้ชมเห็นทุกเมนูแบบดูอย่างเดียว ไม่สามารถสร้างหรือแก้ไขข้อมูลได้
+          👁️ ผู้ขอใช้รถเห็นทุกเมนูแบบดูอย่างเดียว ส่งคำร้องขอใช้รถได้ ไม่สามารถสร้างหรือแก้ไขข้อมูลได้
+        </div>
+        <div class="admin-note" id="managerPermNote" style="display:none;">
+          👔 ผู้บริหารเห็นทุกเมนูแบบดูอย่างเดียว ไม่สามารถสร้างหรือแก้ไขข้อมูลได้
         </div>
 
         <div class="danger-zone" id="dangerZone">
@@ -517,8 +522,10 @@
         <div class="form-group">
           <label>กำหนดบทบาท</label>
           <select id="approveRole" onchange="onApproveRoleChange()">
-            <option value="viewer">👁️ ผู้ชม — ดูอย่างเดียวทุกเมนู</option>
-            <option value="staff">👷 คณะทำงาน — กำหนดสิทธิ์เองได้</option>
+            <option value="viewer">👁️ ผู้ขอใช้รถ — ดูข้อมูล ส่งคำร้องขอใช้รถ</option>
+            <option value="driver">🚘 พนักงานขับรถ — บันทึกการใช้รถ เชื้อเพลิง ซ่อม</option>
+            <option value="staff">👷 คณะทำงาน — สร้างคิว บันทึกน้ำมัน ซ่อม รายงาน</option>
+            <option value="manager">👔 ผู้บริหาร — ดูได้ทุกเมนู แก้ไขไม่ได้</option>
             <option value="admin">⚙️ ผู้ดูแลระบบ — เข้าถึงทุกอย่าง</option>
           </select>
         </div>
@@ -533,7 +540,10 @@
           ⚙️ ผู้ดูแลระบบมีสิทธิ์เข้าถึงทุกเมนูโดยอัตโนมัติ ไม่ต้องตั้งค่าเพิ่มเติม
         </div>
         <div class="admin-note" id="approveViewerPermNote" style="display:none;">
-          👁️ ผู้ชมเห็นทุกเมนูแบบดูอย่างเดียว ไม่สามารถสร้างหรือแก้ไขข้อมูลได้
+          👁️ ผู้ขอใช้รถเห็นทุกเมนูแบบดูอย่างเดียว ส่งคำร้องขอใช้รถได้
+        </div>
+        <div class="admin-note" id="approveManagerPermNote" style="display:none;">
+          👔 ผู้บริหารเห็นทุกเมนูแบบดูอย่างเดียว ไม่สามารถสร้างหรือแก้ไขข้อมูลได้
         </div>
       </div>
       <div class="modal-footer">
@@ -579,10 +589,12 @@
       admin:       { label: '⚙️ ผู้ดูแลระบบ',    css: 'role-admin' },
       super_admin: { label: '⚡ ซูเปอร์แอดมิน',  css: 'role-super_admin' },
       staff:       { label: '👷 คณะทำงาน',        css: 'role-staff' },
+      driver:      { label: '🚘 พนักงานขับรถ',    css: 'role-driver' },
+      manager:     { label: '👔 ผู้บริหาร',        css: 'role-manager' },
       vehicle:     { label: '🚗 ผู้บันทึกคิว',    css: 'role-vehicle' },
       fuel:        { label: '⛽ บันทึกน้ำมัน',    css: 'role-fuel' },
       repair:      { label: '🔧 บันทึกซ่อม',      css: 'role-repair' },
-      viewer:      { label: '👁️ ผู้ชม',           css: 'role-viewer' }
+      viewer:      { label: '👁️ ผู้ขอใช้รถ',      css: 'role-viewer' }
     };
 
     var MODULES = [
@@ -597,7 +609,9 @@
 
     // Default permissions per role
     var ROLE_DEFAULT_PERMS = {
-      staff:   { queue: 'view', usage_log: 'view', vehicles: 'view', fuel: 'view', repair: 'view', drivers: 'view', reports: 'view' },
+      staff:   { queue: 'edit', usage_log: 'edit', vehicles: 'view', fuel: 'edit', repair: 'edit', drivers: 'view', reports: 'view' },
+      driver:  { queue: 'view', usage_log: 'edit', vehicles: 'view', fuel: 'edit', repair: 'edit', drivers: 'view', reports: 'view' },
+      manager: { queue: 'view', usage_log: 'view', vehicles: 'view', fuel: 'view', repair: 'view', drivers: 'view', reports: 'view' },
       vehicle: { queue: 'edit', usage_log: 'edit', vehicles: 'view', fuel: 'view', repair: 'view', drivers: 'view', reports: 'view' },  // legacy
       fuel:    { queue: 'view', usage_log: 'view', vehicles: 'view', fuel: 'edit', repair: 'view', drivers: 'view', reports: 'view' },  // legacy
       repair:  { queue: 'view', usage_log: 'view', vehicles: 'view', fuel: 'view', repair: 'edit', drivers: 'view', reports: 'view' }, // legacy
@@ -691,7 +705,9 @@
       html += '<option value="">ทุกบทบาท</option>';
       html += '<option value="admin">⚙️ ผู้ดูแลระบบ</option>';
       html += '<option value="staff">👷 คณะทำงาน</option>';
-      html += '<option value="viewer">👁️ ผู้ชม</option>';
+      html += '<option value="driver">🚘 พนักงานขับรถ</option>';
+      html += '<option value="manager">👔 ผู้บริหาร</option>';
+      html += '<option value="viewer">👁️ ผู้ขอใช้รถ</option>';
       html += '<option value="vehicle">🚗 ผู้บันทึกคิว (เดิม)</option>';
       html += '<option value="fuel">⛽ บันทึกน้ำมัน (เดิม)</option>';
       html += '<option value="repair">🔧 บันทึกซ่อม (เดิม)</option>';
@@ -888,15 +904,18 @@
       var role = document.getElementById('editRole').value;
       var isAdmin = role === 'admin' || role === 'super_admin';
       var isViewer = role === 'viewer';
+      var isManager = role === 'manager';
       var isStaff = role === 'staff';
 
       var permSection = document.getElementById('permSection');
       var adminNote = document.getElementById('adminPermNote');
       var viewerNote = document.getElementById('viewerPermNote');
+      var managerNote = document.getElementById('managerPermNote');
       var permTitle = document.getElementById('permSectionTitle');
 
       adminNote.style.display = 'none';
       viewerNote.style.display = 'none';
+      managerNote.style.display = 'none';
 
       if (isAdmin) {
         permSection.style.display = 'none';
@@ -907,6 +926,12 @@
       if (isViewer) {
         permSection.style.display = 'none';
         viewerNote.style.display = 'block';
+        permTitle.style.display = 'none';
+        return;
+      }
+      if (isManager) {
+        permSection.style.display = 'none';
+        managerNote.style.display = 'block';
         permTitle.style.display = 'none';
         return;
       }
@@ -921,11 +946,11 @@
       }
 
       // If role changed to staff from a legacy role, keep existing permissions (they're already correct)
-      // If role changed and no existing perms, use defaults
+      // If role changed and no existing perms, use role-appropriate defaults
       var origRole = _editUser ? _editUser.role : null;
       var isLegacyToStaff = (origRole === 'vehicle' || origRole === 'fuel' || origRole === 'repair') && isStaff;
       if (!isLegacyToStaff && Object.keys(perms).length === 0) {
-        perms = JSON.parse(JSON.stringify(ROLE_DEFAULT_PERMS.staff));
+        perms = JSON.parse(JSON.stringify(ROLE_DEFAULT_PERMS[role] || ROLE_DEFAULT_PERMS.staff));
       }
 
       renderPresetBtns('editPresetBtns', 'edit');
@@ -945,7 +970,9 @@
 
       // Build permissions
       var permissions = {};
-      if (!isAdmin && role !== 'viewer') {
+      if (role === 'manager') {
+        permissions = JSON.parse(JSON.stringify(ROLE_DEFAULT_PERMS.manager));
+      } else if (!isAdmin && role !== 'viewer') {
         var selects = document.querySelectorAll('#permGrid select[data-module]');
         selects.forEach(function(sel) {
           permissions[sel.dataset.module] = sel.value;
@@ -1069,15 +1096,17 @@
       var role = document.getElementById('approveRole').value;
       var isAdmin = role === 'admin' || role === 'super_admin';
       var isViewer = role === 'viewer';
-      var isStaff = role === 'staff';
+      var isManager = role === 'manager';
 
       var permSection = document.getElementById('approvePermSection');
       var adminNote = document.getElementById('approveAdminPermNote');
       var viewerNote = document.getElementById('approveViewerPermNote');
+      var managerNote = document.getElementById('approveManagerPermNote');
       var permTitle = document.getElementById('approvePermTitle');
 
       adminNote.style.display = 'none';
       viewerNote.style.display = 'none';
+      managerNote.style.display = 'none';
 
       if (isAdmin) {
         permSection.style.display = 'none';
@@ -1091,11 +1120,17 @@
         permTitle.style.display = 'none';
         return;
       }
+      if (isManager) {
+        permSection.style.display = 'none';
+        managerNote.style.display = 'block';
+        permTitle.style.display = 'none';
+        return;
+      }
 
       permSection.style.display = 'block';
       permTitle.style.display = 'block';
 
-      var perms = JSON.parse(JSON.stringify(ROLE_DEFAULT_PERMS.staff));
+      var perms = JSON.parse(JSON.stringify(ROLE_DEFAULT_PERMS[role] || ROLE_DEFAULT_PERMS.staff));
       renderPresetBtns('approvePresetBtns', 'approve');
       _renderPermGrid(perms, 'approvePermGrid', 'approvePermSummary');
     }
@@ -1110,7 +1145,9 @@
       var isAdmin = role === 'admin' || role === 'super_admin';
 
       var permissions = {};
-      if (!isAdmin && role !== 'viewer') {
+      if (role === 'manager') {
+        permissions = JSON.parse(JSON.stringify(ROLE_DEFAULT_PERMS.manager));
+      } else if (!isAdmin && role !== 'viewer') {
         var selects = document.querySelectorAll('#approvePermGrid select[data-module]');
         selects.forEach(function(sel) {
           permissions[sel.dataset.module] = sel.value;

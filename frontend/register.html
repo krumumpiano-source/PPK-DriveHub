@@ -235,8 +235,8 @@
     </div>
     <div class="register-body">
       <div class="info-box">
-        <strong>⚠️ หมายเหตุสำคัญ</strong>
-        การสมัครนี้เป็นการส่งคำขอใช้งานเท่านั้น คุณจะสามารถเข้าใช้งานได้หลังจากผู้ดูแลระบบอนุมัติแล้วเท่านั้น
+        <strong>ℹ️ สมัครแล้วใช้งานได้ทันที</strong>
+        หลังสมัครสำเร็จ เข้าสู่ระบบได้ทันทีด้วยสิทธิ์ผู้ขอใช้รถ (ดูข้อมูลได้ทุกเมนู) ผู้ดูแลระบบจะกำหนดสิทธิ์เพิ่มเติมตามความเหมาะสม
       </div>
 
       <div id="alert-container"></div>
@@ -277,7 +277,7 @@
         <div class="form-group">
           <label for="email">อีเมล <span class="required">*</span></label>
           <input type="email" id="email" name="email" required>
-          <small>ใช้สำหรับแจ้งผลอนุมัติ</small>
+          <small>ใช้เป็น username สำหรับเข้าสู่ระบบ</small>
         </div>
 
         <div class="form-group">
@@ -286,7 +286,7 @@
             <input type="password" id="password" name="password" required minlength="8" autocomplete="new-password" placeholder="อย่างน้อย 8 ตัวอักษร">
             <button type="button" class="toggle-password" onclick="togglePassword('password', this)" title="แสดง/ซ่อนรหัสผ่าน">👁️</button>
           </div>
-          <small>อย่างน้อย 8 ตัว มีอักษรภาษาอังกฤษ ตัวเลข และเครื่องหมาย</small>
+          <small>อย่างน้อย 8 ตัวอักษร ต้องมีตัวอักษรภาษาอังกฤษและตัวเลขอย่างละอย่างน้อย 1 ตัว</small>
           <div id="password-strength" style="margin-top: 5px; font-size: 0.85em;"></div>
         </div>
 
@@ -301,12 +301,12 @@
 
         <div class="form-group">
           <label for="reason">เหตุผลการขอใช้งาน <span class="required">*</span></label>
-          <textarea id="reason" name="reason" required placeholder="ระบุเหตุผลที่ต้องการใช้งานระบบ"></textarea>
+          <textarea id="reason" name="reason" placeholder="ระบุเหตุผลที่ต้องการใช้งานระบบ (ถ้ามี)"></textarea>
           <small>ผู้ดูแลระบบจะใช้ข้อมูลนี้ในการพิจารณาอนุมัติ</small>
         </div>
 
         <button type="submit" class="btn" id="registerBtn">
-          📤 ส่งคำขอสมัคร
+          📤 สมัครสมาชิก
         </button>
       </form>
 
@@ -409,7 +409,7 @@
       var alertContainer = document.getElementById('alert-container');
 
       // Validate
-      if (!titleValue || !formData.full_name || !formData.department || !formData.phone || !formData.email || !formData.password || !formData.reason) {
+      if (!titleValue || !formData.full_name || !formData.department || !formData.phone || !formData.email || !formData.password) {
         alertContainer.innerHTML = '<div class="alert alert-error">กรุณากรอกข้อมูลให้ครบถ้วน</div>';
         return;
       }
@@ -429,30 +429,32 @@
 
       // Disable button
       registerBtn.disabled = true;
-      registerBtn.textContent = 'กำลังส่งคำขอ...';
+      registerBtn.textContent = 'กำลังสมัคร...';
       alertContainer.innerHTML = '';
 
       try {
         var result = await apiCall('register', formData);
 
         if (result.success) {
-          var msg = (result.data && result.data.message) ? result.data.message : 'ส่งคำขอสมัครสมาชิกเรียบร้อย รอการอนุมัติจากผู้ดูแลระบบ';
-          alertContainer.innerHTML = '<div class="alert alert-success">' + msg + '</div>';
-          document.getElementById('registerForm').reset();
-
-          setTimeout(function () {
-            alert('ส่งคำขอสมัครเรียบร้อยแล้ว รอการอนุมัติจากผู้ดูแลระบบ แล้วตรวจสอบอีเมลเมื่อได้รับการอนุมัติ');
-            window.location.href = 'login.html';
-          }, 2000);
+          document.getElementById('registerForm').style.display = 'none';
+          alertContainer.innerHTML =
+            '<div class="alert alert-success" style="text-align:center;padding:24px;">' +
+            '<div style="font-size:2em;margin-bottom:8px;">✅</div>' +
+            '<strong style="font-size:1.1em;">สมัครสมาชิกสำเร็จ</strong>' +
+            '<p style="margin:10px 0 0;เข้าสู่ระบบได้ทันทีด้วย email และรหัสผ่านที่ตั้งไว้</p>' +
+            '<p style="margin:4px 0 16px;font-size:0.9em;color:#2e7d32;">สิทธิ์เริ่มต้น: ผู้ขอใช้รถ (ดูข้อมูลได้ทุกเมนู)</p>' +
+            '<button onclick="window.location.href=\'login.html\'" style="padding:12px 28px;background:var(--gradient-primary);color:white;border:none;border-radius:var(--radius-md);font-size:1em;font-weight:600;cursor:pointer;font-family:inherit;">' +
+            '➡️ เข้าสู่ระบบเลย</button>' +
+            '</div>';
         } else {
-          alertContainer.innerHTML = '<div class="alert alert-error">' + (result.error || result.message || 'ส่งคำขอไม่สำเร็จ') + '</div>';
+          alertContainer.innerHTML = '<div class="alert alert-error">' + (result.error || result.message || 'สมัครไม่สำเร็จ') + '</div>';
           registerBtn.disabled = false;
-          registerBtn.textContent = '📤 ส่งคำขอสมัคร';
+          registerBtn.textContent = '📤 สมัครสมาชิก';
         }
       } catch (error) {
         alertContainer.innerHTML = '<div class="alert alert-error">' + handleError(error) + '</div>';
         registerBtn.disabled = false;
-        registerBtn.textContent = '📤 ส่งคำขอสมัคร';
+        registerBtn.textContent = '📤 สมัครสมาชิก';
       }
     }
   </script>

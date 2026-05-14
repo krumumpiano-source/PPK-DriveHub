@@ -62,6 +62,8 @@ export async function onRequest(context) {
     const hasFullName = !!(body.full_name || body.fullName || body.name);
     if (!hasFirstLast && !hasFullName) return error('กรุณากรอกชื่อ-นามสกุล');
 
+    if (!body?.password) return error('กรุณาตั้งรหัสผ่าน');
+
     const email = String(body.email).trim();
     const fullName = String(body.full_name || body.fullName || body.name || '').trim();
     const firstName = String(body.first_name || '').trim();
@@ -71,41 +73,43 @@ export async function onRequest(context) {
     const phone = String(body.phone || '').trim();
     const reason = String(body.reason || '').trim();
 
-    // Clean name only — extra fields go to dedicated columns
     const cleanName = hasFirstLast ? `${firstName} ${lastName}`.trim() : fullName;
 
-    const existing = await dbFirst(env.DB, 'SELECT id FROM user_requests WHERE email = ?', [email]);
-    if (existing) return error('email นี้มีคำขอสมัครรอการอนุมัติแล้ว', 409);
-
+    // Check email not already in use
     const existingUser = await dbFirst(env.DB, 'SELECT id FROM users WHERE email = ?', [email]);
-    if (existingUser) return error('email นี้มีบัญชีอยู่แล้ว', 409);
+    if (existingUser) return error('ไม่สามารถใช้ email นี้ได้ หาก email นี้มีบัญชีอยู่แล้ว กรุณาเข้าสู่ระบบ', 409);
 
-    // Hash user's chosen password and store it
-    let pwHash = null, pwSalt = null;
-    if (body.password) {
-      const complexityErr = validatePasswordComplexity(body.password);
-      if (complexityErr) return error(complexityErr);
-      pwSalt = generateSalt();
-      pwHash = await hashPassword(body.password, pwSalt);
-    }
+    // Validate and hash password
+    const complexityErr = validatePasswordComplexity(body.password);
+    if (complexityErr) return error(complexityErr);
+    const pwSalt = generateSalt();
+    const pwHash = await hashPassword(body.password, pwSalt);
+
+    // Build name parts
+    const nameParts = cleanName.split(/\s+/);
+    const fnFirst = hasFirstLast ? firstName : (nameParts[0] || cleanName);
+    const fnLast = hasFirstLast ? lastName : (nameParts.slice(1).join(' ') || '');
+    const displayName = (title ? title : '') + cleanName;
+    const userId = generateUUID();
+    const ts = now();
+
+    // Viewer permissions — view all modules, no edit
+    const viewerPerms = JSON.stringify({ queue: 'view', usage_log: 'view', vehicles: 'view', fuel: 'view', repair: 'view', drivers: 'view', reports: 'view' });
 
     await dbRun(env.DB,
-      `INSERT INTO user_requests (id, name, email, requested_role, initial_permissions, status, initial_password_hash, salt, title, department, phone, reason, created_at)
-       VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)`,
-      [generateUUID(), cleanName, email,
-       body.role || 'viewer', body.permissions ? JSON.stringify(body.permissions) : '{}',
-       pwHash, pwSalt,
-       title || null, department || null, phone || null, reason || null,
-       now()]
+      `INSERT INTO users (id, username, email, password_hash, salt, role, permissions, title, first_name, last_name, display_name, phone, active, pdpa_accepted, must_change_password, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, 'viewer', ?, ?, ?, ?, ?, ?, 1, 0, 0, ?, ?)`,
+      [userId, email, email, pwHash, pwSalt, viewerPerms,
+       title || null, fnFirst, fnLast, displayName, phone || null, ts, ts]
     );
 
     const displayForNotify = title ? `${title}${cleanName}` : cleanName;
-    await notifyAllAdmins(env.DB, 'system', 'ผู้ใช้ใหม่ลงทะเบียน',
-      `${displayForNotify} (${email}) สมัครเข้าใช้งาน รอการอนุมัติ`);
+    await notifyAllAdmins(env.DB, 'system', 'สมาชิกใหม่ลงทะเบียน',
+      `${displayForNotify} (${email}) สมัครเข้าใช้งานสำเร็จ สิทธิ์เริ่มต้น: ผู้ขอใช้รถ`);
     await sendTelegramMessage(env,
-      `👤 <b>ผู้ใช้ใหม่ลงทะเบียน</b>\n📛 ${displayForNotify}\n📧 ${email}\n🏢 ${department || '-'}\n📞 ${phone || '-'}\n📝 ${reason || '-'}\n⏳ รอการอนุมัติจากผู้ดูแล`);
+      `👤 <b>สมาชิกใหม่</b>\n📛 ${displayForNotify}\n📧 ${email}\n🏢 ${department || '-'}\n📞 ${phone || '-'}\n📝 ${reason || '-'}\n✅ เข้าระบบได้ทันที (สิทธิ์: ผู้ขอใช้รถ)`);
 
-    return success({ message: 'ส่งคำขอสมัครสมาชิกเรียบร้อย รอการอนุมัติจากผู้ดูแลระบบ' });
+    return success({ message: 'สมัครสมาชิกสำเร็จ เข้าสู่ระบบได้ทันทีด้วยอีเมลและรหัสผ่านที่ตั้งไว้' });
   }
 
   if (path === '/api/auth/logout' && method === 'POST') {
