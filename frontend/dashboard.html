@@ -92,31 +92,32 @@
     .trip-bar {
     position: absolute;
     height: 20px;
-    background: linear-gradient(90deg, #c62828, #ef5350);
-    color: white;
+    background: #e8d5b7;
+    border-left: 3px solid #b08040;
+    color: #6b4c1e;
     font-size: 0.68em;
-    font-weight: 600;
+    font-weight: 500;
     padding: 0 6px;
     display: flex;
     align-items: center;
     gap: 3px;
     overflow: hidden;
     white-space: nowrap;
-    box-shadow: 0 2px 4px rgba(150,0,0,0.3);
+    box-shadow: none;
     pointer-events: auto;
     cursor: default;
     z-index: 6;
     }
     .trip-bar-plate { font-weight: 700; letter-spacing: 0.02em; }
-    .trip-bar-info  { opacity: 0.88; font-weight: 400; }
+    .trip-bar-info  { opacity: 0.75; font-weight: 400; }
     .overdue-banner {
     font-size: 0.65em;
-    background: #ffccbc;
-    color: #bf360c;
+    background: #fef3cd;
+    color: #856404;
     border-radius: 3px;
     padding: 2px 5px;
     margin-bottom: 4px;
-    font-weight: 700;
+    font-weight: 600;
     }
 
     .calendar-day-header {
@@ -962,7 +963,7 @@
 
               // Banner บนวันนี้
               if (isToday && tripBars.length > 0) {
-                html += '<div class="overdue-banner">⚠️ ยังไม่กลับ ' + tripBars.length + ' คัน</div>';
+                html += '<div class="overdue-banner">🚗 ยังไม่กลับ ' + tripBars.length + ' คัน</div>';
               }
 
               // Single-day queue cards (วันเดียว)
@@ -1016,7 +1017,7 @@
                 var extraStyle = (!wb.isStart ? 'border-left:2px dashed rgba(255,255,255,0.4);margin-left:0;' : '') +
                                  (!wb.isEnd   ? 'border-right:2px dashed rgba(255,255,255,0.4);' : '');
                 html += '<div class="trip-bar" style="left:calc(' + leftPct + '% + 2px);width:calc(' + widthPct + '% - 4px);top:' + topPx + 'px;border-radius:' + borderR + ';' + extraStyle + '">';
-                html += '<span class="trip-bar-plate">⚠️ ' + wb.bar.plate + '</span>';
+                html += '<span class="trip-bar-plate">🚗 ' + wb.bar.plate + '</span>';
                 if (wb.isStart || wb.colStart === 0) {
                   html += '<span class="trip-bar-info"> ' + wb.bar.driver + ' · ' + wb.bar.daysOut + ' วัน</span>';
                 }
