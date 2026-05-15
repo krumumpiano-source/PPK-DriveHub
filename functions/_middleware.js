@@ -9,6 +9,8 @@ const PUBLIC_PATHS = [
   '/api/check/daily',           // QR ตรวจสภาพ+แจ้งซ่อม
   '/api/usage/record',          // QR บันทึกใช้รถ
   '/api/usage/latest-status',   // QR ดูสถานะรถ (ไม่ต้อง login)
+  '/api/usage/staff-names',     // QR autocomplete ชื่อบุคลากร (ไม่ต้อง login)
+  '/api/usage/ocr-odometer',    // QR OCR อ่านเลขไมล์ (ไม่ต้อง login)
   '/api/fuel/record',           // QR เติมน้ำมัน
   '/api/fuel/types',            // QR โชว์ประเภทน้ำมัน (ไม่ต้อง login)
   '/api/vehicles/qr-info',      // QR โหลดข้อมูลรถ (ไม่ต้อง login)
