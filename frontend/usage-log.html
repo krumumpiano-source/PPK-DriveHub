@@ -362,6 +362,7 @@
                 <th>ไมล์ก่อนออก</th>
                 <th>ไมล์กลับ</th>
                 <th>ระยะทาง (กม.)</th>
+                <th>หลักฐานไมล์</th>
                 <th>สถานะ</th>
               </tr>
             </thead>
@@ -462,7 +463,8 @@
       var month = String(date.getMonth() + 1).padStart(2, '0');
       var day = String(date.getDate()).padStart(2, '0');
       return year + '-' + month + '-' + day;
-    }
+    }
+
 
     async function loadVehicles() {
       try {
@@ -851,6 +853,7 @@
             html += '<td style="text-align:right">' + mileStartHtml + '</td>';
             html += '<td style="text-align:right">' + mileEndHtml + '</td>';
             html += '<td style="text-align:right;color:#c62828;font-weight:700">' + (trip.distance != null ? Number(trip.distance).toLocaleString() : '-') + '</td>';
+            html += '<td>-</td>';
             html += '<td>' + statusBadge + '</td>';
           } else {
             html += '<td>' + formatDateThai(trip.date) + '</td>';
@@ -863,6 +866,10 @@
             html += '<td style="text-align:right">' + mileStartHtml + '</td>';
             html += '<td style="text-align:right">' + mileEndHtml + '</td>';
             html += '<td style="text-align:right">' + (trip.distance != null && trip.distance >= 0 ? Number(trip.distance).toLocaleString() : '-') + '</td>';
+            var odomHtml = trip.odometer_image
+              ? '<a href="' + trip.odometer_image + '" target="_blank" title="\u0e14\u0e39\u0e20\u0e32\u0e1e\u0e21\u0e34\u0e40\u0e15\u0e2d\u0e23\u0e4c" style="font-size:1.3em;text-decoration:none;">\ud83d\udcf7</a>'
+              : '<span title="\u0e44\u0e21\u0e48\u0e21\u0e35\u0e20\u0e32\u0e1e\u0e21\u0e34\u0e40\u0e15\u0e2d\u0e23\u0e4c" style="color:#bbb;font-size:1.1em;">\u26a0\ufe0f</span>';
+            html += '<td style="text-align:center">' + odomHtml + '</td>';
             html += '<td>' + statusBadge + noteHtml + '</td>';
           }
           html += '</tr>';

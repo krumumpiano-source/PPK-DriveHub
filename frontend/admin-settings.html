@@ -287,6 +287,7 @@
             <button type="button" class="tab-btn" onclick="switchTab('maint-profile')">🏭 Profile ซ่อมบำรุง</button>
             <button type="button" class="tab-btn" onclick="switchTab('tax-fuel')">📋 ภาษี/ประกัน/น้ำมัน</button>
             <button type="button" class="tab-btn" onclick="switchTab('data')">📊 นำเข้าข้อมูล</button>
+            <button type="button" class="tab-btn" onclick="switchTab('staff')">👥 รายชื่อบุคลากร</button>
           </div>
 
           <div id="settingsContent" style="display: none;">
@@ -464,6 +465,30 @@
                 </button>
                 <div id="gformLogTable" style="display:none; overflow-x:auto; margin-top:10px;"></div>
               </div>
+            </div>
+
+            <!-- ===== รายชื่อบุคลากร ===== -->
+            <div class="settings-section" data-tab="staff">
+              <div class="section-title">👥 รายชื่อบุคลากรสำหรับ Autocomplete</div>
+              <div class="help-text" style="margin-bottom:15px;">
+                ใช้สำหรับช่อง "ผู้ขอใช้รถ" ในหน้าสแกน QR บันทึกการใช้รถ รายชื่อดึงจากเว็บโรงเรียน ppk.ac.th อัตโนมัติ หรือแก้ไขด้วยตนเองด้านล่าง
+              </div>
+
+              <div style="margin-bottom:12px;">
+                <button type="button" class="btn btn-primary" id="syncStaffBtn" onclick="syncStaffNames()">
+                  🔄 ซิงค์รายชื่อจากเว็บโรงเรียน
+                </button>
+                <span id="syncStaffStatus" style="margin-left:12px;font-size:0.9em;color:var(--color-text-muted);"></span>
+              </div>
+
+              <div class="form-group">
+                <label for="staffNamesList">แก้ไขรายชื่อด้วยตนเอง (บรรทัดละ 1 ชื่อ)</label>
+                <textarea id="staffNamesList" rows="12" style="width:100%;padding:10px;border:2px solid #ddd;border-radius:8px;font-size:0.9em;font-family:inherit;resize:vertical;"
+                  placeholder="นายสมชาย ใจดี&#10;นางสาวมาลัย รักไทย&#10;นางสมหญิง มานะ"></textarea>
+                <div class="help-text">จำนวนรายชื่อ: <span id="staffNamesCount">0</span></div>
+              </div>
+
+              <button type="button" class="btn btn-primary" onclick="saveStaffNames()">💾 บันทึกรายชื่อ</button>
             </div>
 
             <!-- ปุ่มบันทึก -->
@@ -984,6 +1009,68 @@
           showSettingsForm();
         }
 
+        // ---- Staff names management ----
+        async function loadStaffNamesTab() {
+          try {
+            var resp = await fetch('/api/usage/staff-names');
+            if (!resp.ok) return;
+            var data = await resp.json();
+            var names = (data && data.data) ? data.data : (Array.isArray(data) ? data : []);
+            var ta = document.getElementById('staffNamesList');
+            if (ta) ta.value = names.join('\n');
+            var cnt = document.getElementById('staffNamesCount');
+            if (cnt) cnt.textContent = names.length;
+          } catch {}
+        }
+
+        async function syncStaffNames() {
+          var btn = document.getElementById('syncStaffBtn');
+          var status = document.getElementById('syncStaffStatus');
+          btn.disabled = true;
+          btn.textContent = '⏳ กำลังซิงค์...';
+          status.textContent = '';
+          try {
+            var result = await apiCall('syncStaffNames', {});
+            if (result && result.success !== false) {
+              var d = result.data || result;
+              var count = d.count || 0;
+              status.style.color = 'var(--color-success)';
+              status.textContent = '✅ พบ ' + count + ' รายชื่อ';
+              var ta = document.getElementById('staffNamesList');
+              if (ta && d.names) {
+                ta.value = d.names.join('\n');
+                var cnt = document.getElementById('staffNamesCount');
+                if (cnt) cnt.textContent = count;
+              }
+            } else {
+              status.style.color = 'var(--color-danger)';
+              status.textContent = '❌ ' + ((result && result.message) || 'ล้มเหลว');
+            }
+          } catch (e) {
+            status.style.color = 'var(--color-danger)';
+            status.textContent = '❌ ' + (e.message || 'เกิดข้อผิดพลาด');
+          }
+          btn.disabled = false;
+          btn.textContent = '🔄 ซิงค์รายชื่อจากเว็บโรงเรียน';
+        }
+
+        async function saveStaffNames() {
+          var ta = document.getElementById('staffNamesList');
+          if (!ta) return;
+          var names = ta.value.split('\n').map(function(n) { return n.trim(); }).filter(Boolean);
+          // Remove duplicates
+          names = Array.from(new Set(names)).sort(function(a, b) { return a.localeCompare(b, 'th'); });
+          try {
+            await apiCall('updateSystemSetting', { key: 'staff_names_list', value: JSON.stringify(names) });
+            var cnt = document.getElementById('staffNamesCount');
+            if (cnt) cnt.textContent = names.length;
+            ta.value = names.join('\n');
+            showAlert('บันทึกรายชื่อ ' + names.length + ' คนเรียบร้อย', 'success');
+          } catch (e) {
+            showAlert('เกิดข้อผิดพลาด: ' + e.message, 'error');
+          }
+        }
+
         async function saveSettings() {
           var el = function (id) { return document.getElementById(id); };
           if (typeof apiCall !== 'function') {
@@ -1315,7 +1402,8 @@
             if (isActive) { btn.classList.add('active'); } else { btn.classList.remove('active'); }
           });
           var saveRow = document.getElementById('tabSaveRow');
-          if (saveRow) saveRow.style.display = name === 'data' ? 'none' : '';
+          if (saveRow) saveRow.style.display = (name === 'data' || name === 'staff') ? 'none' : '';
+          if (name === 'staff') loadStaffNamesTab();
         }
 
         // ============================================================

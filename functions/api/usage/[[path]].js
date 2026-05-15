@@ -1,7 +1,7 @@
 ﻿// Usage records — event-based (departure/return/refuel/inspection) + Auto-Heal
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
-  parseBody, requirePermission, extractParam, notifyAllAdmins
+  parseBody, requirePermission, extractParam, notifyAllAdmins, uploadToR2
 } from '../../_helpers.js';
 import { autoHeal } from '../../_lib/auto-heal.js';
 
@@ -15,6 +15,60 @@ export async function onRequest(context) {
   const path = url.pathname;
   const method = request.method;
   const user = env.user;
+
+  // PUBLIC — ดึงรายชื่อบุคลากรสำหรับ autocomplete ใน QR form
+  if (path === '/api/usage/staff-names' && method === 'GET') {
+    const row = await dbFirst(env.DB,
+      "SELECT value FROM system_settings WHERE key = 'staff_names_list'", []);
+    let names = [];
+    if (row?.value) {
+      try { names = JSON.parse(row.value); } catch { names = []; }
+    }
+    return success(names);
+  }
+
+  // PUBLIC — OCR อ่านเลขไมล์จากภาพมิเตอร์ (ใช้โดย QR form ไม่ต้อง login)
+  if (path === '/api/usage/ocr-odometer' && method === 'POST') {
+    const body = await parseBody(request);
+    if (!body?.base64 || !body?.mime) return error('กรุณาส่ง base64 และ mime');
+    const geminiKey = env.GEMINI_API_KEY;
+    if (!geminiKey) return error('ยังไม่ได้ตั้งค่า GEMINI_API_KEY', 500);
+
+    const prompt = `อ่านตัวเลขระยะทางบนมิเตอร์รถยนต์ ไม่ว่าดิจิตอลหรือตัวเลขหมุนกลไก ตอบเป็น JSON เท่านั้น ห้ามมีข้อความอื่น: {"mileage": <ตัวเลขเต็ม ไม่มีจุลภาค>, "confidence": "high" หรือ "medium" หรือ "low" หรือ "unreadable"}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`;
+    const payload = {
+      contents: [{ parts: [
+        { text: prompt },
+        { inline_data: { mime_type: body.mime, data: body.base64 } }
+      ]}],
+      generationConfig: { temperature: 0.1, maxOutputTokens: 256 }
+    };
+    let geminiResp;
+    try {
+      geminiResp = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (e) {
+      return error(`ไม่สามารถเชื่อมต่อ Gemini API ได้: ${e.message}`, 502);
+    }
+    if (!geminiResp.ok) {
+      const errText = await geminiResp.text();
+      return error(`Gemini API error ${geminiResp.status}: ${errText}`, 502);
+    }
+    const geminiData = await geminiResp.json();
+    const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    let extracted = {};
+    try {
+      const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)```/) || rawText.match(/(\{[\s\S]*\})/);
+      const jsonStr = jsonMatch ? jsonMatch[1] : rawText;
+      extracted = JSON.parse(jsonStr.trim());
+    } catch {
+      return error('ไม่สามารถอ่านเลขไมล์จากภาพได้', 422);
+    }
+    return success({ mileage: extracted.mileage || null, confidence: extracted.confidence || 'low' });
+  }
 
   // PUBLIC QR usage record
   if (path === '/api/usage/record' && method === 'POST') {
@@ -35,15 +89,28 @@ export async function onRequest(context) {
 
     const id = generateUUID();
     const ts = now();
+
+    // Upload odometer image to R2 if provided
+    let odometerImagePath = null;
+    if (body.odometer_image_base64 && body.odometer_image_mime) {
+      odometerImagePath = await uploadToR2(
+        env,
+        body.odometer_image_base64,
+        body.odometer_image_name || 'odometer.jpg',
+        'ODOMETER',
+        body.odometer_image_mime
+      );
+    }
+
     await dbRun(env.DB,
-      `INSERT INTO usage_records (id, car_id, driver_id, record_type, datetime, mileage, location, notes, queue_id, data_quality, requester_name, record_source, purpose, destination, driver_name_manual, passengers, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'normal', ?, 'qr_manual', ?, ?, ?, ?, ?)`,
+      `INSERT INTO usage_records (id, car_id, driver_id, record_type, datetime, mileage, location, notes, queue_id, data_quality, requester_name, record_source, purpose, destination, driver_name_manual, passengers, odometer_image, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'normal', ?, 'qr_manual', ?, ?, ?, ?, ?, ?)`,
       [id, body.car_id, body.driver_id || null, body.record_type,
        body.datetime || ts, body.mileage || null,
        body.location || '', body.notes || '', body.queue_id || null,
        body.requester_name || null,
        body.purpose || null, body.destination || null, body.driver_name_manual || null,
-       body.passengers || null, ts]
+       body.passengers || null, odometerImagePath, ts]
     );
     // Update car mileage if provided
     if (body.mileage && body.mileage > 0) {
@@ -210,16 +277,29 @@ export async function onRequest(context) {
 
     const id = generateUUID();
     const ts = now();
+
+    // Upload odometer image to R2 if provided
+    let odometerImagePathAuth = null;
+    if (body.odometer_image_base64 && body.odometer_image_mime) {
+      odometerImagePathAuth = await uploadToR2(
+        env,
+        body.odometer_image_base64,
+        body.odometer_image_name || 'odometer.jpg',
+        'ODOMETER',
+        body.odometer_image_mime
+      );
+    }
+
     await dbRun(env.DB,
-      `INSERT INTO usage_records (id, car_id, driver_id, record_type, datetime, mileage, location, notes, queue_id, data_quality, requester_name, record_source, purpose, destination, driver_name_manual, passengers, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'normal', ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO usage_records (id, car_id, driver_id, record_type, datetime, mileage, location, notes, queue_id, data_quality, requester_name, record_source, purpose, destination, driver_name_manual, passengers, odometer_image, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'normal', ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, body.car_id, body.driver_id || null, body.record_type,
        body.datetime || ts, body.mileage || null,
        body.location || '', body.notes || '', body.queue_id || null,
        body.requester_name || null,
        body.record_source || 'qr_logged_in',
        body.purpose || null, body.destination || null, body.driver_name_manual || null,
-       body.passengers || null, ts]
+       body.passengers || null, odometerImagePathAuth, ts]
     );
     if (body.mileage && body.mileage > 0) {
       await dbRun(env.DB,

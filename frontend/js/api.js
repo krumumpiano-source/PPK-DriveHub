@@ -307,6 +307,7 @@ const ACTION_MAP = {
   'getAuditLogs':        (d) => API.get('/api/admin/audit-log' + _q(d)),
   'updateSystemSetting': (d) => API.put('/api/admin/settings', { [d.key]: d.value }),
   'resetAdminSettingsToDefault': () => API.put('/api/admin/settings', {}),
+  'syncStaffNames':      () => API.post('/api/admin/sync-staff-names', {}),
   'getGformSyncConfig':  () => API.get('/api/admin/gform-sync/config'),
   'getGformSyncLog':     (d) => API.get('/api/admin/gform-sync/log' + _q(d)),
   'runGformSync':        () => API.post('/api/admin/gform-sync/run', {}),

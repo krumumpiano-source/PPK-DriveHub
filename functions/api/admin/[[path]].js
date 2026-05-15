@@ -397,6 +397,49 @@ export async function onRequest(context) {
     return success({ message: 'ลบผู้ใช้ "' + targetName + '" เรียบร้อยแล้ว' });
   }
 
+  // ── Sync staff names from school website ──
+  if (path === '/api/admin/sync-staff-names' && method === 'POST') {
+    if (!['admin', 'super_admin'].includes(user.role)) return error('ต้องเป็น admin', 403);
+
+    const urls = [
+      'https://ppk.ac.th/?p=482', 'https://ppk.ac.th/?p=480', 'https://ppk.ac.th/?p=472',
+      'https://ppk.ac.th/personnel/458/', 'https://ppk.ac.th/?p=470', 'https://ppk.ac.th/?p=468',
+      'https://ppk.ac.th/?p=466', 'https://ppk.ac.th/?p=464', 'https://ppk.ac.th/?p=460',
+      'https://ppk.ac.th/?p=462', 'https://ppk.ac.th/?p=478', 'https://ppk.ac.th/?p=476'
+    ];
+
+    const allNames = new Set();
+    const nameRegex = /(?:ว่าที่\s*(?:ร้อย(?:ตรี|โท|เอก)|ร\.ต\.|พัน|นาวา|เรือ)[^\s]*\s+)?(?:นาย|นาง(?:สาว)?)\s+([\u0E00-\u0E7F]+)\s+([\u0E00-\u0E7F]+)/g;
+
+    for (const pageUrl of urls) {
+      try {
+        const resp = await fetch(pageUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+        if (!resp.ok) continue;
+        const html = await resp.text();
+        // Strip HTML tags
+        const text = html.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/g, ' ');
+        let m;
+        nameRegex.lastIndex = 0;
+        while ((m = nameRegex.exec(text)) !== null) {
+          // Find the full match prefix (นาย/นาง/นางสาว + name)
+          const fullMatch = m[0].trim();
+          const prefix = fullMatch.match(/(?:ว่าที่[^\s]*\s+)?(?:นาย|นาง(?:สาว)?)/)?.[0] || '';
+          const cleaned = (prefix + ' ' + m[1] + ' ' + m[2]).replace(/\s+/g, ' ').trim();
+          if (cleaned.length > 4) allNames.add(cleaned);
+        }
+      } catch { /* skip failed pages */ }
+    }
+
+    const names = Array.from(allNames).sort((a, b) => a.localeCompare(b, 'th'));
+    const ts = now();
+    await dbRun(env.DB,
+      `INSERT INTO system_settings (key, value, updated_by, updated_at) VALUES ('staff_names_list', ?, ?, ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_by = excluded.updated_by, updated_at = excluded.updated_at`,
+      [JSON.stringify(names), user.displayName || user.username || '', ts]
+    );
+    return success({ count: names.length, names, synced_at: ts });
+  }
+
   return error('Not Found', 404);
   } catch (e) {
     console.error('API Error:', e);
