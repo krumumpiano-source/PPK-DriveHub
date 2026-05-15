@@ -158,7 +158,7 @@
       <!-- 1. เลขทะเบียนรถ (ออโต้ตามคิวอาร์รถแต่ละคัน) -->
       <div class="form-group">
         <label>เลขทะเบียนรถ <span class="required">*</span></label>
-        <select id="carId" required>
+        <select id="carId" required onchange="loadLastMileage(this.value)">
           <option value="">-- เลือกรถ --</option>
         </select>
         <div class="help-text">จะออโต้ตามคิวอาร์รถแต่ละคัน (หรือเลือกจากรายการ)</div>
@@ -257,6 +257,7 @@
       <div class="form-group">
         <label>เลขไมล์รถขณะเติมน้ำมัน <span class="required">*</span></label>
         <input type="number" id="mileageBefore" min="0" required placeholder="ไมล์">
+        <div class="help-text" id="lastMileageHint" style="display:none;"></div>
       </div>
 
       <!-- 10. แนบใบเสร็จรับเงิน (รูปภาพ) — บังคับ -->
@@ -327,6 +328,7 @@
     var vehicles = [];
     var fuelTypes = [];
     var receiptImageFile = null;
+    var lastMileage = 0; // เลขไมล์ล่าสุดของรถที่เลือก (ดึงจาก fuel_log)
 
     document.addEventListener('DOMContentLoaded', function () {
       var isAuthenticated = requireAuth();
@@ -393,6 +395,11 @@
             }
           }
           initHistory();
+          // auto-select from URL param → ดึงไมล์ล่าสุดด้วย
+          if (plate) {
+            var selectedVal = document.getElementById('carId').value;
+            if (selectedVal) loadLastMileage(selectedVal);
+          }
         }
       }).catch(function (err) { console.error('getVehicles error', err); });
     }
@@ -430,6 +437,34 @@
           });
         }
       }).catch(function (err) { console.error('getFuelTypes error', err); });
+    }
+
+    function loadLastMileage(carId) {
+      lastMileage = 0;
+      var hint = document.getElementById('lastMileageHint');
+      if (!carId) {
+        if (hint) hint.style.display = 'none';
+        return;
+      }
+      apiCall('getFuelLog', { car_id: carId }).then(function (res) {
+        var records = [];
+        if (res.success) {
+          records = Array.isArray(res.data) ? res.data : (res.data.records || res.data.data || []);
+        }
+        if (records.length > 0) {
+          lastMileage = parseInt(records[0].mileage_after) || 0;
+          if (hint && lastMileage > 0) {
+            hint.textContent = 'เลขไมล์ล่าสุดของรถคันนี้: ' + lastMileage.toLocaleString() + ' กม. (บันทึกเลขไมล์ปัจจุบัน ณ ขณะเติม)';
+            hint.style.display = 'block';
+          } else if (hint) {
+            hint.style.display = 'none';
+          }
+        } else {
+          if (hint) hint.style.display = 'none';
+        }
+      }).catch(function () {
+        if (hint) hint.style.display = 'none';
+      });
     }
 
     function loadDrivers() {
@@ -581,7 +616,7 @@
         purpose: purpose,
         purpose_detail: purposeDetail || null,
         signed_supply_chief: (document.getElementById('signedSupplyChief') || {}).value || null,
-        mileage_before: parseInt(document.getElementById('mileageBefore').value, 10),
+        mileage_before: lastMileage,
         mileage_after: parseInt(document.getElementById('mileageBefore').value, 10),
         liters: parseFloat(document.getElementById('liters').value),
         price_per_liter: parseFloat(document.getElementById('pricePerLiter').value),
@@ -589,7 +624,7 @@
       };
 
       if (!formData.date || !formData.time || !formData.car_id || !formData.expense_type || !formData.fuel_type ||
-        isNaN(formData.mileage_before) || formData.mileage_before <= 0 ||
+        isNaN(formData.mileage_after) || formData.mileage_after <= 0 ||
         !formData.liters || formData.liters <= 0 ||
         !formData.price_per_liter || formData.price_per_liter <= 0 ||
         !formData.amount || formData.amount <= 0) {

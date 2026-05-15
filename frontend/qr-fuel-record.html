@@ -848,8 +848,8 @@
             }
           }
         } catch (e) {
-          // Use current mileage as before if can't get last
-          lastMileage = mileage;
+          // ถ้าดึงไม่ได้ ใช้ 0 เพื่อไม่ให้ mileage_before = mileage_after
+          lastMileage = 0;
         }
 
         // Prepare receipt image
