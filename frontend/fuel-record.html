@@ -562,10 +562,10 @@
       var expectedAmount = liters * pricePerLiter;
       var difference = Math.abs(amount - expectedAmount);
 
-      // ยอมรับความคลาดเคลื่อน ±0.01 บาท (เพื่อรองรับการปัดเศษ)
-      if (difference > 0.01) {
+      // ยอมรับความคลาดเคลื่อน ±1.00 บาท (รองรับการปัดเศษของตู้น้ำมัน เช่น จ่าย 2,550 บาทกลม ตู้แสดงลิตรปัดขึ้น)
+      if (difference > 1.00) {
         if (errorDiv) {
-          errorDiv.textContent = '⚠️ การคำนวณไม่ถูกต้อง: ปริมาณ (' + liters.toFixed(2) + ') × ราคาต่อลิตร (' + pricePerLiter.toFixed(2) + ') = ' + expectedAmount.toFixed(2) + ' บาท แต่กรอก ' + amount.toFixed(2) + ' บาท กรุณาตรวจสอบอีกครั้ง';
+          errorDiv.textContent = '⚠️ ตัวเลขต่างกันมาก: ' + liters.toFixed(2) + ' ลิตร × ' + pricePerLiter.toFixed(2) + ' บาท = ' + expectedAmount.toFixed(2) + ' บาท แต่กรอกจำนวนเงิน ' + amount.toFixed(2) + ' บาท (ต่างกัน ' + difference.toFixed(2) + ' บาท) กรุณาตรวจสอบอีกครั้ง';
           errorDiv.style.display = 'block';
         }
       } else {
@@ -636,13 +636,15 @@
       var expectedAmount = formData.liters * formData.price_per_liter;
       var difference = Math.abs(formData.amount - expectedAmount);
 
-      // ถ้าคำนวณไม่ตรง (คลาดเคลื่อนมากกว่า 0.01 บาท) ให้แสดงเตือนและหยุดการบันทึก
-      if (difference > 0.01) {
-        var errorMessage = '⚠️ การคำนวณไม่ถูกต้อง!\n\n' +
+      // ถ้าคำนวณไม่ตรง (คลาดเคลื่อนมากกว่า 1.00 บาท) ให้แสดงเตือนและหยุดการบันทึก
+      // หมายเหตุ: ตู้น้ำมันที่จ่ายเงินกลม จะแสดงลิตรปัดขึ้น ทำให้ ลิตร×ราคา ≠ จำนวนเงินจริง ได้สูงสุดประมาณ 0.50 บาท
+      if (difference > 1.00) {
+        var errorMessage = '⚠️ ตัวเลขต่างกันมาก!\n\n' +
           'ปริมาณที่เติม: ' + formData.liters.toFixed(2) + ' ลิตร\n' +
           'ราคาต่อลิตร: ' + formData.price_per_liter.toFixed(2) + ' บาท\n' +
-          'จำนวนเงินรวมที่ควรเป็น: ' + expectedAmount.toFixed(2) + ' บาท\n' +
-          'จำนวนเงินรวมที่กรอก: ' + formData.amount.toFixed(2) + ' บาท\n\n' +
+          'คำนวณได้: ' + expectedAmount.toFixed(2) + ' บาท\n' +
+          'กรอกจำนวนเงิน: ' + formData.amount.toFixed(2) + ' บาท\n' +
+          'ผลต่าง: ' + difference.toFixed(2) + ' บาท\n\n' +
           'กรุณาตรวจสอบ 3 รายการนี้ใหม่ให้ถูกต้อง:\n' +
           '1. ปริมาณที่เติม (ลิตร)\n' +
           '2. ราคาต่อลิตร (บาท)\n' +
