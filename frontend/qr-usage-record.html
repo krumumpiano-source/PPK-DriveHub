@@ -829,6 +829,7 @@
       var objectUrl = URL.createObjectURL(file);
       previewImg.src = objectUrl;
       document.getElementById('odometerError').textContent = '';
+      document.getElementById('odometerPhotoSection').classList.remove('error');
       document.getElementById('odometerCameraBtn').textContent = '🔄 เปลี่ยนภาพ';
 
       // Run OCR
@@ -882,8 +883,10 @@
 
       // Validate odometer photo
       if (!odometerFile) {
+        var odomSection = document.getElementById('odometerPhotoSection');
+        odomSection.classList.add('error');
         document.getElementById('odometerError').textContent = 'กรุณาถ่ายภาพมิเตอร์ไมล์ก่อนบันทึก';
-        document.getElementById('odometerPhotoSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        odomSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
       }
 
