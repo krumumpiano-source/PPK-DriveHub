@@ -329,7 +329,7 @@
         var list=(r.success&&r.data)?(Array.isArray(r.data)?r.data:[]):[];
         if(ft) list=list.filter(function(rp){return rp.service_type===ft});
         if(fy) list=list.filter(function(rp){var d=rp.date_completed||rp.date_reported||'';return d.substring(0,4)===fy});
-        list.sort(function(a,b){return (b.date_completed||b.date_reported||'').localeCompare(a.date_completed||a.date_reported||'')});
+        list.sort(function(a,b){var da=b.date_completed||b.date_reported||'';var db=a.date_completed||a.date_reported||'';return da<db?-1:da>db?1:0;});
         if(list.length>0){
           var totalCost=0,garages={};
           list.forEach(function(rp){totalCost+=(rp.grand_total||rp.cost||0);if(rp.garage_name) garages[rp.garage_name]=(garages[rp.garage_name]||0)+1});
@@ -366,7 +366,7 @@
       }
       var user=getCurrentUser();
       var canEdit=user&&(user.role==='admin'||(typeof hasModulePermission==='function'&&hasModulePermission('repair','edit')));
-      var CHUNK = 50;
+      var CHUNK = 20;
       var idx = 0;
       function buildRow(rp){
         var st=SERVICE_TYPE_MAP[rp.service_type]||SERVICE_TYPE_MAP['repair'];
@@ -393,9 +393,7 @@
         var end = Math.min(idx + CHUNK, list.length);
         var html = '';
         for(var i=idx;i<end;i++) html += buildRow(list[i]);
-        var frag = document.createElement('tbody');
-        frag.innerHTML = html;
-        while(frag.firstChild) tbody.appendChild(frag.firstChild);
+        tbody.insertAdjacentHTML('beforeend', html);
         idx = end;
         if(idx < list.length) requestAnimationFrame(renderChunk);
       }
