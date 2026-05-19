@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ประวัติซ่อมบำรุง - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>
+    window.API_BASE_URL = CONFIG.API_BASE_URL;
+    window.currentPage = 'repair-history';
+    window.REQUIRE_AUTH = true;
+  </script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
+  <link rel="stylesheet" href="common.css">
+  <script src="js/api.js"></script><script src="common.js"></script>
+  <style>
+    .status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:.78rem;font-weight:500}
+    .status-requested{background:#fef3c7;color:#92400e}
+    .status-approved{background:#dbeafe;color:#1e40af}
+    .status-inspected{background:#e0e7ff;color:#3730a3}
+    .status-documented{background:#ede9fe;color:#5b21b6}
+    .status-repairing{background:#fce7f3;color:#9d174d}
+    .status-completed{background:#d1fae5;color:#065f46}
+    .status-rejected{background:#fee2e2;color:#991b1b}
+    .h-card-type{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.75rem;font-weight:600;white-space:nowrap}
+    .h-card-type.t-repair{background:#fef3c7;color:#92400e}
+    .h-card-type.t-scheduled_maintenance{background:#dbeafe;color:#1e40af}
+    .h-card-type.t-inspection{background:#ede9fe;color:#5b21b6}
+    .h-card-type.t-other{background:#e5e7eb;color:#374151}
+    .detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem;margin-top:.75rem}
+    .detail-item label{display:block;font-size:.78rem;color:var(--color-text-light);margin-bottom:2px}
+    .detail-item span{font-size:.88rem;font-weight:500}
+    .file-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+    .file-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:var(--color-bg-light);border-radius:16px;font-size:.78rem;color:var(--color-primary);cursor:pointer}
+    .file-chip:hover{background:var(--color-primary);color:#fff}
+    .mnt-panel{background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border:1px solid #bbf7d0;border-radius:var(--radius-lg,8px);padding:14px 16px;margin-bottom:1rem}
+    .mnt-panel h4{margin:0 0 10px;font-size:.92rem;color:#166534}
+    .mnt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+    .mnt-item{background:#fff;border:1px solid #d1fae5;border-radius:var(--radius-md,6px);padding:8px 12px;font-size:.82rem}
+    .mnt-item.overdue{border-color:#fca5a5;background:#fef2f2}
+    .mnt-item.warning{border-color:#fde68a;background:#fffbeb}
+    .mnt-item.stale{border-color:#d1d5db;background:#f9fafb;opacity:.75}
+    .mnt-item-name{font-weight:600;font-size:.84rem}
+    .mnt-item-info{color:var(--color-text-muted);font-size:.78rem;margin-top:2px}
+    .mnt-section-hdr{font-weight:600;font-size:.85rem;margin:10px 0 6px;display:flex;align-items:center;gap:4px}
+    .h-stat{background:#fff;border:1px solid var(--color-border);border-radius:var(--radius-md,6px);padding:10px 14px;min-width:120px;text-align:center}
+    .h-stat-val{font-size:1.15rem;font-weight:700;color:var(--color-primary)}
+    .h-stat-lbl{font-size:.78rem;color:var(--color-text-muted);margin-top:2px}
+    .h-tbl-wrap{overflow-x:auto;border-radius:var(--radius-lg);border:1px solid var(--color-border);background:#fff}
+    .h-tbl{width:100%;border-collapse:collapse;font-size:.84rem;min-width:680px}
+    .h-tbl thead th{background:#f8fafc;padding:8px 10px;text-align:left;font-weight:600;font-size:.78rem;color:var(--color-text-muted);border-bottom:2px solid var(--color-border);white-space:nowrap}
+    .h-tbl td{padding:8px 10px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+    .h-tbl tbody tr:last-child td{border-bottom:none}
+    .h-tbl tbody tr:hover td{background:#f8fafc}
+    .h-tbl .t-cost{font-weight:700;color:var(--color-primary);text-align:right;white-space:nowrap}
+    .h-tbl .t-muted{color:var(--color-text-muted);font-size:.78rem}
+    .h-tbl .t-desc{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .h-tbl .t-veh{white-space:nowrap;font-weight:600;font-size:.84rem}
+    .h-tbl .t-mile{white-space:nowrap;font-size:.78rem;color:var(--color-text-muted)}
+    .h-srch{padding:7px 12px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:.88rem;flex:1;min-width:180px}
+    @media(max-width:600px){
+      .detail-grid{grid-template-columns:1fr}
+      .h-hide-sm{display:none}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📋 ประวัติซ่อมบำรุง</h1>
+      <p>บันทึกประวัติการซ่อมรถยนต์ทั้งหมด</p>
+    </div>
+    <div id="navigation"></div>
+    <div class="content">
+      <div id="alertContainer"></div>
+
+      <div class="actions-bar" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;align-items:center">
+        <button class="btn btn-primary" id="btnAddCompleted" onclick="openAddCompletedModal()">➕ บันทึกซ่อมย้อนหลัง</button>
+        <select id="hFilterCar" onchange="loadHistory()" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem">
+          <option value="">รถทั้งหมด</option>
+        </select>
+        <select id="hFilterType" onchange="loadHistory()" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem">
+          <option value="">ทุกประเภท</option>
+          <option value="repair">ซ่อมทั่วไป</option>
+          <option value="scheduled_maintenance">เช็คระยะ/บำรุงรักษา</option>
+          <option value="inspection">ตรวจสภาพ</option>
+          <option value="other">อื่นๆ</option>
+        </select>
+        <select id="hFilterYear" onchange="loadHistory()" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem">
+          <option value="">ทุกปี</option>
+        </select>
+        <input id="hSearch" class="h-srch" placeholder="🔍 ค้นหา ทะเบียน / ใบซ่อม / อู่ / รายการ" oninput="filterHistory()">
+        <button class="btn btn-secondary" onclick="loadHistory()">🔃 รีเฟรช</button>
+      </div>
+
+      <div id="hMaintenancePanel" style="display:none"></div>
+      <div id="hSummaryStats" style="display:none;gap:12px;flex-wrap:wrap;margin-bottom:1rem"></div>
+      <div id="hLoading" class="loading" style="display:none">กำลังโหลด...</div>
+
+      <div class="h-tbl-wrap">
+        <table class="h-tbl">
+          <thead><tr>
+            <th>วันที่</th>
+            <th>ทะเบียน / รถ</th>
+            <th>ประเภท</th>
+            <th>อาการ / รายการ</th>
+            <th class="h-hide-sm">อู่</th>
+            <th class="h-hide-sm">ใบซ่อม</th>
+            <th class="h-hide-sm">ไมล์เข้า</th>
+            <th style="text-align:right">รวม (฿)</th>
+            <th style="width:80px"></th>
+          </tr></thead>
+          <tbody id="hTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: บันทึกซ่อมย้อนหลัง -->
+  <div id="completedModal" class="modal-overlay">
+    <div class="modal" style="max-width:700px">
+      <div class="modal-header">
+        <h2 id="cmpTitle">📝 บันทึกซ่อมย้อนหลัง</h2>
+        <button class="modal-close" onclick="closeCompletedModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="completedForm" onsubmit="submitCompleted(event)">
+          <div class="form-group"><label>รถ *</label><select id="cmp_car_id" required><option value="">เลือกรถ</option></select></div>
+          <div class="form-row">
+            <div class="form-group"><label>วันที่ซ่อมเสร็จ *</label><input type="text" id="cmp_date" class="thai-datepicker" required></div>
+            <div class="form-group"><label>เวลา</label><input type="text" id="cmp_time" class="thai-timepicker"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>ประเภทงาน</label>
+              <select id="cmp_service_type">
+                <option value="repair">ซ่อมทั่วไป</option>
+                <option value="scheduled_service">เช็คระยะ/บำรุงรักษา</option>
+                <option value="accident">ซ่อมอุบัติเหตุ</option>
+                <option value="insurance">เคลมประกัน</option>
+              </select>
+            </div>
+            <div class="form-group"><label>เลขที่ใบซ่อม</label><input type="text" id="cmp_invoice" placeholder="REP09-00800"></div>
+          </div>
+          <div class="form-group"><label>อาการ/รายการซ่อม *</label><textarea id="cmp_issue" rows="3" required placeholder="อธิบายสิ่งที่ซ่อม"></textarea></div>
+          <div class="form-row">
+            <div class="form-group"><label>อู่/ร้านซ่อม</label><input type="text" id="cmp_garage" placeholder="ชื่ออู่หรือร้านซ่อม"></div>
+            <div class="form-group"><label>ช่างผู้ดูแล</label><input type="text" id="cmp_mechanic" placeholder="ชื่อช่าง"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>ผู้นำไปซ่อม</label><select id="cmp_taken_by"><option value="">-- เลือก --</option></select></div>
+            <div class="form-group"><label>เลขไมล์เข้าซ่อม</label><input type="number" id="cmp_mileage" placeholder="กม."></div>
+          </div>
+          <div id="cmp_insurance_section" style="display:none">
+            <div class="form-row">
+              <div class="form-group"><label>เลขที่อุบัติเหตุ/เคลม</label><input type="text" id="cmp_claim" placeholder="52506-Y9-6890"></div>
+              <div class="form-group"><label>บริษัทประกัน</label><input type="text" id="cmp_insurance" placeholder="วิริยะ ประกันภัย"></div>
+            </div>
+          </div>
+          <div style="margin:1rem 0 .5rem;display:flex;align-items:center;justify-content:space-between">
+            <strong style="font-size:.9rem">🔩 รายการอะไหล่/ค่าแรง</strong>
+            <button type="button" class="btn btn-secondary" style="padding:3px 10px;font-size:.8rem" onclick="addItemRow()">➕ เพิ่มรายการ</button>
+          </div>
+          <div id="cmp_items_list"></div>
+          <div style="margin-top:1rem;padding:.75rem;background:var(--color-bg-light);border-radius:var(--radius-md)">
+            <strong style="font-size:.88rem">💰 สรุปค่าใช้จ่าย</strong>
+            <div class="form-row" style="margin-top:.5rem">
+              <div class="form-group"><label>ค่าแรงรวม</label><input type="number" id="cmp_labour" step="0.01" placeholder="0.00" oninput="calcTotal()"></div>
+              <div class="form-group"><label>ค่าอะไหล่รวม</label><input type="number" id="cmp_parts" step="0.01" placeholder="0.00" oninput="calcTotal()"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>ส่วนลด</label><input type="number" id="cmp_discount" step="0.01" placeholder="0.00" oninput="calcTotal()"></div>
+              <div class="form-group"><label>VAT 7%</label><input type="number" id="cmp_vat" step="0.01" placeholder="0.00" oninput="calcTotal()"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>ยอดรวมทั้งสิ้น (บาท)</label><input type="number" id="cmp_grand_total" step="0.01" placeholder="0.00" style="font-weight:700;font-size:1rem"></div>
+              <div class="form-group"><label>เลขไมล์ออก</label><input type="number" id="cmp_mileage_out" placeholder="กม."></div>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:.75rem"><label>หมายเหตุ</label><textarea id="cmp_notes" rows="2"></textarea></div>
+          <button type="submit" class="btn btn-primary" id="cmpSubmitBtn" style="width:100%">💾 บันทึก</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: รายละเอียดซ่อม -->
+  <div id="detailModal" class="modal-overlay">
+    <div class="modal" style="max-width:650px">
+      <div class="modal-header">
+        <h2>🔧 รายละเอียดการซ่อม</h2>
+        <button class="modal-close" onclick="closeDetailModal()">×</button>
+      </div>
+      <div class="modal-body" id="detailBody"></div>
+    </div>
+  </div>
+
+  <div style="background:var(--color-bg-light);padding:20px;text-align:center;color:var(--color-text-muted);font-size:.9em;margin-top:20px">
+    <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+  </div>
+
+  <script>
+    var vehicles = [], drivers = [], historyData = [], editingId = null, itemRowCount = 0;
+
+    var STATUS_MAP = {
+      requested:  { label: '\u0e23\u0e2d\u0e1e\u0e34\u0e08\u0e32\u0e23\u0e13\u0e32',    icon: '\ud83d\udce8', cls: 'status-requested' },
+      approved:   { label: '\u0e2d\u0e19\u0e38\u0e21\u0e31\u0e15\u0e34\u0e41\u0e25\u0e49\u0e27',   icon: '\u2705', cls: 'status-approved' },
+      inspected:  { label: '\u0e15\u0e23\u0e27\u0e08\u0e2a\u0e20\u0e32\u0e1e\u0e41\u0e25\u0e49\u0e27', icon: '\ud83d\udd0d', cls: 'status-inspected' },
+      documented: { label: '\u0e17\u0e33\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e41\u0e25\u0e49\u0e27', icon: '\ud83d\udcc4', cls: 'status-documented' },
+      repairing:  { label: '\u0e01\u0e33\u0e25\u0e31\u0e07\u0e0b\u0e48\u0e2d\u0e21',    icon: '\ud83d\udd28', cls: 'status-repairing' },
+      completed:  { label: '\u0e0b\u0e48\u0e2d\u0e21\u0e40\u0e2a\u0e23\u0e47\u0e08',    icon: '\u2705', cls: 'status-completed' },
+      rejected:   { label: '\u0e44\u0e21\u0e48\u0e2d\u0e19\u0e38\u0e21\u0e31\u0e15\u0e34',    icon: '\u274c', cls: 'status-rejected' }
+    };
+
+    var SERVICE_TYPE_MAP = {
+      repair:                { label: '\u0e0b\u0e48\u0e2d\u0e21\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b', cls: 't-repair', icon: '\ud83d\udd27' },
+      scheduled_maintenance: { label: '\u0e40\u0e0a\u0e47\u0e04\u0e23\u0e30\u0e22\u0e30/\u0e1a\u0e33\u0e23\u0e38\u0e07\u0e23\u0e31\u0e01\u0e29\u0e32', cls: 't-scheduled_maintenance', icon: '\ud83d\udd29' },
+      inspection:            { label: '\u0e15\u0e23\u0e27\u0e08\u0e2a\u0e20\u0e32\u0e1e', cls: 't-inspection', icon: '\ud83d\udd0d' },
+      other:                 { label: '\u0e2d\u0e37\u0e48\u0e19\u0e46', cls: 't-other', icon: '\ud83d\udccb' }
+    };
+
+    function waitForCommon(){return new Promise(function(resolve){if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){resolve();return}var c=0;var t=setInterval(function(){c++;if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){clearInterval(t);resolve()}else if(c>50){clearInterval(t);resolve()}},100)})}
+
+    document.addEventListener('DOMContentLoaded', async function(){
+      await waitForCommon();
+      if(typeof requireAuth==='function'&&!requireAuth()) return;
+      var user=getCurrentUser();
+      if(user&&user.role!=='admin'&&!(typeof hasModulePermission==='function'&&hasModulePermission('repair','edit'))){
+        var btn=document.getElementById('btnAddCompleted');
+        if(btn) btn.style.display='none';
+      }
+      initYearFilter();
+      await Promise.all([loadVehicles(), loadDrivers()]);
+      loadHistory();
+      setTimeout(function(){if(typeof initAllThaiDateTimePickers==='function') initAllThaiDateTimePickers()},500);
+    });
+
+    async function loadVehicles(){
+      try{
+        var r=await apiCall('getVehicles',{});
+        if(r.success&&r.data&&r.data.vehicles) vehicles=r.data.vehicles;
+        ['hFilterCar','cmp_car_id'].forEach(function(selId){
+          var sel=document.getElementById(selId);
+          if(!sel) return;
+          var val=sel.value;
+          var isFilter=selId.indexOf('Filter')!==-1;
+          sel.innerHTML=isFilter?'<option value="">\u0e23\u0e16\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14</option>':'<option value="">\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e23\u0e16</option>';
+          vehicles.forEach(function(v){
+            var o=document.createElement('option');
+            o.value=v.id;
+            o.textContent=v.license_plate+' - '+(v.brand||'')+' '+(v.model||'');
+            sel.appendChild(o);
+          });
+          if(val) sel.value=val;
+        });
+      }catch(e){console.error(e)}
+    }
+
+    async function loadDrivers(){
+      try{
+        var r=await apiCall('getDrivers',{status:'active'});
+        if(r.success&&r.data&&r.data.drivers) drivers=r.data.drivers;
+        var sel=document.getElementById('cmp_taken_by');
+        if(!sel) return;
+        sel.innerHTML='<option value="">-- \u0e40\u0e25\u0e37\u0e2d\u0e01 --</option>';
+        drivers.forEach(function(d){
+          var o=document.createElement('option');
+          o.value=d.driver_id;
+          o.textContent=(d.title||'')+' '+(d.first_name||'')+' '+(d.last_name||'');
+          sel.appendChild(o);
+        });
+      }catch(e){console.error(e)}
+    }
+
+    function vLabel(carId,row){
+      if(row&&(row.license_plate||row.brand||row.model)){
+        return ((row.license_plate||'')+' '+(row.brand||'')+' '+(row.model||'')).trim()||carId||'-';
+      }
+      var v=vehicles.find(function(x){return x.id===carId});
+      return v?(v.license_plate+' '+(v.brand||'')+' '+(v.model||'')).trim():carId||'-';
+    }
+    function dLabel(driverId){
+      var d=drivers.find(function(x){return x.driver_id===driverId});
+      return d?((d.title||'')+' '+(d.first_name||'')+' '+(d.last_name||'')).trim():(driverId||'-');
+    }
+    function fmtDate(s){
+      if(!s) return '-';
+      try{
+        var p=s.split(/[T ]/);var dd=p[0].split('-');
+        var months=['\u0e21\u0e01\u0e23\u0e32\u0e04\u0e21','\u0e01\u0e38\u0e21\u0e20\u0e32\u0e1e\u0e31\u0e19\u0e18\u0e4c','\u0e21\u0e35\u0e19\u0e32\u0e04\u0e21','\u0e40\u0e21\u0e29\u0e32\u0e22\u0e19','\u0e1e\u0e24\u0e29\u0e20\u0e32\u0e04\u0e21','\u0e21\u0e34\u0e16\u0e38\u0e19\u0e32\u0e22\u0e19','\u0e01\u0e23\u0e01\u0e0e\u0e32\u0e04\u0e21','\u0e2a\u0e34\u0e07\u0e2b\u0e32\u0e04\u0e21','\u0e01\u0e31\u0e19\u0e22\u0e32\u0e22\u0e19','\u0e15\u0e38\u0e25\u0e32\u0e04\u0e21','\u0e1e\u0e24\u0e28\u0e08\u0e34\u0e01\u0e32\u0e22\u0e19','\u0e18\u0e31\u0e19\u0e27\u0e32\u0e04\u0e21'];
+        return parseInt(dd[2])+' '+months[parseInt(dd[1])-1]+' '+(parseInt(dd[0])+543);
+      }catch(e){return s}
+    }
+    function statusBadge(s){
+      var m=STATUS_MAP[s]||{label:s,icon:'',cls:''};
+      return '<span class="status-badge '+m.cls+'">'+m.icon+' '+m.label+'</span>';
+    }
+    function showAlert(msg,type){
+      var c=document.getElementById('alertContainer');
+      c.innerHTML='<div class="alert alert-'+type+'">'+msg+'</div>';
+      setTimeout(function(){c.innerHTML=''},5000);
+    }
+
+    function initYearFilter(){
+      var sel=document.getElementById('hFilterYear');
+      if(!sel) return;
+      var thisYear=new Date().getFullYear()+543;
+      for(var y=thisYear;y>=2552;y--){
+        var o=document.createElement('option');
+        o.value=''+(y-543);
+        o.textContent='\u0e1e.\u0e28. '+y;
+        sel.appendChild(o);
+      }
+    }
+
+    async function loadHistory(){
+      document.getElementById('hLoading').style.display='block';
+      document.getElementById('hTableBody').innerHTML='';
+      document.getElementById('hSummaryStats').style.display='none';
+      document.getElementById('hMaintenancePanel').style.display='none';
+      try{
+        var filters={status:'completed'};
+        var fc=document.getElementById('hFilterCar').value;
+        var ft=document.getElementById('hFilterType').value;
+        var fy=document.getElementById('hFilterYear').value;
+        if(fc) filters.car_id=fc;
+        var r=await apiCall('getRepairs',filters);
+        var list=(r.success&&r.data)?(Array.isArray(r.data)?r.data:[]):[];
+        if(ft) list=list.filter(function(rp){return rp.service_type===ft});
+        if(fy) list=list.filter(function(rp){var d=rp.date_completed||rp.date_reported||'';return d.substring(0,4)===fy});
+        list.sort(function(a,b){return (b.date_completed||b.date_reported||'').localeCompare(a.date_completed||a.date_reported||'')});
+        if(list.length>0){
+          var totalCost=0,garages={};
+          list.forEach(function(rp){totalCost+=(rp.grand_total||rp.cost||0);if(rp.garage_name) garages[rp.garage_name]=(garages[rp.garage_name]||0)+1});
+          var topGarage='-',topCount=0;
+          for(var g in garages){if(garages[g]>topCount){topCount=garages[g];topGarage=g}}
+          var statsEl=document.getElementById('hSummaryStats');
+          statsEl.style.display='flex';
+          statsEl.innerHTML='<div class="h-stat"><div class="h-stat-val">'+list.length+'</div><div class="h-stat-lbl">\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e0b\u0e48\u0e2d\u0e21</div></div>'
+            +'<div class="h-stat"><div class="h-stat-val">'+totalCost.toLocaleString()+' \u0e3f</div><div class="h-stat-lbl">\u0e04\u0e48\u0e32\u0e0b\u0e48\u0e2d\u0e21\u0e23\u0e27\u0e21</div></div>'
+            +'<div class="h-stat"><div class="h-stat-val">'+(list[0]?fmtDate(list[0].date_completed||list[0].date_reported):'-')+'</div><div class="h-stat-lbl">\u0e0b\u0e48\u0e2d\u0e21\u0e25\u0e48\u0e32\u0e2a\u0e38\u0e14</div></div>'
+            +'<div class="h-stat"><div class="h-stat-val">'+topGarage+'</div><div class="h-stat-lbl">\u0e2d\u0e39\u0e48\u0e17\u0e35\u0e48\u0e43\u0e0a\u0e49\u0e1a\u0e48\u0e2d\u0e22</div></div>';
+        }
+        if(fc) loadMaintenancePanel(fc);
+        if(list.length===0){
+          document.getElementById('hTableBody').innerHTML='<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--color-text-muted)">\ud83d\udd27 \u0e44\u0e21\u0e48\u0e21\u0e35\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e0b\u0e48\u0e2d\u0e21\u0e40\u0e2a\u0e23\u0e47\u0e08</td></tr>';
+        }else{
+          historyData=list;
+          document.getElementById('hSearch').value='';
+          renderHistoryTable(list);
+        }
+      }catch(e){console.error(e);document.getElementById('hTableBody').innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--color-danger)">\u0e42\u0e2b\u0e25\u0e14\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08</td></tr>'}
+      finally{document.getElementById('hLoading').style.display='none'}
+    }
+
+    function renderHistoryTable(list){
+      var tbody=document.getElementById('hTableBody');
+      if(!tbody) return;
+      if(!list.length){
+        tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--color-text-muted)">\ud83d\udd27 \u0e44\u0e21\u0e48\u0e1e\u0e1a\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e17\u0e35\u0e48\u0e15\u0e23\u0e07\u0e01\u0e31\u0e1a\u0e40\u0e07\u0e37\u0e48\u0e2d\u0e19\u0e44\u0e02</td></tr>';
+        return;
+      }
+      var user=getCurrentUser();
+      var canEdit=user&&(user.role==='admin'||(typeof hasModulePermission==='function'&&hasModulePermission('repair','edit')));
+      var html='';
+      list.forEach(function(rp){
+        var st=SERVICE_TYPE_MAP[rp.service_type]||SERVICE_TYPE_MAP['repair'];
+        var total=rp.grand_total||rp.cost||0;
+        var mileIn=rp.mileage_at_repair?rp.mileage_at_repair.toLocaleString():'\u2014';
+        var desc=(rp.issue_description||'-').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        html+='<tr>';
+        html+='<td style="white-space:nowrap">'+fmtDate(rp.date_completed||rp.date_reported)+'</td>';
+        html+='<td class="t-veh">'+vLabel(rp.car_id,rp)+'</td>';
+        html+='<td><span class="h-card-type '+st.cls+'">'+st.icon+' '+st.label+'</span></td>';
+        html+='<td class="t-desc" title="'+desc+'">'+desc+'</td>';
+        html+='<td class="h-hide-sm t-muted">'+(rp.garage_name||'\u2014')+'</td>';
+        html+='<td class="h-hide-sm t-muted">'+(rp.invoice_number||'\u2014')+'</td>';
+        html+='<td class="h-hide-sm t-mile">'+mileIn+'</td>';
+        html+='<td class="t-cost">'+(total?total.toLocaleString():'\u2014')+'</td>';
+        html+='<td style="white-space:nowrap">';
+        html+='<button class="btn btn-ghost" style="padding:3px 8px;font-size:.78rem" onclick="showDetail(\''+rp.id+'\')">\ud83d\udcc4 \u0e14\u0e39</button>';
+        if(canEdit) html+='<button class="btn btn-ghost" style="padding:3px 8px;font-size:.78rem" onclick="editCompleted(\''+rp.id+'\')">&#9999;&#65039;</button>';
+        html+='</td>';
+        html+='</tr>';
+      });
+      tbody.innerHTML=html;
+    }
+
+    function filterHistory(){
+      var q=(document.getElementById('hSearch').value||'').toLowerCase().trim();
+      if(!q){renderHistoryTable(historyData);return}
+      var filtered=historyData.filter(function(rp){
+        return vLabel(rp.car_id,rp).toLowerCase().includes(q)||
+          (rp.issue_description||'').toLowerCase().includes(q)||
+          (rp.invoice_number||'').toLowerCase().includes(q)||
+          (rp.garage_name||'').toLowerCase().includes(q)||
+          (rp.mechanic_name||'').toLowerCase().includes(q);
+      });
+      renderHistoryTable(filtered);
+    }
+
+    function maintenanceSourceLabel(source){
+      if(!source||source==='default') return '\u0e04\u0e48\u0e32\u0e40\u0e23\u0e34\u0e48\u0e21\u0e15\u0e49\u0e19\u0e23\u0e30\u0e1a\u0e1a';
+      if(source==='vehicle') return '\u0e01\u0e33\u0e2b\u0e19\u0e14\u0e40\u0e09\u0e1e\u0e32\u0e30\u0e23\u0e16\u0e04\u0e31\u0e19\u0e19\u0e35\u0e49';
+      if(source.includes(' ')) return '\u0e15\u0e32\u0e21\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d/\u0e23\u0e38\u0e48\u0e19: '+source;
+      return '\u0e15\u0e32\u0e21\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d: '+source;
+    }
+
+    async function loadMaintenancePanel(carId){
+      var panel=document.getElementById('hMaintenancePanel');
+      try{
+        var r=await apiCall('getMaintenanceVehicle',{car_id:carId});
+        if(!r.success||!r.data||!r.data.length){panel.style.display='none';return}
+        var items=r.data;
+        var car=vehicles.find(function(v){return v.id===carId});
+        var currentKm=car?car.current_mileage:0;
+        var today=new Date().toISOString().substring(0,10);
+        var tracked=items.filter(function(it){return it.last_km||it.last_date});
+        if(!tracked.length){panel.style.display='none';return}
+        var overdueArr=[],warningArr=[],okArr=[],staleArr=[];
+        tracked.forEach(function(it){
+          var oKm=it.next_km&&currentKm&&currentKm>=it.next_km;
+          var oDate=it.next_date&&it.next_date<=today;
+          if(oKm||oDate){
+            var isStale=false;
+            if(oKm&&it.interval_km&&it.interval_km>0){if((currentKm-it.next_km)>it.interval_km) isStale=true}
+            if(!isStale&&oDate&&it.interval_months&&it.interval_months>0){
+              var nd=new Date(it.next_date),nw=new Date();
+              var overMonths=(nw.getFullYear()-nd.getFullYear())*12+(nw.getMonth()-nd.getMonth());
+              if(overMonths>it.interval_months) isStale=true;
+            }
+            if(isStale) staleArr.push(it); else overdueArr.push(it);
+          }else{
+            var wKm=it.next_km&&currentKm&&(it.next_km-currentKm)<=3000&&(it.next_km-currentKm)>0;
+            var wDate=false;
+            if(it.next_date&&!(it.next_date<=today)){var df=new Date(it.next_date)-new Date();wDate=df>0&&df<60*86400000}
+            if(wKm||wDate) warningArr.push(it); else okArr.push(it);
+          }
+        });
+        function renderMntItem(it,status){
+          var icon=status==='overdue'?'\ud83d\udd34':(status==='warning'?'\ud83d\udfe1':(status==='stale'?'\u26aa':'\ud83d\udfe2'));
+          var color=status==='overdue'?'#dc2626':(status==='warning'?'#d97706':(status==='stale'?'#9ca3af':'#16a34a'));
+          var h='<div class="mnt-item '+status+'"><div class="mnt-item-name">'+icon+' '+it.item_name+'</div>';
+          h+='<div class="mnt-item-info">';
+          if(it.last_date) h+='\u0e17\u0e33\u0e25\u0e48\u0e32\u0e2a\u0e38\u0e14: '+fmtDate(it.last_date);
+          if(it.last_km) h+=(it.last_date?' | ':'')+it.last_km.toLocaleString()+' \u0e01\u0e21.';
+          h+='</div>';
+          if(it.next_km||it.next_date){
+            h+='<div class="mnt-item-info" style="color:'+color+'">';
+            if(status==='stale') h+='\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e40\u0e01\u0e48\u0e32 \u2014 \u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e2a\u0e16\u0e32\u0e19\u0e30\u0e08\u0e23\u0e34\u0e07';
+            else{
+              h+='\u0e04\u0e23\u0e31\u0e49\u0e07\u0e16\u0e31\u0e14\u0e44\u0e1b: ';
+              if(it.next_date) h+=fmtDate(it.next_date);
+              if(it.next_km) h+=(it.next_date?' | ':'')+it.next_km.toLocaleString()+' \u0e01\u0e21.';
+              if(status==='overdue') h+=' (\u0e40\u0e01\u0e34\u0e19\u0e01\u0e33\u0e2b\u0e19\u0e14!)';
+            }
+            h+='</div>';
+          }
+          if(it.interval_km||it.interval_months){
+            h+='<div class="mnt-item-info">\u0e23\u0e2d\u0e1a: ';
+            if(it.interval_km) h+='\u0e17\u0e38\u0e01 '+it.interval_km.toLocaleString()+' \u0e01\u0e21.';
+            if(it.interval_months) h+=(it.interval_km?' / ':'')+it.interval_months+' \u0e40\u0e14\u0e37\u0e2d\u0e19';
+            if(it.profile_source) h+=' ('+maintenanceSourceLabel(it.profile_source)+')';
+            h+='</div>';
+          }
+          h+='</div>';return h;
+        }
+        var html='<div class="mnt-panel"><h4>\ud83d\udccb \u0e2a\u0e16\u0e32\u0e19\u0e30\u0e01\u0e32\u0e23\u0e1a\u0e33\u0e23\u0e38\u0e07\u0e23\u0e31\u0e01\u0e29\u0e32 \u2014 '+vLabel(carId)+'</h4>';
+        if(overdueArr.length){html+='\u003cdiv class="mnt-section-hdr" style="color:#dc2626"\u003e\ud83d\udd34 \u0e40\u0e01\u0e34\u0e19\u0e01\u0e33\u0e2b\u0e19\u0e14 ('+overdueArr.length+')\u003c/div\u003e\u003cdiv class="mnt-grid"\u003e';overdueArr.forEach(function(it){html+=renderMntItem(it,'overdue')});html+='\u003c/div\u003e'}
+        if(warningArr.length){html+='\u003cdiv class="mnt-section-hdr" style="color:#d97706"\u003e\ud83d\udfe1 \u0e43\u0e01\u0e25\u0e49\u0e16\u0e36\u0e07\u0e01\u0e33\u0e2b\u0e19\u0e14 ('+warningArr.length+')\u003c/div\u003e\u003cdiv class="mnt-grid"\u003e';warningArr.forEach(function(it){html+=renderMntItem(it,'warning')});html+='\u003c/div\u003e'}
+        if(okArr.length){html+='\u003cdiv class="mnt-section-hdr" style="color:#16a34a"\u003e\ud83d\udfe2 \u0e1b\u0e01\u0e15\u0e34 ('+okArr.length+')\u003c/div\u003e\u003cdiv class="mnt-grid"\u003e';okArr.forEach(function(it){html+=renderMntItem(it,'')});html+='\u003c/div\u003e'}
+        if(staleArr.length){html+='\u003cdiv class="mnt-section-hdr" style="color:#9ca3af"\u003e\u26aa \u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e22\u0e49\u0e2d\u0e19\u0e2b\u0e25\u0e31\u0e07 ('+staleArr.length+')\u003c/div\u003e\u003cdiv class="mnt-grid"\u003e';staleArr.forEach(function(it){html+=renderMntItem(it,'stale')});html+='\u003c/div\u003e'}
+        html+='</div>';
+        panel.innerHTML=html;panel.style.display='block';
+      }catch(e){console.error(e);panel.style.display='none'}
+    }
+
+    /* Detail Modal */
+    async function showDetail(id){
+      var body=document.getElementById('detailBody');
+      body.innerHTML='<div class="loading">\u0e01\u0e33\u0e25\u0e31\u0e07\u0e42\u0e2b\u0e25\u0e14...</div>';
+      document.getElementById('detailModal').classList.add('show');
+      try{
+        var r=await apiCall('getRepair',{id:id});
+        if(!r.success){body.innerHTML='<p>\u0e42\u0e2b\u0e25\u0e14\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08</p>';return}
+        var rp=r.data;
+        var typeLabels={repair:'\u0e0b\u0e48\u0e2d\u0e21\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b',scheduled_service:'\u0e40\u0e0a\u0e47\u0e04\u0e23\u0e30\u0e22\u0e30/\u0e1a\u0e33\u0e23\u0e38\u0e07\u0e23\u0e31\u0e01\u0e29\u0e32',accident:'\u0e0b\u0e48\u0e2d\u0e21\u0e2d\u0e38\u0e1a\u0e31\u0e15\u0e34\u0e40\u0e2b\u0e15\u0e38',insurance:'\u0e40\u0e04\u0e25\u0e21\u0e1b\u0e23\u0e30\u0e01\u0e31\u0e19'};
+        var html='<div style="margin-bottom:.75rem;display:flex;gap:8px;flex-wrap:wrap">'+statusBadge(rp.status);
+        if(rp.service_type&&rp.service_type!=='repair') html+='<span class="status-badge" style="background:#e0e7ff;color:#3730a3">'+(typeLabels[rp.service_type]||rp.service_type)+'</span>';
+        html+='</div><div class="detail-grid">';
+        html+='<div class="detail-item"><label>\u0e23\u0e16</label><span>'+vLabel(rp.car_id,rp)+'</span></div>';
+        html+='<div class="detail-item"><label>\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48\u0e0b\u0e48\u0e2d\u0e21\u0e40\u0e2a\u0e23\u0e47\u0e08</label><span>'+fmtDate(rp.date_completed||rp.date_reported)+'</span></div>';
+        if(rp.invoice_number) html+='<div class="detail-item"><label>\u0e40\u0e25\u0e02\u0e17\u0e35\u0e48\u0e43\u0e1a\u0e0b\u0e48\u0e2d\u0e21</label><span>'+rp.invoice_number+'</span></div>';
+        html+='<div class="detail-item"><label>\u0e40\u0e25\u0e02\u0e44\u0e21\u0e25\u0e4c\u0e40\u0e02\u0e49\u0e32</label><span>'+(rp.mileage_at_repair?rp.mileage_at_repair.toLocaleString()+' \u0e01\u0e21.':'-')+'</span></div>';
+        if(rp.mileage_out) html+='<div class="detail-item"><label>\u0e40\u0e25\u0e02\u0e44\u0e21\u0e25\u0e4c\u0e2d\u0e2d\u0e01</label><span>'+rp.mileage_out.toLocaleString()+' \u0e01\u0e21.</span></div>';
+        html+='<div class="detail-item"><label>\u0e2d\u0e39\u0e48</label><span>'+(rp.garage_name||'-')+'</span></div>';
+        if(rp.mechanic_name) html+='<div class="detail-item"><label>\u0e0a\u0e48\u0e32\u0e07\u0e1c\u0e39\u0e49\u0e14\u0e39\u0e41\u0e25</label><span>'+rp.mechanic_name+'</span></div>';
+        if(rp.taken_by) html+='<div class="detail-item"><label>\u0e1c\u0e39\u0e49\u0e19\u0e33\u0e44\u0e1b\u0e0b\u0e48\u0e2d\u0e21</label><span>'+rp.taken_by+'</span></div>';
+        if(rp.claim_number) html+='<div class="detail-item"><label>\u0e40\u0e25\u0e02\u0e40\u0e04\u0e25\u0e21/\u0e2d\u0e38\u0e1a\u0e31\u0e15\u0e34\u0e40\u0e2b\u0e15\u0e38</label><span>'+rp.claim_number+'</span></div>';
+        if(rp.insurance_company) html+='<div class="detail-item"><label>\u0e1a\u0e23\u0e34\u0e29\u0e31\u0e17\u0e1b\u0e23\u0e30\u0e01\u0e31\u0e19</label><span>'+rp.insurance_company+'</span></div>';
+        html+='</div>';
+        if(rp.labour_cost||rp.parts_cost||rp.grand_total||rp.cost){
+          html+='<hr style="margin:1rem 0;border-color:var(--color-border)"><strong style="font-size:.9rem">\ud83d\udcb0 \u0e04\u0e48\u0e32\u0e43\u0e0a\u0e49\u0e08\u0e48\u0e32\u0e22</strong><div class="detail-grid" style="margin-top:.5rem">';
+          if(rp.labour_cost) html+='<div class="detail-item"><label>\u0e04\u0e48\u0e32\u0e41\u0e23\u0e07</label><span>'+rp.labour_cost.toLocaleString()+' \u0e1a\u0e32\u0e17</span></div>';
+          if(rp.parts_cost) html+='<div class="detail-item"><label>\u0e04\u0e48\u0e32\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48</label><span>'+rp.parts_cost.toLocaleString()+' \u0e1a\u0e32\u0e17</span></div>';
+          if(rp.discount_amount) html+='<div class="detail-item"><label>\u0e2a\u0e48\u0e27\u0e19\u0e25\u0e14</label><span>-'+rp.discount_amount.toLocaleString()+' \u0e1a\u0e32\u0e17</span></div>';
+          if(rp.vat_amount) html+='<div class="detail-item"><label>VAT 7%</label><span>'+rp.vat_amount.toLocaleString()+' \u0e1a\u0e32\u0e17</span></div>';
+          var total=rp.grand_total||rp.cost||0;
+          html+='<div class="detail-item"><label>\u0e22\u0e2d\u0e14\u0e23\u0e27\u0e21\u0e17\u0e31\u0e49\u0e07\u0e2a\u0e34\u0e49\u0e19</label><span style="font-weight:700;color:var(--color-primary)">'+total.toLocaleString()+' \u0e1a\u0e32\u0e17</span></div>';
+          html+='</div>';
+        }
+        if(rp.items_detail&&rp.items_detail.length){
+          html+='<hr style="margin:1rem 0;border-color:var(--color-border)"><strong style="font-size:.9rem">\ud83d\udd29 \u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48/\u0e04\u0e48\u0e32\u0e41\u0e23\u0e07</strong>';
+          html+='<div style="overflow-x:auto;margin-top:.5rem"><table class="table" style="font-size:.82rem"><thead><tr><th>\u0e23\u0e2b\u0e31\u0e2a</th><th>\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23</th><th>\u0e08\u0e33\u0e19\u0e27\u0e19</th><th>\u0e23\u0e32\u0e04\u0e32/\u0e2b\u0e19\u0e48\u0e27\u0e22</th><th>\u0e2a\u0e48\u0e27\u0e19\u0e25\u0e14</th><th>\u0e2a\u0e38\u0e17\u0e18\u0e34\u0e4c</th></tr></thead><tbody>';
+          rp.items_detail.forEach(function(it){
+            html+='<tr><td>'+(it.part_code||'-')+'</td><td>'+(it.description||'-')+'</td><td>'+(it.quantity||1)+'</td><td>'+(it.unit_price?it.unit_price.toLocaleString():'-')+'</td><td>'+(it.discount_amount?it.discount_amount.toLocaleString():'-')+'</td><td>'+(it.net_amount?it.net_amount.toLocaleString():'-')+'</td></tr>';
+          });
+          html+='</tbody></table></div>';
+        }
+        html+='<hr style="margin:1rem 0;border-color:var(--color-border)">';
+        html+='<p><strong>\u0e2d\u0e32\u0e01\u0e32\u0e23:</strong> '+(rp.issue_description||'-')+'</p>';
+        if(rp.notes) html+='<p><strong>\u0e2b\u0e21\u0e32\u0e22\u0e40\u0e2b\u0e15\u0e38:</strong> '+rp.notes+'</p>';
+        var docs=[{label:'\u0e43\u0e1a\u0e40\u0e2a\u0e19\u0e2d\u0e23\u0e32\u0e04\u0e32',key:'quotation_documents'},{label:'\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e02\u0e49\u0e2d\u0e04\u0e27\u0e32\u0e21',key:'memo_documents'},{label:'\u0e43\u0e1a\u0e40\u0e2a\u0e23\u0e47\u0e08',key:'receipt_documents'},{label:'\u0e40\u0e2d\u0e01\u0e2a\u0e32\u0e23',key:'documents'}];
+        docs.forEach(function(d){
+          if(rp[d.key]){var arr=[];try{arr=JSON.parse(rp[d.key])}catch(e){}
+            if(arr.length){html+='<p style="margin-top:8px"><strong>'+d.label+':</strong></p><div class="file-chips">';
+              arr.forEach(function(url,i){html+='<a class="file-chip" href="'+url+'" target="_blank">\ud83d\udcce \u0e44\u0e1f\u0e25\u0e4c '+(i+1)+'</a>'});html+='</div>'}}
+        });
+        if(typeof renderAuditMeta==='function'){html+='<hr style="margin:1rem 0;border-color:var(--color-border)">';html+=renderAuditMeta(rp)}
+        body.innerHTML=html;
+      }catch(e){body.innerHTML='<p style="color:var(--color-danger)">\u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14</p>'}
+    }
+    function closeDetailModal(){document.getElementById('detailModal').classList.remove('show')}
+
+    /* Completed Modal */
+    function openAddCompletedModal(){
+      editingId=null;
+      document.getElementById('cmpTitle').textContent='\ud83d\udcdd \u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e0b\u0e48\u0e2d\u0e21\u0e22\u0e49\u0e2d\u0e19\u0e2b\u0e25\u0e31\u0e07';
+      document.getElementById('completedForm').reset();
+      document.getElementById('cmp_items_list').innerHTML='';
+      document.getElementById('cmp_insurance_section').style.display='none';
+      document.getElementById('completedModal').classList.add('show');
+      setTimeout(function(){if(typeof initAllThaiDateTimePickers==='function') initAllThaiDateTimePickers()},100);
+    }
+    function closeCompletedModal(){document.getElementById('completedModal').classList.remove('show')}
+
+    document.addEventListener('change',function(e){
+      if(e.target&&e.target.id==='cmp_service_type'){
+        var v=e.target.value;
+        document.getElementById('cmp_insurance_section').style.display=(v==='accident'||v==='insurance')?'':'none';
+      }
+    });
+
+    function addItemRow(data){
+      itemRowCount++;var n=itemRowCount;var d=data||{};
+      var html='<div class="item-row" id="item-row-'+n+'" style="border:1px solid var(--color-border);border-radius:var(--radius-md);padding:.5rem;margin-bottom:.5rem;background:#fafafa">';
+      html+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">';
+      html+='<input type="text" class="ir-code" placeholder="\u0e23\u0e2b\u0e31\u0e2a" value="'+(d.part_code||'')+'" style="width:100px;padding:4px 6px;font-size:.82rem">';
+      html+='<input type="text" class="ir-desc" placeholder="\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23 *" value="'+(d.description||'')+'" style="flex:1;min-width:120px;padding:4px 6px;font-size:.82rem">';
+      html+='<input type="number" class="ir-qty" placeholder="\u0e08\u0e33\u0e19\u0e27\u0e19" value="'+(d.quantity||1)+'" style="width:60px;padding:4px 6px;font-size:.82rem" step="any">';
+      html+='<input type="number" class="ir-price" placeholder="\u0e23\u0e32\u0e04\u0e32/\u0e2b\u0e19\u0e48\u0e27\u0e22" value="'+(d.unit_price||'')+'" style="width:90px;padding:4px 6px;font-size:.82rem" step="0.01">';
+      html+='<input type="number" class="ir-disc" placeholder="\u0e2a\u0e48\u0e27\u0e19\u0e25\u0e14" value="'+(d.discount_amount||'')+'" style="width:80px;padding:4px 6px;font-size:.82rem" step="0.01">';
+      html+='<input type="number" class="ir-net" placeholder="\u0e2a\u0e38\u0e17\u0e18\u0e34\u0e4c" value="'+(d.net_amount||'')+'" style="width:90px;padding:4px 6px;font-size:.82rem;font-weight:600" step="0.01">';
+      html+='<select class="ir-type" style="padding:4px;font-size:.82rem"><option value="part"'+(d.item_type==='part'?' selected':'')+'>อะไหล่</option><option value="labour"'+(d.item_type==='labour'?' selected':'')+'>ค่าแรง</option><option value="service"'+(d.item_type==='service'?' selected':'')+'>บริการ</option></select>';
+      html+='<button type="button" onclick="removeItemRow('+n+')" style="background:none;border:none;color:var(--color-danger);cursor:pointer;font-size:1rem">\ud83d\uddd1\ufe0f</button>';
+      html+='</div></div>';
+      document.getElementById('cmp_items_list').insertAdjacentHTML('beforeend',html);
+    }
+    function removeItemRow(n){var el=document.getElementById('item-row-'+n);if(el) el.remove()}
+
+    function collectItemRows(){
+      var items=[];
+      document.querySelectorAll('#cmp_items_list .item-row').forEach(function(row){
+        var desc=row.querySelector('.ir-desc').value.trim();if(!desc) return;
+        items.push({part_code:row.querySelector('.ir-code').value.trim(),description:desc,quantity:parseFloat(row.querySelector('.ir-qty').value)||1,unit_price:parseFloat(row.querySelector('.ir-price').value)||0,discount_amount:parseFloat(row.querySelector('.ir-disc').value)||0,net_amount:parseFloat(row.querySelector('.ir-net').value)||0,item_type:row.querySelector('.ir-type').value});
+      });
+      return items;
+    }
+
+    function calcTotal(){
+      var l=parseFloat(document.getElementById('cmp_labour').value)||0;
+      var p=parseFloat(document.getElementById('cmp_parts').value)||0;
+      var d=parseFloat(document.getElementById('cmp_discount').value)||0;
+      var v=parseFloat(document.getElementById('cmp_vat').value)||0;
+      document.getElementById('cmp_grand_total').value=((l+p-d+v)||0).toFixed(2);
+    }
+
+    async function editCompleted(id){
+      try{
+        var r=await apiCall('getRepair',{id:id});
+        if(!r.success){showAlert('\u0e42\u0e2b\u0e25\u0e14\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08','error');return}
+        var rp=r.data;editingId=id;
+        document.getElementById('cmpTitle').textContent='\u270f\ufe0f \u0e41\u0e01\u0e49\u0e44\u0e02\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e0b\u0e48\u0e2d\u0e21';
+        var carSel=document.getElementById('cmp_car_id');
+        if(carSel&&rp.car_id){
+          var hasOpt=false;
+          for(var i=0;i<carSel.options.length;i++){if(carSel.options[i].value===rp.car_id){hasOpt=true;break}}
+          if(!hasOpt){
+            try{var vRes=await apiCall('getVehicle',{id:rp.car_id});
+              if(vRes&&vRes.success&&vRes.data){var v=vRes.data;if(!vehicles.some(function(x){return x.id===v.id})) vehicles.push(v);
+                var o=document.createElement('option');o.value=v.id;o.textContent=v.license_plate+' - '+(v.brand||'')+' '+(v.model||'')+(v.status==='inactive'?' [\u0e22\u0e01\u0e40\u0e25\u0e34\u0e01\u0e43\u0e0a\u0e49]':'');carSel.appendChild(o)}}
+            }catch(e){console.warn(e)}
+          }
+        }
+        document.getElementById('cmp_car_id').value=rp.car_id||'';
+        var dc=rp.date_completed||rp.date_reported||'';
+        if(dc){var parts=dc.split(/[T ]/);document.getElementById('cmp_date').value=parts[0]||'';if(parts[1]) document.getElementById('cmp_time').value=parts[1].substring(0,5)}
+        document.getElementById('cmp_issue').value=rp.issue_description||'';
+        document.getElementById('cmp_mileage').value=rp.mileage_at_repair||'';
+        document.getElementById('cmp_garage').value=rp.garage_name||'';
+        document.getElementById('cmp_taken_by').value=rp.taken_by||'';
+        document.getElementById('cmp_notes').value=rp.notes||'';
+        document.getElementById('cmp_service_type').value=rp.service_type||'repair';
+        document.getElementById('cmp_invoice').value=rp.invoice_number||'';
+        document.getElementById('cmp_mechanic').value=rp.mechanic_name||'';
+        document.getElementById('cmp_labour').value=rp.labour_cost||'';
+        document.getElementById('cmp_parts').value=rp.parts_cost||'';
+        document.getElementById('cmp_discount').value=rp.discount_amount||'';
+        document.getElementById('cmp_vat').value=rp.vat_amount||'';
+        document.getElementById('cmp_grand_total').value=rp.grand_total||rp.cost||'';
+        document.getElementById('cmp_mileage_out').value=rp.mileage_out||'';
+        document.getElementById('cmp_claim').value=rp.claim_number||'';
+        document.getElementById('cmp_insurance').value=rp.insurance_company||'';
+        var st=rp.service_type||'repair';
+        document.getElementById('cmp_insurance_section').style.display=(st==='accident'||st==='insurance')?'':'none';
+        document.getElementById('cmp_items_list').innerHTML='';itemRowCount=0;
+        if(rp.items_detail&&rp.items_detail.length) rp.items_detail.forEach(function(it){addItemRow(it)});
+        document.getElementById('completedModal').classList.add('show');
+        setTimeout(function(){if(typeof initAllThaiDateTimePickers==='function') initAllThaiDateTimePickers()},100);
+      }catch(e){showAlert('\u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14','error')}
+    }
+
+    async function submitCompleted(e){
+      e.preventDefault();
+      var btn=document.getElementById('cmpSubmitBtn');btn.disabled=true;btn.textContent='\u0e01\u0e33\u0e25\u0e31\u0e07\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01...';
+      try{
+        var dateVal=document.getElementById('cmp_date').value;
+        var timeVal=document.getElementById('cmp_time').value;
+        var dateCompleted=dateVal+(timeVal?' '+timeVal+':00':'');
+        var takenByVal=document.getElementById('cmp_taken_by').value;
+        var takenByName=dLabel(takenByVal);
+        if(takenByName==='-') takenByName=takenByVal;
+        var itemsDetail=collectItemRows();
+        var repairItemNames=itemsDetail.map(function(it){return it.description}).filter(Boolean);
+        var data={
+          car_id:document.getElementById('cmp_car_id').value,
+          date_reported:dateCompleted,date_completed:dateCompleted,
+          issue_description:document.getElementById('cmp_issue').value.trim(),
+          repair_items:repairItemNames,items_detail:itemsDetail,
+          mileage_at_repair:parseInt(document.getElementById('cmp_mileage').value)||0,
+          garage_name:document.getElementById('cmp_garage').value.trim(),
+          taken_by:takenByName||null,
+          notes:document.getElementById('cmp_notes').value.trim(),
+          status:'completed',
+          service_type:document.getElementById('cmp_service_type').value,
+          invoice_number:document.getElementById('cmp_invoice').value.trim()||null,
+          mechanic_name:document.getElementById('cmp_mechanic').value.trim()||null,
+          labour_cost:parseFloat(document.getElementById('cmp_labour').value)||0,
+          parts_cost:parseFloat(document.getElementById('cmp_parts').value)||0,
+          discount_amount:parseFloat(document.getElementById('cmp_discount').value)||0,
+          vat_amount:parseFloat(document.getElementById('cmp_vat').value)||0,
+          grand_total:parseFloat(document.getElementById('cmp_grand_total').value)||0,
+          cost:parseFloat(document.getElementById('cmp_grand_total').value)||0,
+          mileage_out:parseInt(document.getElementById('cmp_mileage_out').value)||null,
+          claim_number:document.getElementById('cmp_claim').value.trim()||null,
+          insurance_company:document.getElementById('cmp_insurance').value.trim()||null
+        };
+        var r;
+        if(editingId){data.id=editingId;r=await apiCall('updateRepair',data);}
+        else{r=await apiCall('createRepair',data)}
+        if(r.success){
+          showAlert(editingId?'\u0e41\u0e01\u0e49\u0e44\u0e02\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08':'\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08','success');
+          closeCompletedModal();loadHistory();
+        }else{showAlert(r.message||'\u0e14\u0e33\u0e40\u0e19\u0e34\u0e19\u0e01\u0e32\u0e23\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08','error')}
+      }catch(e){showAlert('\u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14','error')}
+      finally{btn.disabled=false;btn.textContent='\ud83d\udcbe \u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01'}
+    }
+  </script>
+</body>
+</html>

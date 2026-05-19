@@ -181,8 +181,13 @@ function renderNavigation() {
     var isDriver = user.role === 'driver' || !!user.driver_id;
     if (hasRepair || isDriver) {
         nav += _sidebarSection('ระบบซ่อมและตรวจสภาพ');
-        if (hasRepair) nav += _sidebarItem('repair.html', 'repair', '🔧', 'บันทึกการซ่อม');
-        else if (isDriver) nav += _sidebarItem('repair.html', 'repair', '🔧', 'แจ้งซ่อม');
+        if (hasRepair) {
+            nav += _sidebarItem('repair.html', 'repair', '🔧', 'งานซ่อม');
+            nav += _sidebarItem('repair-history.html', 'repair-history', '📋', 'ประวัติซ่อม');
+            nav += _sidebarItem('repair-inspection.html', 'repair-inspection', '🔍', 'ตรวจสภาพ');
+        } else if (isDriver) {
+            nav += _sidebarItem('repair.html', 'repair', '🔧', 'แจ้งซ่อม');
+        }
         nav += _sidebarItem('incident.html', 'incident', '🚨', 'รายงานเหตุการณ์');
     }
 

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตรวจสภาพรถ - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>
+    window.API_BASE_URL = CONFIG.API_BASE_URL;
+    window.currentPage = 'repair-inspection';
+    window.REQUIRE_AUTH = true;
+  </script>
+  <link rel="stylesheet" href="common.css">
+  <script src="js/api.js"></script><script src="common.js"></script>
+  <style>
+    .alert-card{border-left:4px solid var(--color-warning);background:#fffbeb;padding:.75rem 1rem;border-radius:var(--radius-md);margin-bottom:.5rem;font-size:.88rem}
+    .alert-card.critical{border-left-color:var(--color-danger);background:#fef2f2}
+    .alert-card.resolved{border-left-color:var(--color-success);background:#f0fdf4;opacity:.7}
+    .status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:.78rem;font-weight:500}
+    .status-requested{background:#fef3c7;color:#92400e}
+    .status-completed{background:#d1fae5;color:#065f46}
+    .section-hdr{font-size:.95rem;font-weight:600;margin:1.25rem 0 .75rem;display:flex;align-items:center;gap:6px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🔍 ตรวจสภาพรถ</h1>
+      <p>ผลการตรวจสภาพและแจ้งเตือนปัญหารถยนต์</p>
+    </div>
+    <div id="navigation"></div>
+    <div class="content">
+      <div id="alertContainer"></div>
+
+      <div class="actions-bar" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem">
+        <select id="insFilterCar" onchange="loadInspection()" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem">
+          <option value="">รถทั้งหมด</option>
+        </select>
+        <select id="insFilterStatus" onchange="loadInspection()" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem">
+          <option value="">ทุกสถานะ</option>
+          <option value="unresolved">ยังไม่แก้ไข</option>
+          <option value="resolved">แก้ไขแล้ว</option>
+        </select>
+        <button class="btn btn-secondary" onclick="loadInspection()">🔃 รีเฟรช</button>
+      </div>
+
+      <div id="insLoading" class="loading" style="display:none">กำลังโหลด...</div>
+
+      <div class="section-hdr">🚨 แจ้งเตือนผลตรวจสภาพ</div>
+      <div id="alertsList"></div>
+
+      <div class="section-hdr">📋 ประวัติตรวจสภาพ</div>
+      <div id="checkLogList"></div>
+    </div>
+  </div>
+
+  <div style="background:var(--color-bg-light);padding:20px;text-align:center;color:var(--color-text-muted);font-size:.9em;margin-top:20px">
+    <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+  </div>
+
+  <script>
+    var vehicles = [];
+
+    function waitForCommon(){return new Promise(function(resolve){if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){resolve();return}var c=0;var t=setInterval(function(){c++;if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){clearInterval(t);resolve()}else if(c>50){clearInterval(t);resolve()}},100)})}
+
+    document.addEventListener('DOMContentLoaded', async function(){
+      await waitForCommon();
+      if(typeof requireAuth==='function'&&!requireAuth()) return;
+      await loadVehicles();
+      loadInspection();
+    });
+
+    async function loadVehicles(){
+      try{
+        var r=await apiCall('getVehicles',{});
+        if(r.success&&r.data&&r.data.vehicles) vehicles=r.data.vehicles;
+        var sel=document.getElementById('insFilterCar');
+        if(!sel) return;
+        sel.innerHTML='<option value="">รถทั้งหมด</option>';
+        vehicles.forEach(function(v){
+          var o=document.createElement('option');
+          o.value=v.id;
+          o.textContent=v.license_plate+' - '+(v.brand||'')+' '+(v.model||'');
+          sel.appendChild(o);
+        });
+      }catch(e){console.error(e)}
+    }
+
+    function vLabel(carId,row){
+      if(row&&(row.license_plate||row.brand||row.model)){
+        return ((row.license_plate||'')+' '+(row.brand||'')+' '+(row.model||'')).trim()||carId||'-';
+      }
+      var v=vehicles.find(function(x){return x.id===carId});
+      return v?(v.license_plate+' '+(v.brand||'')+' '+(v.model||'')).trim():carId||'-';
+    }
+
+    function fmtDate(s){
+      if(!s) return '-';
+      try{
+        var p=s.split(/[T ]/);var dd=p[0].split('-');
+        var months=['\u0e21\u0e01\u0e23\u0e32\u0e04\u0e21','\u0e01\u0e38\u0e21\u0e20\u0e32\u0e1e\u0e31\u0e19\u0e18\u0e4c','\u0e21\u0e35\u0e19\u0e32\u0e04\u0e21','\u0e40\u0e21\u0e29\u0e32\u0e22\u0e19','\u0e1e\u0e24\u0e29\u0e20\u0e32\u0e04\u0e21','\u0e21\u0e34\u0e16\u0e38\u0e19\u0e32\u0e22\u0e19','\u0e01\u0e23\u0e01\u0e0e\u0e32\u0e04\u0e21','\u0e2a\u0e34\u0e07\u0e2b\u0e32\u0e04\u0e21','\u0e01\u0e31\u0e19\u0e22\u0e32\u0e22\u0e19','\u0e15\u0e38\u0e25\u0e32\u0e04\u0e21','\u0e1e\u0e24\u0e28\u0e08\u0e34\u0e01\u0e32\u0e22\u0e19','\u0e18\u0e31\u0e19\u0e27\u0e32\u0e04\u0e21'];
+        return parseInt(dd[2])+' '+months[parseInt(dd[1])-1]+' '+(parseInt(dd[0])+543);
+      }catch(e){return s}
+    }
+
+    function showAlert(msg,type){
+      var c=document.getElementById('alertContainer');
+      c.innerHTML='<div class="alert alert-'+type+'">'+msg+'</div>';
+      setTimeout(function(){c.innerHTML=''},5000);
+    }
+
+    async function loadInspection(){
+      document.getElementById('insLoading').style.display='block';
+      document.getElementById('alertsList').innerHTML='';
+      document.getElementById('checkLogList').innerHTML='';
+      var fc=document.getElementById('insFilterCar').value;
+      var fs=document.getElementById('insFilterStatus').value;
+      try{
+        var alertParams={};
+        if(fc) alertParams.car_id=fc;
+        if(fs==='resolved') alertParams.resolved='1';
+        else if(fs==='unresolved') alertParams.resolved='0';
+        var ar=await apiCall('getCheckAlerts',alertParams);
+        var alerts=(ar.success&&ar.data)?(Array.isArray(ar.data)?ar.data:[]):[];
+
+        if(alerts.length===0){
+          document.getElementById('alertsList').innerHTML='<div class="empty-state" style="padding:1rem"><p>\u2705 \u0e44\u0e21\u0e48\u0e21\u0e35\u0e41\u0e08\u0e49\u0e07\u0e40\u0e15\u0e37\u0e2d\u0e19\u0e1c\u0e25\u0e15\u0e23\u0e27\u0e08\u0e2a\u0e20\u0e32\u0e1e</p></div>';
+        }else{
+          var aHtml='';
+          alerts.forEach(function(a){
+            var isCritical=a.risk_level==='critical';
+            var isResolved=a.resolved===1||a.resolved==='1';
+            var cls=isResolved?'resolved':(isCritical?'critical':'');
+            aHtml+='<div class="alert-card '+cls+'">';
+            aHtml+='<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">';
+            aHtml+='<strong>'+(isCritical?'\ud83d\udd34':'\ud83d\udfe1')+' '+vLabel(a.car_id,a)+'</strong>';
+            if(isResolved) aHtml+='<span class="status-badge status-completed">\u0e41\u0e01\u0e49\u0e44\u0e02\u0e41\u0e25\u0e49\u0e27</span>';
+            else aHtml+='<span class="status-badge status-requested">\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e41\u0e01\u0e49\u0e44\u0e02</span>';
+            aHtml+='</div>';
+            var items=[];try{items=JSON.parse(a.items||'[]')}catch(e){}
+            if(items.length) aHtml+='<p style="margin-top:4px">\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23: '+items.join(', ')+'</p>';
+            if(a.recommendations) aHtml+='<p>\u0e04\u0e33\u0e41\u0e19\u0e30\u0e19\u0e33: '+a.recommendations+'</p>';
+            aHtml+='<p style="font-size:.78rem;color:var(--color-text-muted)">'+fmtDate(a.created_at)+'</p>';
+            if(!isResolved){
+              var qs='?from=inspection&car_id='+encodeURIComponent(a.car_id)+'&issue='+encodeURIComponent(items.join(', '));
+              aHtml+='<div style="margin-top:6px"><a href="repair.html'+qs+'" class="btn btn-primary" style="padding:4px 12px;font-size:.82rem">\ud83d\udd27 \u0e2a\u0e23\u0e49\u0e32\u0e07\u0e41\u0e08\u0e49\u0e0b\u0e48\u0e2d\u0e21</a></div>';
+            }
+            aHtml+='</div>';
+          });
+          document.getElementById('alertsList').innerHTML=aHtml;
+        }
+
+        var logParams={};
+        if(fc) logParams.car_id=fc;
+        var lr=await apiCall('getCheckLog',logParams);
+        var logs=(lr.success&&lr.data)?(Array.isArray(lr.data)?lr.data:[]):[];
+
+        if(logs.length===0){
+          document.getElementById('checkLogList').innerHTML='<div class="empty-state" style="padding:1rem"><p>\u0e44\u0e21\u0e48\u0e21\u0e35\u0e1b\u0e23\u0e30\u0e27\u0e31\u0e15\u0e34\u0e15\u0e23\u0e27\u0e08\u0e2a\u0e20\u0e32\u0e1e</p></div>';
+        }else{
+          var lHtml='';
+          logs.forEach(function(log){
+            var statusCls=log.overall_status==='critical'?'critical':(log.overall_status==='warning'?'':'resolved');
+            lHtml+='<div class="alert-card '+statusCls+'" style="border-left-width:3px">';
+            lHtml+='<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">';
+            lHtml+='<strong>'+vLabel(log.car_id,log)+'</strong>';
+            var sLabel=log.overall_status==='ok'?'\u2705 \u0e1b\u0e01\u0e15\u0e34':(log.overall_status==='critical'?'\ud83d\udd34 \u0e1e\u0e1a\u0e1b\u0e31\u0e0d\u0e2b\u0e32\u0e27\u0e34\u0e01\u0e24\u0e15':'\ud83d\udfe1 \u0e1e\u0e1a\u0e1b\u0e31\u0e0d\u0e2b\u0e32');
+            lHtml+='<span>'+sLabel+'</span>';
+            lHtml+='</div>';
+            lHtml+='<p style="font-size:.82rem">\u0e1c\u0e39\u0e49\u0e15\u0e23\u0e27\u0e08: '+(log.inspector||'-')+' | '+fmtDate(log.created_at)+'</p>';
+            if(log.notes) lHtml+='<p style="font-size:.82rem">'+log.notes+'</p>';
+            lHtml+='</div>';
+          });
+          document.getElementById('checkLogList').innerHTML=lHtml;
+        }
+      }catch(e){
+        console.error(e);
+        document.getElementById('alertsList').innerHTML='<p style="color:var(--color-danger)">\u0e42\u0e2b\u0e25\u0e14\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08</p>';
+      }finally{document.getElementById('insLoading').style.display='none'}
+    }
+  </script>
+</body>
+</html>
