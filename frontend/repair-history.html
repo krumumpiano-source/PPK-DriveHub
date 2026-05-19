@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -354,37 +354,52 @@
       finally{document.getElementById('hLoading').style.display='none'}
     }
 
+    var _renderToken = 0;
     function renderHistoryTable(list){
       var tbody=document.getElementById('hTableBody');
       if(!tbody) return;
+      var myToken = ++_renderToken;
+      tbody.innerHTML='';
       if(!list.length){
         tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--color-text-muted)">\ud83d\udd27 \u0e44\u0e21\u0e48\u0e1e\u0e1a\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e17\u0e35\u0e48\u0e15\u0e23\u0e07\u0e01\u0e31\u0e1a\u0e40\u0e07\u0e37\u0e48\u0e2d\u0e19\u0e44\u0e02</td></tr>';
         return;
       }
       var user=getCurrentUser();
       var canEdit=user&&(user.role==='admin'||(typeof hasModulePermission==='function'&&hasModulePermission('repair','edit')));
-      var html='';
-      list.forEach(function(rp){
+      var CHUNK = 50;
+      var idx = 0;
+      function buildRow(rp){
         var st=SERVICE_TYPE_MAP[rp.service_type]||SERVICE_TYPE_MAP['repair'];
         var total=rp.grand_total||rp.cost||0;
         var mileIn=rp.mileage_at_repair?rp.mileage_at_repair.toLocaleString():'\u2014';
         var desc=(rp.issue_description||'-').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        html+='<tr>';
-        html+='<td style="white-space:nowrap">'+fmtDate(rp.date_completed||rp.date_reported)+'</td>';
-        html+='<td class="t-veh">'+vLabel(rp.car_id,rp)+'</td>';
-        html+='<td><span class="h-card-type '+st.cls+'">'+st.icon+' '+st.label+'</span></td>';
-        html+='<td class="t-desc" title="'+desc+'">'+desc+'</td>';
-        html+='<td class="h-hide-sm t-muted">'+(rp.garage_name||'\u2014')+'</td>';
-        html+='<td class="h-hide-sm t-muted">'+(rp.invoice_number||'\u2014')+'</td>';
-        html+='<td class="h-hide-sm t-mile">'+mileIn+'</td>';
-        html+='<td class="t-cost">'+(total?total.toLocaleString():'\u2014')+'</td>';
-        html+='<td style="white-space:nowrap">';
-        html+='<button class="btn btn-ghost" style="padding:3px 8px;font-size:.78rem" onclick="showDetail(\''+rp.id+'\')">\ud83d\udcc4 \u0e14\u0e39</button>';
-        if(canEdit) html+='<button class="btn btn-ghost" style="padding:3px 8px;font-size:.78rem" onclick="editCompleted(\''+rp.id+'\')">&#9999;&#65039;</button>';
-        html+='</td>';
-        html+='</tr>';
-      });
-      tbody.innerHTML=html;
+        var h='<tr>';
+        h+='<td style="white-space:nowrap">'+fmtDate(rp.date_completed||rp.date_reported)+'</td>';
+        h+='<td class="t-veh">'+vLabel(rp.car_id,rp)+'</td>';
+        h+='<td><span class="h-card-type '+st.cls+'">'+st.icon+' '+st.label+'</span></td>';
+        h+='<td class="t-desc" title="'+desc+'">'+desc+'</td>';
+        h+='<td class="h-hide-sm t-muted">'+(rp.garage_name||'\u2014')+'</td>';
+        h+='<td class="h-hide-sm t-muted">'+(rp.invoice_number||'\u2014')+'</td>';
+        h+='<td class="h-hide-sm t-mile">'+mileIn+'</td>';
+        h+='<td class="t-cost">'+(total?total.toLocaleString():'\u2014')+'</td>';
+        h+='<td style="white-space:nowrap">';
+        h+='<button class="btn btn-ghost" style="padding:3px 8px;font-size:.78rem" onclick="showDetail(\''+rp.id+'\')">\ud83d\udcc4 \u0e14\u0e39</button>';
+        if(canEdit) h+='<button class="btn btn-ghost" style="padding:3px 8px;font-size:.78rem" onclick="editCompleted(\''+rp.id+'\')">&#9999;&#65039;</button>';
+        h+='</td></tr>';
+        return h;
+      }
+      function renderChunk(){
+        if(myToken !== _renderToken) return;
+        var end = Math.min(idx + CHUNK, list.length);
+        var html = '';
+        for(var i=idx;i<end;i++) html += buildRow(list[i]);
+        var frag = document.createElement('tbody');
+        frag.innerHTML = html;
+        while(frag.firstChild) tbody.appendChild(frag.firstChild);
+        idx = end;
+        if(idx < list.length) requestAnimationFrame(renderChunk);
+      }
+      requestAnimationFrame(renderChunk);
     }
 
     function filterHistory(){
