@@ -643,7 +643,9 @@
         if(list.length===0){
           el.innerHTML='<div class="empty-state"><div class="empty-state-icon">🔧</div><p>'+(isDriverMode?'ยังไม่มีรายการแจ้งซ่อมของคุณ':'ไม่มีรายการแจ้งซ่อม')+'</p></div>';
         } else {
-          list.forEach(function(rp){ el.innerHTML+=renderWorkflowCard(rp) });
+          var wfHtml='';
+          list.forEach(function(rp){ wfHtml+=renderWorkflowCard(rp) });
+          el.innerHTML=wfHtml;
         }
       }catch(e){console.error(e);el.innerHTML='<p style="color:var(--color-danger)">โหลดข้อมูลไม่สำเร็จ</p>'}
       finally{document.getElementById('wfLoading').style.display='none'}
