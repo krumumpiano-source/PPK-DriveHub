@@ -435,6 +435,8 @@
     var editingId = null, currentAction = null, currentRepairId = null;
     var isDriverMode = false;
     var historyData = [];
+    var _wfToken = 0;
+    var _wfToken = 0;
 
     var STATUS_MAP = {
       requested:  { label: 'รอพิจารณา',    icon: '📨', cls: 'status-requested' },
@@ -614,16 +616,16 @@
       document.getElementById('wfLoading').style.display='block';
       el.innerHTML='';
       try{
-        var filters={};
+        var filters={active_only:1};
         var fc=document.getElementById('wfFilterCar').value;
         var fs=document.getElementById('wfFilterStatus').value;
         if(fc) filters.car_id=fc;
         var r=await apiCall('getRepairs',filters);
         var allRaw=(r.success&&r.data)?(Array.isArray(r.data)?r.data:[]):[];
-        // Build status bar (count active items only)
+        // Build status bar (allRaw มีแต่ active records แล้ว)
         var counts={};
-        allRaw.filter(function(x){return x.status!=='completed'}).forEach(function(rp){counts[rp.status]=(counts[rp.status]||0)+1});
-        var totalActive=Object.values(counts).reduce(function(a,b){return a+b},0);
+        allRaw.forEach(function(rp){counts[rp.status]=(counts[rp.status]||0)+1});
+        var totalActive=allRaw.length;
         var barDefs=[{s:'',l:'ทั้งหมด'},{s:'requested',l:'รอพิจารณา'},{s:'approved',l:'อนุมัติแล้ว'},{s:'inspected',l:'ตรวจสภาพ'},{s:'documented',l:'ทำบันทึก'},{s:'repairing',l:'กำลังซ่อม'},{s:'rejected',l:'ไม่อนุมัติ'}];
         var barHtml='';
         barDefs.forEach(function(b){
@@ -631,8 +633,8 @@
           if(!b.s||n>0){barHtml+='<button class="wsb'+(fs===b.s?' on':'')+'" onclick="setWfStatus(\''+b.s+'\')">'+b.l+' <span class="wsb-n">'+n+'</span></button>'}
         });
         document.getElementById('wfStatusBar').innerHTML=barHtml;
-        // Client-side status filter
-        var list=fs?allRaw.filter(function(x){return x.status===fs}):allRaw.filter(function(x){return x.status!=='completed'});
+        // Client-side status filter (ไม่ต้อง filter completed เพราะ server กรองแล้ว)
+        var list=fs?allRaw.filter(function(x){return x.status===fs}):allRaw;
         // In driver mode, show only this driver's reports
         if(isDriverMode){
           var user=getCurrentUser();
@@ -643,9 +645,16 @@
         if(list.length===0){
           el.innerHTML='<div class="empty-state"><div class="empty-state-icon">🔧</div><p>'+(isDriverMode?'ยังไม่มีรายการแจ้งซ่อมของคุณ':'ไม่มีรายการแจ้งซ่อม')+'</p></div>';
         } else {
-          var wfHtml='';
-          list.forEach(function(rp){ wfHtml+=renderWorkflowCard(rp) });
-          el.innerHTML=wfHtml;
+          el.innerHTML='';
+          // Chunked rendering: render 15 cards ต่อ frame ป้องกัน UI ค้าง
+          var _idx=0; var _tkn=++_wfToken;
+          (function renderChunk(){
+            if(_tkn!==_wfToken) return;
+            var html='';
+            for(var _end=Math.min(_idx+15,list.length);_idx<_end;_idx++) html+=renderWorkflowCard(list[_idx]);
+            el.insertAdjacentHTML('beforeend',html);
+            if(_idx<list.length) requestAnimationFrame(renderChunk);
+          })();
         }
       }catch(e){console.error(e);el.innerHTML='<p style="color:var(--color-danger)">โหลดข้อมูลไม่สำเร็จ</p>'}
       finally{document.getElementById('wfLoading').style.display='none'}

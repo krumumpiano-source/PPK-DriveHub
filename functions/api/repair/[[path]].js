@@ -219,10 +219,13 @@ export async function onRequest(context) {
     try { requirePermission(user, 'repair', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const carId = url.searchParams.get('car_id');
     const status = url.searchParams.get('status');
+    const activeOnly = url.searchParams.get('active_only');
     const where = [];
     const params = [];
     if (carId) { where.push('rl.car_id = ?'); params.push(carId); }
     if (status) { where.push('rl.status = ?'); params.push(status); }
+    if (activeOnly === '1') { where.push("rl.status != 'completed'"); }
+    const limit = activeOnly === '1' ? 100 : 300;
     const rows = await dbAll(env.DB,
       `SELECT rl.*, c.license_plate, c.brand,
               uc.display_name AS created_by_name,
@@ -232,7 +235,7 @@ export async function onRequest(context) {
        LEFT JOIN users uc ON rl.created_by = uc.id
        LEFT JOIN users uu ON rl.updated_by = uu.id
        ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
-       ORDER BY rl.date_reported DESC LIMIT 300`,
+       ORDER BY rl.date_reported DESC LIMIT ${limit}`,
       params
     );
     return success(rows);
