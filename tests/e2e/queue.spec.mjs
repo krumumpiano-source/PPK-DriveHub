@@ -161,6 +161,7 @@ test.beforeAll(async () => {
   }
   if (ctx.queueUserId) {
     await apiPut(`/api/admin/users/${ctx.queueUserId}`, {
+      role: QUEUE_USER.role,
       permissions: QUEUE_USER.permissions,
     }, ctx.adminToken);
     clearRateLimits();

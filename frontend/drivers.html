@@ -334,8 +334,8 @@
         }
 
         if (!hasViewPermission && currentUser) {
-          console.warn('No permission, but showing page anyway');
-          // ไม่ redirect — ให้แสดงหน้าได้
+          window.location.href = '/dashboard.html';
+          return;
         }
 
         // ถ้ายังไม่ล็อกอิน ให้แสดงหน้าได้แต่ไม่โหลดข้อมูล
@@ -1166,7 +1166,8 @@
         console.error('Error deleting leave:', error);
         showAlert(handleError(error), 'error');
       }
-    }
+    }
+
 
     function getLeaveTypeText(type) {
       var types = {

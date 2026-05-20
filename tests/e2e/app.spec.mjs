@@ -507,14 +507,12 @@ test.describe('หน้า Incident', () => {
   });
 
   test('โหลดหน้าอุบัติเหตุสำเร็จ', async ({ page }) => {
-    await page.goto('/incident.html');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/incident.html', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveTitle(/อุบัติ|Incident|PPK DriveHub/);
   });
 
   test('แสดงรายการอุบัติเหตุ', async ({ page }) => {
-    await page.goto('/incident.html');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/incident.html', { waitUntil: 'domcontentloaded' });
     const content = page.locator('#incidentList, table, .incident-item, #pageContent');
     await expect(content.first()).toBeVisible({ timeout: 10000 });
   });
@@ -544,8 +542,7 @@ test.describe('หน้า Vehicle Timeline', () => {
   });
 
   test('โหลดหน้า Vehicle Timeline สำเร็จ', async ({ page }) => {
-    await page.goto('/vehicle-timeline.html');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/vehicle-timeline.html', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveTitle(/Timeline|ไทม์ไลน์|PPK DriveHub/);
   });
 });
@@ -559,8 +556,7 @@ test.describe('หน้า Driver Performance & History', () => {
   });
 
   test('โหลดหน้า Driver Performance สำเร็จ', async ({ page }) => {
-    await page.goto('/driver-performance.html');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/driver-performance.html', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveTitle(/Performance|ประสิทธิภาพ|PPK DriveHub/);
   });
 
