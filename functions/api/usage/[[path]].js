@@ -123,8 +123,31 @@ export async function onRequest(context) {
     // Auto-heal: detect and fix missing records
     const healed = await autoHeal(env.DB, { id, car_id: body.car_id, driver_id: body.driver_id || null, record_type: body.record_type, datetime: body.datetime || ts, mileage: body.mileage || null, queue_id: body.queue_id || null });
 
+    // ── helper: resolve driver_id จาก body หรือ driver_name_manual ──────────
+    async function resolveDriverId(driverId, driverNameManual) {
+      if (driverId) return driverId;
+      if (!driverNameManual) return null;
+      const row = await dbFirst(env.DB,
+        `SELECT id FROM drivers WHERE name = ? AND status = 'active' LIMIT 1`,
+        [driverNameManual]);
+      return row ? row.id : null;
+    }
+
+    // ── helper: สร้าง queue อัตโนมัติ ────────────────────────────────────────
+    async function autoCreateQueue(queueId, qDate, qTimeStart, qTimeEnd, qStatus, driverId, mission, destination, note) {
+      await dbRun(env.DB,
+        `INSERT INTO queue (id, date, time_start, time_end, car_id, driver_id,
+           mission, destination, status, notes, created_by, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
+        [queueId, qDate, qTimeStart, qTimeEnd, body.car_id, driverId,
+         mission, destination, qStatus, note, ts, ts]
+      );
+    }
+
     // Auto-complete queue เมื่อสแกนกลับ
     let queueCompleted = false;
+    let autoCreatedQueueId = null;
+
     if (body.record_type === 'return') {
       // หา queue ที่ผูกอยู่: ถ้ามี queue_id ตรงๆ ใช้เลย, ถ้าไม่มีให้ค้นจาก car_id ที่ยังไม่ปิด
       let targetQueueId = body.queue_id || null;
@@ -137,15 +160,70 @@ export async function onRequest(context) {
         if (openQ) targetQueueId = openQ.id;
       }
       if (targetQueueId) {
+        // อัปเดต time_end ด้วยเวลาจริงที่กลับ
+        const retTime = (body.datetime || ts).length >= 16 ? (body.datetime || ts).substr(11, 5) : '00:00';
         await dbRun(env.DB,
-          `UPDATE queue SET status = 'completed', updated_at = ? WHERE id = ? AND status IN ('ongoing','scheduled')`,
-          [ts, targetQueueId]
+          `UPDATE queue SET status = 'completed', time_end = ?, updated_at = ?
+           WHERE id = ? AND status IN ('ongoing','scheduled')`,
+          [retTime, ts, targetQueueId]
         );
+        // ผูก return record กับ queue
+        await dbRun(env.DB, 'UPDATE usage_records SET queue_id = ? WHERE id = ?', [targetQueueId, id]);
         queueCompleted = true;
+      } else {
+        // ไม่มี open queue — หา departure record ล่าสุดของรถที่ยังไม่มี return
+        const depRecord = await dbFirst(env.DB,
+          `SELECT ur.id, ur.driver_id, ur.driver_name_manual, ur.datetime,
+                  ur.destination, ur.purpose, ur.queue_id
+           FROM usage_records ur
+           WHERE ur.car_id = ? AND ur.record_type = 'departure'
+             AND NOT EXISTS (
+               SELECT 1 FROM usage_records r2
+               WHERE r2.car_id = ur.car_id AND r2.record_type = 'return'
+                 AND r2.datetime > ur.datetime
+             )
+           ORDER BY ur.datetime DESC LIMIT 1`,
+          [body.car_id]
+        );
+        if (depRecord) {
+          let linkedQueueId = depRecord.queue_id;
+          if (!linkedQueueId) {
+            // สร้าง queue ย้อนหลังจาก departure record
+            const driverId = await resolveDriverId(depRecord.driver_id, depRecord.driver_name_manual);
+            if (driverId) {
+              const newQueueId = generateUUID();
+              const depDate = depRecord.datetime.substr(0, 10);
+              const depTime = depRecord.datetime.length >= 16 ? depRecord.datetime.substr(11, 5) : '00:00';
+              const retTime = (body.datetime || ts).length >= 16 ? (body.datetime || ts).substr(11, 5) : '00:00';
+              await autoCreateQueue(newQueueId, depDate, depTime, retTime, 'completed',
+                driverId,
+                depRecord.purpose || 'บันทึกผ่าน QR',
+                depRecord.destination || '',
+                'สร้างอัตโนมัติจากการสแกน QR (ย้อนหลัง)'
+              );
+              await dbRun(env.DB, 'UPDATE usage_records SET queue_id = ? WHERE id = ?', [newQueueId, depRecord.id]);
+              linkedQueueId = newQueueId;
+              autoCreatedQueueId = newQueueId;
+            }
+          } else {
+            // departure มี queue แล้ว — complete มัน
+            const retTime = (body.datetime || ts).length >= 16 ? (body.datetime || ts).substr(11, 5) : '00:00';
+            await dbRun(env.DB,
+              `UPDATE queue SET status = 'completed', time_end = ?, updated_at = ?
+               WHERE id = ? AND status IN ('ongoing','scheduled')`,
+              [retTime, ts, linkedQueueId]
+            );
+          }
+          if (linkedQueueId) {
+            await dbRun(env.DB, 'UPDATE usage_records SET queue_id = ? WHERE id = ?', [linkedQueueId, id]);
+            queueCompleted = true;
+          }
+        }
       }
     }
 
     // Auto-set queue status = 'ongoing' เมื่อสแกนออก (ถ้ายังเป็น scheduled)
+    // หรือสร้าง queue ใหม่อัตโนมัติถ้าไม่มีคิวเลย
     if (body.record_type === 'departure') {
       let targetQueueId = body.queue_id || null;
       if (!targetQueueId) {
@@ -161,10 +239,29 @@ export async function onRequest(context) {
           `UPDATE queue SET status = 'ongoing', updated_at = ? WHERE id = ? AND status = 'scheduled'`,
           [ts, targetQueueId]
         );
+        // ผูก departure record กับ queue ที่มีอยู่
+        await dbRun(env.DB, 'UPDATE usage_records SET queue_id = ? WHERE id = ?', [targetQueueId, id]);
+      } else {
+        // ไม่มี queue เลย — สร้างใหม่อัตโนมัติ
+        const driverId = await resolveDriverId(body.driver_id, body.driver_name_manual);
+        if (driverId) {
+          const newQueueId = generateUUID();
+          const depDatetime = body.datetime || ts;
+          const depDate = depDatetime.substr(0, 10);
+          const depTime = depDatetime.length >= 16 ? depDatetime.substr(11, 5) : '00:00';
+          await autoCreateQueue(newQueueId, depDate, depTime, depTime, 'ongoing',
+            driverId,
+            body.purpose || body.mission || 'บันทึกผ่าน QR',
+            body.destination || '',
+            'สร้างอัตโนมัติจากการสแกน QR'
+          );
+          await dbRun(env.DB, 'UPDATE usage_records SET queue_id = ? WHERE id = ?', [newQueueId, id]);
+          autoCreatedQueueId = newQueueId;
+        }
       }
     }
 
-    return success({ id, message: 'บันทึกการใช้งานเรียบร้อย', auto_healed: healed, queue_completed: queueCompleted }, 201);
+    return success({ id, message: 'บันทึกการใช้งานเรียบร้อย', auto_healed: healed, queue_completed: queueCompleted, auto_queue_id: autoCreatedQueueId }, 201);
   }
 
   // PUBLIC — ดึงสถานะล่าสุดของรถ (ใช้โดยหน้า QR ไม่ต้อง login)
@@ -252,7 +349,7 @@ export async function onRequest(context) {
   }
 
   // --- GET /api/usage/:id ---
-  if (path.match(/^\/api\/usage\/[^/]+$/) && !path.endsWith('/summary') && !path.endsWith('/batch-heal') && method === 'GET') {
+  if (path.match(/^\/api\/usage\/[^/]+$/) && !path.endsWith('/summary') && !path.endsWith('/batch-heal') && !path.endsWith('/backfill-queues') && method === 'GET') {
     try { requirePermission(user, 'usage', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = extractParam(path, '/api/usage/');
     const row = await dbFirst(env.DB,
@@ -568,6 +665,79 @@ export async function onRequest(context) {
     }
 
     return success({ summary, details: details.slice(0, 100) });
+  }
+
+  // --- POST /api/usage/backfill-queues ---
+  // สร้าง queue ย้อนหลังสำหรับ usage_records ที่ไม่มี queue_id (เคยสแกนตรงโดยไม่ผ่านคิว)
+  if (path === '/api/usage/backfill-queues' && method === 'POST') {
+    try { requirePermission(user, 'admin', 'manage'); } catch { return error('ต้องเป็นผู้ดูแลระบบ', 403); }
+    const bfTs = now();
+    let created = 0, skipped = 0;
+    const details = [];
+
+    // หา departure records ทั้งหมดที่ไม่มี queue_id
+    const depRecords = await dbAll(env.DB,
+      `SELECT ur.id, ur.car_id, ur.driver_id, ur.driver_name_manual,
+              ur.datetime, ur.destination, ur.purpose, ur.mileage,
+              c.license_plate
+       FROM usage_records ur
+       LEFT JOIN cars c ON ur.car_id = c.id
+       WHERE ur.record_type = 'departure' AND ur.queue_id IS NULL
+         AND ur.data_quality NOT IN ('gap_record','auto_departure')
+       ORDER BY ur.datetime ASC`,
+      []
+    );
+
+    for (const dep of depRecords) {
+      // หา return record ที่ตามหลัง departure นี้ (ยังไม่มี queue_id ด้วยหรือมีก็ได้)
+      const retRecord = await dbFirst(env.DB,
+        `SELECT id, datetime, queue_id FROM usage_records
+         WHERE car_id = ? AND record_type = 'return'
+           AND datetime > ?
+           AND NOT EXISTS (
+             SELECT 1 FROM usage_records dep2
+             WHERE dep2.car_id = ? AND dep2.record_type = 'departure'
+               AND dep2.datetime > ? AND dep2.datetime < usage_records.datetime
+           )
+         ORDER BY datetime ASC LIMIT 1`,
+        [dep.car_id, dep.datetime, dep.car_id, dep.datetime]
+      );
+
+      // resolve driver_id
+      let driverId = dep.driver_id;
+      if (!driverId && dep.driver_name_manual) {
+        const dr = await dbFirst(env.DB,
+          `SELECT id FROM drivers WHERE name = ? AND status = 'active' LIMIT 1`,
+          [dep.driver_name_manual]);
+        if (dr) driverId = dr.id;
+      }
+
+      if (!driverId) { skipped++; continue; }
+
+      const newQueueId = generateUUID();
+      const depDate = dep.datetime.substr(0, 10);
+      const depTime = dep.datetime.length >= 16 ? dep.datetime.substr(11, 5) : '00:00';
+      const retTime = retRecord ? (retRecord.datetime.length >= 16 ? retRecord.datetime.substr(11, 5) : '00:00') : depTime;
+      const qStatus = retRecord ? 'completed' : 'ongoing';
+
+      await dbRun(env.DB,
+        `INSERT INTO queue (id, date, time_start, time_end, car_id, driver_id,
+           mission, destination, status, notes, created_by, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
+        [newQueueId, depDate, depTime, retTime, dep.car_id, driverId,
+         dep.purpose || 'บันทึกผ่าน QR', dep.destination || '',
+         qStatus, 'สร้างอัตโนมัติ backfill จากการสแกน QR', bfTs, bfTs]
+      );
+      await dbRun(env.DB, 'UPDATE usage_records SET queue_id = ? WHERE id = ?', [newQueueId, dep.id]);
+      if (retRecord && !retRecord.queue_id) {
+        await dbRun(env.DB, 'UPDATE usage_records SET queue_id = ? WHERE id = ?', [newQueueId, retRecord.id]);
+      }
+
+      created++;
+      details.push({ plate: dep.license_plate, date: depDate, status: qStatus });
+    }
+
+    return success({ created, skipped, details: details.slice(0, 200) });
   }
 
   return error('Not Found', 404);

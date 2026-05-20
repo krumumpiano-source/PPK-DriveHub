@@ -467,6 +467,22 @@
               </div>
             </div>
 
+            <!-- ===== Backfill Queues ===== -->
+            <div class="settings-section" data-tab="data">
+              <div class="section-title">🔄 สร้างคิวย้อนหลังจากการสแกน QR โดยตรง</div>
+              <div class="help-text" style="margin-bottom:15px;">
+                ค้นหา usage_records ที่ยังไม่มีคิว (สแกนโดยตรงโดยไม่ผ่านคิว) แล้วสร้าง queue entry ย้อนหลังให้อัตโนมัติ
+                เพื่อให้ข้อมูลแสดงบน Calendar Dashboard ได้ถูกต้อง
+              </div>
+              <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <button type="button" class="btn btn-warning" id="backfillQueuesBtn" onclick="runBackfillQueues()">
+                  🔧 สร้างคิวย้อนหลัง
+                </button>
+                <span id="backfillQueuesStatus" style="font-size:0.9em; color:var(--color-text-muted);"></span>
+              </div>
+              <div id="backfillQueuesResult" style="display:none; margin-top:12px; padding:12px; background:#f0fdf4; border:1px solid #86efac; border-radius:8px; font-size:0.9em;"></div>
+            </div>
+
             <!-- ===== รายชื่อบุคลากร ===== -->
             <div class="settings-section" data-tab="staff">
               <div class="section-title">👥 รายชื่อบุคลากรสำหรับ Autocomplete</div>
@@ -1249,6 +1265,31 @@
             var count = tbl.querySelector('tbody') ? tbl.querySelector('tbody').querySelectorAll('tr').length : '';
             var countLabel = count ? ' (' + count + ' รายการ)' : '';
             btn.textContent = (isOpen ? '▶' : '▼') + ' ดูประวัติการ Sync' + countLabel;
+          }
+        }
+
+        async function runBackfillQueues() {
+          var btn = document.getElementById('backfillQueuesBtn');
+          var status = document.getElementById('backfillQueuesStatus');
+          var result = document.getElementById('backfillQueuesResult');
+          if (btn) { btn.disabled = true; btn.textContent = '⏳ กำลังสร้างคิว…'; }
+          if (status) status.textContent = '';
+          if (result) result.style.display = 'none';
+          try {
+            var r = await API.post('/api/usage/backfill-queues', {});
+            if (r && r.success) {
+              var d = r.data;
+              if (result) {
+                result.style.display = 'block';
+                result.innerHTML = '✅ สร้างคิวย้อนหลังสำเร็จ — สร้างใหม่ <strong>' + (d.created||0) + '</strong> คิว, ข้าม <strong>' + (d.skipped||0) + '</strong> รายการ (ไม่พบ driver_id)';
+              }
+            } else {
+              if (status) status.textContent = '❌ ' + (r && r.error ? r.error : 'ไม่สำเร็จ');
+            }
+          } catch (e) {
+            if (status) status.textContent = '❌ ' + e.message;
+          } finally {
+            if (btn) { btn.disabled = false; btn.textContent = '🔧 สร้างคิวย้อนหลัง'; }
           }
         }
 
