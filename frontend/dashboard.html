@@ -512,6 +512,10 @@
           } else {
             // admin, super_admin, vehicle (queue) → full calendar
             loadDashboard();
+            // อัตโนมัติ: สร้างคิวย้อนหลังสำหรับ usage_records ที่ไม่มี queue_id (silent)
+            API.post('/api/usage/backfill-queues', {}).then(function(r) {
+              if (r && r.success && r.data && r.data.created > 0) loadDashboard();
+            }).catch(function() {});
           }
         });
 

@@ -597,6 +597,17 @@
           loadFuelTypes();
           loadGformConfig();
           loadGformLog();
+
+          // อัตโนมัติ: สร้างคิวย้อนหลังสำหรับ usage_records ที่ไม่มี queue_id (silent)
+          API.post('/api/usage/backfill-queues', {}).then(function(r) {
+            if (r && r.success && r.data && r.data.created > 0) {
+              var el = document.getElementById('backfillQueuesResult');
+              if (el) {
+                el.style.display = 'block';
+                el.innerHTML = '✅ สร้างคิวย้อนหลังอัตโนมัติ — สร้างใหม่ <strong>' + r.data.created + '</strong> คิว';
+              }
+            }
+          }).catch(function() {});
         });
 
         function renderMaintenanceItems() {
