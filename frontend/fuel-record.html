@@ -654,22 +654,29 @@
       }
 
       if (receiptImageFile) {
+        var submitBtn = document.querySelector('#fuelRecordForm button[type="submit"]');
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'กำลังบันทึก...'; }
         var reader = new FileReader();
         reader.onload = function () {
           formData.receipt_image_base64 = reader.result.split(',')[1];
           formData.receipt_image_name = receiptImageFile.name;
-          formData.receipt_image_mime = receiptImageFile.type;
-          submitAPI(formData);
+          formData.receipt_image_mime = receiptImageFile.type || 'image/jpeg';
+          submitAPI(formData, submitBtn);
+        };
+        reader.onerror = function () {
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'บันทึกการเติมน้ำมัน'; }
+          showAlert('ไม่สามารถอ่านไฟล์รูปภาพได้ กรุณาลองเลือกรูปใหม่', 'error');
         };
         reader.readAsDataURL(receiptImageFile);
       } else {
-        submitAPI(formData);
+        submitAPI(formData, null);
       }
     }
 
-    function submitAPI(formData) {
+    function submitAPI(formData, submitBtn) {
       apiCall('createFuel', formData)
         .then(function (response) {
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'บันทึกการเติมน้ำมัน'; }
           if (response.success) {
             showAlert('บันทึกการเติมน้ำมันสำเร็จ', 'success');
             document.getElementById('fuelRecordForm').reset();
@@ -682,17 +689,20 @@
           }
         })
         .catch(function (error) {
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'บันทึกการเติมน้ำมัน'; }
           showAlert(error && error.message ? error.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง', 'error');
         });
     }
 
     function showAlert(message, type) {
       var container = document.getElementById('alertContainer');
-      var alert = document.createElement('div');
-      alert.className = 'alert alert-' + type;
-      alert.textContent = message;
+      var alertEl = document.createElement('div');
+      alertEl.className = 'alert alert-' + type;
+      alertEl.textContent = message;
       container.innerHTML = '';
-      container.appendChild(alert);
+      container.appendChild(alertEl);
+      // Scroll to alert so user sees it (especially on mobile when scrolled down)
+      container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
     /* ═══ ประวัติการเติมน้ำมัน ═══ */
