@@ -503,6 +503,7 @@ test.describe('หน้า Executive Dashboard', () => {
 // ════════════════════════════════════════════
 test.describe('หน้า Incident', () => {
   test.beforeEach(async ({ page }) => {
+    await page.route('https://cdn.jsdelivr.net/**', route => route.abort());
     await loginAsAdmin(page);
   });
 
@@ -538,6 +539,7 @@ test.describe('หน้า Vehicle Request', () => {
 // ════════════════════════════════════════════
 test.describe('หน้า Vehicle Timeline', () => {
   test.beforeEach(async ({ page }) => {
+    await page.route('https://cdn.jsdelivr.net/**', route => route.abort());
     await loginAsAdmin(page);
   });
 
@@ -552,6 +554,7 @@ test.describe('หน้า Vehicle Timeline', () => {
 // ════════════════════════════════════════════
 test.describe('หน้า Driver Performance & History', () => {
   test.beforeEach(async ({ page }) => {
+    await page.route('https://cdn.jsdelivr.net/**', route => route.abort());
     await loginAsAdmin(page);
   });
 
