@@ -988,6 +988,21 @@
                 html += '<div style="font-size:0.7em;color:var(--color-text-light)">+ ' + (dayQueues.length - 3) + ' คิวเพิ่มเติม</div>';
               }
 
+              // usage_records ที่ไม่มี queue_id (บันทึกผ่าน QR / ตรง)
+              var dayGform = gformRecords.filter(function(r) {
+                return r.datetime && r.datetime.substr(0, 10) === dateStr;
+              });
+              dayGform.forEach(function(r) {
+                var plate = r.license_plate || (r.car_id || '').substr(0, 8);
+                var driverName = r.driver_name || '-';
+                var destination = r.destination || r.purpose || 'บันทึกการใช้รถ';
+                html += '<div class="queue-item" style="border-left:3px solid var(--color-warning,#f59e0b)">';
+                html += '<div class="queue-plate">' + plate + '</div>';
+                html += '<div class="queue-driver">' + driverName + '</div>';
+                html += '<div class="queue-destination">' + destination + '</div>';
+                html += '</div>';
+              });
+
               // carsOut ที่ออกวันนี้ (ยังไม่ถึง multi-day)
               carsOut.forEach(function(r) {
                 var dep = r.last_departure ? r.last_departure.substr(0, 10) : null;
