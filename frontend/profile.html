@@ -1278,6 +1278,12 @@
             uploadBtn.textContent = '💾 บันทึกรูป';
           }
         };
+        reader.onerror = function () {
+          document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">ไม่สามารถอ่านไฟล์รูปภาพได้ กรุณาลองเลือกรูปใหม่</div>';
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          uploadBtn.disabled = false;
+          uploadBtn.textContent = '💾 บันทึกรูป';
+        };
         reader.readAsDataURL(selectedProfileImageFile);
       } catch (error) {
         document.getElementById('alert-container').innerHTML = '<div class="alert alert-error">' + (typeof handleError !== 'undefined' ? handleError(error) : 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') + '</div>';
