@@ -786,7 +786,7 @@
               return v.status === 'active' && !busyCarIds[v.id];
             });
             availableDrivers = drivers.filter(function (d) {
-              return d.status === 'active' && !busyDriverIds[d.id];
+              return d.status === 'active' && !busyDriverIds[d.id] && (d.assignment_type === 'primary' || !d.assignment_type);
             });
 
             // Always display calendar, even if no data
