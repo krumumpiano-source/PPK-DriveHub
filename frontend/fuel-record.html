@@ -379,7 +379,7 @@
           vehicles.forEach(function (vehicle) {
             if (vehicle.active !== false) {
               var option = document.createElement('option');
-              option.value = vehicle.car_id;
+              option.value = vehicle.id;
               option.textContent = vehicle.license_plate + ' - ' + (vehicle.brand || '') + ' ' + (vehicle.model || '');
               select.appendChild(option);
             }
@@ -716,7 +716,7 @@
       vehicles.forEach(function (v) {
         if (v.active !== false) {
           var opt = document.createElement('option');
-          opt.value = v.car_id;
+          opt.value = v.id;
           opt.textContent = v.license_plate;
           sel.appendChild(opt);
         }
