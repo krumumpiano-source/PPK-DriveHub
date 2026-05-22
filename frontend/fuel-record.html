@@ -221,7 +221,7 @@
 
       <!-- 5. ประเภทน้ำมัน -->
       <div class="form-group">
-        <label>ประเภทน้ำมัน <span class="required">*</span></label>
+        <label style="display:flex;align-items:center;justify-content:space-between;">ประเภทน้ำมัน <span class="required">*</span><button type="button" onclick="openFuelTypeModal()" style="font-size:0.78em;padding:2px 8px;border-radius:6px;border:1px solid #aaa;background:#f8f9fa;cursor:pointer;font-family:inherit;">⚙️ จัดการรายการ</button></label>
         <select id="fuelType" required>
           <option value="">-- เลือกประเภทน้ำมัน --</option>
         </select>
@@ -320,6 +320,21 @@
       <div id="histCount" style="text-align: right; font-size: 12px; color: var(--color-text-muted); margin-top: 8px;"></div>
     </div>
 
+    </div>
+  </div>
+
+  <!-- Modal: จัดการประเภทน้ำมัน -->
+  <div id="fuelTypeMgrOverlay" onclick="if(event.target===this)closeFuelTypeModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:white;border-radius:12px;padding:24px;width:min(480px,95vw);max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 style="margin:0;font-size:1.1em;">⚙️ จัดการประเภทน้ำมัน</h3>
+        <button type="button" onclick="closeFuelTypeModal()" style="background:none;border:none;font-size:1.5em;cursor:pointer;line-height:1;color:#666;">×</button>
+      </div>
+      <div id="ftmList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="ftmNewName" placeholder="ชื่อประเภทน้ำมันใหม่" style="flex:1;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:1em;font-family:inherit;" onkeydown="if(event.key==='Enter')ftmAdd()">
+        <button type="button" class="btn btn-primary" onclick="ftmAdd()" style="padding:8px 16px;">➕ เพิ่ม</button>
+      </div>
     </div>
   </div>
 
@@ -842,6 +857,77 @@
       w.document.close();
     }
     window.printDispatchOrder = printDispatchOrder;
+
+    // ===== Fuel Type Manager =====
+    var _ftmList = [];
+    function openFuelTypeModal() {
+      _ftmList = fuelTypes.slice();
+      ftmRender();
+      var ov = document.getElementById('fuelTypeMgrOverlay');
+      ov.style.display = 'flex';
+      document.getElementById('ftmNewName').value = '';
+    }
+    function closeFuelTypeModal() {
+      document.getElementById('fuelTypeMgrOverlay').style.display = 'none';
+    }
+    function ftmRender() {
+      var c = document.getElementById('ftmList');
+      if (!c) return;
+      if (!_ftmList.length) { c.innerHTML = '<div style="color:#888;padding:8px;">ยังไม่มีรายการ</div>'; return; }
+      c.innerHTML = _ftmList.map(function(ft, i) {
+        var name = ft.name.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+        return '<div style="display:flex;align-items:center;gap:8px;background:#f8f9fa;padding:10px 14px;border-radius:8px;border:1px solid #e9ecef;">' +
+          '<span style="flex:1;font-weight:600;">' + (i+1) + '. ' + name + '</span>' +
+          '<button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:.82em;" onclick="ftmEdit(' + i + ')">✏️ แก้ไข</button>' +
+          '<button type="button" class="btn btn-danger" style="padding:4px 10px;font-size:.82em;" onclick="ftmDelete(' + i + ')">🗑️ ลบ</button>' +
+          '</div>';
+      }).join('');
+    }
+    function ftmAdd() {
+      var inp = document.getElementById('ftmNewName');
+      var name = (inp.value || '').trim();
+      if (!name) { alert('กรุณาระบุชื่อประเภทน้ำมัน'); return; }
+      var id = name.toLowerCase().replace(/[^a-z0-9\u0e00-\u0e7f]+/g,'_').replace(/^_|_$/g,'') || ('type_' + Date.now());
+      _ftmList.push({ id: id, name: name });
+      inp.value = '';
+      ftmRender();
+      ftmSave();
+    }
+    function ftmEdit(idx) {
+      var ft = _ftmList[idx];
+      if (!ft) return;
+      var newName = prompt('แก้ไขชื่อประเภทน้ำมัน:', ft.name);
+      if (newName === null || !newName.trim()) return;
+      _ftmList[idx] = { id: ft.id, name: newName.trim() };
+      ftmRender();
+      ftmSave();
+    }
+    function ftmDelete(idx) {
+      var ft = _ftmList[idx];
+      if (!ft) return;
+      if (!confirm('ลบ "' + ft.name + '" ออกจากรายการ?')) return;
+      _ftmList.splice(idx, 1);
+      ftmRender();
+      ftmSave();
+    }
+    async function ftmSave() {
+      try {
+        await apiCall('updateFuelTypes', { fuel_types: _ftmList });
+        fuelTypes = _ftmList.slice();
+        var sel = document.getElementById('fuelType');
+        var prev = sel.value;
+        sel.innerHTML = '<option value="">-- เลือกประเภทน้ำมัน --</option>';
+        fuelTypes.forEach(function(ft) {
+          var opt = document.createElement('option');
+          opt.value = ft.id || ft.key;
+          opt.textContent = ft.name;
+          if (opt.value === prev) opt.selected = true;
+          sel.appendChild(opt);
+        });
+      } catch(e) {
+        alert('บันทึกไม่สำเร็จ: ' + (e.message || e));
+      }
+    }
   </script>
 
 </body>

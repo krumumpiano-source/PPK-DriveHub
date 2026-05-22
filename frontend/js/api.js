@@ -142,6 +142,7 @@ const ACTION_MAP = {
   'createFuel':          (d) => API.post('/api/fuel/record', d),
   'updateFuel':          (d) => API.put(`/api/fuel/${d.id}`, d),
   'getFuelTypes':        ()  => API.get('/api/fuel/types'),
+  'updateFuelTypes':     (d) => API.put('/api/fuel/types', d),
   'getFuelReports':      (d) => API.get('/api/fuel/reports' + _q(d)),
   'getFuelRequests':     (d) => API.get('/api/fuel/requests' + _q(d)),
   'createFuelRequest':   (d) => API.post('/api/fuel/requests', d),

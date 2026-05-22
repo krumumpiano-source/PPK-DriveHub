@@ -34,6 +34,23 @@ export async function onRequest(context) {
     return success({ fuel_types: fuelTypes });
   }
 
+  // ========== PUT /api/fuel/types ==========
+  if (path === '/api/fuel/types' && method === 'PUT') {
+    if (!user) return error('กรุณาเข้าสู่ระบบ', 401);
+    const body = await parseBody(request);
+    if (!Array.isArray(body?.fuel_types)) return error('ข้อมูลไม่ถูกต้อง (ต้องส่ง fuel_types เป็น array)');
+    const list = body.fuel_types
+      .filter(ft => ft && ft.name)
+      .map(ft => ({ id: ft.id || ('type_' + Date.now()), name: String(ft.name).trim() }));
+    await dbRun(env.DB,
+      `INSERT INTO system_settings (id, key, value, updated_by, updated_at)
+       VALUES (?, 'fuel_types_list', ?, ?, ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_by = excluded.updated_by, updated_at = excluded.updated_at`,
+      [generateUUID(), JSON.stringify(list), user.id || 'system', now()]
+    );
+    return success({ message: 'บันทึกประเภทน้ำมันเรียบร้อย', count: list.length });
+  }
+
   // ========== POST /api/fuel/record ==========
   if (path === '/api/fuel/record' && method === 'POST') {
     const body = await parseBody(request);
