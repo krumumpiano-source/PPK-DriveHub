@@ -5,6 +5,7 @@
 
 import { dbAll, dbFirst, dbRun, generateUUID, now } from '../_helpers.js';
 import { getGoogleAccessToken, readSheet } from './google-auth.js';
+import { autoHeal } from './auto-heal.js';
 
 const COL = { TS: 0, DRIVER: 1, STATUS: 2, DATE: 3, REQUESTER: 4, DEST: 5, MILEAGE: 6 };
 const RANGE = 'A2:H';
@@ -80,7 +81,7 @@ async function findDriverByName(db, rawName) {
   return null;
 }
 
-async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report) {
+async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report, env) {
   const car = await dbFirst(db,
     `SELECT id FROM cars WHERE license_plate = ? OR registration_number = ?
      OR REPLACE(license_plate,' ','') = REPLACE(?,' ','')
@@ -211,6 +212,9 @@ async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report
                              driver_id: driverId ?? null, driver_name_manual: driverName || null,
                              requester_name: requester || null });
 
+      // Auto-heal: ตรวจสอบและสร้าง auto-return/auto-departure ถ้าจำเป็น (เหมือน QR)
+      await autoHeal(db, { id, car_id: carId, driver_id: driverId, record_type: recordType, datetime, mileage }, env);
+
       if (mileage) {
         await dbRun(db,
           `UPDATE cars SET current_mileage = ?, updated_at = ?
@@ -288,7 +292,7 @@ export async function runGoogleFormSync(env, triggerSource, triggeredBy) {
 
     for (const [licensePlate, spreadsheetId] of Object.entries(sheetMap)) {
       const report = { fetched: 0, inserted: 0, skipped: 0, failed: 0 };
-      try { await syncOneSheet(env.DB, accessToken, licensePlate, spreadsheetId, report); }
+      try { await syncOneSheet(env.DB, accessToken, licensePlate, spreadsheetId, report, env); }
       catch (e) { report.error = e.message; }
       summary.sheets_processed++;
       summary.rows_fetched += report.fetched;
