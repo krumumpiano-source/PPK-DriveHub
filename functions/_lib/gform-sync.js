@@ -103,14 +103,17 @@ async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report
   }
   report.fetched = rows.length;
 
-  // โหลด form_timestamps ที่มีอยู่แล้วทั้งหมดใน 1 query
+  // โหลด existing google_form records ทั้งหมดพร้อมข้อมูลเพื่อเปรียบเทียบ
   const existingRows = await dbAll(db,
-    `SELECT record_type || '|' || form_timestamp AS key
+    `SELECT id,
+            record_type || '|' || form_timestamp AS key,
+            mileage, destination, driver_id, driver_name_manual, requester_name
      FROM usage_records
      WHERE record_source = 'google_form' AND car_id = ? AND form_timestamp IS NOT NULL`,
     [carId]
   );
-  const existingKeys = new Set(existingRows.map(r => r.key));
+  // Map key → record (เพื่อเปรียบเทียบว่าข้อมูลเปลี่ยนไหม)
+  const existingMap = new Map(existingRows.map(r => [r.key, r]));
 
   // โหลด driver map ทั้งหมดใน 1 query (ลด D1 calls)
   const allDrivers = await dbAll(db,
@@ -146,7 +149,41 @@ async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report
     const recordType = statusToRecordType(r[COL.STATUS]);
     if (!recordType) { report.skipped++; continue; }
 
-    if (existingKeys.has(recordType + '|' + formTimestamp)) { report.skipped++; continue; }
+    const key = recordType + '|' + formTimestamp;
+    const existing = existingMap.get(key);
+
+    // ถ้ามีอยู่แล้ว — ตรวจว่าข้อมูลเปลี่ยนหรือเปล่า
+    if (existing) {
+      const changed =
+        existing.mileage    !== (mileage      ?? null) ||
+        existing.destination !== (destination  || null) ||
+        existing.driver_id   !== (driverId     ?? null) ||
+        existing.driver_name_manual !== (driverName   || null) ||
+        existing.requester_name     !== (requester    || null);
+
+      if (changed) {
+        const ts = now();
+        await dbRun(db,
+          `UPDATE usage_records
+           SET mileage = ?, destination = ?, driver_id = ?,
+               driver_name_manual = ?, requester_name = ?, updated_at = ?
+           WHERE id = ?`,
+          [mileage ?? null, destination || null, driverId ?? null,
+           driverName || null, requester || null, ts, existing.id]
+        );
+        if (mileage) {
+          await dbRun(db,
+            `UPDATE cars SET current_mileage = ?, updated_at = ?
+             WHERE id = ? AND (current_mileage IS NULL OR current_mileage < ?)`,
+            [mileage, ts, carId, mileage]
+          );
+        }
+        report.updated = (report.updated || 0) + 1;
+      } else {
+        report.skipped++;
+      }
+      continue;
+    }
 
     const datetime = parseFormDate(r[COL.DATE], tsRaw) || parseFormDate(tsRaw, '');
     const mileage = parseMileage(r[COL.MILEAGE]);
@@ -171,7 +208,9 @@ async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report
          requester || null, destination || null, driverName || null,
          formTimestamp, ts]
       );
-      existingKeys.add(recordType + '|' + formTimestamp);
+      existingMap.set(key, { id, mileage: mileage ?? null, destination: destination || null,
+                             driver_id: driverId ?? null, driver_name_manual: driverName || null,
+                             requester_name: requester || null });
 
       if (mileage) {
         await dbRun(db,
@@ -243,7 +282,7 @@ export async function runGoogleFormSync(env, triggerSource, triggeredBy) {
   );
 
   const summary = { sheets_processed: 0, rows_fetched: 0, rows_inserted: 0,
-                    rows_skipped: 0, rows_failed: 0, details: {} };
+                    rows_updated: 0, rows_skipped: 0, rows_failed: 0, details: {} };
   try {
     const tokenResp = await getGoogleAccessToken(saJson, 'https://www.googleapis.com/auth/spreadsheets.readonly');
     const accessToken = tokenResp.access_token;
@@ -255,6 +294,7 @@ export async function runGoogleFormSync(env, triggerSource, triggeredBy) {
       summary.sheets_processed++;
       summary.rows_fetched += report.fetched;
       summary.rows_inserted += report.inserted;
+      summary.rows_updated += (report.updated || 0);
       summary.rows_skipped += report.skipped;
       summary.rows_failed += report.failed;
       summary.details[licensePlate] = report;
@@ -264,11 +304,11 @@ export async function runGoogleFormSync(env, triggerSource, triggeredBy) {
       `UPDATE gform_sync_log
        SET finished_at = ?, status = ?,
            sheets_processed = ?, rows_fetched = ?,
-           rows_inserted = ?, rows_skipped = ?, rows_failed = ?,
+           rows_inserted = ?, rows_updated = ?, rows_skipped = ?, rows_failed = ?,
            details = ?
        WHERE id = ?`,
       [now(), status, summary.sheets_processed, summary.rows_fetched,
-       summary.rows_inserted, summary.rows_skipped, summary.rows_failed,
+       summary.rows_inserted, summary.rows_updated, summary.rows_skipped, summary.rows_failed,
        JSON.stringify(summary.details), logId]
     );
     return { logId, status, ...summary };
