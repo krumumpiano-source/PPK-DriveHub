@@ -121,7 +121,7 @@ export async function onRequest(context) {
     }
 
     // Auto-heal: detect and fix missing records
-    const healed = await autoHeal(env.DB, { id, car_id: body.car_id, driver_id: body.driver_id || null, record_type: body.record_type, datetime: body.datetime || ts, mileage: body.mileage || null, queue_id: body.queue_id || null });
+    const healed = await autoHeal(env.DB, { id, car_id: body.car_id, driver_id: body.driver_id || null, record_type: body.record_type, datetime: body.datetime || ts, mileage: body.mileage || null, queue_id: body.queue_id || null }, env);
 
     // ── helper: resolve driver_id จาก body หรือ driver_name_manual ──────────
     async function resolveDriverId(driverId, driverNameManual) {

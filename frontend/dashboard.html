@@ -966,8 +966,8 @@
               if (spacerPx > 0) html += '<div style="height:' + spacerPx + 'px;flex-shrink:0"></div>';
 
               // Banner บนวันนี้
-              if (isToday && tripBars.length > 0) {
-                html += '<div class="overdue-banner">🚗 ยังไม่กลับ ' + tripBars.length + ' คัน</div>';
+              if (isToday && carsOut.length > 0) {
+                html += '<div class="overdue-banner">🚗 ยังไม่กลับ ' + carsOut.length + ' คัน</div>';
               }
 
               // Single-day queue cards (วันเดียว)

@@ -391,6 +391,13 @@
   <script>
     var ledgerData = null;
     var monthlyData = null;
+    var _FT_MAP = {
+      'diesel': 'ดีเซล', 'gasohol_95': 'แก๊สโซฮอล์ 95', 'gasohol_91': 'แก๊สโซฮอล์ 91',
+      'fuelSave_gasohol91': 'ฟิวเซฟ แก๊สโซฮอล์ 91', 'vPower_gasohol95': 'วี-เพาวอร์แก๊สโซฮอล์ 95',
+      'vPower_diesel_b7': 'วี-เพาเวอร์ ดีเซล B7', 'fuelSave_diesel_b7': 'ฟิวเซฟดีเซล B7',
+      'fuelSave_diesel': 'ฟิวเซฟดีเซล', 'e20': 'E20', 'e85': 'E85', 'ngv': 'NGV', 'lpg': 'LPG'
+    };
+    function fuelTypeName(v) { return v ? (_FT_MAP[v] || v) : '-'; }
 
     document.addEventListener('DOMContentLoaded', function () {
       var isAuth = requireAuth();
@@ -566,7 +573,7 @@
       (d.by_fuel_type || []).forEach(function (ft) {
         var pct = grandAmount > 0 ? (ft.total_amount / grandAmount * 100) : 0;
         html += '<tr>' +
-          '<td>' + (ft.fuel_type || '-') + '</td>' +
+          '<td>' + fuelTypeName(ft.fuel_type) + '</td>' +
           '<td class="num">' + ft.count + '</td>' +
           '<td class="num">' + ft.total_liters.toFixed(2) + '</td>' +
           '<td class="num">' + ft.total_amount.toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td>' +
@@ -666,7 +673,7 @@
       html = '';
       (d.by_fuel_type || []).forEach(function (ft) {
         html += '<tr>' +
-          '<td>' + (ft.fuel_type || '-') + '</td>' +
+          '<td>' + fuelTypeName(ft.fuel_type) + '</td>' +
           '<td class="num">' + ft.count + '</td>' +
           '<td class="num">' + ft.total_liters.toFixed(2) + '</td>' +
           '<td class="num">' + ft.total_amount.toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td></tr>';
@@ -690,7 +697,7 @@
           '<td>' + (r.document_number || '-') + '</td>' +
           '<td>' + (r.license_plate || '-') + '</td>' +
           '<td>' + (r.driver_name || '-') + '</td>' +
-          '<td>' + (r.fuel_type || '-') + '</td>' +
+          '<td>' + fuelTypeName(r.fuel_type) + '</td>' +
           '<td class="num">' + (r.liters || 0).toFixed(2) + '</td>' +
           '<td class="num">' + ppl + '</td>' +
           '<td class="num">' + (r.amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td>' +
@@ -763,7 +770,7 @@
         totalLiters += ft.total_liters;
         html += '<tr>' +
           '<td class="num">' + (i + 1) + '</td>' +
-          '<td>น้ำมัน' + (ft.fuel_type || '-') + '</td>' +
+          '<td>น้ำมัน' + fuelTypeName(ft.fuel_type) + '</td>' +
           '<td class="num">' + ft.total_liters.toFixed(2) + '</td>' +
           '<td class="num">' + ft.total_amount.toLocaleString('th-TH', { minimumFractionDigits: 2 }) + '</td>' +
           '<td>สำหรับรถราชการ ' + (d.by_vehicle || []).length + ' คัน</td></tr>';
@@ -1073,7 +1080,7 @@
             r.license_plate || '',
             r.brand || '',
             r.driver_name || '',
-            r.fuel_type || '',
+            fuelTypeName(r.fuel_type),
             liters,
             num(r.price_per_liter),
             amount,
@@ -1162,7 +1169,7 @@
             r.time || '',
             r.document_number || '',
             r.driver_name || '',
-            r.fuel_type || '',
+            fuelTypeName(r.fuel_type),
             liters,
             num(r.price_per_liter),
             amount,
@@ -1254,7 +1261,7 @@
         '<table class="gov"><thead><tr><th>ประเภทน้ำมัน</th><th>จำนวนครั้ง</th><th>จำนวน (ลิตร)</th><th>จำนวนเงิน (บาท)</th><th>สัดส่วน (%)</th></tr></thead><tbody>';
       (d.by_fuel_type || []).forEach(function(ft) {
         var pct = gAmt > 0 ? (ft.total_amount / gAmt * 100) : 0;
-        html += '<tr><td>' + (ft.fuel_type||'-') + '</td><td class="r">' + ft.count + '</td><td class="r">' + ft.total_liters.toFixed(2) + '</td><td class="r">' + ft.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td><td class="r">' + pct.toFixed(1) + '%</td></tr>';
+        html += '<tr><td>' + fuelTypeName(ft.fuel_type) + '</td><td class="r">' + ft.count + '</td><td class="r">' + ft.total_liters.toFixed(2) + '</td><td class="r">' + ft.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td><td class="r">' + pct.toFixed(1) + '%</td></tr>';
       });
       html += '</tbody><tfoot><tr><td><b>รวม</b></td><td class="r">' + d.grand_total.count + '</td><td class="r">' + d.grand_total.total_liters.toFixed(2) + '</td><td class="r">' + d.grand_total.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td><td class="r">100.0%</td></tr></tfoot></table>';
 
@@ -1313,7 +1320,7 @@
           '<td>' + (r.document_number||'-') + '</td>' +
           '<td>' + (r.license_plate||'-') + '</td>' +
           '<td>' + (r.driver_name||'-') + '</td>' +
-          '<td>' + (r.fuel_type||'-') + '</td>' +
+          '<td>' + fuelTypeName(r.fuel_type) + '</td>' +
           '<td class="r">' + (r.liters||0).toFixed(2) + '</td>' +
           '<td class="r">' + ppl + '</td>' +
           '<td class="r">' + (r.amount||0).toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td>' +
@@ -1338,7 +1345,7 @@
       html += '<p class="section-title">3. สรุปแยกตามประเภทน้ำมัน</p>' +
         '<table class="gov"><thead><tr><th>ประเภทน้ำมัน</th><th>จำนวนครั้ง</th><th>จำนวน (ลิตร)</th><th>จำนวนเงิน (บาท)</th></tr></thead><tbody>';
       (d.by_fuel_type || []).forEach(function(ft) {
-        html += '<tr><td>' + (ft.fuel_type||'-') + '</td><td class="r">' + ft.count + '</td><td class="r">' + ft.total_liters.toFixed(2) + '</td><td class="r">' + ft.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td></tr>';
+        html += '<tr><td>' + fuelTypeName(ft.fuel_type) + '</td><td class="r">' + ft.count + '</td><td class="r">' + ft.total_liters.toFixed(2) + '</td><td class="r">' + ft.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td></tr>';
       });
       html += '</tbody></table>';
 
@@ -1390,7 +1397,7 @@
           '<td>' + (r.document_number||'-') + '</td>' +
           '<td>' + (r.license_plate||'-') + '</td>' +
           '<td>' + (r.driver_name||'-') + '</td>' +
-          '<td>' + (r.fuel_type||'-') + '</td>' +
+          '<td>' + fuelTypeName(r.fuel_type) + '</td>' +
           '<td class="r">' + (r.liters||0).toFixed(2) + '</td>' +
           '<td class="r">' + ppl + '</td>' +
           '<td class="r">' + (r.amount||0).toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td>' +
@@ -1406,7 +1413,7 @@
       html += '<p class="section-title">สรุปตามประเภทน้ำมัน</p>' +
         '<table class="gov"><thead><tr><th>ประเภทน้ำมัน</th><th>จำนวนครั้ง</th><th>จำนวน (ลิตร)</th><th>จำนวนเงิน (บาท)</th></tr></thead><tbody>';
       (d.by_fuel_type || []).forEach(function(ft) {
-        html += '<tr><td>น้ำมัน' + (ft.fuel_type||'-') + '</td><td class="r">' + ft.count + '</td><td class="r">' + ft.total_liters.toFixed(2) + '</td><td class="r">' + ft.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td></tr>';
+        html += '<tr><td>น้ำมัน' + fuelTypeName(ft.fuel_type) + '</td><td class="r">' + ft.count + '</td><td class="r">' + ft.total_liters.toFixed(2) + '</td><td class="r">' + ft.total_amount.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td></tr>';
       });
       html += '</tbody></table>';
 

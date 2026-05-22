@@ -5,7 +5,6 @@
 
 import { dbAll, dbFirst, dbRun, generateUUID, now } from '../_helpers.js';
 import { getGoogleAccessToken, readSheet } from './google-auth.js';
-import { autoHeal } from './auto-heal.js';
 
 const COL = { TS: 0, DRIVER: 1, STATUS: 2, DATE: 3, REQUESTER: 4, DEST: 5, MILEAGE: 6 };
 const RANGE = 'A2:H';
