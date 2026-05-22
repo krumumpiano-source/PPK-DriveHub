@@ -208,6 +208,7 @@
 
   <script>
     var vehicles = [], drivers = [], historyData = [], editingId = null, itemRowCount = 0;
+    var _loadingHistory = false;
 
     var STATUS_MAP = {
       requested:  { label: '\u0e23\u0e2d\u0e1e\u0e34\u0e08\u0e32\u0e23\u0e13\u0e32',    icon: '\ud83d\udce8', cls: 'status-requested' },
@@ -242,27 +243,23 @@
       initYearFilter();
       await Promise.all([loadVehicles(), loadDrivers()]);
       loadHistory();
-      setTimeout(function(){if(typeof initAllThaiDateTimePickers==='function') initAllThaiDateTimePickers()},500);
     });
 
     async function loadVehicles(){
       try{
         var r=await apiCall('getVehicles',{});
         if(r.success&&r.data&&r.data.vehicles) vehicles=r.data.vehicles;
-        ['hFilterCar','cmp_car_id'].forEach(function(selId){
-          var sel=document.getElementById(selId);
-          if(!sel) return;
-          var val=sel.value;
-          var isFilter=selId.indexOf('Filter')!==-1;
-          sel.innerHTML=isFilter?'<option value="">\u0e23\u0e16\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14</option>':'<option value="">\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e23\u0e16</option>';
-          vehicles.forEach(function(v){
-            var o=document.createElement('option');
-            o.value=v.id;
-            o.textContent=v.license_plate+' - '+(v.brand||'')+' '+(v.model||'');
-            sel.appendChild(o);
-          });
-          if(val) sel.value=val;
+        var filterHtml='<option value="">\u0e23\u0e16\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14</option>';
+        var modalHtml='<option value="">\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e23\u0e16</option>';
+        vehicles.forEach(function(v){
+          var txt=v.license_plate+' - '+(v.brand||'')+' '+(v.model||'');
+          var opt='<option value="'+v.id+'">'+txt+'</option>';
+          filterHtml+=opt;modalHtml+=opt;
         });
+        var fc=document.getElementById('hFilterCar');
+        if(fc){var fv=fc.value;fc.innerHTML=filterHtml;if(fv) fc.value=fv;}
+        var cm=document.getElementById('cmp_car_id');
+        if(cm){var cv=cm.value;cm.innerHTML=modalHtml;if(cv) cm.value=cv;}
       }catch(e){console.error(e)}
     }
 
@@ -270,15 +267,12 @@
       try{
         var r=await apiCall('getDrivers',{status:'active'});
         if(r.success&&r.data&&r.data.drivers) drivers=r.data.drivers;
-        var sel=document.getElementById('cmp_taken_by');
-        if(!sel) return;
-        sel.innerHTML='<option value="">-- \u0e40\u0e25\u0e37\u0e2d\u0e01 --</option>';
+        var html='<option value="">-- \u0e40\u0e25\u0e37\u0e2d\u0e01 --</option>';
         drivers.forEach(function(d){
-          var o=document.createElement('option');
-          o.value=d.driver_id;
-          o.textContent=(d.title||'')+' '+(d.first_name||'')+' '+(d.last_name||'');
-          sel.appendChild(o);
+          html+='<option value="'+d.driver_id+'">'+(d.title||'')+' '+(d.first_name||'')+' '+(d.last_name||'')+'</option>';
         });
+        var sel=document.getElementById('cmp_taken_by');
+        if(sel) sel.innerHTML=html;
       }catch(e){console.error(e)}
     }
 
@@ -315,104 +309,95 @@
       var sel=document.getElementById('hFilterYear');
       if(!sel) return;
       var thisYear=new Date().getFullYear()+543;
+      var opts='<option value="">\u0e17\u0e38\u0e01\u0e1b\u0e35</option>';
       for(var y=thisYear;y>=2552;y--){
-        var o=document.createElement('option');
-        o.value=''+(y-543);
-        o.textContent='\u0e1e.\u0e28. '+y;
-        sel.appendChild(o);
+        opts+='<option value="'+(y-543)+'">\u0e1e.\u0e28. '+y+'</option>';
       }
+      sel.innerHTML=opts;
     }
 
     async function loadHistory(){
-      document.getElementById('hLoading').style.display='block';
-      document.getElementById('hTableBody').innerHTML='';
-      document.getElementById('hSummaryStats').style.display='none';
-      var _mntPanel=document.getElementById('hMaintenancePanel');if(_mntPanel) _mntPanel.style.display='none';
+      if(_loadingHistory) return;
+      _loadingHistory=true;
+      var elLoad=document.getElementById('hLoading');
+      var elBody=document.getElementById('hTableBody');
+      var elStats=document.getElementById('hSummaryStats');
+      if(elLoad) elLoad.style.display='block';
+      if(elBody) elBody.innerHTML='';
+      if(elStats) elStats.style.display='none';
       try{
         var filters={status:'completed'};
-        var fc=document.getElementById('hFilterCar').value;
-        var ft=document.getElementById('hFilterType').value;
-        var fy=document.getElementById('hFilterYear').value;
-        if(fc) filters.car_id=fc;
+        var fcEl=document.getElementById('hFilterCar');
+        var ftEl=document.getElementById('hFilterType');
+        var fyEl=document.getElementById('hFilterYear');
+        if(fcEl&&fcEl.value) filters.car_id=fcEl.value;
         var r=await apiCall('getRepairs',filters);
-        var list=(r.success&&r.data)?(Array.isArray(r.data)?r.data:[]):[];
-        if(ft) list=list.filter(function(rp){return rp.service_type===ft});
-        if(fy) list=list.filter(function(rp){var d=rp.date_completed||rp.date_reported||'';return d.substring(0,4)===fy});
-        list.sort(function(a,b){var da=b.date_completed||b.date_reported||'';var db=a.date_completed||a.date_reported||'';return da<db?-1:da>db?1:0;});
+        var list=(r.success&&Array.isArray(r.data))?r.data:(r.success&&r.data&&Array.isArray(r.data))?r.data:[];
+        var ftVal=ftEl?ftEl.value:'';
+        var fyVal=fyEl?fyEl.value:'';
+        if(ftVal) list=list.filter(function(rp){return rp.service_type===ftVal});
+        if(fyVal) list=list.filter(function(rp){var d=rp.date_completed||rp.date_reported||'';return d.substring(0,4)===fyVal});
+        list.sort(function(a,b){var da=a.date_completed||a.date_reported||'';var db=b.date_completed||b.date_reported||'';return da<db?1:da>db?-1:0});
+        historyData=list;
         if(list.length>0){
           var totalCost=0,garages={};
           list.forEach(function(rp){totalCost+=(rp.grand_total||rp.cost||0);if(rp.garage_name) garages[rp.garage_name]=(garages[rp.garage_name]||0)+1});
           var topGarage='-',topCount=0;
           for(var g in garages){if(garages[g]>topCount){topCount=garages[g];topGarage=g}}
-          var statsEl=document.getElementById('hSummaryStats');
-          statsEl.style.display='flex';
-          statsEl.innerHTML='<div class="h-stat"><div class="h-stat-val">'+list.length+'</div><div class="h-stat-lbl">\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e0b\u0e48\u0e2d\u0e21</div></div>'
-            +'<div class="h-stat"><div class="h-stat-val">'+totalCost.toLocaleString()+' \u0e3f</div><div class="h-stat-lbl">\u0e04\u0e48\u0e32\u0e0b\u0e48\u0e2d\u0e21\u0e23\u0e27\u0e21</div></div>'
-            +'<div class="h-stat"><div class="h-stat-val">'+(list[0]?fmtDate(list[0].date_completed||list[0].date_reported):'-')+'</div><div class="h-stat-lbl">\u0e0b\u0e48\u0e2d\u0e21\u0e25\u0e48\u0e32\u0e2a\u0e38\u0e14</div></div>'
-            +'<div class="h-stat"><div class="h-stat-val">'+topGarage+'</div><div class="h-stat-lbl">\u0e2d\u0e39\u0e48\u0e17\u0e35\u0e48\u0e43\u0e0a\u0e49\u0e1a\u0e48\u0e2d\u0e22</div></div>';
+          if(elStats){
+            elStats.style.display='flex';
+            elStats.innerHTML='<div class="h-stat"><div class="h-stat-val">'+list.length+'</div><div class="h-stat-lbl">\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e0b\u0e48\u0e2d\u0e21</div></div>'
+              +'<div class="h-stat"><div class="h-stat-val">'+totalCost.toLocaleString()+' \u0e3f</div><div class="h-stat-lbl">\u0e04\u0e48\u0e32\u0e0b\u0e48\u0e2d\u0e21\u0e23\u0e27\u0e21</div></div>'
+              +'<div class="h-stat"><div class="h-stat-val">'+(list[0]?fmtDate(list[0].date_completed||list[0].date_reported):'-')+'</div><div class="h-stat-lbl">\u0e0b\u0e48\u0e2d\u0e21\u0e25\u0e48\u0e32\u0e2a\u0e38\u0e14</div></div>'
+              +'<div class="h-stat"><div class="h-stat-val">'+topGarage+'</div><div class="h-stat-lbl">\u0e2d\u0e39\u0e48\u0e17\u0e35\u0e48\u0e43\u0e0a\u0e49\u0e1a\u0e48\u0e2d\u0e22</div></div>';
+          }
         }
-
-        if(list.length===0){
-          historyData=[];
-          document.getElementById('hTableBody').innerHTML='<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--color-text-muted)">\ud83d\udd27 \u0e44\u0e21\u0e48\u0e21\u0e35\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e0b\u0e48\u0e2d\u0e21\u0e40\u0e2a\u0e23\u0e47\u0e08</td></tr>';
-        }else{
-          historyData=list;
-          document.getElementById('hSearch').value='';
-          renderHistoryTable(list);
-        }
-      }catch(e){console.error(e);document.getElementById('hTableBody').innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--color-danger)">\u0e42\u0e2b\u0e25\u0e14\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08</td></tr>'}
-      finally{document.getElementById('hLoading').style.display='none'}
+        renderTable(list);
+      }catch(e){
+        console.error(e);
+        if(elBody) elBody.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--color-danger)">\u0e42\u0e2b\u0e25\u0e14\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08</td></tr>';
+      }finally{
+        _loadingHistory=false;
+        if(elLoad) elLoad.style.display='none';
+      }
     }
 
-    var _renderToken = 0;
-    function renderHistoryTable(list){
-      var tbody=document.getElementById('hTableBody');
-      if(!tbody) return;
-      var myToken = ++_renderToken;
-      tbody.innerHTML='';
-      if(!list.length){
-        tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--color-text-muted)">\ud83d\udd27 \u0e44\u0e21\u0e48\u0e1e\u0e1a\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e17\u0e35\u0e48\u0e15\u0e23\u0e07\u0e01\u0e31\u0e1a\u0e40\u0e07\u0e37\u0e48\u0e2d\u0e19\u0e44\u0e02</td></tr>';
+    function renderTable(list){
+      var elBody=document.getElementById('hTableBody');
+      if(!elBody) return;
+      if(!list||!list.length){
+        elBody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--color-text-muted)">\ud83d\udd27 \u0e44\u0e21\u0e48\u0e21\u0e35\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e0b\u0e48\u0e2d\u0e21\u0e40\u0e2a\u0e23\u0e47\u0e08</td></tr>';
         return;
       }
       var user=getCurrentUser();
       var canEdit=user&&(user.role==='admin'||(typeof hasModulePermission==='function'&&hasModulePermission('repair','edit')));
-      var CHUNK = 20;
-      var idx = 0;
-      function buildRow(rp){
+      var html='';
+      for(var i=0;i<list.length;i++){
+        var rp=list[i];
         var st=SERVICE_TYPE_MAP[rp.service_type]||SERVICE_TYPE_MAP['repair'];
         var total=rp.grand_total||rp.cost||0;
         var mileIn=rp.mileage_at_repair?rp.mileage_at_repair.toLocaleString():'\u2014';
         var desc=(rp.issue_description||'-').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        var h='<tr>';
-        h+='<td style="white-space:nowrap">'+fmtDate(rp.date_completed||rp.date_reported)+'</td>';
-        h+='<td class="t-veh">'+vLabel(rp.car_id,rp)+'</td>';
-        h+='<td><span class="h-card-type '+st.cls+'">'+st.icon+' '+st.label+'</span></td>';
-        h+='<td class="t-desc" title="'+desc+'">'+desc+'</td>';
-        h+='<td class="h-hide-sm t-muted">'+(rp.garage_name||'\u2014')+'</td>';
-        h+='<td class="h-hide-sm t-muted">'+(rp.invoice_number||'\u2014')+'</td>';
-        h+='<td class="h-hide-sm t-mile">'+mileIn+'</td>';
-        h+='<td class="t-cost">'+(total?total.toLocaleString():'\u2014')+'</td>';
-        h+='<td style="white-space:nowrap">';
-        h+='<button class="btn btn-ghost" style="padding:3px 8px;font-size:.78rem" onclick="showDetail(\''+rp.id+'\')">\ud83d\udcc4 \u0e14\u0e39</button>';
-        if(canEdit) h+='<button class="btn btn-ghost" style="padding:3px 8px;font-size:.78rem" onclick="editCompleted(\''+rp.id+'\')">&#9999;&#65039;</button>';
-        h+='</td></tr>';
-        return h;
+        html+='<tr>';
+        html+='<td style="white-space:nowrap">'+fmtDate(rp.date_completed||rp.date_reported)+'</td>';
+        html+='<td class="t-veh">'+vLabel(rp.car_id,rp)+'</td>';
+        html+='<td><span class="h-card-type '+st.cls+'">'+st.icon+' '+st.label+'</span></td>';
+        html+='<td class="t-desc" title="'+desc+'">'+desc+'</td>';
+        html+='<td class="h-hide-sm t-muted">'+(rp.garage_name||'\u2014')+'</td>';
+        html+='<td class="h-hide-sm t-muted">'+(rp.invoice_number||'\u2014')+'</td>';
+        html+='<td class="h-hide-sm t-mile">'+mileIn+'</td>';
+        html+='<td class="t-cost">'+(total?total.toLocaleString():'\u2014')+'</td>';
+        html+='<td style="white-space:nowrap">';
+        html+='<button class="btn btn-ghost" style="padding:3px 8px;font-size:.78rem" onclick="showDetail(\''+rp.id+'\')">\ud83d\udcc4 \u0e14\u0e39</button>';
+        if(canEdit) html+='<button class="btn btn-ghost" style="padding:3px 8px;font-size:.78rem" onclick="editCompleted(\''+rp.id+'\')">&#9999;&#65039;</button>';
+        html+='</td></tr>';
       }
-      function renderChunk(){
-        if(myToken !== _renderToken) return;
-        var end = Math.min(idx + CHUNK, list.length);
-        var html = '';
-        for(var i=idx;i<end;i++) html += buildRow(list[i]);
-        tbody.insertAdjacentHTML('beforeend', html);
-        idx = end;
-        if(idx < list.length) requestAnimationFrame(renderChunk);
-      }
-      requestAnimationFrame(renderChunk);
+      elBody.innerHTML=html;
     }
 
     function filterHistory(){
       var q=(document.getElementById('hSearch').value||'').toLowerCase().trim();
-      if(!q){renderHistoryTable(historyData);return}
+      if(!q){renderTable(historyData);return}
       var filtered=historyData.filter(function(rp){
         return vLabel(rp.car_id,rp).toLowerCase().includes(q)||
           (rp.issue_description||'').toLowerCase().includes(q)||
@@ -420,7 +405,7 @@
           (rp.garage_name||'').toLowerCase().includes(q)||
           (rp.mechanic_name||'').toLowerCase().includes(q);
       });
-      renderHistoryTable(filtered);
+      renderTable(filtered);
     }
 
 
@@ -490,6 +475,7 @@
       document.getElementById('cmpTitle').textContent='\ud83d\udcdd \u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e0b\u0e48\u0e2d\u0e21\u0e22\u0e49\u0e2d\u0e19\u0e2b\u0e25\u0e31\u0e07';
       document.getElementById('completedForm').reset();
       document.getElementById('cmp_items_list').innerHTML='';
+      itemRowCount=0;
       document.getElementById('cmp_insurance_section').style.display='none';
       document.getElementById('completedModal').classList.add('show');
       setTimeout(function(){if(typeof initAllThaiDateTimePickers==='function') initAllThaiDateTimePickers()},100);
