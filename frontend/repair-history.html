@@ -23,6 +23,8 @@
     .status-repairing{background:#fce7f3;color:#9d174d}
     .status-completed{background:#d1fae5;color:#065f46}
     .status-rejected{background:#fee2e2;color:#991b1b}
+    .h-card-type.t-accident{background:#fee2e2;color:#991b1b}
+    .h-card-type.t-insurance{background:#fce7f3;color:#9d174d}
     .h-card-type{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.75rem;font-weight:600;white-space:nowrap}
     .h-card-type.t-repair{background:#fef3c7;color:#92400e}
     .h-card-type.t-scheduled_maintenance{background:#dbeafe;color:#1e40af}
@@ -83,7 +85,9 @@
         <select id="hFilterType" onchange="loadHistory()" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem">
           <option value="">ทุกประเภท</option>
           <option value="repair">ซ่อมทั่วไป</option>
-          <option value="scheduled_maintenance">เช็คระยะ/บำรุงรักษา</option>
+          <option value="scheduled_service">เช็คระยะ/บำรุงรักษา</option>
+          <option value="accident">ซ่อมอุบัติเหตุ</option>
+          <option value="insurance">เคลมประกัน</option>
           <option value="inspection">ตรวจสภาพ</option>
           <option value="other">อื่นๆ</option>
         </select>
@@ -94,7 +98,9 @@
         <button class="btn btn-secondary" onclick="loadHistory()">🔃 รีเฟรช</button>
       </div>
 
-      <div id="hMaintenancePanel" style="display:none"></div>
+      <div style="margin-bottom:.75rem">
+        <a href="maintenance-alerts.html" class="btn btn-secondary" style="font-size:.85rem">🔔 ดูแจ้งเตือนครบกำหนดบำรุงรักษา</a>
+      </div>
       <div id="hSummaryStats" style="display:none;gap:12px;flex-wrap:wrap;margin-bottom:1rem"></div>
       <div id="hLoading" class="loading" style="display:none">กำลังโหลด...</div>
 
@@ -215,8 +221,11 @@
 
     var SERVICE_TYPE_MAP = {
       repair:                { label: '\u0e0b\u0e48\u0e2d\u0e21\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b', cls: 't-repair', icon: '\ud83d\udd27' },
+      scheduled_service:     { label: '\u0e40\u0e0a\u0e47\u0e04\u0e23\u0e30\u0e22\u0e30/\u0e1a\u0e33\u0e23\u0e38\u0e07\u0e23\u0e31\u0e01\u0e29\u0e32', cls: 't-scheduled_maintenance', icon: '\ud83d\udd29' },
       scheduled_maintenance: { label: '\u0e40\u0e0a\u0e47\u0e04\u0e23\u0e30\u0e22\u0e30/\u0e1a\u0e33\u0e23\u0e38\u0e07\u0e23\u0e31\u0e01\u0e29\u0e32', cls: 't-scheduled_maintenance', icon: '\ud83d\udd29' },
       inspection:            { label: '\u0e15\u0e23\u0e27\u0e08\u0e2a\u0e20\u0e32\u0e1e', cls: 't-inspection', icon: '\ud83d\udd0d' },
+      accident:              { label: '\u0e0b\u0e48\u0e2d\u0e21\u0e2d\u0e38\u0e1a\u0e31\u0e15\u0e34\u0e40\u0e2b\u0e15\u0e38', cls: 't-accident', icon: '\u26a0\ufe0f' },
+      insurance:             { label: '\u0e40\u0e04\u0e25\u0e21\u0e1b\u0e23\u0e30\u0e01\u0e31\u0e19', cls: 't-insurance', icon: '\ud83d\udee1\ufe0f' },
       other:                 { label: '\u0e2d\u0e37\u0e48\u0e19\u0e46', cls: 't-other', icon: '\ud83d\udccb' }
     };
 
@@ -277,7 +286,8 @@
       if(row&&(row.license_plate||row.brand||row.model)){
         return ((row.license_plate||'')+' '+(row.brand||'')+' '+(row.model||'')).trim()||carId||'-';
       }
-      var v=vehicles.find(function(x){return x.id===carId});
+      var v=vehicles.find(function(x){return (x.id||x.car_id)===carId});
+      var v=vehicles.find(function(x){return String(x.id||x.car_id)===String(carId)});
       return v?(v.license_plate+' '+(v.brand||'')+' '+(v.model||'')).trim():carId||'-';
     }
     function dLabel(driverId){
@@ -342,7 +352,7 @@
             +'<div class="h-stat"><div class="h-stat-val">'+(list[0]?fmtDate(list[0].date_completed||list[0].date_reported):'-')+'</div><div class="h-stat-lbl">\u0e0b\u0e48\u0e2d\u0e21\u0e25\u0e48\u0e32\u0e2a\u0e38\u0e14</div></div>'
             +'<div class="h-stat"><div class="h-stat-val">'+topGarage+'</div><div class="h-stat-lbl">\u0e2d\u0e39\u0e48\u0e17\u0e35\u0e48\u0e43\u0e0a\u0e49\u0e1a\u0e48\u0e2d\u0e22</div></div>';
         }
-        if(fc) loadMaintenancePanel(fc);
+
         if(list.length===0){
           document.getElementById('hTableBody').innerHTML='<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--color-text-muted)">\ud83d\udd27 \u0e44\u0e21\u0e48\u0e21\u0e35\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e0b\u0e48\u0e2d\u0e21\u0e40\u0e2a\u0e23\u0e47\u0e08</td></tr>';
         }else{
@@ -413,81 +423,9 @@
       renderHistoryTable(filtered);
     }
 
-    function maintenanceSourceLabel(source){
-      if(!source||source==='default') return '\u0e04\u0e48\u0e32\u0e40\u0e23\u0e34\u0e48\u0e21\u0e15\u0e49\u0e19\u0e23\u0e30\u0e1a\u0e1a';
-      if(source==='vehicle') return '\u0e01\u0e33\u0e2b\u0e19\u0e14\u0e40\u0e09\u0e1e\u0e32\u0e30\u0e23\u0e16\u0e04\u0e31\u0e19\u0e19\u0e35\u0e49';
-      if(source.includes(' ')) return '\u0e15\u0e32\u0e21\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d/\u0e23\u0e38\u0e48\u0e19: '+source;
-      return '\u0e15\u0e32\u0e21\u0e22\u0e35\u0e48\u0e2b\u0e49\u0e2d: '+source;
-    }
 
-    async function loadMaintenancePanel(carId){
-      var panel=document.getElementById('hMaintenancePanel');
-      try{
-        var r=await apiCall('getMaintenanceVehicle',{car_id:carId});
-        if(!r.success||!r.data||!r.data.length){panel.style.display='none';return}
-        var items=r.data;
-        var car=vehicles.find(function(v){return v.id===carId});
-        var currentKm=car?car.current_mileage:0;
-        var today=new Date().toISOString().substring(0,10);
-        var tracked=items.filter(function(it){return it.last_km||it.last_date});
-        if(!tracked.length){panel.style.display='none';return}
-        var overdueArr=[],warningArr=[],okArr=[],staleArr=[];
-        tracked.forEach(function(it){
-          var oKm=it.next_km&&currentKm&&currentKm>=it.next_km;
-          var oDate=it.next_date&&it.next_date<=today;
-          if(oKm||oDate){
-            var isStale=false;
-            if(oKm&&it.interval_km&&it.interval_km>0){if((currentKm-it.next_km)>it.interval_km) isStale=true}
-            if(!isStale&&oDate&&it.interval_months&&it.interval_months>0){
-              var nd=new Date(it.next_date),nw=new Date();
-              var overMonths=(nw.getFullYear()-nd.getFullYear())*12+(nw.getMonth()-nd.getMonth());
-              if(overMonths>it.interval_months) isStale=true;
-            }
-            if(isStale) staleArr.push(it); else overdueArr.push(it);
-          }else{
-            var wKm=it.next_km&&currentKm&&(it.next_km-currentKm)<=3000&&(it.next_km-currentKm)>0;
-            var wDate=false;
-            if(it.next_date&&!(it.next_date<=today)){var df=new Date(it.next_date)-new Date();wDate=df>0&&df<60*86400000}
-            if(wKm||wDate) warningArr.push(it); else okArr.push(it);
-          }
-        });
-        function renderMntItem(it,status){
-          var icon=status==='overdue'?'\ud83d\udd34':(status==='warning'?'\ud83d\udfe1':(status==='stale'?'\u26aa':'\ud83d\udfe2'));
-          var color=status==='overdue'?'#dc2626':(status==='warning'?'#d97706':(status==='stale'?'#9ca3af':'#16a34a'));
-          var h='<div class="mnt-item '+status+'"><div class="mnt-item-name">'+icon+' '+it.item_name+'</div>';
-          h+='<div class="mnt-item-info">';
-          if(it.last_date) h+='\u0e17\u0e33\u0e25\u0e48\u0e32\u0e2a\u0e38\u0e14: '+fmtDate(it.last_date);
-          if(it.last_km) h+=(it.last_date?' | ':'')+it.last_km.toLocaleString()+' \u0e01\u0e21.';
-          h+='</div>';
-          if(it.next_km||it.next_date){
-            h+='<div class="mnt-item-info" style="color:'+color+'">';
-            if(status==='stale') h+='\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e40\u0e01\u0e48\u0e32 \u2014 \u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e2a\u0e16\u0e32\u0e19\u0e30\u0e08\u0e23\u0e34\u0e07';
-            else{
-              h+='\u0e04\u0e23\u0e31\u0e49\u0e07\u0e16\u0e31\u0e14\u0e44\u0e1b: ';
-              if(it.next_date) h+=fmtDate(it.next_date);
-              if(it.next_km) h+=(it.next_date?' | ':'')+it.next_km.toLocaleString()+' \u0e01\u0e21.';
-              if(status==='overdue') h+=' (\u0e40\u0e01\u0e34\u0e19\u0e01\u0e33\u0e2b\u0e19\u0e14!)';
-            }
-            h+='</div>';
-          }
-          if(it.interval_km||it.interval_months){
-            h+='<div class="mnt-item-info">\u0e23\u0e2d\u0e1a: ';
-            if(it.interval_km) h+='\u0e17\u0e38\u0e01 '+it.interval_km.toLocaleString()+' \u0e01\u0e21.';
-            if(it.interval_months) h+=(it.interval_km?' / ':'')+it.interval_months+' \u0e40\u0e14\u0e37\u0e2d\u0e19';
-            if(it.profile_source) h+=' ('+maintenanceSourceLabel(it.profile_source)+')';
-            h+='</div>';
-          }
-          h+='</div>';return h;
-        }
-        var html='<div class="mnt-panel"><h4>\ud83d\udccb \u0e2a\u0e16\u0e32\u0e19\u0e30\u0e01\u0e32\u0e23\u0e1a\u0e33\u0e23\u0e38\u0e07\u0e23\u0e31\u0e01\u0e29\u0e32 \u2014 '+vLabel(carId)+'</h4>';
-        if(overdueArr.length){html+='\u003cdiv class="mnt-section-hdr" style="color:#dc2626"\u003e\ud83d\udd34 \u0e40\u0e01\u0e34\u0e19\u0e01\u0e33\u0e2b\u0e19\u0e14 ('+overdueArr.length+')\u003c/div\u003e\u003cdiv class="mnt-grid"\u003e';overdueArr.forEach(function(it){html+=renderMntItem(it,'overdue')});html+='\u003c/div\u003e'}
-        if(warningArr.length){html+='\u003cdiv class="mnt-section-hdr" style="color:#d97706"\u003e\ud83d\udfe1 \u0e43\u0e01\u0e25\u0e49\u0e16\u0e36\u0e07\u0e01\u0e33\u0e2b\u0e19\u0e14 ('+warningArr.length+')\u003c/div\u003e\u003cdiv class="mnt-grid"\u003e';warningArr.forEach(function(it){html+=renderMntItem(it,'warning')});html+='\u003c/div\u003e'}
-        if(okArr.length){html+='\u003cdiv class="mnt-section-hdr" style="color:#16a34a"\u003e\ud83d\udfe2 \u0e1b\u0e01\u0e15\u0e34 ('+okArr.length+')\u003c/div\u003e\u003cdiv class="mnt-grid"\u003e';okArr.forEach(function(it){html+=renderMntItem(it,'')});html+='\u003c/div\u003e'}
-        if(staleArr.length){html+='\u003cdiv class="mnt-section-hdr" style="color:#9ca3af"\u003e\u26aa \u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e22\u0e49\u0e2d\u0e19\u0e2b\u0e25\u0e31\u0e07 ('+staleArr.length+')\u003c/div\u003e\u003cdiv class="mnt-grid"\u003e';staleArr.forEach(function(it){html+=renderMntItem(it,'stale')});html+='\u003c/div\u003e'}
-        html+='</div>';
-        panel.innerHTML=html;panel.style.display='block';
-      }catch(e){console.error(e);panel.style.display='none'}
-    }
+
+
 
     /* Detail Modal */
     async function showDetail(id){
@@ -499,7 +437,7 @@
         if(!r.success){body.innerHTML='<p>\u0e42\u0e2b\u0e25\u0e14\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08</p>';return}
         var rp=r.data;
         var typeLabels={repair:'\u0e0b\u0e48\u0e2d\u0e21\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b',scheduled_service:'\u0e40\u0e0a\u0e47\u0e04\u0e23\u0e30\u0e22\u0e30/\u0e1a\u0e33\u0e23\u0e38\u0e07\u0e23\u0e31\u0e01\u0e29\u0e32',accident:'\u0e0b\u0e48\u0e2d\u0e21\u0e2d\u0e38\u0e1a\u0e31\u0e15\u0e34\u0e40\u0e2b\u0e15\u0e38',insurance:'\u0e40\u0e04\u0e25\u0e21\u0e1b\u0e23\u0e30\u0e01\u0e31\u0e19'};
-        var html='<div style="margin-bottom:.75rem;display:flex;gap:8px;flex-wrap:wrap">'+statusBadge(rp.status);
+        var html='<div style="margin-bottom:.75rem;display:flex;gap:8px;flex-wrap:wrap">'+statusBadge(rp.status||'completed');
         if(rp.service_type&&rp.service_type!=='repair') html+='<span class="status-badge" style="background:#e0e7ff;color:#3730a3">'+(typeLabels[rp.service_type]||rp.service_type)+'</span>';
         html+='</div><div class="detail-grid">';
         html+='<div class="detail-item"><label>\u0e23\u0e16</label><span>'+vLabel(rp.car_id,rp)+'</span></div>';
@@ -611,7 +549,8 @@
           for(var i=0;i<carSel.options.length;i++){if(carSel.options[i].value===rp.car_id){hasOpt=true;break}}
           if(!hasOpt){
             try{var vRes=await apiCall('getVehicle',{id:rp.car_id});
-              if(vRes&&vRes.success&&vRes.data){var v=vRes.data;if(!vehicles.some(function(x){return x.id===v.id})) vehicles.push(v);
+              if(vRes&&vRes.success&&vRes.data){var v=vRes.data;if(!vehicles.some(function(x){return (x.id||x.car_id)===(v.id||v.car_id)})) vehicles.push(v);
+              if(vRes&&vRes.success&&vRes.data){var v=vRes.data;if(!vehicles.some(function(x){return String(x.id||x.car_id)===String(v.id||v.car_id)})) vehicles.push(v);
                 var o=document.createElement('option');o.value=v.id;o.textContent=v.license_plate+' - '+(v.brand||'')+' '+(v.model||'')+(v.status==='inactive'?' [\u0e22\u0e01\u0e40\u0e25\u0e34\u0e01\u0e43\u0e0a\u0e49]':'');carSel.appendChild(o)}}
             }catch(e){console.warn(e)}
           }

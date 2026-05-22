@@ -184,6 +184,7 @@ function renderNavigation() {
         if (hasRepair) {
             nav += _sidebarItem('repair.html', 'repair', '🔧', 'งานซ่อม');
             nav += _sidebarItem('repair-history.html', 'repair-history', '📋', 'ประวัติซ่อม');
+            nav += _sidebarItem('maintenance-alerts.html', 'maintenance-alerts', '🔔', 'แจ้งเตือนครบกำหนด');
             nav += _sidebarItem('repair-inspection.html', 'repair-inspection', '🔍', 'ตรวจสภาพ');
         } else if (isDriver) {
             nav += _sidebarItem('repair.html', 'repair', '🔧', 'แจ้งซ่อม');

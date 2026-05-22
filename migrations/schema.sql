@@ -328,7 +328,7 @@ CREATE TABLE IF NOT EXISTS fuel_log (
   liters REAL NOT NULL,
   price_per_liter REAL,
   amount REAL,
-  fuel_type TEXT NOT NULL DEFAULT 'diesel',
+  fuel_type TEXT NOT NULL DEFAULT 'diesel' CHECK(fuel_type IN ('diesel', 'v_power_diesel', 'gasohol_95', 'gasohol_91', 'e20', 'premium_diesel')),
   gas_station_name TEXT,
   gas_station_address TEXT,
   gas_station_tax_id TEXT,

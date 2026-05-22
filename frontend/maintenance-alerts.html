@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>แจ้งเตือนครบกำหนดบำรุงรักษา - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>
+    window.API_BASE_URL = CONFIG.API_BASE_URL;
+    window.currentPage = 'maintenance-alerts';
+    window.REQUIRE_AUTH = true;
+  </script>
+  <link rel="stylesheet" href="common.css">
+  <script src="js/api.js"></script>
+  <script src="js/common.js"></script>
+  <style>
+    .ma-filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;align-items:center}
+    .ma-filter-bar select,.ma-filter-bar input{padding:7px 10px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:.88rem}
+    .ma-stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.25rem}
+    .ma-stat{background:#fff;border:1px solid var(--color-border);border-radius:var(--radius-md,6px);padding:10px 16px;min-width:120px;text-align:center;flex:1}
+    .ma-stat-val{font-size:1.25rem;font-weight:700}
+    .ma-stat-lbl{font-size:.78rem;color:var(--color-text-muted);margin-top:2px}
+    .ma-stat.danger .ma-stat-val{color:#dc2626}
+    .ma-stat.warning .ma-stat-val{color:#d97706}
+    .ma-stat.ok .ma-stat-val{color:#16a34a}
+    .ma-stat.stale .ma-stat-val{color:#9ca3af}
+
+    .ma-card-group{margin-bottom:1.5rem}
+    .ma-group-hdr{display:flex;align-items:center;gap:8px;font-weight:700;font-size:.95rem;padding:8px 12px;border-radius:var(--radius-md) var(--radius-md) 0 0;margin-bottom:0}
+    .ma-group-hdr.danger{background:#fef2f2;color:#dc2626;border:1px solid #fca5a5}
+    .ma-group-hdr.warning{background:#fffbeb;color:#d97706;border:1px solid #fde68a}
+    .ma-group-hdr.ok{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}
+    .ma-group-hdr.stale{background:#f9fafb;color:#9ca3af;border:1px solid #d1d5db}
+
+    .ma-table-wrap{overflow-x:auto;border:1px solid var(--color-border);border-top:none;border-radius:0 0 var(--radius-md) var(--radius-md);background:#fff}
+    .ma-table{width:100%;border-collapse:collapse;font-size:.84rem;min-width:640px}
+    .ma-table thead th{background:#f8fafc;padding:8px 10px;text-align:left;font-weight:600;font-size:.78rem;color:var(--color-text-muted);border-bottom:1px solid var(--color-border);white-space:nowrap}
+    .ma-table td{padding:8px 10px;border-bottom:1px solid #f4f4f4;vertical-align:middle}
+    .ma-table tbody tr:last-child td{border-bottom:none}
+    .ma-table tbody tr:hover td{background:#f8fafc}
+    .ma-veh{font-weight:600;white-space:nowrap}
+    .ma-item{font-weight:500}
+    .ma-date{white-space:nowrap;font-size:.82rem;color:var(--color-text-muted)}
+    .ma-next{white-space:nowrap;font-size:.82rem;font-weight:600}
+    .ma-next.danger{color:#dc2626}
+    .ma-next.warning{color:#d97706}
+    .ma-next.ok{color:#16a34a}
+    .ma-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.75rem;font-weight:600;white-space:nowrap}
+    .ma-badge.danger{background:#fee2e2;color:#dc2626}
+    .ma-badge.warning{background:#fef3c7;color:#d97706}
+    .ma-badge.ok{background:#d1fae5;color:#16a34a}
+    .ma-badge.stale{background:#f3f4f6;color:#9ca3af}
+    .ma-interval{font-size:.78rem;color:var(--color-text-muted)}
+    .ma-source{font-size:.75rem;color:#6b7280;background:#f3f4f6;padding:1px 6px;border-radius:8px}
+    @media(max-width:600px){.ma-hide-sm{display:none}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🔔 แจ้งเตือนครบกำหนดบำรุงรักษา</h1>
+      <p>ติดตามสถานะการบำรุงรักษารถทุกคันในที่เดียว</p>
+    </div>
+    <div id="navigation"></div>
+    <div class="content">
+      <div id="alertContainer"></div>
+
+      <div class="ma-filter-bar">
+        <select id="maFilterCar" onchange="loadAlerts()">
+          <option value="">รถทั้งหมด</option>
+        </select>
+        <select id="maFilterStatus" onchange="applyFilter()">
+          <option value="">ทุกสถานะ</option>
+          <option value="overdue">🔴 เกินกำหนด</option>
+          <option value="warning">🟡 ใกล้ถึงกำหนด</option>
+          <option value="ok">🟢 ปกติ</option>
+          <option value="stale">⚪ ข้อมูลเก่า</option>
+        </select>
+        <input id="maSearch" type="text" placeholder="🔍 ค้นหารายการ / ทะเบียน" oninput="applyFilter()">
+        <button class="btn btn-secondary" onclick="loadAlerts()">🔃 รีเฟรช</button>
+      </div>
+
+      <div id="maStats" class="ma-stats" style="display:none"></div>
+      <div id="maLoading" class="loading" style="display:none">กำลังโหลด...</div>
+      <div id="maContent"></div>
+    </div>
+  </div>
+
+  <div style="background:var(--color-bg-light);padding:20px;text-align:center;color:var(--color-text-muted);font-size:.9em;margin-top:20px">
+    <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+  </div>
+
+  <script>
+    var allVehicles = [];
+    var allItems = [];   // flat list: { car_id, license_plate, brand, model, ...item, _status }
+
+    function waitForCommon(){
+      return new Promise(function(resolve){
+        if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){resolve();return}
+        var c=0,t=setInterval(function(){
+          c++;
+          if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){clearInterval(t);resolve()}
+          else if(c>50){clearInterval(t);resolve()}
+        },100)
+      })
+    }
+
+    document.addEventListener('DOMContentLoaded', async function(){
+      await waitForCommon();
+      if(typeof requireAuth==='function'&&!requireAuth()) return;
+      await loadVehicleList();
+      await loadAlerts();
+    });
+
+    async function loadVehicleList(){
+      try{
+        var r=await apiCall('getVehicles',{});
+        if(r.success&&r.data&&r.data.vehicles) allVehicles=r.data.vehicles;
+        var sel=document.getElementById('maFilterCar');
+        sel.innerHTML='<option value="">รถทั้งหมด</option>';
+        allVehicles.forEach(function(v){
+          var o=document.createElement('option');
+          o.value=v.id;
+          o.textContent=v.license_plate+' - '+(v.brand||'')+' '+(v.model||'');
+          sel.appendChild(o);
+        });
+      }catch(e){console.error(e)}
+    }
+
+    function vLabel(carId){
+      var v=allVehicles.find(function(x){return x.id===carId});
+      return v?(v.license_plate+' '+(v.brand||'')+' '+(v.model||'')).trim():carId||'-';
+    }
+
+    function fmtDate(s){
+      if(!s) return '-';
+      try{
+        var p=s.split(/[T ]/),dd=p[0].split('-');
+        var months=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+        return parseInt(dd[2])+' '+months[parseInt(dd[1])-1]+' '+(parseInt(dd[0])+543);
+      }catch(e){return s}
+    }
+
+    function sourceLabel(source){
+      if(!source||source==='default') return 'ค่าเริ่มต้นระบบ';
+      if(source==='vehicle') return 'กำหนดเฉพาะรถคันนี้';
+      if(source.includes(' ')) return 'ยี่ห้อ/รุ่น: '+source;
+      return 'ยี่ห้อ: '+source;
+    }
+
+    function classifyItem(it, currentKm){
+      var today=new Date().toISOString().substring(0,10);
+      var oKm=it.next_km&&currentKm&&currentKm>=it.next_km;
+      var oDate=it.next_date&&it.next_date<=today;
+      if(oKm||oDate){
+        var isStale=false;
+        if(oKm&&it.interval_km&&it.interval_km>0){if((currentKm-it.next_km)>it.interval_km) isStale=true}
+        if(!isStale&&oDate&&it.interval_months&&it.interval_months>0){
+          var nd=new Date(it.next_date),nw=new Date();
+          var overMonths=(nw.getFullYear()-nd.getFullYear())*12+(nw.getMonth()-nd.getMonth());
+          if(overMonths>it.interval_months) isStale=true;
+        }
+        return isStale?'stale':'overdue';
+      }
+      var wKm=it.next_km&&currentKm&&(it.next_km-currentKm)<=3000&&(it.next_km-currentKm)>0;
+      var wDate=false;
+      if(it.next_date){var df=new Date(it.next_date)-new Date();wDate=df>0&&df<60*86400000}
+      if(wKm||wDate) return 'warning';
+      return 'ok';
+    }
+
+    async function loadAlerts(){
+      document.getElementById('maLoading').style.display='block';
+      document.getElementById('maContent').innerHTML='';
+      document.getElementById('maStats').style.display='none';
+      allItems=[];
+      try{
+        var filterCar=document.getElementById('maFilterCar').value;
+        var carsToLoad=filterCar?[allVehicles.find(function(v){return v.id===filterCar})].filter(Boolean):allVehicles;
+
+        // โหลด maintenance ของแต่ละรถแบบ parallel (batch 5 คัน)
+        var BATCH=5;
+        for(var i=0;i<carsToLoad.length;i+=BATCH){
+          var batch=carsToLoad.slice(i,i+BATCH);
+          await Promise.all(batch.map(async function(car){
+            try{
+              var r=await apiCall('getMaintenanceVehicle',{car_id:car.id});
+              if(!r.success||!r.data||!r.data.length) return;
+              var items=r.data.filter(function(it){return it.last_km||it.last_date});
+              var currentKm=car.current_mileage||0;
+              items.forEach(function(it){
+                allItems.push(Object.assign({},it,{
+                  _carId:car.id,
+                  _plate:car.license_plate,
+                  _brand:car.brand||'',
+                  _model:car.model||'',
+                  _currentKm:currentKm,
+                  _status:classifyItem(it,currentKm)
+                }));
+              });
+            }catch(e){console.warn('skip car',car.id,e)}
+          }));
+        }
+        renderAll(allItems);
+      }catch(e){
+        console.error(e);
+        document.getElementById('maContent').innerHTML='<p style="color:var(--color-danger)">โหลดข้อมูลไม่สำเร็จ</p>';
+      }finally{
+        document.getElementById('maLoading').style.display='none';
+      }
+    }
+
+    function applyFilter(){
+      var statusF=document.getElementById('maFilterStatus').value;
+      var q=(document.getElementById('maSearch').value||'').toLowerCase().trim();
+      var filtered=allItems.filter(function(it){
+        if(statusF&&it._status!==statusF) return false;
+        if(q){
+          var hay=(it._plate+' '+it._brand+' '+it._model+' '+it.item_name).toLowerCase();
+          if(!hay.includes(q)) return false;
+        }
+        return true;
+      });
+      renderAll(filtered);
+    }
+
+    function renderAll(items){
+      // Stats
+      var counts={overdue:0,warning:0,ok:0,stale:0};
+      items.forEach(function(it){counts[it._status]=(counts[it._status]||0)+1});
+      var statsEl=document.getElementById('maStats');
+      statsEl.style.display='flex';
+      statsEl.innerHTML=
+        '<div class="ma-stat danger"><div class="ma-stat-val">'+counts.overdue+'</div><div class="ma-stat-lbl">🔴 เกินกำหนด</div></div>'+
+        '<div class="ma-stat warning"><div class="ma-stat-val">'+counts.warning+'</div><div class="ma-stat-lbl">🟡 ใกล้ถึงกำหนด</div></div>'+
+        '<div class="ma-stat ok"><div class="ma-stat-val">'+counts.ok+'</div><div class="ma-stat-lbl">🟢 ปกติ</div></div>'+
+        '<div class="ma-stat stale"><div class="ma-stat-val">'+counts.stale+'</div><div class="ma-stat-lbl">⚪ ข้อมูลเก่า</div></div>';
+
+      var content=document.getElementById('maContent');
+      if(!items.length){
+        content.innerHTML='<div style="text-align:center;padding:2rem;color:var(--color-text-muted)">🔔 ไม่พบรายการที่ตรงกับเงื่อนไข</div>';
+        return;
+      }
+
+      var groups=[
+        {key:'overdue', icon:'🔴', label:'เกินกำหนด', cls:'danger'},
+        {key:'warning', icon:'🟡', label:'ใกล้ถึงกำหนด', cls:'warning'},
+        {key:'ok',      icon:'🟢', label:'ปกติ',         cls:'ok'},
+        {key:'stale',   icon:'⚪', label:'ข้อมูลเก่า',   cls:'stale'}
+      ];
+
+      var html='';
+      groups.forEach(function(g){
+        var rows=items.filter(function(it){return it._status===g.key});
+        if(!rows.length) return;
+        html+='<div class="ma-card-group">';
+        html+='<div class="ma-group-hdr '+g.cls+'">'+g.icon+' '+g.label+' ('+rows.length+' รายการ)</div>';
+        html+='<div class="ma-table-wrap"><table class="ma-table"><thead><tr>'+
+          '<th>ทะเบียน / รถ</th>'+
+          '<th>รายการบำรุง</th>'+
+          '<th>ทำล่าสุด</th>'+
+          '<th>ครั้งถัดไป</th>'+
+          '<th class="ma-hide-sm">รอบ</th>'+
+          '<th class="ma-hide-sm">ที่มา</th>'+
+          '<th></th>'+
+          '</tr></thead><tbody>';
+
+        rows.forEach(function(it){
+          var nextInfo='—';
+          var nextCls=g.cls;
+          if(it.next_date&&it.next_km) nextInfo=fmtDate(it.next_date)+' / '+it.next_km.toLocaleString()+' กม.';
+          else if(it.next_date) nextInfo=fmtDate(it.next_date);
+          else if(it.next_km) nextInfo=it.next_km.toLocaleString()+' กม.';
+
+          var lastInfo='—';
+          if(it.last_date&&it.last_km) lastInfo=fmtDate(it.last_date)+' / '+it.last_km.toLocaleString()+' กม.';
+          else if(it.last_date) lastInfo=fmtDate(it.last_date);
+          else if(it.last_km) lastInfo=it.last_km.toLocaleString()+' กม.';
+
+          var interval='—';
+          if(it.interval_km&&it.interval_months) interval='ทุก '+it.interval_km.toLocaleString()+' กม. / '+it.interval_months+' เดือน';
+          else if(it.interval_km) interval='ทุก '+it.interval_km.toLocaleString()+' กม.';
+          else if(it.interval_months) interval='ทุก '+it.interval_months+' เดือน';
+
+          html+='<tr>'+
+            '<td class="ma-veh">'+it._plate+'<br><span style="font-weight:400;font-size:.78rem;color:var(--color-text-muted)">'+it._brand+' '+it._model+'</span></td>'+
+            '<td class="ma-item">'+it.item_name+'</td>'+
+            '<td class="ma-date">'+lastInfo+'</td>'+
+            '<td class="ma-next '+nextCls+'">'+nextInfo+
+              (g.key==='overdue'?' <span class="ma-badge danger">เกินกำหนด!</span>':'')+
+              (g.key==='warning'?' <span class="ma-badge warning">ใกล้ถึงกำหนด</span>':'')+
+            '</td>'+
+            '<td class="ma-interval ma-hide-sm">'+interval+'</td>'+
+            '<td class="ma-hide-sm"><span class="ma-source">'+sourceLabel(it.profile_source)+'</span></td>'+
+            '<td><a class="btn btn-ghost" style="padding:3px 8px;font-size:.78rem;white-space:nowrap" '+
+              'href="repair-history.html?car_id='+encodeURIComponent(it._carId)+'">📋 ประวัติ</a></td>'+
+            '</tr>';
+        });
+
+        html+='</tbody></table></div></div>';
+      });
+      content.innerHTML=html;
+    }
+  </script>
+</body>
+</html>
