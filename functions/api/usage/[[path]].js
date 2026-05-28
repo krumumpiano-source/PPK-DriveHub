@@ -332,7 +332,14 @@ export async function onRequest(context) {
        JOIN cars c ON q.car_id = c.id
        LEFT JOIN drivers d ON q.driver_id = d.id
        WHERE q.status = 'ongoing'
-         AND q.date <= ?`,
+         AND q.date <= ?
+         AND NOT EXISTS (
+           SELECT 1 FROM usage_records ur2
+           WHERE ur2.car_id = q.car_id
+             AND ur2.record_type = 'return'
+             AND ur2.datetime >= q.date
+             AND ur2.data_quality != 'gap_record'
+         )`,
       [today]
     );
     const extraRows = queueRows.filter(r => !usageCarIds.has(r.car_id));
