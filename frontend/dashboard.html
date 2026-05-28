@@ -834,50 +834,24 @@
           }
 
           // === สร้าง trip bars (hotel-booking style) ===
-          // เฉพาะรถที่ออกไปก่อนวันนี้และยังไม่กลับ (multi-day)
+          // carsOut มาจาก API เดียว ครบทั้ง QR-confirmed + ongoing queues แล้ว
           var tripBars = [];
-          var tripBarCarIds = {};
 
-          // Source 1: carsOut — QR-confirmed departure, no return scan (source of truth)
           carsOut.forEach(function(r) {
             var dep = r.last_departure ? r.last_departure.substr(0, 10) : null;
             if (!dep || dep >= todayStr) return;
             tripBars.push({
               car_id: r.car_id,
-              plate: r.license_plate || r.car_id.substr(0, 8),
+              plate: r.license_plate || (r.car_id || '').substr(0, 8),
               driver: r.driver_name || '-',
               startDate: dep,
               endDate: todayStr,
               daysOut: Math.round((new Date(todayStr) - new Date(dep)) / 86400000)
             });
-            tripBarCarIds[r.car_id] = true;
           });
 
-          // Source 2: queues ที่ status=ongoing และออกก่อนวันนี้ (ไม่รวม scheduled)
-          queues.forEach(function(q) {
-            if (q.status !== 'ongoing') return;
-            var qDate = q.date || q.departure_date;
-            if (!qDate || qDate >= todayStr) return;
-            if (tripBarCarIds[q.car_id]) return;
-            var v = vehiclesMap[q.car_id];
-            var d = driversMap[q.driver_id];
-            tripBarCarIds[q.car_id] = true;
-            tripBars.push({
-              car_id: q.car_id,
-              plate: q.license_plate || (v && v.license_plate) || (q.car_id || '').substr(0, 8),
-              driver: q.driver_name || (d && (d.name || d.full_name)) || '-',
-              startDate: qDate,
-              endDate: todayStr,
-              daysOut: Math.round((new Date(todayStr) - new Date(qDate)) / 86400000)
-            });
-          });
-
-          // คำนวณ total รถที่ยังออกอยู่ทั้งหมด (trip bars = multi-day + คันที่ออกวันนี้ยังไม่กลับ)
-          var totalCarsOut = tripBars.length;
-          carsOut.forEach(function(r) {
-            var dep = r.last_departure ? r.last_departure.substr(0, 10) : null;
-            if (dep && dep >= todayStr) totalCarsOut++;
-          });
+          // total รถที่ยังออกอยู่ทั้งหมด = carsOut.length (source เดียว ครบแล้ว)
+          var totalCarsOut = carsOut.length;
 
           // === สร้าง grid slots ===
           var gridSlots = [];

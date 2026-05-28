@@ -283,15 +283,18 @@ export async function onRequest(context) {
     });
   }
 
-  // PUBLIC — ดึงรายการรถที่ยังออกอยู่ (last record = departure, ไม่มี return ตามหลัง)
+  // PUBLIC — ดึงรายการรถที่ยังออกอยู่ทั้งหมด
+  // รวม 2 sources: (1) QR-confirmed departure ไม่มี return, (2) queue.status='ongoing' ที่ยังไม่มี QR scan
   // ใช้โดย dashboard ต้อง login (user required)
   if (path === '/api/usage/cars-out' && method === 'GET') {
     if (!env.user) return error('Unauthorized', 401);
-    const rows = await dbAll(env.DB,
+    // Source 1: usage_records departure ที่ยังไม่มี return
+    const usageRows = await dbAll(env.DB,
       `SELECT ur.car_id, ur.datetime AS last_departure, ur.driver_id,
               ur.driver_name_manual, ur.queue_id, ur.destination,
               c.license_plate, c.brand, c.model,
-              COALESCE(d.name, ur.driver_name_manual) AS driver_name
+              COALESCE(d.name, ur.driver_name_manual) AS driver_name,
+              'usage' AS source
        FROM usage_records ur
        JOIN cars c ON ur.car_id = c.id
        LEFT JOIN drivers d ON ur.driver_id = d.id
@@ -314,7 +317,27 @@ export async function onRequest(context) {
        ORDER BY ur.datetime ASC`,
       []
     );
-    return success(rows);
+    // รวบรวม car_ids ที่ได้จาก usage แล้ว
+    const usageCarIds = new Set(usageRows.map(r => r.car_id));
+
+    // Source 2: queue.status='ongoing' ที่ไม่มีใน usageRows (ยังไม่ได้สแกน QR ออก)
+    const today = new Date().toISOString().substr(0, 10);
+    const queueRows = await dbAll(env.DB,
+      `SELECT q.car_id, q.date AS last_departure, q.driver_id,
+              NULL AS driver_name_manual, q.id AS queue_id, q.destination,
+              c.license_plate, c.brand, c.model,
+              COALESCE(d.name, q.driver_name) AS driver_name,
+              'queue' AS source
+       FROM queue q
+       JOIN cars c ON q.car_id = c.id
+       LEFT JOIN drivers d ON q.driver_id = d.id
+       WHERE q.status = 'ongoing'
+         AND q.date <= ?`,
+      [today]
+    );
+    const extraRows = queueRows.filter(r => !usageCarIds.has(r.car_id));
+
+    return success([...usageRows, ...extraRows]);
   }
 
   if (!user) return error('Unauthorized', 401);
