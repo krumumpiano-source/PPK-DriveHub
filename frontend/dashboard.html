@@ -872,6 +872,13 @@
             });
           });
 
+          // คำนวณ total รถที่ยังออกอยู่ทั้งหมด (trip bars = multi-day + คันที่ออกวันนี้ยังไม่กลับ)
+          var totalCarsOut = tripBars.length;
+          carsOut.forEach(function(r) {
+            var dep = r.last_departure ? r.last_departure.substr(0, 10) : null;
+            if (dep && dep >= todayStr) totalCarsOut++;
+          });
+
           // === สร้าง grid slots ===
           var gridSlots = [];
           for (var i = 0; i < firstDayOfWeek; i++) gridSlots.push({ empty: true });
@@ -966,8 +973,8 @@
               if (spacerPx > 0) html += '<div style="height:' + spacerPx + 'px;flex-shrink:0"></div>';
 
               // Banner บนวันนี้
-              if (isToday && carsOut.length > 0) {
-                html += '<div class="overdue-banner">🚗 ยังไม่กลับ ' + carsOut.length + ' คัน</div>';
+              if (isToday && totalCarsOut > 0) {
+                html += '<div class="overdue-banner">🚗 ยังไม่กลับ ' + totalCarsOut + ' คัน</div>';
               }
 
               // Single-day queue cards (วันเดียว)
@@ -1007,10 +1014,16 @@
                 html += '</div>';
               });
 
+              // รวม car_ids ที่แสดงแล้วใน dayQueues และ gformRecords เพื่อป้องกันแสดงซ้ำ
+              var shownCarIds = {};
+              displayQueues.forEach(function(q) { if (q.car_id) shownCarIds[q.car_id] = true; });
+              dayGform.forEach(function(r) { if (r.car_id) shownCarIds[r.car_id] = true; });
+
               // carsOut ที่ออกวันนี้ (ยังไม่ถึง multi-day)
               carsOut.forEach(function(r) {
                 var dep = r.last_departure ? r.last_departure.substr(0, 10) : null;
                 if (dep !== dateStr || dep < todayStr) return;
+                if (shownCarIds[r.car_id]) return; // ข้าม ถ้าแสดงใน queue card ไปแล้ว
                 html += '<div class="queue-item queue-item-active">';
                 html += '<div class="queue-plate">🚗 ' + (r.license_plate || r.car_id.substr(0, 8)) + '</div>';
                 html += '<div class="queue-driver">' + (r.driver_name || '-') + '</div>';
