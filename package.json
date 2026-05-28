@@ -1,11 +1,14 @@
-{
+﻿{
   "name": "ppk-drivehub",
   "private": true,
   "version": "1.0.0",
+  "type": "module",
   "description": "PPK DriveHub — ระบบจัดการยานพาหนะโรงเรียนพะเยาพิทยาคม",
   "scripts": {
     "dev": "npx wrangler pages dev ./frontend --d1 DB=REPLACE_WITH_YOUR_D1_ID",
-    "deploy": "npx wrangler pages deploy ./frontend",
+    "lint": "npx eslint functions/",
+    "lint:fix": "npx eslint functions/ --fix",
+    "deploy": "npm run lint && npx wrangler pages deploy ./frontend",
     "migrate": "npx wrangler d1 execute ppk-drivehub-db --remote --file=migrations/schema.sql",
     "seed": "npx wrangler d1 execute ppk-drivehub-db --remote --file=migrations/seed.sql",
     "migrate:local": "npx wrangler d1 execute ppk-drivehub-db --local --file=migrations/schema.sql",
@@ -16,7 +19,9 @@
     "test:report": "npx playwright show-report"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.59.1",
+    "eslint": "^10.4.0",
     "wrangler": "^4.90.0"
   }
 }
