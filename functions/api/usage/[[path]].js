@@ -326,7 +326,7 @@ export async function onRequest(context) {
       `SELECT q.car_id, q.date AS last_departure, q.driver_id,
               NULL AS driver_name_manual, q.id AS queue_id, q.destination,
               c.license_plate, c.brand, c.model,
-              COALESCE(d.name, q.driver_name) AS driver_name,
+              d.name AS driver_name,
               'queue' AS source
        FROM queue q
        JOIN cars c ON q.car_id = c.id
