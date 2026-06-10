@@ -253,7 +253,6 @@
         if(fc) fc.value=urlCarId;
       }
       loadHistory();
-      setTimeout(function(){if(typeof initAllThaiDateTimePickers==='function') initAllThaiDateTimePickers();},500);
     });
 
     async function loadVehicles(){
@@ -342,7 +341,11 @@
         var ftEl=document.getElementById('hFilterType');
         var fyEl=document.getElementById('hFilterYear');
         if(fcEl&&fcEl.value) filters.car_id=fcEl.value;
-        var r=await apiCall('getRepairs',filters);
+        // timeout 30 วิ ป้องกัน API ค้าง
+        var r=await Promise.race([
+          apiCall('getRepairs',filters),
+          new Promise(function(_,reject){setTimeout(function(){reject(new Error('หมดเวลาเชื่อมต่อ — กรุณาลองใหม่'))},30000)})
+        ]);
         var list=(r.success&&r.data)?(Array.isArray(r.data)?r.data:[]):[];
         var ftVal=ftEl?ftEl.value:'';
         var fyVal=fyEl?fyEl.value:'';
@@ -366,8 +369,9 @@
         renderTable(list);
       }catch(e){
         console.error('loadHistory error:', e);
-        showAlert('โหลดข้อมูลประวัติซ่อมไม่สำเร็จ: ' + (e.message||'ไม่ทราบสาเหตุ'), 'error');
-        if(elBody) elBody.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--color-danger)">โหลดข้อมูลไม่สำเร็จ — กรุณาลองใหม่</td></tr>';
+        var alertEl=document.getElementById('alertContainer');
+        if(alertEl) alertEl.innerHTML='<div class="alert alert-danger" style="margin-bottom:1rem">❌ โหลดข้อมูลประวัติซ่อมไม่สำเร็จ: '+(e.message||'ไม่ทราบสาเหตุ')+'</div>';
+        if(elBody) elBody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--color-danger)">โหลดข้อมูลไม่สำเร็จ — กรุณากด 🔃 รีเฟรช</td></tr>';
       }finally{
         _loadingHistory=false;
         if(elLoad) elLoad.style.display='none';
