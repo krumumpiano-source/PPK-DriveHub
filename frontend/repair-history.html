@@ -351,7 +351,10 @@
         var list=(r.success&&r.data)?(Array.isArray(r.data)?r.data:[]):[];
         var ftVal=ftEl?ftEl.value:'';
         var fyVal=fyEl?fyEl.value:'';
-        if(ftVal) list=list.filter(function(rp){return rp.service_type===ftVal});
+        if(ftVal) list=list.filter(function(rp){
+          if(ftVal==='scheduled_service') return rp.service_type==='scheduled_service'||rp.service_type==='scheduled_maintenance';
+          return rp.service_type===ftVal;
+        });
         if(fyVal) list=list.filter(function(rp){var d=rp.date_completed||rp.date_reported||'';return d.substring(0,4)===fyVal});
         list.sort(function(a,b){var da=a.date_completed||a.date_reported||'';var db=b.date_completed||b.date_reported||'';return da<db?1:da>db?-1:0});
         historyData=list;
@@ -518,8 +521,8 @@
           html+='</tbody></table></div>';
         }
         html+='<hr style="margin:1rem 0;border-color:var(--color-border)">';
-        html+='<p><strong>\u0e2d\u0e32\u0e01\u0e32\u0e23:</strong> '+(rp.issue_description||'-')+'</p>';
-        if(rp.notes) html+='<p><strong>\u0e2b\u0e21\u0e32\u0e22\u0e40\u0e2b\u0e15\u0e38:</strong> '+rp.notes+'</p>';
+        html+='<p><strong>\u0e2d\u0e32\u0e01\u0e32\u0e23:</strong> '+(rp.issue_description||'-').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</p>';
+        if(rp.notes) html+='<p><strong>\u0e2b\u0e21\u0e32\u0e22\u0e40\u0e2b\u0e15\u0e38:</strong> '+rp.notes.replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</p>';
         var docs=[{label:'\u0e43\u0e1a\u0e40\u0e2a\u0e19\u0e2d\u0e23\u0e32\u0e04\u0e32',key:'quotation_documents'},{label:'\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e02\u0e49\u0e2d\u0e04\u0e27\u0e32\u0e21',key:'memo_documents'},{label:'\u0e43\u0e1a\u0e40\u0e2a\u0e23\u0e47\u0e08',key:'receipt_documents'},{label:'\u0e40\u0e2d\u0e01\u0e2a\u0e32\u0e23',key:'documents'}];
         docs.forEach(function(d){
           if(rp[d.key]){var arr=[];try{arr=JSON.parse(rp[d.key])}catch(e){}
@@ -537,6 +540,10 @@
       editingId=null;
       document.getElementById('cmpTitle').textContent='\ud83d\udcdd \u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e0b\u0e48\u0e2d\u0e21\u0e22\u0e49\u0e2d\u0e19\u0e2b\u0e25\u0e31\u0e07';
       document.getElementById('completedForm').reset();
+      // Clear flatpickr instances so they don't retain previous edit's date
+      var _fpDate=document.getElementById('cmp_date');if(_fpDate&&_fpDate._flatpickr) _fpDate._flatpickr.clear();
+      var _fpTime=document.getElementById('cmp_time');if(_fpTime&&_fpTime._flatpickr) _fpTime._flatpickr.clear();
+      document.getElementById('cmp_taken_by').removeAttribute('data-original-taken-by');
       document.getElementById('cmp_items_list').innerHTML='';
       itemRowCount=0;
       document.getElementById('cmp_insurance_section').style.display='none';
@@ -605,11 +612,30 @@
         }
         document.getElementById('cmp_car_id').value=rp.car_id||'';
         var dc=rp.date_completed||rp.date_reported||'';
-        if(dc){var parts=dc.split(/[T ]/);document.getElementById('cmp_date').value=parts[0]||'';if(parts[1]) document.getElementById('cmp_time').value=parts[1].substring(0,5)}
+        if(dc){
+          var parts=dc.split(/[T ]/);
+          var dateStr=parts[0]||'';
+          var timeStr=parts[1]?parts[1].substring(0,5):'';
+          var dateEl=document.getElementById('cmp_date');
+          if(dateEl._flatpickr) dateEl._flatpickr.setDate(dateStr,false);
+          else dateEl.value=dateStr;
+          if(timeStr){
+            var timeEl=document.getElementById('cmp_time');
+            if(timeEl._flatpickr) timeEl._flatpickr.setDate(timeStr,false);
+            else timeEl.value=timeStr;
+          }
+        }
         document.getElementById('cmp_issue').value=rp.issue_description||'';
         document.getElementById('cmp_mileage').value=rp.mileage_at_repair||'';
         document.getElementById('cmp_garage').value=rp.garage_name||'';
-        document.getElementById('cmp_taken_by').value=rp.taken_by||'';
+        // taken_by: stored as name string — try to match to driver dropdown; store original as fallback
+        var takenBySel=document.getElementById('cmp_taken_by');
+        takenBySel.removeAttribute('data-original-taken-by');
+        if(rp.taken_by){
+          var drvMatch=drivers.find(function(d){return dLabel(d.driver_id).trim()===rp.taken_by.trim();});
+          if(drvMatch) takenBySel.value=drvMatch.driver_id;
+          else{takenBySel.value='';takenBySel.setAttribute('data-original-taken-by',rp.taken_by);}
+        }else{takenBySel.value=''}
         document.getElementById('cmp_notes').value=rp.notes||'';
         document.getElementById('cmp_service_type').value=rp.service_type||'repair';
         document.getElementById('cmp_invoice').value=rp.invoice_number||'';
@@ -638,9 +664,11 @@
         var dateVal=document.getElementById('cmp_date').value;
         var timeVal=document.getElementById('cmp_time').value;
         var dateCompleted=dateVal+(timeVal?' '+timeVal+':00':'');
-        var takenByVal=document.getElementById('cmp_taken_by').value;
-        var takenByName=dLabel(takenByVal);
-        if(takenByName==='-') takenByName=takenByVal;
+        var takenByEl2=document.getElementById('cmp_taken_by');
+        var takenByVal=takenByEl2.value;
+        var takenByName='';
+        if(takenByVal){takenByName=dLabel(takenByVal);if(takenByName==='-') takenByName=takenByVal;}
+        else if(editingId){takenByName=takenByEl2.getAttribute('data-original-taken-by')||null;}
         var itemsDetail=collectItemRows();
         var repairItemNames=itemsDetail.map(function(it){return it.description}).filter(Boolean);
         var data={
