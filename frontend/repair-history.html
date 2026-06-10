@@ -332,9 +332,10 @@
       byId('btnRefresh').addEventListener('click', function(){ loadHistory(true); });
       byId('btnExport').addEventListener('click', exportExcel);
 
-      byId('hFilterCar').addEventListener('change', function(){ state.reqSeq += 1; state.loading = false; loadHistory(false); });
+      // filter ทุกตัว = client-side ทันที ไม่ต้อง re-fetch
+      byId('hFilterCar').addEventListener('change', function(){ applySearchAndRender(); });
       byId('hFilterType').addEventListener('change', function(){ applySearchAndRender(); });
-      byId('hFilterYear').addEventListener('change', function(){ state.reqSeq += 1; state.loading = false; loadHistory(false); });
+      byId('hFilterYear').addEventListener('change', function(){ applySearchAndRender(); });
 
       byId('hSearch').addEventListener('input', function(e){ state.search = String(e.target.value || '').trim().toLowerCase(); applySearchAndRender(); });
 
@@ -406,7 +407,9 @@
 
       var html = '<option value="">-- เลือก --</option>';
       state.drivers.forEach(function(d){
-        html += '<option value="' + escAttr(d.driver_id || '') + '">' + escHtml(((d.title || '') + ' ' + (d.first_name || '') + ' ' + (d.last_name || '')).trim()) + '</option>';
+        var dId = d.driver_id || d.id || '';
+        var dName = ((d.title || '') + ' ' + (d.first_name || '') + ' ' + (d.last_name || '')).trim() || d.name || dId;
+        html += '<option value="' + escAttr(dId) + '">' + escHtml(dName) + '</option>';
       });
       byId('cmp_taken_by').innerHTML = html;
     }
@@ -421,10 +424,8 @@
       byId('hSummaryStats').style.display = 'none';
 
       try {
-        var filters = { status:'completed' };
-        if (byId('hFilterCar').value) filters.car_id = byId('hFilterCar').value;
-
-        var r = await withTimeout(apiCall('getRepairs', filters), 30000, 'หมดเวลาเชื่อมต่อ API');
+        // โหลดทั้งหมด — filter รถ/ประเภท/ปี ทำ client-side ใน applySearchAndRender()
+        var r = await withTimeout(apiCall('getRepairs', { status:'completed' }), 30000, 'หมดเวลาเชื่อมต่อ API');
         if (reqId !== state.reqSeq) return;
         if (!r || !r.success) throw new Error((r && r.message) || 'โหลดข้อมูลไม่สำเร็จ');
 
@@ -454,7 +455,13 @@
     function applySearchAndRender(){
       var list = state.historyData.slice();
 
-      // กรองประเภท (client-side — ไม่ต้องเรียก API ใหม่)
+      // กรองรถ (client-side)
+      var carFilter = (byId('hFilterCar') || {}).value || '';
+      if (carFilter) {
+        list = list.filter(function(rp){ return String(rp.car_id || '') === carFilter; });
+      }
+
+      // กรองประเภท (client-side)
       var type = byId('hFilterType').value;
       if (type) {
         list = list.filter(function(rp){
