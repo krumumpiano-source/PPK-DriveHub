@@ -13,7 +13,9 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
   <link rel="stylesheet" href="common.css">
-  <script src="js/api.js"></script><script src="common.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/export-utils.js"></script>
+  <script src="common.js"></script>
   <style>
     .status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:.78rem;font-weight:500}
     .status-requested{background:#fef3c7;color:#92400e}
@@ -96,6 +98,7 @@
         </select>
         <input id="hSearch" class="h-srch" placeholder="🔍 ค้นหา ทะเบียน / ใบซ่อม / อู่ / รายการ" oninput="filterHistory()">
         <button class="btn btn-secondary" onclick="loadHistory()">🔃 รีเฟรช</button>
+        <button class="btn btn-secondary" onclick="exportExcel()" style="background:#217346;color:#fff;border-color:#217346">📊 Export Excel</button>
       </div>
 
       <div style="margin-bottom:.75rem">
@@ -296,9 +299,15 @@
       return v?(v.license_plate+' '+(v.brand||'')+' '+(v.model||'')).trim():carId||'-';
     }
     function dLabel(driverId){
-      var d=drivers.find(function(x){return x.driver_id===driverId});
+      var d=drivers.find(function(x){return String(x.driver_id)===String(driverId)});
       return d?((d.title||'')+' '+(d.first_name||'')+' '+(d.last_name||'')).trim():(driverId||'-');
     }
+    function escHtml(s) {
+      if (!s) return '';
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                      .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
     function fmtDate(s){
       if(!s) return '-';
       try{
@@ -329,58 +338,86 @@
     }
 
     async function loadHistory(){
-      if(_loadingHistory) return;
-      _loadingHistory=true;
-      var elLoad=document.getElementById('hLoading');
-      var elBody=document.getElementById('hTableBody');
-      var elStats=document.getElementById('hSummaryStats');
-      if(elLoad) elLoad.style.display='block';
-      if(elBody) elBody.innerHTML='';
-      if(elStats) elStats.style.display='none';
-      try{
-        var filters={status:'completed'};
-        var fcEl=document.getElementById('hFilterCar');
-        var ftEl=document.getElementById('hFilterType');
-        var fyEl=document.getElementById('hFilterYear');
-        if(fcEl&&fcEl.value) filters.car_id=fcEl.value;
-        // timeout 30 วิ ป้องกัน API ค้าง
-        var r=await Promise.race([
-          apiCall('getRepairs',filters),
-          new Promise(function(_,reject){setTimeout(function(){reject(new Error('หมดเวลาเชื่อมต่อ — กรุณาลองใหม่'))},30000)})
-        ]);
-        var list=(r.success&&r.data)?(Array.isArray(r.data)?r.data:[]):[];
-        var ftVal=ftEl?ftEl.value:'';
-        var fyVal=fyEl?fyEl.value:'';
-        if(ftVal) list=list.filter(function(rp){
-          if(ftVal==='scheduled_service') return rp.service_type==='scheduled_service'||rp.service_type==='scheduled_maintenance';
-          return rp.service_type===ftVal;
-        });
-        if(fyVal) list=list.filter(function(rp){var d=rp.date_completed||rp.date_reported||'';return d.substring(0,4)===fyVal});
-        list.sort(function(a,b){var da=a.date_completed||a.date_reported||'';var db=b.date_completed||b.date_reported||'';return da<db?1:da>db?-1:0});
-        historyData=list;
-        if(list.length>0){
-          var totalCost=0,garages={};
-          list.forEach(function(rp){totalCost+=(rp.grand_total||rp.cost||0);if(rp.garage_name) garages[rp.garage_name]=(garages[rp.garage_name]||0)+1});
-          var topGarage='-',topCount=0;
-          for(var g in garages){if(garages[g]>topCount){topCount=garages[g];topGarage=g}}
-          if(elStats){
-            elStats.style.display='flex';
-            elStats.innerHTML='<div class="h-stat"><div class="h-stat-val">'+list.length+'</div><div class="h-stat-lbl">รายการซ่อม</div></div>'
-              +'<div class="h-stat"><div class="h-stat-val">'+totalCost.toLocaleString()+' ฿</div><div class="h-stat-lbl">ค่าซ่อมรวม</div></div>'
-              +'<div class="h-stat"><div class="h-stat-val">'+(list[0]?fmtDate(list[0].date_completed||list[0].date_reported):'-')+'</div><div class="h-stat-lbl">ซ่อมล่าสุด</div></div>'
-              +'<div class="h-stat"><div class="h-stat-val">'+topGarage+'</div><div class="h-stat-lbl">อู่ที่ใช้บ่อย</div></div>';
-          }
+        if (_loadingHistory) return;
+        _loadingHistory = true;
+        var elLoad = document.getElementById('hLoading');
+        var elBody = document.getElementById('hTableBody');
+        var elStats = document.getElementById('hSummaryStats');
+
+        if (elLoad) elLoad.style.display = 'block';
+        if (elBody) elBody.innerHTML = '';
+        if (elStats) elStats.style.display = 'none';
+
+        try {
+            var filters = { status: 'completed' };
+            var fcEl = document.getElementById('hFilterCar');
+            var ftEl = document.getElementById('hFilterType');
+            var fyEl = document.getElementById('hFilterYear');
+            if (fcEl && fcEl.value) filters.car_id = fcEl.value;
+
+            // ใช้ Promise.race ป้องกันหน้าค้างหาก API ไม่ตอบสนองใน 30 วินาที
+            var r = await Promise.race([
+                apiCall('getRepairs', filters),
+                new Promise(function (_, reject) {
+                    setTimeout(function () { reject(new Error('หมดเวลาเชื่อมต่อ API')) }, 30000);
+                })
+            ]);
+
+            var list = (r.success && r.data) ? (Array.isArray(r.data) ? r.data : []) : [];
+
+            // การกรองข้อมูลเพิ่มเติม (Type & Year)
+            var ftVal = ftEl ? ftEl.value : '';
+            var fyVal = fyEl ? fyEl.value : '';
+            if (ftVal) {
+                list = list.filter(function (rp) {
+                    if (ftVal === 'scheduled_service') return rp.service_type === 'scheduled_service' || rp.service_type === 'scheduled_maintenance';
+                    return rp.service_type === ftVal;
+                });
+            }
+            if (fyVal) {
+                list = list.filter(function (rp) {
+                    var d = rp.date_completed || rp.date_reported || '';
+                    return d.substring(0, 4) === fyVal;
+                });
+            }
+
+            list.sort(function (a, b) {
+                var da = a.date_completed || a.date_reported || '';
+                var db = b.date_completed || b.date_reported || '';
+                return da < db ? 1 : da > db ? -1 : 0;
+            });
+
+            historyData = list;
+
+            // คำนวณสถิติสรุป
+            if (list.length > 0 && elStats) {
+                var totalCost = 0, garages = {};
+                list.forEach(function (rp) {
+                    totalCost += (rp.grand_total || rp.cost || 0);
+                    if (rp.garage_name) garages[rp.garage_name] = (garages[rp.garage_name] || 0) + 1;
+                });
+                var topGarage = '-', topCount = 0;
+                for (var g in garages) { if (garages[g] > topCount) { topCount = garages[g]; topGarage = g; } }
+
+                elStats.style.display = 'flex';
+                elStats.innerHTML = '<div class="h-stat"><div class="h-stat-val">' + list.length + '</div><div class="h-stat-lbl">รายการซ่อม</div></div>'
+                    + '<div class="h-stat"><div class="h-stat-val">' + totalCost.toLocaleString() + ' ฿</div><div class="h-stat-lbl">ค่าซ่อมรวม</div></div>'
+                    + '<div class="h-stat"><div class="h-stat-val">' + (list[0] ? fmtDate(list[0].date_completed || list[0].date_reported) : '-') + '</div><div class="h-stat-lbl">ซ่อมล่าสุด</div></div>'
+                    + '<div class="h-stat"><div class="h-stat-val">' + escHtml(topGarage) + '</div><div class="h-stat-lbl">อู่ที่ใช้บ่อย</div></div>';
+            }
+
+            renderTable(list);
+
+        } catch (e) {
+            console.error('loadHistory error:', e);
+            if (elBody) {
+                elBody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:3rem;color:var(--color-danger)">' +
+                    '❌ <strong>โหลดข้อมูลไม่สำเร็จ</strong><br><small>' + (e.message || 'กรุณาตรวจสอบการเชื่อมต่อ') + '</small></td></tr>';
+            }
+        } finally {
+            _loadingHistory = false;
+            if (elLoad) elLoad.style.display = 'none';
         }
-        renderTable(list);
-      }catch(e){
-        console.error('loadHistory error:', e);
-        var alertEl=document.getElementById('alertContainer');
-        if(alertEl) alertEl.innerHTML='<div class="alert alert-danger" style="margin-bottom:1rem">❌ โหลดข้อมูลประวัติซ่อมไม่สำเร็จ: '+(e.message||'ไม่ทราบสาเหตุ')+'</div>';
-        if(elBody) elBody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--color-danger)">โหลดข้อมูลไม่สำเร็จ — กรุณากด 🔃 รีเฟรช</td></tr>';
-      }finally{
-        _loadingHistory=false;
-        if(elLoad) elLoad.style.display='none';
-      }
     }
 
     function renderTable(list){
@@ -407,13 +444,14 @@
         var st=SERVICE_TYPE_MAP[rp.service_type]||SERVICE_TYPE_MAP['repair'];
         var total=rp.grand_total||rp.cost||0;
         var mileIn=rp.mileage_at_repair?rp.mileage_at_repair.toLocaleString():'\u2014';
-        var desc=(rp.issue_description||'-').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        var rawDesc = rp.issue_description || '-';
+        var desc = escHtml(rawDesc);
         html+='<tr>';
         html+='<td style="white-space:nowrap">'+fmtDate(rp.date_completed||rp.date_reported)+'</td>';
-        html+='<td class="t-veh">'+vLabel(rp.car_id,rp)+'</td>';
+        html+='<td class="t-veh">'+escHtml(vLabel(rp.car_id,rp))+'</td>';
         html+='<td><span class="h-card-type '+st.cls+'">'+st.icon+' '+st.label+'</span></td>';
-        html+='<td class="t-desc" title="'+desc+'">'+desc+'</td>';
-        html+='<td class="h-hide-sm t-muted">'+(rp.garage_name||'\u2014')+'</td>';
+        html+='<td class="t-desc" title="'+escHtml(rawDesc)+'">'+desc+'</td>';
+        html+='<td class="h-hide-sm t-muted">'+escHtml(rp.garage_name||'\u2014')+'</td>';
         html+='<td class="h-hide-sm t-muted">'+(rp.invoice_number||'\u2014')+'</td>';
         html+='<td class="h-hide-sm t-mile">'+mileIn+'</td>';
         html+='<td class="t-cost">'+(total?total.toLocaleString():'\u2014')+'</td>';
@@ -488,19 +526,19 @@
         if(!r.success){body.innerHTML='<p>\u0e42\u0e2b\u0e25\u0e14\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08</p>';return}
         var rp=r.data;
         var typeLabels={repair:'\u0e0b\u0e48\u0e2d\u0e21\u0e17\u0e31\u0e48\u0e27\u0e44\u0e1b',scheduled_service:'\u0e40\u0e0a\u0e47\u0e04\u0e23\u0e30\u0e22\u0e30/\u0e1a\u0e33\u0e23\u0e38\u0e07\u0e23\u0e31\u0e01\u0e29\u0e32',accident:'\u0e0b\u0e48\u0e2d\u0e21\u0e2d\u0e38\u0e1a\u0e31\u0e15\u0e34\u0e40\u0e2b\u0e15\u0e38',insurance:'\u0e40\u0e04\u0e25\u0e21\u0e1b\u0e23\u0e30\u0e01\u0e31\u0e19'};
-        var html='<div style="margin-bottom:.75rem;display:flex;gap:8px;flex-wrap:wrap">'+statusBadge(rp.status||'completed');
-        if(rp.service_type&&rp.service_type!=='repair') html+='<span class="status-badge" style="background:#e0e7ff;color:#3730a3">'+(typeLabels[rp.service_type]||rp.service_type)+'</span>';
+        var html='<div style="margin-bottom:.75rem;display:flex;gap:8px;flex-wrap:wrap">'+statusBadge(rp.status || 'completed');
+        if(rp.service_type&&rp.service_type!=='repair') html+='<span class="status-badge" style="background:#e0e7ff;color:#3730a3">'+escHtml(typeLabels[rp.service_type]||rp.service_type)+'</span>';
         html+='</div><div class="detail-grid">';
-        html+='<div class="detail-item"><label>\u0e23\u0e16</label><span>'+vLabel(rp.car_id,rp)+'</span></div>';
+        html+='<div class="detail-item"><label>\u0e23\u0e16</label><span>'+escHtml(vLabel(rp.car_id,rp))+'</span></div>';
         html+='<div class="detail-item"><label>\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48\u0e0b\u0e48\u0e2d\u0e21\u0e40\u0e2a\u0e23\u0e47\u0e08</label><span>'+fmtDate(rp.date_completed||rp.date_reported)+'</span></div>';
-        if(rp.invoice_number) html+='<div class="detail-item"><label>\u0e40\u0e25\u0e02\u0e17\u0e35\u0e48\u0e43\u0e1a\u0e0b\u0e48\u0e2d\u0e21</label><span>'+rp.invoice_number+'</span></div>';
+        if(rp.invoice_number) html+='<div class="detail-item"><label>\u0e40\u0e25\u0e02\u0e17\u0e35\u0e48\u0e43\u0e1a\u0e0b\u0e48\u0e2d\u0e21</label><span>'+escHtml(rp.invoice_number)+'</span></div>';
         html+='<div class="detail-item"><label>\u0e40\u0e25\u0e02\u0e44\u0e21\u0e25\u0e4c\u0e40\u0e02\u0e49\u0e32</label><span>'+(rp.mileage_at_repair?rp.mileage_at_repair.toLocaleString()+' \u0e01\u0e21.':'-')+'</span></div>';
         if(rp.mileage_out) html+='<div class="detail-item"><label>\u0e40\u0e25\u0e02\u0e44\u0e21\u0e25\u0e4c\u0e2d\u0e2d\u0e01</label><span>'+rp.mileage_out.toLocaleString()+' \u0e01\u0e21.</span></div>';
-        html+='<div class="detail-item"><label>\u0e2d\u0e39\u0e48</label><span>'+(rp.garage_name||'-')+'</span></div>';
-        if(rp.mechanic_name) html+='<div class="detail-item"><label>\u0e0a\u0e48\u0e32\u0e07\u0e1c\u0e39\u0e49\u0e14\u0e39\u0e41\u0e25</label><span>'+rp.mechanic_name+'</span></div>';
-        if(rp.taken_by) html+='<div class="detail-item"><label>\u0e1c\u0e39\u0e49\u0e19\u0e33\u0e44\u0e1b\u0e0b\u0e48\u0e2d\u0e21</label><span>'+rp.taken_by+'</span></div>';
-        if(rp.claim_number) html+='<div class="detail-item"><label>\u0e40\u0e25\u0e02\u0e40\u0e04\u0e25\u0e21/\u0e2d\u0e38\u0e1a\u0e31\u0e15\u0e34\u0e40\u0e2b\u0e15\u0e38</label><span>'+rp.claim_number+'</span></div>';
-        if(rp.insurance_company) html+='<div class="detail-item"><label>\u0e1a\u0e23\u0e34\u0e29\u0e31\u0e17\u0e1b\u0e23\u0e30\u0e01\u0e31\u0e19</label><span>'+rp.insurance_company+'</span></div>';
+        html+='<div class="detail-item"><label>\u0e2d\u0e39\u0e48</label><span>'+escHtml(rp.garage_name||'-')+'</span></div>';
+        if(rp.mechanic_name) html+='<div class="detail-item"><label>\u0e0a\u0e48\u0e32\u0e07\u0e1c\u0e39\u0e49\u0e14\u0e39\u0e41\u0e25</label><span>'+escHtml(rp.mechanic_name)+'</span></div>';
+        if(rp.taken_by) html+='<div class="detail-item"><label>\u0e1c\u0e39\u0e49\u0e19\u0e33\u0e44\u0e1b\u0e0b\u0e48\u0e2d\u0e21</label><span>'+escHtml(rp.taken_by)+'</span></div>';
+        if(rp.claim_number) html+='<div class="detail-item"><label>\u0e40\u0e25\u0e02\u0e40\u0e04\u0e25\u0e21/\u0e2d\u0e38\u0e1a\u0e31\u0e15\u0e34\u0e40\u0e2b\u0e15\u0e38</label><span>'+escHtml(rp.claim_number)+'</span></div>';
+        if(rp.insurance_company) html+='<div class="detail-item"><label>\u0e1a\u0e23\u0e34\u0e29\u0e31\u0e17\u0e1b\u0e23\u0e30\u0e01\u0e31\u0e19</label><span>'+escHtml(rp.insurance_company)+'</span></div>';
         html+='</div>';
         if(rp.labour_cost||rp.parts_cost||rp.grand_total||rp.cost){
           html+='<hr style="margin:1rem 0;border-color:var(--color-border)"><strong style="font-size:.9rem">\ud83d\udcb0 \u0e04\u0e48\u0e32\u0e43\u0e0a\u0e49\u0e08\u0e48\u0e32\u0e22</strong><div class="detail-grid" style="margin-top:.5rem">';
@@ -516,18 +554,18 @@
           html+='<hr style="margin:1rem 0;border-color:var(--color-border)"><strong style="font-size:.9rem">\ud83d\udd29 \u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e2d\u0e30\u0e44\u0e2b\u0e25\u0e48/\u0e04\u0e48\u0e32\u0e41\u0e23\u0e07</strong>';
           html+='<div style="overflow-x:auto;margin-top:.5rem"><table class="table" style="font-size:.82rem"><thead><tr><th>\u0e23\u0e2b\u0e31\u0e2a</th><th>\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23</th><th>\u0e08\u0e33\u0e19\u0e27\u0e19</th><th>\u0e23\u0e32\u0e04\u0e32/\u0e2b\u0e19\u0e48\u0e27\u0e22</th><th>\u0e2a\u0e48\u0e27\u0e19\u0e25\u0e14</th><th>\u0e2a\u0e38\u0e17\u0e18\u0e34\u0e4c</th></tr></thead><tbody>';
           rp.items_detail.forEach(function(it){
-            html+='<tr><td>'+(it.part_code||'-')+'</td><td>'+(it.description||'-')+'</td><td>'+(it.quantity||1)+'</td><td>'+(it.unit_price?it.unit_price.toLocaleString():'-')+'</td><td>'+(it.discount_amount?it.discount_amount.toLocaleString():'-')+'</td><td>'+(it.net_amount?it.net_amount.toLocaleString():'-')+'</td></tr>';
+            html+='<tr><td>'+escHtml(it.part_code||'-')+'</td><td>'+escHtml(it.description||'-')+'</td><td>'+(it.quantity||1)+'</td><td>'+(it.unit_price?it.unit_price.toLocaleString():'-')+'</td><td>'+(it.discount_amount?it.discount_amount.toLocaleString():'-')+'</td><td>'+(it.net_amount?it.net_amount.toLocaleString():'-')+'</td></tr>';
           });
           html+='</tbody></table></div>';
         }
         html+='<hr style="margin:1rem 0;border-color:var(--color-border)">';
-        html+='<p><strong>\u0e2d\u0e32\u0e01\u0e32\u0e23:</strong> '+(rp.issue_description||'-').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</p>';
-        if(rp.notes) html+='<p><strong>\u0e2b\u0e21\u0e32\u0e22\u0e40\u0e2b\u0e15\u0e38:</strong> '+rp.notes.replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</p>';
+        html+='<p><strong>\u0e2d\u0e32\u0e01\u0e32\u0e23:</strong> '+escHtml(rp.issue_description||'-')+'</p>';
+        if(rp.notes) html+='<p><strong>\u0e2b\u0e21\u0e32\u0e22\u0e40\u0e2b\u0e15\u0e38:</strong> '+escHtml(rp.notes)+'</p>';
         var docs=[{label:'\u0e43\u0e1a\u0e40\u0e2a\u0e19\u0e2d\u0e23\u0e32\u0e04\u0e32',key:'quotation_documents'},{label:'\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e02\u0e49\u0e2d\u0e04\u0e27\u0e32\u0e21',key:'memo_documents'},{label:'\u0e43\u0e1a\u0e40\u0e2a\u0e23\u0e47\u0e08',key:'receipt_documents'},{label:'\u0e40\u0e2d\u0e01\u0e2a\u0e32\u0e23',key:'documents'}];
         docs.forEach(function(d){
           if(rp[d.key]){var arr=[];try{arr=JSON.parse(rp[d.key])}catch(e){}
             if(arr.length){html+='<p style="margin-top:8px"><strong>'+d.label+':</strong></p><div class="file-chips">';
-              arr.forEach(function(url,i){html+='<a class="file-chip" href="'+url+'" target="_blank">\ud83d\udcce \u0e44\u0e1f\u0e25\u0e4c '+(i+1)+'</a>'});html+='</div>'}}
+              arr.forEach(function(url,i){html+='<a class="file-chip" href="'+escHtml(url)+'" target="_blank">\ud83d\udcce \u0e44\u0e1f\u0e25\u0e4c '+(i+1)+'</a>'});html+='</div>'}}
         });
         if(typeof renderAuditMeta==='function'){html+='<hr style="margin:1rem 0;border-color:var(--color-border)">';html+=renderAuditMeta(rp)}
         body.innerHTML=html;
@@ -663,7 +701,8 @@
       try{
         var dateVal=document.getElementById('cmp_date').value;
         var timeVal=document.getElementById('cmp_time').value;
-        var dateCompleted=dateVal+(timeVal?' '+timeVal+':00':'');
+        // ปรับปรุง: หากไม่มีเวลา ให้ default เป็น 00:00 เพื่อความสมบูรณ์ของ ISO Timestamp
+        var dateCompleted=dateVal + (timeVal ? ' ' + timeVal + ':00' : ' 00:00:00');
         var takenByEl2=document.getElementById('cmp_taken_by');
         var takenByVal=takenByEl2.value;
         var takenByName='';
@@ -703,6 +742,59 @@
         }else{showAlert(r.message||'\u0e14\u0e33\u0e40\u0e19\u0e34\u0e19\u0e01\u0e32\u0e23\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08','error')}
       }catch(e){showAlert('\u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14','error')}
       finally{btn.disabled=false;btn.textContent='\ud83d\udcbe \u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01'}
+    }
+
+    function exportExcel() {
+      if (!historyData || historyData.length === 0) {
+        alert('ไม่มีข้อมูลสำหรับส่งออก');
+        return;
+      }
+
+      var headers = ['วันที่', 'ทะเบียน / รถ', 'ประเภท', 'อาการ / รายการ', 'อู่', 'เลขที่ใบซ่อม', 'ไมล์เข้า', 'ไมล์ออก', 'รวม (บาท)', 'ช่างผู้ดูแล', 'ผู้นำไปซ่อม', 'หมายเหตุ'];
+
+      // ฟังก์ชันช่วยแปลงข้อมูลแต่ละแถว
+      function mapRepairToRow(rp) {
+        var st = SERVICE_TYPE_MAP[rp.service_type] || SERVICE_TYPE_MAP['repair'];
+        return [
+          fmtDate(rp.date_completed || rp.date_reported),
+          vLabel(rp.car_id, rp),
+          st.label,
+          rp.issue_description || '-',
+          rp.garage_name || '-',
+          rp.invoice_number || '-',
+          rp.mileage_at_repair || 0,
+          rp.mileage_out || '-',
+          rp.grand_total || rp.cost || 0,
+          rp.mechanic_name || '-',
+          rp.taken_by || '-',
+          rp.notes || '-'
+        ];
+      }
+
+      // จัดกลุ่มข้อมูลตามชื่อประเภท (Label) เพื่อใช้เป็นชื่อ Sheet
+      var groups = {};
+      historyData.forEach(function(rp) {
+        var label = (SERVICE_TYPE_MAP[rp.service_type] || SERVICE_TYPE_MAP['repair']).label;
+        if (!groups[label]) groups[label] = [];
+        groups[label].push(rp);
+      });
+
+      // สร้างโครงสร้าง Sheet สำหรับ ExportUtils
+      var sheets = [{ sheetName: 'ทั้งหมด', headers: headers, rows: historyData.map(mapRepairToRow) }];
+      Object.keys(groups).forEach(function(label) {
+        // ตัดชื่อ Sheet ไม่ให้เกิน 31 ตัวอักษรตามข้อกำหนด Excel และล้างอักขระพิเศษ
+        var sheetName = label.substring(0, 30).replace(/[\\/?*\[\]]/g, ' ');
+        sheets.push({ sheetName: sheetName, headers: headers, rows: groups[label].map(mapRepairToRow) });
+      });
+
+      if (typeof ExportUtils !== 'undefined' && ExportUtils.exportExcelSheets) {
+        ExportUtils.exportExcelSheets({
+          filename: 'ประวัติการซ่อมบำรุง_' + new Date().toISOString().substring(0, 10),
+          sheets: sheets
+        });
+      } else {
+        alert('ระบบ Export ยังไม่พร้อมใช้งาน กรุณาตรวจสอบไฟล์ js/export-utils.js');
+      }
     }
   </script>
 </body>
