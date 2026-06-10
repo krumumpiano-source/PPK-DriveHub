@@ -120,6 +120,7 @@
           <tbody id="hTableBody"></tbody>
         </table>
       </div>
+      <div id="hPagination" style="display:none;text-align:center;margin-top:.75rem"></div>
     </div>
   </div>
 
@@ -209,6 +210,8 @@
   <script>
     var vehicles = [], drivers = [], historyData = [], editingId = null, itemRowCount = 0;
     var _loadingHistory = false;
+    var _filteredData = [], _historyPage = 0;
+    var PAGE_SIZE = 50;
 
     var STATUS_MAP = {
       requested:  { label: '\u0e23\u0e2d\u0e1e\u0e34\u0e08\u0e32\u0e23\u0e13\u0e32',    icon: '\ud83d\udce8', cls: 'status-requested' },
@@ -363,17 +366,26 @@
     }
 
     function renderTable(list){
+      _filteredData=list||[];
+      _historyPage=0;
+      _renderPage();
+    }
+
+    function _renderPage(){
       var elBody=document.getElementById('hTableBody');
       if(!elBody) return;
-      if(!list||!list.length){
+      var start=_historyPage*PAGE_SIZE;
+      var pageList=_filteredData.slice(start,start+PAGE_SIZE);
+      if(!_filteredData.length){
         elBody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--color-text-muted)">\ud83d\udd27 \u0e44\u0e21\u0e48\u0e21\u0e35\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e0b\u0e48\u0e2d\u0e21\u0e40\u0e2a\u0e23\u0e47\u0e08</td></tr>';
+        var pg=document.getElementById('hPagination');if(pg) pg.style.display='none';
         return;
       }
       var user=getCurrentUser();
       var canEdit=user&&(user.role==='admin'||(typeof hasModulePermission==='function'&&hasModulePermission('repair','edit')));
       var html='';
-      for(var i=0;i<list.length;i++){
-        var rp=list[i];
+      for(var i=0;i<pageList.length;i++){
+        var rp=pageList[i];
         var st=SERVICE_TYPE_MAP[rp.service_type]||SERVICE_TYPE_MAP['repair'];
         var total=rp.grand_total||rp.cost||0;
         var mileIn=rp.mileage_at_repair?rp.mileage_at_repair.toLocaleString():'\u2014';
@@ -393,6 +405,42 @@
         html+='</td></tr>';
       }
       elBody.innerHTML=html;
+      _renderPagination();
+    }
+
+    function _renderPagination(){
+      var pg=document.getElementById('hPagination');
+      if(!pg) return;
+      var total=_filteredData.length;
+      var totalPages=Math.ceil(total/PAGE_SIZE);
+      if(totalPages<=1){pg.style.display='none';return;}
+      pg.style.display='flex';
+      pg.style.gap='4px';
+      pg.style.justifyContent='center';
+      pg.style.flexWrap='wrap';
+      pg.style.alignItems='center';
+      var startIdx=(_historyPage*PAGE_SIZE)+1;
+      var endIdx=Math.min((_historyPage+1)*PAGE_SIZE,total);
+      var html='<span style="font-size:.82rem;color:var(--color-text-muted);margin-right:4px">\u0e41\u0e2a\u0e14\u0e07 '+startIdx+'-'+endIdx+' / '+total+' \u0e23\u0e32\u0e22\u0e01\u0e32\u0e23</span>';
+      html+='<button class="btn btn-secondary" style="padding:3px 10px;font-size:.82rem" onclick="_gotoPage('+(_historyPage-1)+')" '+(_historyPage===0?'disabled':'')+'>&#9664;</button>';
+      var pStart=Math.max(0,_historyPage-2);
+      var pEnd=Math.min(totalPages-1,pStart+4);
+      if(pEnd-pStart<4) pStart=Math.max(0,pEnd-4);
+      for(var p=pStart;p<=pEnd;p++){
+        var active=p===_historyPage;
+        html+='<button class="btn '+(active?'btn-primary':'btn-secondary')+'" style="padding:3px 8px;font-size:.82rem" onclick="_gotoPage('+p+')">'+(p+1)+'</button>';
+      }
+      html+='<button class="btn btn-secondary" style="padding:3px 10px;font-size:.82rem" onclick="_gotoPage('+(_historyPage+1)+')" '+(_historyPage===totalPages-1?'disabled':'')+'>&#9654;</button>';
+      pg.innerHTML=html;
+    }
+
+    function _gotoPage(n){
+      var totalPages=Math.ceil(_filteredData.length/PAGE_SIZE);
+      if(n<0||n>=totalPages) return;
+      _historyPage=n;
+      _renderPage();
+      var wrap=document.querySelector('.h-tbl-wrap');
+      if(wrap) wrap.scrollIntoView({behavior:'smooth',block:'start'});
     }
 
     function filterHistory(){
