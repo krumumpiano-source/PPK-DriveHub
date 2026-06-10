@@ -4,6 +4,6 @@
     SYSTEM_VERSION: '2.0.0',
     SCHOOL_NAME: 'โรงเรียนพะเยาพิทยาคม',
     ACADEMIC_YEAR: '2569',
-    // API is on same origin — no base URL needed
-    API_BASE_URL: '',
+    // แก้ไข URL ของระบบหลังบ้านที่นี่ (เช่น Google Apps Script URL)
+    API_BASE_URL: 'https://script.google.com/macros/s/ใส่รหัสของคุณที่นี่/exec',
 };

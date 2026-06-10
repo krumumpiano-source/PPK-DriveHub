@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+﻿﻿<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -443,7 +443,7 @@
     }
     function statusBadge(s){
       var m=STATUS_MAP[s]||{label:s,icon:'',cls:''};
-      return '<span class="status-badge '+m.cls+'">'+m.icon+' '+m.label+'</span>';
+      return '<span class="status-badge '+m.cls+'">'+escHtml(m.icon)+' '+escHtml(m.label)+'</span>';
     }
     function showAlert(msg,type){
       var c=document.getElementById('alertContainer');
@@ -516,12 +516,12 @@
 
       var html='<div class="repair-card" style="border-left:4px solid '+(borderColors[rp.status]||'var(--color-border)')+'">';
       html+='<div class="repair-card-header">';
-      html+='<div class="repair-card-title">'+vLabel(rp.car_id, rp)+'</div>';
+      html+='<div class="repair-card-title">'+escHtml(vLabel(rp.car_id, rp))+'</div>';
       html+=statusBadge(rp.status);
       html+='</div>';
       html+='<div class="repair-card-body">';
-      html+='<p>📝 '+(rp.issue_description||'-')+'</p>';
-      html+='<p style="font-size:.8rem;color:var(--color-text-muted)">📅 '+fmtDate(rp.date_reported)+' • 👤 '+(rp.reporter_name||'-')+'</p>';
+      html+='<p>📝 '+escHtml(rp.issue_description||'-')+'</p>';
+      html+='<p style="font-size:.8rem;color:var(--color-text-muted)">📅 '+fmtDate(rp.date_reported)+' • 👤 '+escHtml(rp.reporter_name||'-')+'</p>';
 
       // Horizontal stepper
       var currentIdx=STEP_ORDER.indexOf(rp.status);
@@ -546,9 +546,9 @@
         html+='</div>';
       }
       html+='</div>';
-      if(rp.status==='repairing'&&rp.garage_name) html+='<p style="font-size:.8rem;color:var(--color-text-muted)">🏪 '+rp.garage_name+'</p>';
+      if(rp.status==='repairing'&&rp.garage_name) html+='<p style="font-size:.8rem;color:var(--color-text-muted)">🏪 '+escHtml(rp.garage_name)+'</p>';
       if(rp.status==='completed'&&rp.cost) html+='<p style="font-size:.8rem;color:var(--color-text-muted)">💰 '+rp.cost.toLocaleString()+' บาท</p>';
-      if(isRejected&&rp.rejection_reason) html+='<p style="font-size:.8rem;color:var(--color-danger)">❌ '+rp.rejection_reason+'</p>';
+      if(isRejected&&rp.rejection_reason) html+='<p style="font-size:.8rem;color:var(--color-danger)">❌ '+escHtml(rp.rejection_reason)+'</p>';
       html+='</div>'; // end body
 
       html+='<div class="repair-card-actions">';
@@ -715,21 +715,21 @@
         if(!r.success){body.innerHTML='<p>โหลดไม่สำเร็จ</p>';return}
         var rp=r.data;
         var typeLabels={repair:'ซ่อมทั่วไป',scheduled_service:'เช็คระยะ/บำรุงรักษา',accident:'ซ่อมอุบัติเหตุ',insurance:'เคลมประกัน'};
-        var html='<div style="margin-bottom:.75rem;display:flex;gap:8px;flex-wrap:wrap">'+statusBadge(rp.status);
-        if(rp.service_type&&rp.service_type!=='repair') html+='<span class="status-badge" style="background:#e0e7ff;color:#3730a3">'+(typeLabels[rp.service_type]||rp.service_type)+'</span>';
+        var html='<div style="margin-bottom:.75rem;display:flex;gap:8px;flex-wrap:wrap">'+statusBadge(rp.status || 'requested');
+        if(rp.service_type&&rp.service_type!=='repair') html+='<span class="status-badge" style="background:#e0e7ff;color:#3730a3">'+escHtml(typeLabels[rp.service_type]||rp.service_type)+'</span>';
         html+='</div>';
         html+='<div class="detail-grid">';
-        html+='<div class="detail-item"><label>รถ</label><span>'+vLabel(rp.car_id, rp)+'</span></div>';
+        html+='<div class="detail-item"><label>รถ</label><span>'+escHtml(vLabel(rp.car_id, rp))+'</span></div>';
         html+='<div class="detail-item"><label>แจ้งเมื่อ</label><span>'+fmtDate(rp.date_reported)+'</span></div>';
-        html+='<div class="detail-item"><label>ผู้แจ้ง</label><span>'+(rp.reporter_name||'-')+'</span></div>';
-        if(rp.invoice_number) html+='<div class="detail-item"><label>เลขที่ใบซ่อม</label><span>'+rp.invoice_number+'</span></div>';
+        html+='<div class="detail-item"><label>ผู้แจ้ง</label><span>'+escHtml(rp.reporter_name||'-')+'</span></div>';
+        if(rp.invoice_number) html+='<div class="detail-item"><label>เลขที่ใบซ่อม</label><span>'+escHtml(rp.invoice_number)+'</span></div>';
         html+='<div class="detail-item"><label>เลขไมล์เข้า</label><span>'+(rp.mileage_at_repair?rp.mileage_at_repair.toLocaleString()+' กม.':'-')+'</span></div>';
         if(rp.mileage_out) html+='<div class="detail-item"><label>เลขไมล์ออก</label><span>'+rp.mileage_out.toLocaleString()+' กม.</span></div>';
-        html+='<div class="detail-item"><label>อู่</label><span>'+(rp.garage_name||'-')+'</span></div>';
-        if(rp.mechanic_name) html+='<div class="detail-item"><label>ช่างผู้ดูแล</label><span>'+rp.mechanic_name+'</span></div>';
-        if(rp.taken_by) html+='<div class="detail-item"><label>ผู้นำไปซ่อม</label><span>'+rp.taken_by+'</span></div>';
-        if(rp.claim_number) html+='<div class="detail-item"><label>เลขเคลม/อุบัติเหตุ</label><span>'+rp.claim_number+'</span></div>';
-        if(rp.insurance_company) html+='<div class="detail-item"><label>บริษัทประกัน</label><span>'+rp.insurance_company+'</span></div>';
+        html+='<div class="detail-item"><label>อู่</label><span>'+escHtml(rp.garage_name||'-')+'</span></div>';
+        if(rp.mechanic_name) html+='<div class="detail-item"><label>ช่างผู้ดูแล</label><span>'+escHtml(rp.mechanic_name)+'</span></div>';
+        if(rp.taken_by) html+='<div class="detail-item"><label>ผู้นำไปซ่อม</label><span>'+escHtml(rp.taken_by)+'</span></div>';
+        if(rp.claim_number) html+='<div class="detail-item"><label>เลขเคลม/อุบัติเหตุ</label><span>'+escHtml(rp.claim_number)+'</span></div>';
+        if(rp.insurance_company) html+='<div class="detail-item"><label>บริษัทประกัน</label><span>'+escHtml(rp.insurance_company)+'</span></div>';
         html+='</div>';
         // ค่าใช้จ่าย
         if(rp.labour_cost||rp.parts_cost||rp.grand_total||rp.cost){
@@ -752,8 +752,8 @@
           html+='<th>รหัส</th><th>รายการ</th><th>จำนวน</th><th>ราคา/หน่วย</th><th>ส่วนลด</th><th>สุทธิ</th></tr></thead><tbody>';
           rp.items_detail.forEach(function(it){
             html+='<tr>';
-            html+='<td>'+(it.part_code||'-')+'</td>';
-            html+='<td>'+(it.description||'-')+'</td>';
+            html+='<td>'+escHtml(it.part_code||'-')+'</td>';
+            html+='<td>'+escHtml(it.description||'-')+'</td>';
             html+='<td>'+(it.quantity||1)+'</td>';
             html+='<td>'+(it.unit_price?it.unit_price.toLocaleString():'-')+'</td>';
             html+='<td>'+(it.discount_amount?it.discount_amount.toLocaleString():'-')+'</td>';
@@ -763,15 +763,15 @@
           html+='</tbody></table></div>';
         }
         html+='<hr style="margin:1rem 0;border-color:var(--color-border)">';
-        html+='<p><strong>อาการ:</strong> '+(rp.issue_description||'-')+'</p>';
+        html+='<p><strong>อาการ:</strong> '+escHtml(rp.issue_description||'-')+'</p>';
         if(rp.repair_items){
           var items=[];try{items=JSON.parse(rp.repair_items)}catch(e){items=rp.repair_items?[rp.repair_items]:[]}
-          if(items.length) html+='<p><strong>รายการซ่อม:</strong> '+items.join(', ')+'</p>';
+          if(items.length) html+='<p><strong>รายการซ่อม:</strong> '+escHtml(items.join(', '))+'</p>';
         }
-        if(rp.notes) html+='<p><strong>หมายเหตุ:</strong> '+rp.notes+'</p>';
-        if(rp.inspection_notes) html+='<p><strong>ผลตรวจสภาพ:</strong> '+rp.inspection_notes+'</p>';
-        if(rp.memo_notes) html+='<p><strong>บันทึกข้อความ:</strong> '+rp.memo_notes+'</p>';
-        if(rp.rejection_reason) html+='<p style="color:var(--color-danger)"><strong>เหตุผลที่ไม่อนุมัติ:</strong> '+rp.rejection_reason+'</p>';
+        if(rp.notes) html+='<p><strong>หมายเหตุ:</strong> '+escHtml(rp.notes)+'</p>';
+        if(rp.inspection_notes) html+='<p><strong>ผลตรวจสภาพ:</strong> '+escHtml(rp.inspection_notes)+'</p>';
+        if(rp.memo_notes) html+='<p><strong>บันทึกข้อความ:</strong> '+escHtml(rp.memo_notes)+'</p>';
+        if(rp.rejection_reason) html+='<p style="color:var(--color-danger)"><strong>เหตุผลที่ไม่อนุมัติ:</strong> '+escHtml(rp.rejection_reason)+'</p>';
 
         // Documents
         var docs=[
