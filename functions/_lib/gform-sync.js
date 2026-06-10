@@ -149,15 +149,15 @@ async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report
     const recordType = statusToRecordType(r[COL.STATUS]);
     if (!recordType) { report.skipped++; continue; }
 
-    const datetime = parseFormDate(r[COL.DATE], tsRaw) || parseFormDate(tsRaw, '');
+    const key = recordType + '|' + formTimestamp;
+    const existing = existingMap.get(key);
+
+    // Parse row fields (needed for both update and insert paths)
     const mileage = parseMileage(r[COL.MILEAGE]);
     const driverId = findDriverLocal(r[COL.DRIVER]);
     const requester = normalizeName(r[COL.REQUESTER]);
     const destination = normalizeName(r[COL.DEST]);
     const driverName = normalizeName(r[COL.DRIVER]);
-
-    const key = recordType + '|' + formTimestamp;
-    const existing = existingMap.get(key);
 
     // ถ้ามีอยู่แล้ว — ตรวจว่าข้อมูลเปลี่ยนหรือเปล่า
     if (existing) {
@@ -191,6 +191,8 @@ async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report
       }
       continue;
     }
+
+    const datetime = parseFormDate(r[COL.DATE], tsRaw) || parseFormDate(tsRaw, '');
 
     try {
       const id = generateUUID();

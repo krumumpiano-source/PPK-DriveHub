@@ -1,7 +1,7 @@
 ﻿// Maintenance settings, schedules, profiles & alerts
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
-  parseBody, requirePermission, extractParam
+  parseBody, requirePermission, checkPermission, extractParam
 } from '../../_helpers.js';
 
 // Resolve interval for a specific vehicle/item.
@@ -331,7 +331,7 @@ export async function onRequest(context) {
 
   // --- GET /api/maintenance/vehicle/:carId ---
   if (path.match(/^\/api\/maintenance\/vehicle\/[^/]+$/) && method === 'GET') {
-    try { requirePermission(user, 'maintenance', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    if (!checkPermission(user, 'maintenance', 'view') && !checkPermission(user, 'repair', 'view')) return error('ไม่มีสิทธิ์', 403);
     const carId = path.split('/').pop();
     // Get car info for profile resolution
     const car = await dbFirst(env.DB, 'SELECT brand, model, fuel_type FROM cars WHERE id = ?', [carId]);

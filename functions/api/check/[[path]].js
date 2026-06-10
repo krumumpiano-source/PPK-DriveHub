@@ -1,7 +1,7 @@
 ﻿// Daily vehicle inspections (incl. public QR)
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
-  parseBody, requirePermission, extractParam, uploadToR2
+  parseBody, requirePermission, checkPermission, extractParam, uploadToR2
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
@@ -90,7 +90,7 @@ export async function onRequest(context) {
   if (!user) return error('Unauthorized', 401);
 
   if (path === '/api/check/log' && method === 'GET') {
-    try { requirePermission(user, 'check', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    if (!checkPermission(user, 'check', 'view') && !checkPermission(user, 'repair', 'view')) return error('ไม่มีสิทธิ์', 403);
     const carId = url.searchParams.get('car_id');
     const dateFrom = url.searchParams.get('date_from');
     const dateTo = url.searchParams.get('date_to');
@@ -110,14 +110,21 @@ export async function onRequest(context) {
   }
 
   if (path === '/api/check/alerts' && method === 'GET') {
-    try { requirePermission(user, 'check', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    if (!checkPermission(user, 'check', 'view') && !checkPermission(user, 'repair', 'view')) return error('ไม่มีสิทธิ์', 403);
+    const carId = url.searchParams.get('car_id');
     const resolved = url.searchParams.get('resolved');
-    const where = resolved === '1' ? 'WHERE ia.resolved = 1' : 'WHERE ia.resolved = 0';
+    const where = [];
+    const params = [];
+    if (carId) { where.push('ia.car_id = ?'); params.push(carId); }
+    if (resolved === '1') { where.push('ia.resolved = 1'); }
+    else if (resolved === '0') { where.push('ia.resolved = 0'); }
+    else { where.push('ia.resolved = 0'); }  // default: show unresolved
     const rows = await dbAll(env.DB,
       `SELECT ia.*, c.license_plate, c.brand FROM inspection_alerts ia
        LEFT JOIN cars c ON ia.car_id = c.id
-       ${where} ORDER BY ia.created_at DESC`,
-      []
+       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+       ORDER BY ia.created_at DESC`,
+      params
     );
     return success(rows);
   }
