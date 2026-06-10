@@ -245,7 +245,15 @@
       }
       initYearFilter();
       await Promise.all([loadVehicles(), loadDrivers()]);
+      // รับ car_id จาก URL param (จาก maintenance-alerts.html)
+      var _params=new URLSearchParams(location.search);
+      var urlCarId=_params.get('car_id');
+      if(urlCarId){
+        var fc=document.getElementById('hFilterCar');
+        if(fc) fc.value=urlCarId;
+      }
       loadHistory();
+      setTimeout(function(){if(typeof initAllThaiDateTimePickers==='function') initAllThaiDateTimePickers();},500);
     });
 
     async function loadVehicles(){
@@ -335,7 +343,7 @@
         var fyEl=document.getElementById('hFilterYear');
         if(fcEl&&fcEl.value) filters.car_id=fcEl.value;
         var r=await apiCall('getRepairs',filters);
-        var list=(r.success&&Array.isArray(r.data))?r.data:(r.success&&r.data&&Array.isArray(r.data))?r.data:[];
+        var list=(r.success&&r.data)?(Array.isArray(r.data)?r.data:[]):[];
         var ftVal=ftEl?ftEl.value:'';
         var fyVal=fyEl?fyEl.value:'';
         if(ftVal) list=list.filter(function(rp){return rp.service_type===ftVal});
@@ -349,16 +357,17 @@
           for(var g in garages){if(garages[g]>topCount){topCount=garages[g];topGarage=g}}
           if(elStats){
             elStats.style.display='flex';
-            elStats.innerHTML='<div class="h-stat"><div class="h-stat-val">'+list.length+'</div><div class="h-stat-lbl">\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e0b\u0e48\u0e2d\u0e21</div></div>'
-              +'<div class="h-stat"><div class="h-stat-val">'+totalCost.toLocaleString()+' \u0e3f</div><div class="h-stat-lbl">\u0e04\u0e48\u0e32\u0e0b\u0e48\u0e2d\u0e21\u0e23\u0e27\u0e21</div></div>'
-              +'<div class="h-stat"><div class="h-stat-val">'+(list[0]?fmtDate(list[0].date_completed||list[0].date_reported):'-')+'</div><div class="h-stat-lbl">\u0e0b\u0e48\u0e2d\u0e21\u0e25\u0e48\u0e32\u0e2a\u0e38\u0e14</div></div>'
-              +'<div class="h-stat"><div class="h-stat-val">'+topGarage+'</div><div class="h-stat-lbl">\u0e2d\u0e39\u0e48\u0e17\u0e35\u0e48\u0e43\u0e0a\u0e49\u0e1a\u0e48\u0e2d\u0e22</div></div>';
+            elStats.innerHTML='<div class="h-stat"><div class="h-stat-val">'+list.length+'</div><div class="h-stat-lbl">รายการซ่อม</div></div>'
+              +'<div class="h-stat"><div class="h-stat-val">'+totalCost.toLocaleString()+' ฿</div><div class="h-stat-lbl">ค่าซ่อมรวม</div></div>'
+              +'<div class="h-stat"><div class="h-stat-val">'+(list[0]?fmtDate(list[0].date_completed||list[0].date_reported):'-')+'</div><div class="h-stat-lbl">ซ่อมล่าสุด</div></div>'
+              +'<div class="h-stat"><div class="h-stat-val">'+topGarage+'</div><div class="h-stat-lbl">อู่ที่ใช้บ่อย</div></div>';
           }
         }
         renderTable(list);
       }catch(e){
-        console.error(e);
-        if(elBody) elBody.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--color-danger)">\u0e42\u0e2b\u0e25\u0e14\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08</td></tr>';
+        console.error('loadHistory error:', e);
+        showAlert('โหลดข้อมูลประวัติซ่อมไม่สำเร็จ: ' + (e.message||'ไม่ทราบสาเหตุ'), 'error');
+        if(elBody) elBody.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--color-danger)">โหลดข้อมูลไม่สำเร็จ — กรุณาลองใหม่</td></tr>';
       }finally{
         _loadingHistory=false;
         if(elLoad) elLoad.style.display='none';
