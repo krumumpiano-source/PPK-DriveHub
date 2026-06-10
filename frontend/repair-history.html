@@ -244,7 +244,9 @@
         if(btn) btn.style.display='none';
       }
       initYearFilter();
-      await Promise.all([loadVehicles(), loadDrivers()]);
+      // timeout 8 วิ ป้องกัน API vehicles/drivers ค้าง ทำให้ loadHistory() ไม่ถูกเรียก
+      var _timeout8s=new Promise(function(resolve){setTimeout(resolve,8000)});
+      await Promise.race([Promise.all([loadVehicles(), loadDrivers()]),_timeout8s]);
       // รับ car_id จาก URL param (จาก maintenance-alerts.html)
       var _params=new URLSearchParams(location.search);
       var urlCarId=_params.get('car_id');
@@ -257,7 +259,7 @@
 
     async function loadVehicles(){
       try{
-        var r=await apiCall('getVehicles',{});
+        var r=await Promise.race([apiCall('getVehicles',{}),new Promise(function(_,rej){setTimeout(function(){rej(new Error('vehicles timeout'))},8000)})]);
         if(r.success&&r.data&&r.data.vehicles) vehicles=r.data.vehicles;
         var filterHtml='<option value="">\u0e23\u0e16\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14</option>';
         var modalHtml='<option value="">\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e23\u0e16</option>';
@@ -270,12 +272,12 @@
         if(fc){var fv=fc.value;fc.innerHTML=filterHtml;if(fv) fc.value=fv;}
         var cm=document.getElementById('cmp_car_id');
         if(cm){var cv=cm.value;cm.innerHTML=modalHtml;if(cv) cm.value=cv;}
-      }catch(e){console.error(e)}
+      }catch(e){console.error('loadVehicles:',e)}
     }
 
     async function loadDrivers(){
       try{
-        var r=await apiCall('getDrivers',{status:'active'});
+        var r=await Promise.race([apiCall('getDrivers',{status:'active'}),new Promise(function(_,rej){setTimeout(function(){rej(new Error('drivers timeout'))},8000)})]);
         if(r.success&&r.data&&r.data.drivers) drivers=r.data.drivers;
         var html='<option value="">-- \u0e40\u0e25\u0e37\u0e2d\u0e01 --</option>';
         drivers.forEach(function(d){
@@ -283,7 +285,7 @@
         });
         var sel=document.getElementById('cmp_taken_by');
         if(sel) sel.innerHTML=html;
-      }catch(e){console.error(e)}
+      }catch(e){console.error('loadDrivers:',e)}
     }
 
     function vLabel(carId,row){
