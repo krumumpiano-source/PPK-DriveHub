@@ -143,6 +143,21 @@
     var dateMode = 'day';
     var _lastPayload = null;
 
+    /* ═══ เกณฑ์มาตรฐานอัตราสิ้นเปลือง (กม./ลิตร) ── ตรงกับ fuel-ledger.html ═══
+       แก้ไขค่า default หรือเพิ่มทะเบียนรถแต่ละคันได้ที่นี่ */
+    var KPL_THRESHOLDS = {
+      'default': 10.0
+      // 'ทะเบียนรถ': 9.0
+    };
+    function getKplThreshold(lp) { return KPL_THRESHOLDS[lp] || KPL_THRESHOLDS['default']; }
+    function kplReportBadge(val, lp) {
+      if (val == null || val === 0) return '-';
+      var thr = getKplThreshold(lp);
+      var ok = val >= thr;
+      return '<span class="badge '+(ok?'badge-green':'badge-red')+'">'
+        + Number(val).toFixed(2)+' กม./ลิตร '+(ok?'✅':'⚠️')+'</span>';
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
       requireAuth();
       initYearOptions();
@@ -572,22 +587,24 @@
       h+=statCard('📋 จำนวนครั้งเติม',fmtNum(summary.count||0),'ครั้ง','');
       h+=statCard('⛽ ลิตรรวม',fmtNum(summary.total_liters||0),'ลิตร','');
       h+=statCard('💰 ค่าน้ำมันรวม',fmtMoney(summary.total_amount||0),'บาท','');
-      h+=statCard('📉 อัตราสิ้นเปลือง',Number(summary.avg_consumption||0).toFixed(2),'กม./ลิตร',summary.anomaly_count>0?'⚠️ ผิดปกติ '+summary.anomaly_count+' รายการ':'');
+      h+=statCard('📉 อัตราสิ้นเปลือง (เฉลี่ย)',Number(summary.avg_consumption||0).toFixed(2),'กม./ลิตร',(summary.avg_consumption>=getKplThreshold('default')?'✅ ผ่านเกณฑ์ (≥'+getKplThreshold('default')+')':'⚠️ ต่ำกว่าเกณฑ์ ('+getKplThreshold('default')+')'),(summary.avg_consumption>0&&summary.avg_consumption<getKplThreshold('default'))?'warn':'success');
       h+='</div>';
 
       if (bv.length) {
         h+='<div class="report-section"><div class="section-header"><span class="section-title">🚗 สรุปรายคัน'+(rl?' ('+rl+')':'')+'</span></div>';
-        h+='<div class="section-body"><table class="report-table"><thead><tr><th>ทะเบียน</th><th>ยี่ห้อ</th><th>จำนวนครั้ง</th><th>ลิตรรวม</th><th>บาทรวม</th><th>เฉลี่ย กม./ลิตร</th><th>ผิดปกติ</th></tr></thead><tbody>';
+        h+='<div class="section-body"><table class="report-table"><thead><tr><th>ทะเบียน</th><th>ยี่ห้อ</th><th>จำนวนครั้ง</th><th>ลิตรรวม</th><th>บาทรวม</th><th>เฉลี่ย กม./ลิตร</th><th>เกณฑ์ (กม./ลิตร)</th><th>สถานะ</th></tr></thead><tbody>';
         var tl=0,ta=0;
         bv.forEach(function(v) {
           tl+=v.total_liters||0; ta+=v.total_amount||0;
-          var an=v.anomaly_count>0;
+          var thr = getKplThreshold(v.license_plate);
+          var badge = kplReportBadge(v.avg_consumption || v.avg_km_per_liter, v.license_plate);
           h+='<tr><td><strong>'+htmlEsc(v.license_plate||'-')+'</strong></td><td>'+htmlEsc(v.brand||'-')+'</td>'
             +'<td>'+fmtNum(v.count||0)+'</td><td>'+fmtNum(v.total_liters||0)+'</td><td>'+fmtMoney(v.total_amount||0)+'</td>'
-            +'<td>'+Number(v.avg_consumption||0).toFixed(2)+' กม./ลิตร</td>'
-            +'<td>'+(an?'<span class="badge badge-red">⚠️ '+v.anomaly_count+'</span>':'<span class="badge badge-green">ปกติ</span>')+'</td></tr>';
+            +'<td>'+Number(v.avg_consumption||v.avg_km_per_liter||0).toFixed(2)+' กม./ลิตร</td>'
+            +'<td>'+thr.toFixed(1)+'</td>'
+            +'<td>'+badge+'</td></tr>';
         });
-        h+='<tfoot><tr><td colspan="3"><strong>รวม</strong></td><td><strong>'+fmtNum(tl)+'</strong></td><td><strong>'+fmtMoney(ta)+'</strong></td><td colspan="2"></td></tr></tfoot>';
+        h+='<tfoot><tr><td colspan="3"><strong>รวม</strong></td><td><strong>'+fmtNum(tl)+'</strong></td><td><strong>'+fmtMoney(ta)+'</strong></td><td colspan="3"></td></tr></tfoot>';
         h+='</tbody></table></div></div>';
       }
 
@@ -597,7 +614,7 @@
         h+='<div class="section-body"><table class="report-table"><thead><tr><th>เลขที่</th><th>วันที่</th><th>ทะเบียน</th><th>ผู้เบิก</th><th>ประเภทเบิก</th><th>ลิตร</th><th>ราคา/ลิตร</th><th>รวม (บาท)</th><th>ปั๊ม</th><th>กม./ลิตร</th></tr></thead><tbody>';
         records.forEach(function(rec) {
           var an=rec.anomaly_flag;
-          var rate=rec.fuel_consumption_rate?Number(rec.fuel_consumption_rate).toFixed(2)+' กม./ลิตร':'-';
+          var rate=rec.fuel_consumption_rate?kplReportBadge(rec.fuel_consumption_rate, rec.license_plate):'-';
           h+='<tr'+(an?' style="background:rgba(255,193,7,.08)"':'')+'>';
           h+='<td><strong>'+htmlEsc(rec.document_number||'-')+'</strong></td>';
           h+='<td>'+fmtDateTH(rec.date)+'</td>';
@@ -608,7 +625,7 @@
           h+='<td>'+fmtMoney(rec.price_per_liter||0)+'</td>';
           h+='<td><strong>'+fmtMoney(rec.amount||0)+'</strong></td>';
           h+='<td>'+htmlEsc(rec.gas_station_name||'-')+'</td>';
-          h+='<td>'+(an?'⚠️ ':'')+rate+'</td>';
+          h+='<td>'+rate+'</td>';
           h+='</tr>';
         });
         h+='</tbody></table></div></div>';
