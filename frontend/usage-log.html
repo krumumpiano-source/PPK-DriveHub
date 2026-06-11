@@ -428,8 +428,8 @@
 
       // Show admin controls
       try {
-        var _u = JSON.parse(localStorage.getItem('user') || localStorage.getItem('ppk_user') || '{}');
-        if (_u.role === 'admin' || _u.role === 'superadmin') {
+        var _u = getCurrentUser();
+        if (_u && (_u.role === 'admin' || _u.role === 'superadmin' || _u.role === 'super_admin')) {
           isAdmin = true;
           document.getElementById('btnBatchHeal').style.display = '';
           document.getElementById('thManage').style.display = '';
