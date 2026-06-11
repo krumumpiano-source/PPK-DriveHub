@@ -8,6 +8,9 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>บันทึกน้ำมัน - PPK DriveHub</title>
+  <script>/* URLSearchParams polyfill */
+  if(!window.URLSearchParams){window.URLSearchParams=function(q){var d={};(q||'').replace(/^\?/,'').split('&').forEach(function(s){if(!s)return;var i=s.indexOf('='),k=decodeURIComponent((i<0?s:s.slice(0,i)).replace(/\+/g,' '));d[k]=i<0?'':decodeURIComponent(s.slice(i+1).replace(/\+/g,' '));});this.get=function(k){return d.hasOwnProperty(k)?d[k]:null};this.has=function(k){return d.hasOwnProperty(k)};};}
+  </script>
   <script src="config.js"></script>
   <script>window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'qr-fuel-record'; window.REQUIRE_AUTH = false;</script>
   <link rel="stylesheet" href="common.css">

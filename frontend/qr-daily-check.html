@@ -8,6 +8,9 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>ตรวจเช็คสภาพรถประจำวัน - PPK DriveHub</title>
+  <script>/* URLSearchParams polyfill */
+  if(!window.URLSearchParams){window.URLSearchParams=function(q){var d={};(q||'').replace(/^\?/,'').split('&').forEach(function(s){if(!s)return;var i=s.indexOf('='),k=decodeURIComponent((i<0?s:s.slice(0,i)).replace(/\+/g,' '));d[k]=i<0?'':decodeURIComponent(s.slice(i+1).replace(/\+/g,' '));});this.get=function(k){return d.hasOwnProperty(k)?d[k]:null};this.has=function(k){return d.hasOwnProperty(k)};};}
+  </script>
   <script src="config.js"></script>
   <script>window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'qr-daily-check'; window.REQUIRE_AUTH = false;</script>
   <link rel="stylesheet" href="common.css">
@@ -1203,7 +1206,7 @@
       if (currentMode === 'logged_in') {
         loadCar = apiCall('getVehicle', { id: carId });
       } else {
-        loadCar = fetch(API_BASE_URL + '/api/vehicles/qr-info?car_id=' + encodeURIComponent(carId)).then(function(r) { return r.json(); });
+        loadCar = fetch('/api/vehicles/qr-info?car_id=' + encodeURIComponent(carId)).then(function(r) { return r.json(); });
       }
 
       loadCar.then(function (response) {
@@ -1290,26 +1293,24 @@
     }
 
     function createFuelCheckItem(label, name) {
-      return `
-        <div class="check-item">
-          <label>${label}</label>
-          <div class="status-options">
-            <label class="status-option normal">
-              <input type="radio" name="${name}" value="normal">
-              <span>✅ ปกติ</span>
-            </label>
-            <label class="status-option warning">
-              <input type="radio" name="${name}" value="warning">
-              <span>⚠️ ควรเฝ้าระวัง</span>
-            </label>
-            <label class="status-option abnormal">
-              <input type="radio" name="${name}" value="abnormal">
-              <span>❌ ผิดปกติ</span>
-            </label>
-          </div>
-          <textarea id="${name}_note" placeholder="ระบุรายละเอียด (ถ้าผิดปกติ)"></textarea>
-        </div>
-      `;
+      return '<div class="check-item">' +
+        '<label>' + label + '</label>' +
+        '<div class="status-options">' +
+          '<label class="status-option normal">' +
+            '<input type="radio" name="' + name + '" value="normal">' +
+            '<span>\u2705 \u0e1b\u0e01\u0e15\u0e34</span>' +
+          '</label>' +
+          '<label class="status-option warning">' +
+            '<input type="radio" name="' + name + '" value="warning">' +
+            '<span>\u26a0\ufe0f \u0e04\u0e27\u0e23\u0e40\u0e1d\u0e49\u0e32\u0e23\u0e30\u0e27\u0e31\u0e07</span>' +
+          '</label>' +
+          '<label class="status-option abnormal">' +
+            '<input type="radio" name="' + name + '" value="abnormal">' +
+            '<span>\u274c \u0e1c\u0e34\u0e14\u0e1b\u0e01\u0e15\u0e34</span>' +
+          '</label>' +
+        '</div>' +
+        '<textarea id="' + name + '_note" placeholder="\u0e23\u0e30\u0e1a\u0e38\u0e23\u0e32\u0e22\u0e25\u0e30\u0e40\u0e2d\u0e35\u0e22\u0e14 (\u0e16\u0e49\u0e32\u0e1c\u0e34\u0e14\u0e1b\u0e01\u0e15\u0e34)"></textarea>' +
+      '</div>';
     }
 
     function setDefaultDateTime() {

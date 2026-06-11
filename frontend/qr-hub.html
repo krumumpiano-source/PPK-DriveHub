@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -6,6 +6,9 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>เลือกรายการ - PPK DriveHub</title>
+  <script>/* URLSearchParams polyfill */
+  if(!window.URLSearchParams){window.URLSearchParams=function(q){var d={};(q||'').replace(/^\?/,'').split('&').forEach(function(s){if(!s)return;var i=s.indexOf('='),k=decodeURIComponent((i<0?s:s.slice(0,i)).replace(/\+/g,' '));d[k]=i<0?'':decodeURIComponent(s.slice(i+1).replace(/\+/g,' '));});this.get=function(k){return d.hasOwnProperty(k)?d[k]:null};this.has=function(k){return d.hasOwnProperty(k)};};}
+  </script>
   <script src="config.js"></script>
   <script>window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'qr-hub'; window.REQUIRE_AUTH = false;</script>
   <link rel="stylesheet" href="common.css">
@@ -77,9 +80,13 @@
 
     .hub-body {
       padding: 20px 16px 16px;
+      display: -webkit-box;
+      display: -webkit-flex;
       display: flex;
+      -webkit-box-orient: vertical;
+      -webkit-box-direction: normal;
+      -webkit-flex-direction: column;
       flex-direction: column;
-      gap: 10px;
     }
 
     .hub-btn {
@@ -88,18 +95,29 @@
       border-radius: 14px;
       padding: 18px 20px;
       cursor: pointer;
+      display: -webkit-box;
+      display: -webkit-flex;
       display: flex;
+      -webkit-box-align: center;
+      -webkit-align-items: center;
       align-items: center;
-      gap: 14px;
+      gap: 14px; /* modern browsers */
       text-align: left;
+      -webkit-transition: -webkit-transform 0.12s, box-shadow 0.12s, opacity 0.12s;
       transition: transform 0.12s, box-shadow 0.12s, opacity 0.12s;
       text-decoration: none;
       color: white;
       font-family: var(--font-family);
+      margin-bottom: 10px; /* flex gap fallback for old iOS */
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
     }
+    .hub-btn:last-child { margin-bottom: 0; }
 
-    .hub-btn:hover { opacity: 0.92; transform: translateY(-1px); text-decoration: none; }
-    .hub-btn:active { transform: scale(0.97); }
+    .hub-btn:hover { opacity: 0.92; -webkit-transform: translateY(-1px); transform: translateY(-1px); text-decoration: none; }
+    .hub-btn:active { -webkit-transform: scale(0.97); transform: scale(0.97); }
 
     .hub-btn-icon {
       font-size: 1.8em;
@@ -222,23 +240,28 @@
         document.getElementById('btnRepair').href = base + 'login.html?next=' + encodeURIComponent(repairUrl);
       }
 
-      // Load car info
-      fetch('/api/vehicles/qr-info?car_id=' + enc)
-        .then(function(r) { return r.json(); })
-        .catch(function() { return {}; })
-        .then(function(res) {
-          var nameEl = document.getElementById('carName');
-          nameEl.classList.remove('loading');
-          if (res.success && res.data) {
-            var d = res.data;
-            nameEl.textContent = d.license_plate || carId;
-            var detail = [d.brand, d.model, d.fuel_type].filter(Boolean).join(' · ');
-            document.getElementById('carDetail').textContent = detail;
-          } else {
-            nameEl.textContent = 'รหัสรถ: ' + carId;
-            document.getElementById('carDetail').textContent = 'ไม่พบข้อมูลในระบบ';
-          }
-        });
+      // Load car info (guard for browsers without fetch)
+      var nameEl = document.getElementById('carName');
+      if (typeof fetch !== 'undefined') {
+        fetch('/api/vehicles/qr-info?car_id=' + enc)
+          .then(function(r) { return r.json(); })
+          .catch(function() { return {}; })
+          .then(function(res) {
+            nameEl.classList.remove('loading');
+            if (res.success && res.data) {
+              var d = res.data;
+              nameEl.textContent = d.license_plate || carId;
+              var detail = [d.brand, d.model, d.fuel_type].filter(Boolean).join(' \u00b7 ');
+              document.getElementById('carDetail').textContent = detail;
+            } else {
+              nameEl.textContent = '\u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19: ' + carId;
+              document.getElementById('carDetail').textContent = '\u0e44\u0e21\u0e48\u0e1e\u0e1a\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e43\u0e19\u0e23\u0e30\u0e1a\u0e1a';
+            }
+          });
+      } else {
+        nameEl.classList.remove('loading');
+        nameEl.textContent = '\u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19: ' + carId;
+      }
     }
 
     function disableAll() {
