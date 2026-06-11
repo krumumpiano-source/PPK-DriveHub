@@ -27,6 +27,9 @@
     .date-mode-pills { display:flex;gap:4px;background:var(--color-bg-light);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:3px; }
     .date-mode-pill { padding:6px 14px;border:none;border-radius:calc(var(--radius-md) - 2px);font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;background:transparent;color:var(--color-text-muted);transition:all .15s; }
     .date-mode-pill.active { background:white;color:var(--color-primary);box-shadow:var(--shadow-sm); }
+    .date-range-pills { display:flex;gap:4px;background:var(--color-bg-light);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:2px; }
+    .date-range-pill { padding:3px 10px;border:none;border-radius:calc(var(--radius-md) - 2px);font-family:inherit;font-size:.75rem;font-weight:600;cursor:pointer;background:transparent;color:var(--color-text-muted);transition:all .15s; }
+    .date-range-pill.active { background:white;color:var(--color-primary);box-shadow:var(--shadow-sm); }
     .filter-group { display:flex;flex-direction:column;gap:4px;min-width:120px; }
     .filter-group label { font-size:.72rem;font-weight:700;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.04em; }
     .filter-group input,.filter-group select { padding:7px 10px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:.87rem;font-family:inherit;color:var(--color-text);background:white; }
@@ -101,19 +104,28 @@
               <button class="date-mode-pill active" onclick="setDateMode('day',this)">วัน</button>
               <button class="date-mode-pill" onclick="setDateMode('month',this)">เดือน</button>
               <button class="date-mode-pill" onclick="setDateMode('year',this)">ปี</button>
+              <button class="date-mode-pill" onclick="setDateMode('fiscal',this)">ปีงบประมาณ</button>
+            </div>
+            <div class="date-range-pills" style="margin-top:6px;display:flex;gap:6px;">
+              <button class="date-range-pill active" onclick="setRangeMode('single',this)">เดี่ยว</button>
+              <button class="date-range-pill" onclick="setRangeMode('range',this)">ช่วง</button>
             </div>
           </div>
           <div id="filter-day" class="filter-row" style="gap:8px">
-            <div class="filter-group"><label>ตั้งแต่วันที่</label><input type="date" id="dayFrom" onchange="loadReport()"></div>
-            <div class="filter-group"><label>ถึงวันที่</label><input type="date" id="dayTo" onchange="loadReport()"></div>
+            <div class="filter-group"><label id="lbl-day-from">วันที่</label><input type="date" id="dayFrom" onchange="onSingleDateChange('day')"></div>
+            <div class="filter-group" id="fg-day-to"><label>ถึงวันที่</label><input type="date" id="dayTo" onchange="loadReport()"></div>
           </div>
           <div id="filter-month" class="filter-row" style="gap:8px;display:none">
-            <div class="filter-group"><label>ตั้งแต่เดือน</label><input type="month" id="monthFrom" onchange="loadReport()"></div>
-            <div class="filter-group"><label>ถึงเดือน</label><input type="month" id="monthTo" onchange="loadReport()"></div>
+            <div class="filter-group"><label id="lbl-month-from">เดือน</label><input type="month" id="monthFrom" onchange="onSingleDateChange('month')"></div>
+            <div class="filter-group" id="fg-month-to"><label>ถึงเดือน</label><input type="month" id="monthTo" onchange="loadReport()"></div>
           </div>
           <div id="filter-year" class="filter-row" style="gap:8px;display:none">
-            <div class="filter-group"><label>ตั้งแต่ปี (พ.ศ.)</label><select id="yearFrom" onchange="loadReport()"></select></div>
-            <div class="filter-group"><label>ถึงปี (พ.ศ.)</label><select id="yearTo" onchange="loadReport()"></select></div>
+            <div class="filter-group"><label id="lbl-year-from">ปี (พ.ศ.)</label><select id="yearFrom" onchange="onSingleDateChange('year')"></select></div>
+            <div class="filter-group" id="fg-year-to"><label>ถึงปี (พ.ศ.)</label><select id="yearTo" onchange="loadReport()"></select></div>
+          </div>
+          <div id="filter-fiscal" class="filter-row" style="gap:8px;display:none">
+            <div class="filter-group"><label id="lbl-fiscal-from">ปีงบประมาณ (พ.ศ.)</label><select id="fiscalYear" onchange="onSingleDateChange('fiscal')"></select></div>
+            <div class="filter-group" id="fg-fiscal-to"><label>ถึงปีงบประมาณ (พ.ศ.)</label><select id="fiscalYearTo" onchange="loadReport()"></select></div>
           </div>
           <div class="filter-sep"></div>
           <div class="filter-group" id="fg-car" style="display:none">
@@ -141,6 +153,7 @@
   <script>
     var currentTab = 'trips';
     var dateMode = 'day';
+    var rangeMode = 'single';
     var _lastPayload = null;
 
     /* ═══ เกณฑ์มาตรฐานอัตราสิ้นเปลือง (กม./ลิตร) ── ตรงกับ fuel-ledger.html ═══
@@ -172,17 +185,25 @@
       loadCarFilter();
       loadDriverFilter();
       updateFilterVisibility();
+      _applyRangeModeVisibility();
       loadReport();
     });
 
     function initYearOptions() {
       var yearFrom = document.getElementById('yearFrom');
       var yearTo = document.getElementById('yearTo');
+      var fiscalYear = document.getElementById('fiscalYear');
+      var fiscalYearTo = document.getElementById('fiscalYearTo');
       var cy = new Date().getFullYear() + 543;
-      for (var y = cy; y >= cy - 10; y--) {
+      for (var y = cy + 1; y >= cy - 10; y--) {
         var o1 = document.createElement('option'); o1.value = y; o1.textContent = y; yearFrom.appendChild(o1);
         var o2 = document.createElement('option'); o2.value = y; o2.textContent = y; yearTo.appendChild(o2);
+        var o3 = document.createElement('option'); o3.value = y; o3.textContent = 'พ.ศ. '+y; fiscalYear.appendChild(o3);
+        var o4 = document.createElement('option'); o4.value = y; o4.textContent = 'พ.ศ. '+y; fiscalYearTo.appendChild(o4);
       }
+      var currentFY = new Date().getFullYear() + 543 + (new Date().getMonth() >= 9 ? 1 : 0);
+      fiscalYear.value = currentFY;
+      fiscalYearTo.value = currentFY;
     }
 
     function pad(n) { return String(n).padStart(2,'0'); }
@@ -309,23 +330,36 @@
     }
 
     function getDateRange() {
-      if (dateMode==='day') return {date_from:document.getElementById('dayFrom').value, date_to:document.getElementById('dayTo').value};
+      if (dateMode==='day') {
+        var df=document.getElementById('dayFrom').value;
+        var dt=rangeMode==='single'?df:document.getElementById('dayTo').value;
+        return {date_from:df, date_to:dt};
+      }
       if (dateMode==='month') {
-        var mf=document.getElementById('monthFrom').value, mt=document.getElementById('monthTo').value;
-        if (!mf||!mt) return {date_from:'',date_to:''};
+        var mf=document.getElementById('monthFrom').value;
+        var mt=rangeMode==='single'?mf:document.getElementById('monthTo').value;
+        if (!mf) return {date_from:'',date_to:''};
         var lastDay=new Date(parseInt(mt.substr(0,4)),parseInt(mt.substr(5,2)),0);
         return {date_from:mf+'-01', date_to:fmtDate(lastDay)};
       }
       if (dateMode==='year') {
         var yf=parseInt(document.getElementById('yearFrom').value)-543;
-        var yt=parseInt(document.getElementById('yearTo').value)-543;
+        var yt=rangeMode==='single'?yf:(parseInt(document.getElementById('yearTo').value)-543);
         return {date_from:yf+'-01-01', date_to:yt+'-12-31'};
+      }
+      if (dateMode==='fiscal') {
+        var fyf=parseInt(document.getElementById('fiscalYear').value);
+        var fyt=rangeMode==='single'?fyf:parseInt(document.getElementById('fiscalYearTo').value);
+        var ceFrom=(fyf-543)-1; var ceTo=fyt-543;
+        return {date_from:ceFrom+'-10-01', date_to:ceTo+'-09-30'};
       }
       return {date_from:'',date_to:''};
     }
     function getRangeLabel() {
       var r=getDateRange();
       if (!r.date_from && !r.date_to) return '';
+      if (rangeMode==='single') return fmtDateTH(r.date_from);
+      if (r.date_from===r.date_to) return fmtDateTH(r.date_from);
       return fmtDateTH(r.date_from)+' - '+fmtDateTH(r.date_to);
     }
 
@@ -343,6 +377,38 @@
       document.getElementById('filter-day').style.display=mode==='day'?'':'none';
       document.getElementById('filter-month').style.display=mode==='month'?'':'none';
       document.getElementById('filter-year').style.display=mode==='year'?'':'none';
+      document.getElementById('filter-fiscal').style.display=mode==='fiscal'?'':'none';
+      _applyRangeModeVisibility();
+      loadReport();
+    }
+    function setRangeMode(mode,el) {
+      rangeMode=mode;
+      document.querySelectorAll('.date-range-pill').forEach(function(p){p.classList.remove('active');});
+      el.classList.add('active');
+      _applyRangeModeVisibility();
+      loadReport();
+    }
+    function _applyRangeModeVisibility() {
+      var isRange=rangeMode==='range';
+      var toIds={day:'fg-day-to',month:'fg-month-to',year:'fg-year-to',fiscal:'fg-fiscal-to'};
+      var lblFrom={day:'lbl-day-from',month:'lbl-month-from',year:'lbl-year-from',fiscal:'lbl-fiscal-from'};
+      Object.keys(toIds).forEach(function(m){
+        var el=document.getElementById(toIds[m]);
+        if(el) el.style.display=isRange?'':'none';
+      });
+      var lbl=document.getElementById(lblFrom[dateMode]);
+      if(lbl){
+        var map={day:{single:'\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48',range:'\u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48'},month:{single:'\u0e40\u0e14\u0e37\u0e2d\u0e19',range:'\u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48\u0e40\u0e14\u0e37\u0e2d\u0e19'},year:{single:'\u0e1b\u0e35 (\u0e1e.\u0e28.)',range:'\u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48\u0e1b\u0e35 (\u0e1e.\u0e28.)'},fiscal:{single:'\u0e1b\u0e35\u0e07\u0e1a\u0e1b\u0e23\u0e30\u0e21\u0e32\u0e13 (\u0e1e.\u0e28.)',range:'\u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48\u0e1b\u0e35\u0e07\u0e1a (\u0e1e.\u0e28.)'}};
+        if(map[dateMode]) lbl.textContent=map[dateMode][rangeMode]||lbl.textContent;
+      }
+    }
+    function onSingleDateChange(mode) {
+      if(rangeMode==='single') {
+        if(mode==='day') document.getElementById('dayTo').value=document.getElementById('dayFrom').value;
+        else if(mode==='month') document.getElementById('monthTo').value=document.getElementById('monthFrom').value;
+        else if(mode==='year') document.getElementById('yearTo').value=document.getElementById('yearFrom').value;
+        else if(mode==='fiscal') document.getElementById('fiscalYearTo').value=document.getElementById('fiscalYear').value;
+      }
       loadReport();
     }
     function updateFilterVisibility() {
@@ -792,28 +858,151 @@
     }
 
     /* ═══ PRINT / PDF ════════════════════════════════════════════════ */
-    function printReport() {
+
+    /* Signature Modal helpers */
+    var _sigResolve = null;
+    var _sigFields = [];
+    function requireSigs(fields, title) {
+      return new Promise(function(resolve) {
+        _sigResolve = resolve;
+        _sigFields = fields;
+        document.getElementById('sigModalTitle').textContent = title || 'กรอกข้อมูลเอกสาร';
+        // pre-fill doc fields
+        var savedDocNo = localStorage.getItem('sig_docno') || '';
+        var savedDocDate = localStorage.getItem('sig_docdate') || new Date().toISOString().slice(0,10);
+        document.getElementById('sigDocNumber').value = savedDocNo;
+        document.getElementById('sigDocDate').value = savedDocDate;
+        // build sig fields
+        var html = '';
+        fields.forEach(function(f) {
+          var sn = localStorage.getItem('sig_'+f.key+'_name') || '';
+          var sp = localStorage.getItem('sig_'+f.key+'_pos') || '';
+          html += '<div style="border:1px solid #e0e0e0;border-radius:8px;padding:12px;margin-bottom:10px;">'
+            + '<div style="font-weight:700;font-size:.9em;color:#555;margin-bottom:8px;">'+htmlEsc(f.label)+'</div>'
+            + '<div style="display:flex;gap:10px;">'
+            + '<div style="flex:2"><label style="display:block;font-size:.82em;font-weight:700;margin-bottom:3px;">ชื่อ-สกุล <span style="color:#c62828;">*</span></label>'
+            + '<input type="text" id="sig_'+f.key+'_name" value="'+htmlEsc(sn)+'" placeholder="ชื่อ-สกุล" style="width:100%;padding:7px 9px;border:1px solid #ccc;border-radius:6px;font-size:.95em;font-family:inherit;box-sizing:border-box;"></div>'
+            + '<div style="flex:2"><label style="display:block;font-size:.82em;font-weight:700;margin-bottom:3px;">ตำแหน่ง <span style="color:#c62828;">*</span></label>'
+            + '<input type="text" id="sig_'+f.key+'_pos" value="'+htmlEsc(sp)+'" placeholder="ตำแหน่ง" style="width:100%;padding:7px 9px;border:1px solid #ccc;border-radius:6px;font-size:.95em;font-family:inherit;box-sizing:border-box;"></div>'
+            + '</div></div>';
+        });
+        document.getElementById('sigModalFields').innerHTML = html;
+        document.getElementById('sigModalMsg').style.display = 'none';
+        var m = document.getElementById('sigModal');
+        m.style.display = 'flex';
+      });
+    }
+    function _sigConfirm() {
+      var missing = [];
+      var docNo = (document.getElementById('sigDocNumber').value||'').trim();
+      var docDate = (document.getElementById('sigDocDate').value||'').trim();
+      if (!docNo) missing.push('เลขที่เอกสาร');
+      if (!docDate) missing.push('วันที่เอกสาร');
+      _sigFields.forEach(function(f) {
+        if (!(document.getElementById('sig_'+f.key+'_name').value||'').trim()) missing.push(f.label+' (ชื่อ-สกุล)');
+        if (!(document.getElementById('sig_'+f.key+'_pos').value||'').trim()) missing.push(f.label+' (ตำแหน่ง)');
+      });
+      var msgEl = document.getElementById('sigModalMsg');
+      if (missing.length) {
+        msgEl.textContent = 'กรุณากรอกข้อมูลที่จำเป็น: ' + missing.join(', ');
+        msgEl.style.display = 'block';
+        return;
+      }
+      msgEl.style.display = 'none';
+      // save to localStorage
+      localStorage.setItem('sig_docno', docNo);
+      localStorage.setItem('sig_docdate', docDate);
+      var result = {docNumber: docNo, docDate: docDate};
+      _sigFields.forEach(function(f) {
+        var n = (document.getElementById('sig_'+f.key+'_name').value||'').trim();
+        var p = (document.getElementById('sig_'+f.key+'_pos').value||'').trim();
+        localStorage.setItem('sig_'+f.key+'_name', n);
+        localStorage.setItem('sig_'+f.key+'_pos', p);
+        result[f.key] = {name: n, pos: p};
+      });
+      document.getElementById('sigModal').style.display = 'none';
+      if (_sigResolve) { _sigResolve(result); _sigResolve = null; }
+    }
+    function _sigReject() {
+      document.getElementById('sigModal').style.display = 'none';
+      if (_sigResolve) { _sigResolve(null); _sigResolve = null; }
+    }
+    function _sigClearAll() {
+      localStorage.removeItem('sig_docno');
+      localStorage.removeItem('sig_docdate');
+      (_sigFields||[]).forEach(function(f) {
+        localStorage.removeItem('sig_'+f.key+'_name');
+        localStorage.removeItem('sig_'+f.key+'_pos');
+      });
+      document.getElementById('sigDocNumber').value = '';
+      document.getElementById('sigDocDate').value = new Date().toISOString().slice(0,10);
+      (_sigFields||[]).forEach(function(f) {
+        var ne = document.getElementById('sig_'+f.key+'_name');
+        var pe = document.getElementById('sig_'+f.key+'_pos');
+        if(ne) ne.value='';
+        if(pe) pe.value='';
+      });
+    }
+
+    var _SIG_FIELDS_STD = [
+      {key:'reporter', label:'\u0e1c\u0e39\u0e49\u0e23\u0e32\u0e22\u0e07\u0e32\u0e19/\u0e1c\u0e39\u0e49\u0e08\u0e31\u0e14\u0e17\u0e33'},
+      {key:'chief', label:'\u0e2b\u0e31\u0e27\u0e2b\u0e19\u0e49\u0e32\u0e07\u0e32\u0e19\u0e1e\u0e31\u0e2a\u0e14\u0e38'},
+      {key:'director', label:'\u0e1c\u0e39\u0e49\u0e2d\u0e33\u0e19\u0e27\u0e22\u0e01\u0e32\u0e23\u0e42\u0e23\u0e07\u0e40\u0e23\u0e35\u0e22\u0e19'}
+    ];
+
+    function _buildSigHtml(sigs) {
+      function box(key, lbl) {
+        var s = sigs[key] || {};
+        return '<div style="text-align:center;width:28%;">'
+          + '<div style="border-top:1px solid #000;margin-top:50px;padding-top:6px;">'
+          + 'ลงชื่อ.......................................................................<br>'
+          + '<span style="font-weight:700;">('+htmlEsc(s.name||'')+')</span><br>'
+          + htmlEsc(s.pos||'')+' </div></div>';
+      }
+      return '<div style="display:flex;justify-content:space-around;margin-top:40pt;">'
+        + box('reporter','ผู้รายงาน') + box('chief','หัวหน้างานพัสดุ') + box('director','ผู้อำนวยการ')
+        + '</div>';
+    }
+
+    async function printReport() {
       if (!_lastPayload) { alert('ยังไม่มีข้อมูล'); return; }
-      var t=_lastPayload.tab, p=_lastPayload.payload, r=_lastPayload.range;
-      var rl=r.date_from&&r.date_to?r.date_from+' ถึง '+r.date_to:'ทั้งหมด';
+      var sigs = await requireSigs(_SIG_FIELDS_STD, 'ข้อมูลเอกสาร — '+({trips:'การใช้งานรถ',drivers:'พนักงานขับรถ',fuel:'เชื้อเพลิง',repairs:'ซ่อมบำรุง'}[_lastPayload.tab]||_lastPayload.tab));
+      if (!sigs) return;
+      var t=_lastPayload.tab, p=_lastPayload.payload;
+      var rl=getRangeLabel()||'ทั้งหมด';
       var tn={trips:'การใช้งานรถ',drivers:'พนักงานขับรถ',fuel:'เชื้อเพลิง',repairs:'ซ่อมบำรุง'}[t]||t;
       var tblHtml='';
       if (t==='trips')   tblHtml=buildPrintTrips(p);
       else if (t==='drivers') tblHtml=buildPrintDrivers(p);
       else if (t==='fuel')    tblHtml=buildPrintFuel(p);
       else if (t==='repairs') tblHtml=buildPrintRepairs(p);
+      var isLandscape=(t==='trips'||t==='fuel');
       var w=window.open('','_blank');
       var h='<!DOCTYPE html><html><head><meta charset="utf-8"><title>รายงาน'+tn+'</title>';
-      h+='<style>body{font-family:"TH Sarabun New",Sarabun,sans-serif;font-size:13pt;margin:15mm;color:#000}.hdr{text-align:center;margin-bottom:16px}.hdr h2{font-size:16pt;margin:0}.hdr p{margin:3px 0;font-size:13pt}table{width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:12px}th,td{border:1px solid #333;padding:3px 5px}th{background:#e8e8e8;font-weight:700;text-align:center}.sl{font-size:13pt;font-weight:700;margin:14px 0 6px}.sigs{margin-top:40px;display:flex;justify-content:space-around}.sig{text-align:center;width:28%}.sigline{border-top:1px solid #000;margin-top:40px;padding-top:5px;font-size:12pt}@media print{@page{size:A4 landscape}body{margin:8mm;font-size:9pt}}</style></head><body>';
-      h+='<div class="hdr"><h2>โรงเรียนพะเยาพิทยาคม</h2><p>รายงาน'+tn+'</p><p>ช่วงเวลา: '+rl+'</p></div>';
+      h+='<style>';
+      h+='@import url("https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap");';
+      h+='@page{size:A4'+(isLandscape?' landscape':'')+';margin:20mm;}';
+      h+='body{font-family:"TH Sarabun New",Sarabun,"Angsana New",sans-serif;font-size:16pt;line-height:1.5;margin:0;color:#000;}';
+      h+='.hdr{margin-bottom:14pt;}.hdr table{width:100%;border:none;border-collapse:collapse;font-size:16pt;}.hdr td{padding:1pt 0;border:none;vertical-align:top;}';
+      h+='.hdr-rule{border:none;border-top:2px solid #000;margin:6pt 0;}';
+      h+='table.data{width:100%;border-collapse:collapse;font-size:11pt;margin-bottom:10pt;}';
+      h+='table.data th,table.data td{border:1px solid #333;padding:3pt 5pt;}';
+      h+='table.data th{background:#f0f0f0;font-weight:700;text-align:center;}';
+      h+='.sl{font-size:14pt;font-weight:700;margin:12pt 0 4pt;}';
+      h+='</style></head><body>';
+      // header
+      h+='<div class="hdr"><table><tr>';
+      h+='<td><b>ส่วนราชการ:</b> งานยานพาหนะ โรงเรียนพะเยาพิทยาคม</td>';
+      h+='<td style="text-align:right;white-space:nowrap;"><b>เลขที่:</b> '+htmlEsc(sigs.docNumber)+'</td>';
+      h+='</tr><tr>';
+      h+='<td><b>เรื่อง:</b> รายงาน'+tn+' ช่วงเวลา '+htmlEsc(rl)+'</td>';
+      h+='<td style="text-align:right;white-space:nowrap;"><b>วันที่:</b> '+fmtDateTH(sigs.docDate)+'</td>';
+      h+='</tr></table><hr class="hdr-rule"></div>';
       h+=tblHtml;
-      h+='<div class="sigs">';
-      h+='<div class="sig"><div class="sigline">ลงชื่อ..............................<br>ผู้รายงาน</div></div>';
-      h+='<div class="sig"><div class="sigline">ลงชื่อ..............................<br>หัวหน้างานพัสดุ</div></div>';
-      h+='<div class="sig"><div class="sigline">ลงชื่อ..............................<br>ผู้อำนวยการ</div></div>';
-      h+='</div></body></html>';
+      h+=_buildSigHtml(sigs);
+      h+='</body></html>';
       w.document.write(h); w.document.close();
-      setTimeout(function(){w.print();},400);
+      setTimeout(function(){w.print();},500);
     }
 
     function buildPrintTrips(p) {
@@ -823,26 +1012,27 @@
         if(!s) return 'ไม่มีการบันทึก';
         return formatDateTimeThai(s);
       }
-      var h='<table><thead><tr>'
+      var h='<table class="data"><thead><tr>'
         +'<th>ที่</th><th>วันที่</th><th>สแกนออก</th><th>สแกนเข้า</th><th>ทะเบียน</th>'
         +'<th>ผู้ขอ</th><th>จุดหมาย</th><th>ภารกิจ</th><th>คนขับ</th>'
-        +'<th>ก่อนออกเดินทาง</th><th>กลับมาจากเดินทาง</th>'
-        +'<th>ไมล์ก่อนออก</th><th>ไมล์กลับมา</th><th>ระยะ(กม.)</th><th>หมายเหตุ</th>'
+        +'<th>ก่อนออก</th><th>กลับมา</th>'
+        +'<th>ไมล์ออก</th><th>ไมล์กลับ</th><th>ระยะ(กม.)</th>'
+        +'<th>เลขที่คำสั่ง</th><th>ผู้อนุมัติ</th><th>หมายเหตุ</th>'
         +'</tr></thead><tbody>';
       recs.forEach(function(r,i) {
-        var d=new Date(r.date);
-        var thd=isNaN(d)?r.date||'':formatDateThai(r.date);
+        var thd=formatDateThai(r.date);
         var effStart=r.mileage_start!=null?r.mileage_start:(r.prev_ret_mileage!=null?r.prev_ret_mileage:null);
         var effEnd=r.mileage_end!=null?r.mileage_end:(r.next_dep_mileage!=null?r.next_dep_mileage:null);
         var km=(effStart!=null&&effEnd!=null&&effEnd>effStart)?effEnd-effStart:'-';
         var isAutoGap=r.mission&&r.mission.indexOf('ไม่บันทึกข้อมูล')>=0;
-        var driver=isAutoGap?'ไม่ทราบ':(r.driver_name||'-');
         var remark='';
         if(isAutoGap) remark='มีการใช้รถโดยไม่บันทึกข้อมูล';
         else if(!r.actual_departure&&!r.actual_return) remark='ไม่บันทึกออกและกลับ';
         else if(!r.actual_departure) remark='ไม่บันทึกก่อนออกเดินทาง';
         else if(!r.actual_return) remark='ไม่บันทึกกลับมาจากเดินทาง';
         var remarkStyle=remark?'style="color:red;font-weight:bold"':'';
+        var approver=r.signed_director||r.signed_vehicle_chief||'-';
+        var orderNo=r.travel_order_number||'-';
         h+='<tr>'
           +'<td>'+(i+1)+'</td><td>'+thd+'</td>'
           +'<td>'+(r.time_start||'')+'</td><td>'+(r.time_end||'')+'</td>'
@@ -855,6 +1045,8 @@
           +'<td>'+(isAutoGap?'':(r.mileage_start!=null?r.mileage_start:''))+'</td>'
           +'<td>'+(isAutoGap?'':(r.mileage_end!=null?r.mileage_end:''))+'</td>'
           +'<td>'+km+'</td>'
+          +'<td>'+htmlEsc(orderNo)+'</td>'
+          +'<td>'+htmlEsc(approver)+'</td>'
           +'<td '+remarkStyle+'>'+remark+'</td>'
           +'</tr>';
       });
@@ -864,7 +1056,7 @@
     function buildPrintDrivers(p) {
       var drs=(p.drivers||[]).filter(function(d){return d.trip_count>0;});
       if (!drs.length) return '<p>ไม่มีข้อมูล</p>';
-      var h='<table><thead><tr><th>ที่</th><th>ชื่อ</th><th>จำนวนเที่ยว</th><th>ระยะทาง(กม.)</th><th>ชม.ขับ</th><th>วันทำการ</th><th>วันหยุดสัปดาห์</th><th>บันทึกไม่ครบ</th></tr></thead><tbody>';
+      var h='<table class="data"><thead><tr><th>ที่</th><th>ชื่อ</th><th>จำนวนเที่ยว</th><th>ระยะทาง(กม.)</th><th>ชม.ขับ</th><th>วันทำการ</th><th>วันหยุดสัปดาห์</th><th>บันทึกไม่ครบ</th></tr></thead><tbody>';
       drs.forEach(function(d,i) {
         h+='<tr><td>'+(i+1)+'</td><td>'+(d.driver_name||'-')+'</td><td>'+(d.trip_count||0)+'</td>'
           +'<td>'+Math.round(d.total_km||0)+'</td><td>'+Number(d.total_hours||0).toFixed(1)+'</td>'
@@ -878,13 +1070,13 @@
       var h='';
       var expL={procurement:'ใบสั่งจ่ายน้ำมัน',official_travel:'งบไปราชการ'};
       if (bv.length) {
-        h+='<p class="sl">สรุปรายคัน</p><table><thead><tr><th>ที่</th><th>ทะเบียน</th><th>ยี่ห้อ</th><th>ครั้ง</th><th>ลิตร</th><th>บาท</th><th>กม./ลิตร</th></tr></thead><tbody>';
+        h+='<p class="sl">สรุปรายคัน</p><table class="data"><thead><tr><th>ที่</th><th>ทะเบียน</th><th>ยี่ห้อ</th><th>ครั้ง</th><th>ลิตร</th><th>บาท</th><th>กม./ลิตร</th></tr></thead><tbody>';
         bv.forEach(function(v,i){h+='<tr><td>'+(i+1)+'</td><td>'+(v.license_plate||'-')+'</td><td>'+(v.brand||'-')+'</td><td>'+(v.count||0)+'</td><td>'+(v.total_liters||0)+'</td><td>'+Number(v.total_amount||0).toFixed(2)+'</td><td>'+Number(v.avg_consumption||0).toFixed(2)+'</td></tr>';});
         h+='</tbody></table>';
       }
       if (recs.length) {
-        h+='<p class="sl">รายการทั้งหมด</p><table><thead><tr><th>ที่</th><th>เลขที่</th><th>วันที่</th><th>ทะเบียน</th><th>ผู้เบิก</th><th>ประเภท</th><th>ลิตร</th><th>ราคา/ลิตร</th><th>รวม(บาท)</th><th>ปั๊ม</th><th>กม./ลิตร</th></tr></thead><tbody>';
-        recs.forEach(function(r,i){h+='<tr><td>'+(i+1)+'</td><td>'+(r.document_number||'-')+'</td><td>'+(r.date||'-')+'</td><td>'+(r.license_plate||'-')+'</td><td>'+(r.driver_name||r.driver_name_manual||'-')+'</td><td>'+(expL[r.expense_type]||r.expense_type||'-')+'</td><td>'+(r.liters||0)+'</td><td>'+(r.price_per_liter||0)+'</td><td>'+Number(r.amount||0).toFixed(2)+'</td><td>'+(r.gas_station_name||'-')+'</td><td>'+(r.fuel_consumption_rate?Number(r.fuel_consumption_rate).toFixed(2):'-')+'</td></tr>';});
+        h+='<p class="sl">รายการทั้งหมด</p><table class="data"><thead><tr><th>ที่</th><th>เลขที่</th><th>วันที่</th><th>ทะเบียน</th><th>ผู้เบิก</th><th>ประเภท</th><th>ลิตร</th><th>ราคา/ลิตร</th><th>รวม(บาท)</th><th>ปั๊ม</th><th>กม./ลิตร</th></tr></thead><tbody>';
+        recs.forEach(function(r,i){h+='<tr><td>'+(i+1)+'</td><td>'+(r.document_number||'-')+'</td><td>'+fmtDateTH(r.date)+'</td><td>'+(r.license_plate||'-')+'</td><td>'+(r.driver_name||r.driver_name_manual||'-')+'</td><td>'+(expL[r.expense_type]||r.expense_type||'-')+'</td><td>'+(r.liters||0)+'</td><td>'+(r.price_per_liter||0)+'</td><td>'+Number(r.amount||0).toFixed(2)+'</td><td>'+(r.gas_station_name||'-')+'</td><td>'+(r.fuel_consumption_rate?Number(r.fuel_consumption_rate).toFixed(2):'-')+'</td></tr>';});
         h+='</tbody></table>';
       }
       return h||'<p>ไม่มีข้อมูล</p>';
@@ -894,13 +1086,13 @@
       var bv=p.by_vehicle||[], recs=p.records||[];
       var h='';
       if (bv.length) {
-        h+='<p class="sl">สรุปรายคัน</p><table><thead><tr><th>ที่</th><th>ทะเบียน</th><th>ยี่ห้อ/รุ่น</th><th>จำนวนซ่อม</th><th>ค่าซ่อมรวม(บาท)</th><th>เสร็จ</th><th>รอ</th></tr></thead><tbody>';
+        h+='<p class="sl">สรุปรายคัน</p><table class="data"><thead><tr><th>ที่</th><th>ทะเบียน</th><th>ยี่ห้อ/รุ่น</th><th>จำนวนซ่อม</th><th>ค่าซ่อมรวม(บาท)</th><th>เสร็จ</th><th>รอ</th></tr></thead><tbody>';
         bv.forEach(function(v,i){h+='<tr><td>'+(i+1)+'</td><td>'+(v.license_plate||'-')+'</td><td>'+(v.brand||'')+' '+(v.model||'')+'</td><td>'+(v.repair_count||0)+'</td><td>'+Number(v.total_cost||0).toFixed(2)+'</td><td>'+(v.completed||0)+'</td><td>'+(v.active||0)+'</td></tr>';});
         h+='</tbody></table>';
       }
       if (recs.length) {
-        h+='<p class="sl">รายการซ่อม</p><table><thead><tr><th>ที่</th><th>วันที่แจ้ง</th><th>ทะเบียน</th><th>ปัญหา</th><th>อู่/ผู้ซ่อม</th><th>ค่าใช้จ่าย(บาท)</th><th>สถานะ</th></tr></thead><tbody>';
-        recs.forEach(function(r,i){h+='<tr><td>'+(i+1)+'</td><td>'+(r.date_reported||'-')+'</td><td>'+(r.license_plate||'-')+'</td><td>'+(r.problem_type||r.issue_description||r.description||'-')+'</td><td>'+(r.garage||'-')+'</td><td>'+Number(r.cost||0).toFixed(2)+'</td><td>'+(r.status||'-')+'</td></tr>';});
+        h+='<p class="sl">รายการซ่อม</p><table class="data"><thead><tr><th>ที่</th><th>วันที่แจ้ง</th><th>ทะเบียน</th><th>ปัญหา</th><th>อู่/ผู้ซ่อม</th><th>ค่าใช้จ่าย(บาท)</th><th>สถานะ</th></tr></thead><tbody>';
+        recs.forEach(function(r,i){h+='<tr><td>'+(i+1)+'</td><td>'+fmtDateTH(r.date_reported)+'</td><td>'+(r.license_plate||'-')+'</td><td>'+(r.problem_type||r.issue_description||r.description||'-')+'</td><td>'+(r.garage||'-')+'</td><td>'+Number(r.cost||0).toFixed(2)+'</td><td>'+(r.status||'-')+'</td></tr>';});
         h+='</tbody></table>';
       }
       return h||'<p>ไม่มีข้อมูล</p>';
@@ -909,6 +1101,36 @@
 
   <div style="background:var(--color-bg-light);padding:16px 20px;text-align:center;color:var(--color-text-muted);font-size:.85em;margin-top:20px">
     <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+  </div>
+
+  <!-- ═══ Signature Modal ═══ -->
+  <div id="sigModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)_sigReject()">
+    <div style="background:#fff;border-radius:14px;padding:28px 30px;width:min(560px,96vw);max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.25);font-family:inherit;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+        <h3 id="sigModalTitle" style="margin:0;font-size:1.1em;">กรอกข้อมูลเอกสาร</h3>
+        <button onclick="_sigReject()" style="border:none;background:none;font-size:1.4em;cursor:pointer;color:#888;">✕</button>
+      </div>
+      <div style="background:#f0f4ff;border-left:3px solid #3f51b5;border-radius:4px;padding:8px 12px;font-size:.85em;color:#283593;margin-bottom:16px;">
+        ข้อมูลจะถูกจดจำสำหรับครั้งถัดไปโดยอัตโนมัติ — กดปุ่ม <b>ล้างค่า</b> หากต้องการเปลี่ยนข้อมูล
+      </div>
+      <div id="sigModalMsg" style="display:none;padding:8px 12px;background:#fff3e0;border-left:3px solid #f57c00;border-radius:4px;font-size:.88em;color:#e65100;margin-bottom:12px;"></div>
+      <div style="display:flex;gap:12px;margin-bottom:14px;">
+        <div style="flex:1;">
+          <label style="display:block;font-weight:700;font-size:.88em;margin-bottom:4px;">เลขที่เอกสาร <span style="color:#c62828;">*</span></label>
+          <input type="text" id="sigDocNumber" placeholder="เช่น พย.0025/2569" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:1em;font-family:inherit;box-sizing:border-box;">
+        </div>
+        <div style="flex:1;">
+          <label style="display:block;font-weight:700;font-size:.88em;margin-bottom:4px;">วันที่เอกสาร <span style="color:#c62828;">*</span></label>
+          <input type="date" id="sigDocDate" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:1em;font-family:inherit;box-sizing:border-box;">
+        </div>
+      </div>
+      <div id="sigModalFields"></div>
+      <div style="display:flex;gap:10px;margin-top:20px;">
+        <button onclick="_sigReject()" style="flex:1;padding:10px;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer;font-size:1em;font-family:inherit;">ยกเลิก</button>
+        <button onclick="_sigClearAll()" style="flex:1;padding:10px;border:1px solid #e57373;border-radius:8px;background:#fff;color:#c62828;cursor:pointer;font-size:1em;font-family:inherit;">ล้างค่า</button>
+        <button onclick="_sigConfirm()" style="flex:2;padding:10px;border:none;border-radius:8px;background:var(--color-primary);color:#fff;cursor:pointer;font-size:1em;font-family:inherit;font-weight:700;">✅ ยืนยันและพิมพ์</button>
+      </div>
+    </div>
   </div>
 </body>
 </html>
