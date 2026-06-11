@@ -744,7 +744,7 @@
           h+='<td><strong>'+htmlEsc(rec.license_plate||rec.car_id||'-')+'</strong></td>';
           h+='<td style="max-width:220px">'+htmlEsc(rec.problem_type||rec.issue_description||rec.description||'-')+'</td>';
           h+='<td>'+htmlEsc(rec.garage||'-')+'</td>';
-          h+='<td>'+fmtMoney(rec.cost||0)+'</td>';
+          h+='<td>'+fmtMoney(rec.grand_total||rec.cost||0)+'</td>';
           h+='<td>'+statusBadge(rec.status)+'</td>';
           h+='</tr>';
         });
@@ -853,7 +853,7 @@
       var hS=['ทะเบียน','ยี่ห้อ/รุ่น','จำนวนซ่อม','ค่าซ่อมรวม (บาท)','เสร็จแล้ว','รอดำเนินการ'];
       var rS=bv.map(function(v){return [v.license_plate||'',(v.brand||'')+' '+(v.model||''),v.repair_count||0,v.total_cost||0,v.completed||0,v.active||0];});
       var hR=['วันที่แจ้ง','ทะเบียน','ประเภทปัญหา','รายละเอียด','อู่/ผู้ซ่อม','ค่าใช้จ่าย (บาท)','สถานะ'];
-      var rR=recs.map(function(r){return [r.date_reported||'',r.license_plate||'',r.problem_type||'',r.issue_description||r.description||'',r.garage||'',r.cost||0,r.status||''];});
+      var rR=recs.map(function(r){return [r.date_reported||'',r.license_plate||'',r.problem_type||'',r.issue_description||r.description||'',r.garage||'',(r.grand_total||r.cost||0),r.status||''];});
       ExportUtils.exportExcelMultiSheet({filename:'ซ่อมบำรุง_'+ds,sheets:[{sheetName:'สรุปรายคัน',headers:hS,rows:rS},{sheetName:'รายการซ่อม',headers:hR,rows:rR}]});
     }
 

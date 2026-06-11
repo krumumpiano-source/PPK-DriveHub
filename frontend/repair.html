@@ -355,7 +355,7 @@
           if(rp.status==='repairing') progress++;
           if(rp.status==='completed'){
             var dc=rp.date_completed||rp.date_reported||'';
-            if(dc.substring(0,7)===ym){ doneMonth++; costMonth+=(rp.cost||0); }
+            if(dc.substring(0,7)===ym){ doneMonth++; costMonth+=(rp.grand_total||rp.cost||0); }
           }
         });
         document.getElementById('sumPending').textContent=pending;
@@ -547,7 +547,7 @@
       }
       html+='</div>';
       if(rp.status==='repairing'&&rp.garage_name) html+='<p style="font-size:.8rem;color:var(--color-text-muted)">🏪 '+escHtml(rp.garage_name)+'</p>';
-      if(rp.status==='completed'&&rp.cost) html+='<p style="font-size:.8rem;color:var(--color-text-muted)">💰 '+rp.cost.toLocaleString()+' บาท</p>';
+      if(rp.status==='completed'&&(rp.grand_total||rp.cost)) html+='<p style="font-size:.8rem;color:var(--color-text-muted)">💰 '+(rp.grand_total||rp.cost).toLocaleString()+' บาท</p>';
       if(isRejected&&rp.rejection_reason) html+='<p style="font-size:.8rem;color:var(--color-danger)">❌ '+escHtml(rp.rejection_reason)+'</p>';
       html+='</div>'; // end body
 

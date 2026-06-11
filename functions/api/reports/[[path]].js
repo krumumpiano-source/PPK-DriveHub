@@ -241,7 +241,7 @@ export async function onRequest(context) {
     );
 
     const summary = await dbFirst(env.DB,
-      `SELECT COUNT(*) AS total, COALESCE(SUM(COALESCE(NULLIF(cost,0), grand_total, 0)),0) AS total_cost,
+      `SELECT COUNT(*) AS total, COALESCE(SUM(COALESCE(NULLIF(grand_total,0), cost, 0)),0) AS total_cost,
        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed,
        SUM(CASE WHEN status NOT IN ('completed','cancelled') THEN 1 ELSE 0 END) AS active
        FROM repair_log rl
