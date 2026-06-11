@@ -164,6 +164,13 @@
         <div class="help-text">จะออโต้ตามคิวอาร์รถแต่ละคัน (หรือเลือกจากรายการ)</div>
       </div>
 
+      <!-- 1.5 เลขที่ใบเสร็จ / Sales Slip -->
+      <div class="form-group">
+        <label>เลขที่ใบเสร็จ / Sales Slip</label>
+        <input type="text" id="documentNumber" placeholder="เช่น INV-2025-0001 (ถ้ามี)">
+        <div class="help-text">กรอกเลขที่จากใบเสร็จรับเงิน หรือ Sales Slip — ใช้สำหรับอ้างอิงในทะเบียนควบคุม</div>
+      </div>
+
       <!-- 2. วันที่เติม -->
       <div class="form-group">
         <label>วันที่เติม <span class="required">*</span></label>
@@ -253,6 +260,13 @@
           style="display: none; color: var(--color-danger-dark); font-size: 0.9em; margin-top: 5px; font-weight: 600;"></div>
       </div>
 
+      <!-- 8.5 สถานีบริการน้ำมัน -->
+      <div class="form-group">
+        <label>สถานีบริการน้ำมัน</label>
+        <input type="text" id="gasStationName" placeholder="เช่น ปตท. สาขาพะเยา, เชลล์ ถนนพหลโยธิน">
+        <div class="help-text">ชื่อสถานีบริการที่เติมน้ำมัน — ใช้สำหรับทะเบียนควบคุม</div>
+      </div>
+
       <!-- 9. เลขไมล์รถขณะเติมน้ำมัน -->
       <div class="form-group">
         <label>เลขไมล์รถขณะเติมน้ำมัน <span class="required">*</span></label>
@@ -302,9 +316,11 @@
         <table id="histTable" style="width: 100%; border-collapse: collapse; font-size: 13px;">
           <thead>
             <tr style="background: var(--color-bg-lighter);">
+              <th style="padding: 10px 8px; text-align: left; border-bottom: 2px solid var(--color-border);">เลขที่</th>
               <th style="padding: 10px 8px; text-align: left; border-bottom: 2px solid var(--color-border);">วันที่</th>
               <th style="padding: 10px 8px; text-align: left; border-bottom: 2px solid var(--color-border);">ทะเบียน</th>
               <th style="padding: 10px 8px; text-align: left; border-bottom: 2px solid var(--color-border);">ผู้เบิก</th>
+              <th style="padding: 10px 8px; text-align: left; border-bottom: 2px solid var(--color-border);">สถานีบริการ</th>
               <th style="padding: 10px 8px; text-align: left; border-bottom: 2px solid var(--color-border);">ประเภทน้ำมัน</th>
               <th style="padding: 10px 8px; text-align: right; border-bottom: 2px solid var(--color-border);">ลิตร</th>
               <th style="padding: 10px 8px; text-align: right; border-bottom: 2px solid var(--color-border);">บาท</th>
@@ -313,7 +329,7 @@
             </tr>
           </thead>
           <tbody id="histBody">
-            <tr><td colspan="8" style="text-align: center; padding: 30px; color: var(--color-text-muted);">กดปุ่ม 🔍 ค้นหา เพื่อโหลดข้อมูล</td></tr>
+            <tr><td colspan="10" style="text-align: center; padding: 30px; color: var(--color-text-muted);">กดปุ่ม 🔍 ค้นหา เพื่อโหลดข้อมูล</td></tr>
           </tbody>
         </table>
       </div>
@@ -642,6 +658,8 @@
         purpose: purpose,
         purpose_detail: purposeDetail || null,
         signed_supply_chief: (document.getElementById('signedSupplyChief') || {}).value || null,
+        document_number: (document.getElementById('documentNumber').value || '').trim() || null,
+        gas_station_name: (document.getElementById('gasStationName').value || '').trim() || null,
         mileage_before: lastMileage,
         mileage_after: parseInt(document.getElementById('mileageBefore').value, 10),
         liters: parseFloat(document.getElementById('liters').value),
@@ -760,7 +778,7 @@
       if (car) params.car_id = car;
 
       var body = document.getElementById('histBody');
-      body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--color-text-muted);">⏳ กำลังโหลด...</td></tr>';
+      body.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--color-text-muted);">⏳ กำลังโหลด...</td></tr>';
 
       apiCall('getFuelLog', params).then(function (res) {
         var records = [];
@@ -770,14 +788,14 @@
         }
         renderHistory(records);
       }).catch(function () {
-        body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--color-danger-dark);">❌ โหลดข้อมูลไม่สำเร็จ</td></tr>';
+        body.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--color-danger-dark);">❌ โหลดข้อมูลไม่สำเร็จ</td></tr>';
       });
     }
 
     function renderHistory(records) {
       var body = document.getElementById('histBody');
       if (!records || records.length === 0) {
-        body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--color-text-muted);">ไม่มีข้อมูลในช่วงที่เลือก</td></tr>';
+        body.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--color-text-muted);">ไม่มีข้อมูลในช่วงที่เลือก</td></tr>';
         document.getElementById('histSummary').innerHTML = '';
         document.getElementById('histCount').textContent = '';
         return;
@@ -804,9 +822,11 @@
         var mileage = r.mileage_after || r.mileage_before || '-';
         var auditMeta = typeof renderAuditMetaInline === 'function' ? renderAuditMetaInline(r) : '';
         html += '<tr style="border-bottom:1px solid var(--color-border);">' +
+          '<td style="padding:8px;font-size:12px;">' + (r.document_number || '-') + '</td>' +
           '<td style="padding:8px;">' + dateDisplay + (auditMeta ? '<br>' + auditMeta : '') + '</td>' +
           '<td style="padding:8px;">' + (r.license_plate || '-') + '</td>' +
           '<td style="padding:8px;">' + driverDisplay + '</td>' +
+          '<td style="padding:8px;font-size:12px;">' + (r.gas_station_name || '-') + '</td>' +
           '<td style="padding:8px;">' + fuelTypeName(r.fuel_type) + '</td>' +
           '<td style="padding:8px;text-align:right;">' + (r.liters || 0).toFixed(2) + '</td>' +
           '<td style="padding:8px;text-align:right;">' + (r.amount || 0).toLocaleString('th-TH', {minimumFractionDigits:2}) + '</td>' +
