@@ -810,24 +810,41 @@
     }
 
     function checkIsAdmin() {
+      var detectedRole = '(ไม่พบ)';
       try {
-        // Try hasPermission (common.js)
-        if (typeof hasPermission === 'function' && hasPermission(['admin', 'super_admin'])) return true;
-        // Try getCurrentUser
-        if (typeof getCurrentUser === 'function') {
-          var u = getCurrentUser();
-          if (u && (u.role === 'admin' || u.role === 'super_admin')) return true;
-        }
+        // Try raw localStorage / sessionStorage first (most reliable)
+        var raw = localStorage.getItem('ppk_user') || sessionStorage.getItem('ppk_user') || '{}';
+        var parsed = JSON.parse(raw);
+        if (parsed && parsed.role) detectedRole = parsed.role;
+        if (parsed && (parsed.role === 'admin' || parsed.role === 'super_admin')) return true;
         // Try API.getUser
         if (typeof API !== 'undefined' && typeof API.getUser === 'function') {
           var u2 = API.getUser();
+          if (u2 && u2.role) detectedRole = u2.role;
           if (u2 && (u2.role === 'admin' || u2.role === 'super_admin')) return true;
         }
-        // Try raw localStorage / sessionStorage
-        var raw = localStorage.getItem('ppk_user') || sessionStorage.getItem('ppk_user') || '{}';
-        var parsed = JSON.parse(raw);
-        if (parsed && (parsed.role === 'admin' || parsed.role === 'super_admin')) return true;
-      } catch(e) {}
+        // Try getCurrentUser
+        if (typeof getCurrentUser === 'function') {
+          var u = getCurrentUser();
+          if (u && u.role) detectedRole = u.role;
+          if (u && (u.role === 'admin' || u.role === 'super_admin')) return true;
+        }
+        // Try hasPermission (common.js)
+        if (typeof hasPermission === 'function' && hasPermission(['admin', 'super_admin'])) return true;
+      } catch(e) { detectedRole = 'ERROR: ' + e.message; }
+      // Show debug info in console
+      console.warn('[usage-log] checkIsAdmin: role =', detectedRole, '| ppk_user =', localStorage.getItem('ppk_user') || sessionStorage.getItem('ppk_user'));
+      // Show debug badge on page
+      var dbg = document.getElementById('_roleDebug');
+      if (!dbg) {
+        dbg = document.createElement('div');
+        dbg.id = '_roleDebug';
+        dbg.style.cssText = 'position:fixed;bottom:10px;right:10px;background:#333;color:#fff;padding:8px 14px;border-radius:8px;font-size:.85em;z-index:99999;cursor:pointer;';
+        dbg.title = 'คลิกเพื่อซ่อน';
+        dbg.onclick = function(){ this.remove(); };
+        document.body.appendChild(dbg);
+      }
+      dbg.textContent = '🔍 role: ' + detectedRole + ' (ไม่ใช่ admin)';
       return false;
     }
 
