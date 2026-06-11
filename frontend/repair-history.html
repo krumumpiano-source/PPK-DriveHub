@@ -234,7 +234,7 @@
       historyData: [], filteredData: [],
       page: 0, loading: false, reqSeq: 0,
       editingId: null, itemRowCount: 0, search: '',
-      _renderToken: 0
+      _renderToken: 0, _searchTimer: null
     };
 
     var SERVICE_TYPE_MAP = {
@@ -408,12 +408,16 @@
         filterHtml += '<option value="' + id + '">' + txt + '</option>';
         modalHtml += '<option value="' + id + '">' + txt + '</option>';
       });
-      var oldFilter = byId('hFilterCar').value;
+      // fallback to URL param ถ้า select ยังไม่มี option ตรงกัน (เช่น โหลด vehicles ช้ากว่า history)
+      var urlCarId = new URLSearchParams(location.search).get('car_id') || '';
+      var oldFilter = byId('hFilterCar').value || urlCarId;
       var oldModal = byId('cmp_car_id').value;
       byId('hFilterCar').innerHTML = filterHtml;
       byId('cmp_car_id').innerHTML = modalHtml;
       if (oldFilter) byId('hFilterCar').value = oldFilter;
       if (oldModal) byId('cmp_car_id').value = oldModal;
+      // ถ้ามี URL param และข้อมูลโหลดแล้ว ให้ re-render เพื่อใช้ filter ที่ set ใหม่
+      if (urlCarId && state.historyData.length) applySearchAndRender();
     }
 
     async function loadVehicles(){
@@ -992,10 +996,7 @@
 
       if (!canEditRepair()) byId('btnAddCompleted').style.display = 'none';
 
-      // โหลดข้อมูลรถ/คนขับพร้อมกับประวัติซ่อม — ไม่รอต่อกัน
-      var params = new URLSearchParams(location.search);
-      var carId = params.get('car_id');
-      if (carId) byId('hFilterCar').value = carId;
+      // ลบการเซ็ต car_id จาก URL param ก่อน loadVehicles (options ยังไม่มี) — ใช้ _buildVehicleDropdowns จัดการแทน
 
       // เริ่มทุก API call พร้อมกัน
       await Promise.allSettled([
