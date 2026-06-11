@@ -856,20 +856,10 @@ function _scheduleThaiPickerInit() {
     setTimeout(initAllThaiDateTimePickers, 1500);
 
     // Pass 4: MutationObserver — catch dynamically inserted inputs (modals etc.)
-    if (typeof MutationObserver !== 'undefined') {
-        try {
-            var obs = new MutationObserver(function (mutations) {
-                var needsInit = false;
-                for (var i = 0; i < mutations.length; i++) {
-                    if (mutations[i].addedNodes && mutations[i].addedNodes.length) {
-                        needsInit = true; break;
-                    }
-                }
-                if (needsInit) initAllThaiDateTimePickers();
-            });
-            obs.observe(document.body || document.documentElement, { childList: true, subtree: true });
-        } catch (e) { /* ignore */ }
-    }
+    // NOTE: ปิดแล้ว — MutationObserver กับ subtree:true ทำให้เกิด infinite loop:
+    //   renderChunk insertAdjacentHTML → observer fires → initAllThaiDateTimePickers()
+    //   → flatpickr modifies DOM → observer fires อีก → loop ไม่หยุด → Page Unresponsive
+    // แต่ละหน้าต้อง call initAllThaiDateTimePickers() ด้วยตัวเองเมื่อเปิด modal
 }
 
 if (document.readyState === 'loading') {
