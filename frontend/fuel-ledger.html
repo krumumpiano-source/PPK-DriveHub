@@ -34,6 +34,17 @@
     .summary-card .value { font-size: 1.4em; font-weight: 700; }
     .btn-print { padding: 8px 20px; background: var(--color-primary); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
     .btn-print:hover { opacity: .85; }
+    /* Gov Register Modal */
+    #govRegModal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:9999; align-items:center; justify-content:center; }
+    #govRegModal.open { display:flex; }
+    #govRegModalBox { background:#fff; border-radius:14px; padding:28px 30px; width:min(520px,96vw); max-height:90vh; overflow-y:auto; box-shadow:0 8px 40px rgba(0,0,0,.25); }
+    #govRegModalBox h3 { margin:0 0 20px 0; font-size:1.15em; }
+    .grm-field { margin-bottom:16px; }
+    .grm-field label { display:block; font-weight:700; font-size:.93em; margin-bottom:5px; }
+    .grm-field input, .grm-field select { width:100%; padding:9px 12px; border:1px solid #ccc; border-radius:8px; font-size:1em; font-family:inherit; box-sizing:border-box; }
+    .grm-field .help { font-size:.83em; color:#666; margin-top:4px; }
+    .grm-row { display:flex; gap:12px; }
+    .grm-row .grm-field { flex:1; }
     @media print {
       .header, .tab-bar, .filter-row, .nav-top, .sidebar, .btn-print, .no-print { display: none !important; }
       .tab-panel { display: block !important; page-break-after: always; }
@@ -78,6 +89,7 @@
         <button class="btn-print" onclick="loadAll()">🔍 โหลดข้อมูล</button>
         <button class="btn-print" onclick="printActiveTab()" style="background:#555;">🖨️ พิมพ์เอกสาร</button>
         <button class="btn-print" onclick="exportLedgerExcel()" style="background:#217346;">📥 Excel</button>
+        <button class="btn-print" onclick="openGovRegModal()" style="background:#7b1fa2;">📄 ส่งออกทะเบียนราชการ</button>
       </div>
 
       <!-- Tabs -->
@@ -1674,7 +1686,264 @@
 
       govOpen('รายงานขอซื้อน้ำมัน ' + periodLabel, html);
     }
+
+    /* ═══════════════════════════════════════════════════════════════
+       📄 ส่งออกทะเบียนควบคุมการจัดซื้อน้ำมัน (แบบราชการ)
+    ═══════════════════════════════════════════════════════════════ */
+    function openGovRegModal() {
+      if (!ledgerData) { alert('กรุณาโหลดข้อมูลก่อนโดยกดปุ่ม 🔍 โหลดข้อมูล'); return; }
+      // populate month/year selects
+      var fy = ledgerData.fiscal_year_be;
+      var startYear = fy - 543 - 1;
+      var moSel = document.getElementById('grmMonth');
+      var yrSel = document.getElementById('grmYear');
+      moSel.innerHTML = '';
+      var moNames = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+      moNames.forEach(function(n, i) {
+        var o = document.createElement('option'); o.value = i + 1; o.textContent = n;
+        moSel.appendChild(o);
+      });
+      // default to current month
+      moSel.value = new Date().getMonth() + 1;
+      yrSel.innerHTML = '';
+      [startYear + 543, fy].forEach(function(y) {
+        var o = document.createElement('option'); o.value = y - 543; o.textContent = 'พ.ศ. ' + y;
+        yrSel.appendChild(o);
+      });
+      yrSel.value = new Date().getFullYear();
+      // default day
+      document.getElementById('grmDay').value = new Date().toISOString().split('T')[0];
+      // show fiscal year label
+      document.getElementById('grmFYLabel').textContent = 'ปีงบประมาณ พ.ศ. ' + fy + ' (ต.ค. ' + (fy-1) + ' – ก.ย. ' + fy + ')';
+      grmToggle();
+      document.getElementById('govRegModal').classList.add('open');
+    }
+    function closeGovRegModal() {
+      document.getElementById('govRegModal').classList.remove('open');
+    }
+    function grmToggle() {
+      var mode = document.getElementById('grmMode').value;
+      document.getElementById('grmDayRow').style.display = mode === 'day' ? 'flex' : 'none';
+      document.getElementById('grmMonthRow').style.display = mode === 'month' ? 'flex' : 'none';
+      document.getElementById('grmFYRow').style.display = mode === 'fiscal' ? 'block' : 'none';
+      document.getElementById('grmYearRow').style.display = mode === 'year' ? 'flex' : 'none';
+    }
+    window.grmToggle = grmToggle;
+
+    function printGovRegForm() {
+      if (!ledgerData) return;
+      var mode = document.getElementById('grmMode').value;
+      var approvalNo = (document.getElementById('grmApprovalNo').value || '').trim() || '...................................';
+      var approvalBudget = (document.getElementById('grmApprovalBudget').value || '').trim();
+      var budgetLabel = approvalBudget ? Number(approvalBudget).toLocaleString('th-TH', {minimumFractionDigits:2}) + ' บาท' : '...................................';
+      var records = (ledgerData.records || []).slice().sort(function(a,b){
+        return (a.date+(a.time||'')).localeCompare(b.date+(b.time||''));
+      });
+      var periodLabel = '';
+      var filtered = records;
+
+      if (mode === 'day') {
+        var day = document.getElementById('grmDay').value;
+        if (!day) { alert('กรุณาเลือกวันที่'); return; }
+        filtered = records.filter(function(r){ return r.date === day; });
+        var dp = day.split('-');
+        var thMo = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+        periodLabel = 'วันที่ ' + parseInt(dp[2]) + ' ' + thMo[parseInt(dp[1])] + ' พ.ศ. ' + (parseInt(dp[0])+543);
+      } else if (mode === 'month') {
+        var mo = parseInt(document.getElementById('grmMonth').value);
+        var yr = parseInt(document.getElementById('grmYear').value);
+        var keyPfx = yr + '-' + String(mo).padStart(2, '0');
+        filtered = records.filter(function(r){ return r.date && r.date.startsWith(keyPfx); });
+        var thMo2 = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+        periodLabel = 'เดือน' + thMo2[mo] + ' พ.ศ. ' + (yr+543);
+      } else if (mode === 'year') {
+        var calYr = parseInt(document.getElementById('grmCalYear').value);
+        filtered = records.filter(function(r){ return r.date && r.date.startsWith(String(calYr) + '-'); });
+        periodLabel = 'ปี พ.ศ. ' + (calYr+543);
+      } else {
+        // fiscal year
+        var fy = ledgerData.fiscal_year_be;
+        periodLabel = 'ปีงบประมาณ พ.ศ. ' + fy + ' (ตุลาคม ' + (fy-1) + ' — กันยายน ' + fy + ')';
+      }
+
+      if (filtered.length === 0) { alert('ไม่มีข้อมูลในช่วงที่เลือก'); return; }
+      closeGovRegModal();
+      _printGovRegDoc(filtered, periodLabel, approvalNo, budgetLabel);
+    }
+    window.printGovRegForm = printGovRegForm;
+
+    function _printGovRegDoc(records, periodLabel, approvalNo, budgetLabel) {
+      var thMo = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+      function fmtGovD(iso) {
+        if (!iso) return '';
+        var p = iso.split('-'); if (p.length < 3) return iso;
+        return parseInt(p[2]) + ' ' + thMo[parseInt(p[1])] + ' ' + (parseInt(p[0])+543);
+      }
+      var css = '@import url("https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap");' +
+        '@page { size:A4 landscape; margin:10mm 15mm; }' +
+        'body { font-family:"TH Sarabun New",Sarabun,sans-serif; font-size:14pt; line-height:1.4; margin:0; color:#000; }' +
+        'h1 { text-align:center; font-size:18pt; font-weight:700; margin:0 0 4pt 0; }' +
+        '.hdr-info { text-align:center; font-size:13pt; margin:2pt 0; }' +
+        '.hdr-block { text-align:right; font-size:13pt; margin:6pt 0 10pt 0; }' +
+        'table { width:100%; border-collapse:collapse; font-size:12pt; }' +
+        'th, td { border:1pt solid #000; padding:4pt 5pt; vertical-align:middle; }' +
+        'th { text-align:center; font-weight:700; background:#f5f5f5; }' +
+        '.r { text-align:right; }' +
+        '.c { text-align:center; }' +
+        'tfoot td { font-weight:700; background:#f0f4f8; }' +
+        '.sig-area { display:flex; justify-content:flex-end; margin-top:24pt; }' +
+        '.sig-box { text-align:center; width:260pt; }' +
+        '.sig-dot { border-bottom:1pt dotted #000; height:30pt; margin-bottom:4pt; }' +
+        '.sig-name { font-size:11pt; }' +
+        '.fn { font-size:10pt; color:#555; margin-top:8pt; }' +
+        '@media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }';
+
+      var runAmt = 0;
+      var totL = 0, totA = 0;
+      var rows = '';
+      records.forEach(function(r, i) {
+        var amt = +(r.amount) || 0;
+        runAmt += amt; totL += +(r.liters) || 0; totA += amt;
+        var ppl = r.price_per_liter ? (+r.price_per_liter).toFixed(2) : '-';
+        rows += '<tr>' +
+          '<td class="c">' + fmtGovD(r.date) + '</td>' +
+          '<td class="c">' + (r.document_number || '-') + '</td>' +
+          '<td>' + (r.license_plate || '-') + (r.brand ? ' (' + r.brand + ')' : '') + '</td>' +
+          '<td>' + (r.driver_name || r.driver_name_manual || '-') + '</td>' +
+          '<td class="c">' + fuelTypeName(r.fuel_type) + '</td>' +
+          '<td class="r">' + (+(r.liters)||0).toFixed(2) + '</td>' +
+          '<td class="r">' + amt.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td>' +
+          '<td class="r" style="background:#fffde7;">' + runAmt.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</td>' +
+          '<td></td>' +
+          '<td></td>' +
+          '</tr>';
+      });
+
+      var html = '<h1>ทะเบียนควบคุมการจัดซื้อน้ำมันเชื้อเพลิง</h1>' +
+        '<p class="hdr-info">โรงเรียนพะเยาพิทยาคม</p>' +
+        '<div class="hdr-block">' +
+        'รายงานขอซื้อที่หัวหน้าหน่วยงานของรัฐให้ความเห็นชอบ เลขที่ ' + approvalNo + '<br>' +
+        'วงเงินที่หัวหน้าหน่วยงานของรัฐให้ความเห็นชอบ ' + budgetLabel +
+        '</div>' +
+        '<p style="font-size:12pt;margin:0 0 6pt 0;">ช่วงเวลา: <b>' + periodLabel + '</b></p>' +
+        '<table>' +
+        '<thead>' +
+        '<tr>' +
+        '<th rowspan="2" style="width:10%">วัน/เดือน/ปี</th>' +
+        '<th rowspan="2" style="width:10%">*ใบสั่งซื้อ/<br>ใบเสร็จรับเงิน/<br>ใบกำกับภาษี<br><span style="font-size:10pt;font-weight:400;">อย่างใดอย่างหนึ่ง</span></th>' +
+        '<th rowspan="2" style="width:18%">ประเภทของครุภัณฑ์ หรือสิ่งอื่นใด<br>ซึ่งใช้น้ำมันเชื้อเพลิง<br>และหมายเลขทะเบียนหรือรหัสครุภัณฑ์</th>' +
+        '<th rowspan="2" style="width:12%">ผู้จัดซื้อน้ำมัน<br>เชื้อเพลิง</th>' +
+        '<th colspan="4" style="background:#e8f5e9;">รายละเอียดการจัดซื้อน้ำมันเชื้อเพลิง</th>' +
+        '<th rowspan="2" style="width:10%">ลายมือชื่อ<br>ผู้บันทึกรายการ</th>' +
+        '<th rowspan="2" style="width:8%">หมายเหตุ</th>' +
+        '</tr>' +
+        '<tr>' +
+        '<th style="background:#e8f5e9;width:8%">ประเภท</th>' +
+        '<th style="background:#e8f5e9;width:8%">ปริมาณ<br>(ลิตร)</th>' +
+        '<th style="background:#e8f5e9;width:8%">วงเงิน<br>(บาท)</th>' +
+        '<th style="background:#fffde7;width:9%">วงเงินสะสม<br>(บาท)</th>' +
+        '</tr>' +
+        '</thead>' +
+        '<tbody>' + rows + '</tbody>' +
+        '<tfoot><tr>' +
+        '<td colspan="4" class="c"><b>รวม ' + records.length + ' รายการ</b></td>' +
+        '<td></td>' +
+        '<td class="r"><b>' + totL.toFixed(2) + '</b></td>' +
+        '<td class="r"><b>' + totA.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</b></td>' +
+        '<td class="r" style="background:#fffde7;"><b>' + runAmt.toLocaleString('th-TH',{minimumFractionDigits:2}) + '</b></td>' +
+        '<td colspan="2"></td>' +
+        '</tr></tfoot>' +
+        '</table>' +
+        '<p class="fn">* ใบสั่งซื้อ/ใบเสร็จรับเงิน/ใบกำกับภาษี อย่างใดอย่างหนึ่ง</p>' +
+        '<div class="sig-area">' +
+        '<div class="sig-box">' +
+        '<div class="sig-dot"></div>' +
+        '<div>(.........................................)</div>' +
+        '<div class="sig-name">ผู้ตรวจสอบ</div>' +
+        '</div></div>';
+
+      var w = window.open('', '_blank', 'width=1000,height=800');
+      w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ทะเบียนควบคุมน้ำมัน ' + periodLabel + '</title><style>' + css + '</style></head><body>' + html + '<script>setTimeout(function(){window.print()},600);<\/script></body></html>');
+      w.document.close();
+    }
+    window.openGovRegModal = openGovRegModal;
+    window.closeGovRegModal = closeGovRegModal;
   </script>
+
+  <!-- Modal: ส่งออกทะเบียนควบคุมการจัดซื้อน้ำมัน (แบบราชการ) -->
+  <div id="govRegModal" onclick="if(event.target===this)closeGovRegModal()">
+    <div id="govRegModalBox">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 style="margin:0;">📄 ส่งออกทะเบียนควบคุมการจัดซื้อน้ำมัน</h3>
+        <button onclick="closeGovRegModal()" style="background:none;border:none;font-size:1.6em;cursor:pointer;line-height:1;color:#666;padding:0;">×</button>
+      </div>
+
+      <div class="grm-field">
+        <label>ช่วงเวลา</label>
+        <select id="grmMode" onchange="grmToggle()">
+          <option value="fiscal">ทั้งปีงบประมาณ</option>
+          <option value="month">รายเดือน</option>
+          <option value="year">รายปี (ปีปฏิทิน)</option>
+          <option value="day">รายวัน</option>
+        </select>
+      </div>
+
+      <!-- ปีงบประมาณ -->
+      <div id="grmFYRow" class="grm-field">
+        <div id="grmFYLabel" style="padding:9px 12px;background:#f5f5f5;border-radius:8px;font-size:.95em;color:#444;border:1px solid #ddd;"></div>
+        <div class="help">ข้อมูลปีงบประมาณที่โหลดอยู่ในหน้า (เปลี่ยนได้จาก fySelect ด้านบน)</div>
+      </div>
+
+      <!-- รายเดือน -->
+      <div id="grmMonthRow" class="grm-row" style="display:none;">
+        <div class="grm-field">
+          <label>เดือน</label>
+          <select id="grmMonth"></select>
+        </div>
+        <div class="grm-field">
+          <label>ปี (ค.ศ.)</label>
+          <select id="grmYear"></select>
+        </div>
+      </div>
+
+      <!-- รายปี (ปีปฏิทิน) -->
+      <div id="grmYearRow" class="grm-row" style="display:none;">
+        <div class="grm-field">
+          <label>ปี ค.ศ.</label>
+          <input type="number" id="grmCalYear" min="2020" max="2099" value="2025">
+          <div class="help">ข้อมูลกรองจากปีงบประมาณที่โหลดอยู่</div>
+        </div>
+      </div>
+
+      <!-- รายวัน -->
+      <div id="grmDayRow" class="grm-row" style="display:none;">
+        <div class="grm-field">
+          <label>วันที่</label>
+          <input type="date" id="grmDay">
+        </div>
+      </div>
+
+      <hr style="margin:16px 0;border:none;border-top:1px solid #e0e0e0;">
+      <p style="font-size:.88em;font-weight:700;color:#555;margin:0 0 10px 0;">ข้อมูลส่วนหัวเอกสาร (ตามแบบฟอร์มราชการ)</p>
+
+      <div class="grm-field">
+        <label>รายงานขอซื้อที่หัวหน้าหน่วยงานของรัฐให้ความเห็นชอบ เลขที่</label>
+        <input type="text" id="grmApprovalNo" placeholder="เช่น พย.0025/2567">
+        <div class="help">เลขที่หนังสือรายงานขอซื้อที่ผู้บริหารอนุมัติ (ถ้ามี)</div>
+      </div>
+
+      <div class="grm-field">
+        <label>วงเงินที่หัวหน้าหน่วยงานของรัฐให้ความเห็นชอบ (บาท)</label>
+        <input type="number" id="grmApprovalBudget" step="0.01" min="0" placeholder="เช่น 150000">
+        <div class="help">วงเงินที่ได้รับอนุมัติ (ถ้ามี)</div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:20px;">
+        <button onclick="closeGovRegModal()" style="flex:1;padding:10px;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer;font-size:1em;font-family:inherit;">ยกเลิก</button>
+        <button onclick="printGovRegForm()" style="flex:2;padding:10px;border:none;border-radius:8px;background:#7b1fa2;color:#fff;cursor:pointer;font-size:1em;font-family:inherit;font-weight:700;">🖨️ พิมพ์ / บันทึก PDF</button>
+      </div>
+    </div>
+  </div>
 
 </body>
 
