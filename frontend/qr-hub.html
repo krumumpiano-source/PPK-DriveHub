@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>เลือกรายการ - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'qr-hub'; window.REQUIRE_AUTH = false;</script>
+  <link rel="stylesheet" href="common.css">
+  <script src="js/api.js"></script><script src="common.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-family);
+      background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .hub-container {
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.5);
+      max-width: 420px;
+      width: 100%;
+      overflow: hidden;
+      animation: hub-in 0.3s cubic-bezier(.34,1.4,.64,1) both;
+    }
+
+    @keyframes hub-in {
+      from { opacity: 0; transform: scale(0.88) translateY(24px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .hub-header {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      color: white;
+      padding: 24px 20px 20px;
+      text-align: center;
+    }
+
+    .hub-header-icon {
+      font-size: 2.4em;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .hub-car-name {
+      font-size: 1.35em;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      margin-bottom: 4px;
+    }
+
+    .hub-car-detail {
+      font-size: 0.85em;
+      opacity: 0.8;
+      min-height: 1.2em;
+    }
+
+    .hub-prompt {
+      background: rgba(255,255,255,0.12);
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: 0.88em;
+      font-weight: 500;
+      margin-top: 12px;
+      display: inline-block;
+    }
+
+    .hub-body {
+      padding: 20px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .hub-btn {
+      width: 100%;
+      border: none;
+      border-radius: 14px;
+      padding: 18px 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-align: left;
+      transition: transform 0.12s, box-shadow 0.12s, opacity 0.12s;
+      text-decoration: none;
+      color: white;
+      font-family: var(--font-family);
+    }
+
+    .hub-btn:hover { opacity: 0.92; transform: translateY(-1px); text-decoration: none; }
+    .hub-btn:active { transform: scale(0.97); }
+
+    .hub-btn-icon {
+      font-size: 1.8em;
+      flex-shrink: 0;
+      width: 44px;
+      text-align: center;
+    }
+
+    .hub-btn-text {}
+    .hub-btn-title {
+      font-size: 1em;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .hub-btn-sub {
+      font-size: 0.78em;
+      opacity: 0.82;
+      margin-top: 2px;
+    }
+
+    .btn-usage  { background: linear-gradient(135deg, #4f46e5, #6366f1); box-shadow: 0 4px 16px rgba(79,70,229,0.35); }
+    .btn-fuel   { background: linear-gradient(135deg, #059669, #10b981); box-shadow: 0 4px 16px rgba(5,150,105,0.35); }
+    .btn-check  { background: linear-gradient(135deg, #d97706, #f59e0b); box-shadow: 0 4px 16px rgba(217,119,6,0.32); }
+    .btn-repair { background: linear-gradient(135deg, #dc2626, #ef4444); box-shadow: 0 4px 16px rgba(220,38,38,0.30); }
+
+    .hub-footer {
+      text-align: center;
+      padding: 12px 16px 18px;
+      font-size: 0.75em;
+      color: #94a3b8;
+      border-top: 1px solid #f1f5f9;
+    }
+
+    /* Loading skeleton */
+    .hub-car-name.loading {
+      background: rgba(255,255,255,0.25);
+      border-radius: 6px;
+      color: transparent;
+      animation: shimmer 1.2s ease-in-out infinite;
+    }
+    @keyframes shimmer {
+      0%,100% { opacity: 0.5; }
+      50%      { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="hub-container">
+    <div class="hub-header">
+      <span class="hub-header-icon">🚗</span>
+      <div class="hub-car-name loading" id="carName">กำลังโหลด...</div>
+      <div class="hub-car-detail" id="carDetail"></div>
+      <div class="hub-prompt">เลือกรายการที่ต้องการ</div>
+    </div>
+
+    <div class="hub-body">
+      <a class="hub-btn btn-usage" id="btnUsage" href="#">
+        <span class="hub-btn-icon">📋</span>
+        <div class="hub-btn-text">
+          <div class="hub-btn-title">บันทึกการใช้รถ</div>
+          <div class="hub-btn-sub">ออกเดินทาง / กลับจากเดินทาง</div>
+        </div>
+      </a>
+      <a class="hub-btn btn-fuel" id="btnFuel" href="#">
+        <span class="hub-btn-icon">⛽</span>
+        <div class="hub-btn-text">
+          <div class="hub-btn-title">บันทึกเติมน้ำมัน</div>
+          <div class="hub-btn-sub">บันทึกการเติมน้ำมัน ลิตร/ราคา</div>
+        </div>
+      </a>
+      <a class="hub-btn btn-check" id="btnCheck" href="#">
+        <span class="hub-btn-icon">✅</span>
+        <div class="hub-btn-text">
+          <div class="hub-btn-title">ตรวจสภาพรถประจำวัน</div>
+          <div class="hub-btn-sub">ตรวจสภาพก่อนออกเดินทาง</div>
+        </div>
+      </a>
+      <a class="hub-btn btn-repair" id="btnRepair" href="#">
+        <span class="hub-btn-icon">🔧</span>
+        <div class="hub-btn-text">
+          <div class="hub-btn-title">แจ้งซ่อม</div>
+          <div class="hub-btn-sub">แจ้งปัญหา / ความเสียหาย</div>
+        </div>
+      </a>
+    </div>
+
+    <div class="hub-footer">
+      PPK DriveHub — โรงเรียนพะเยาพิทยาคม
+    </div>
+  </div>
+
+  <script>
+    var carId = null;
+
+    function init() {
+      var params = new URLSearchParams(window.location.search);
+      carId = params.get('car') || params.get('qr') || params.get('car_id');
+
+      if (!carId) {
+        document.getElementById('carName').textContent = 'ไม่พบรหัสรถ';
+        document.getElementById('carName').classList.remove('loading');
+        document.getElementById('carDetail').textContent = 'กรุณาสแกน QR Code ที่ถูกต้อง';
+        disableAll();
+        return;
+      }
+
+      // Set links
+      var base = window.location.origin + window.location.pathname.replace(/[^/]*$/, '');
+      var enc = encodeURIComponent(carId);
+      document.getElementById('btnUsage').href  = base + 'qr-usage-record.html?car=' + enc;
+      document.getElementById('btnFuel').href   = base + 'qr-fuel-record.html?car='  + enc;
+      document.getElementById('btnCheck').href  = base + 'qr-daily-check.html?car='  + enc;
+
+      // แจ้งซ่อม: ถ้า login แล้วไป repair.html, ถ้าไม่ login ให้ไป login ก่อน
+      var token = (typeof API !== 'undefined') ? API.getToken() : null;
+      var repairUrl = base + 'repair.html?car_id=' + enc;
+      if (token) {
+        document.getElementById('btnRepair').href = repairUrl;
+      } else {
+        document.getElementById('btnRepair').href = base + 'login.html?next=' + encodeURIComponent(repairUrl);
+      }
+
+      // Load car info
+      fetch('/api/vehicles/qr-info?car_id=' + enc)
+        .then(function(r) { return r.json(); })
+        .catch(function() { return {}; })
+        .then(function(res) {
+          var nameEl = document.getElementById('carName');
+          nameEl.classList.remove('loading');
+          if (res.success && res.data) {
+            var d = res.data;
+            nameEl.textContent = d.license_plate || carId;
+            var detail = [d.brand, d.model, d.fuel_type].filter(Boolean).join(' · ');
+            document.getElementById('carDetail').textContent = detail;
+          } else {
+            nameEl.textContent = 'รหัสรถ: ' + carId;
+            document.getElementById('carDetail').textContent = 'ไม่พบข้อมูลในระบบ';
+          }
+        });
+    }
+
+    function disableAll() {
+      ['btnUsage','btnFuel','btnCheck','btnRepair'].forEach(function(id) {
+        var el = document.getElementById(id);
+        el.style.opacity = '0.4';
+        el.style.pointerEvents = 'none';
+        el.removeAttribute('href');
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

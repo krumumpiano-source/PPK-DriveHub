@@ -34,7 +34,7 @@
 
     .qr-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
       gap: 20px;
     }
 
@@ -42,7 +42,8 @@
       background: white;
       border: 1px solid #e5e7eb;
       border-radius: 12px;
-      padding: 16px 20px;
+      padding: 16px;
+      text-align: center;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
       transition: box-shadow 0.2s;
     }
@@ -51,61 +52,26 @@
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
     }
 
-    .qr-card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
     .qr-card-title {
       font-weight: 700;
-      font-size: 17px;
+      font-size: 16px;
+      margin-bottom: 2px;
       color: #1e293b;
     }
 
     .qr-card-sub {
-      font-size: 13px;
-      color: #64748b;
-      margin-top: 2px;
-    }
-
-    .qr-types-row {
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    .qr-type-item {
-      flex: 1;
-      min-width: 130px;
-      max-width: 180px;
-      text-align: center;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      padding: 12px 8px 10px;
-    }
-
-    .qr-type-label {
       font-size: 12px;
-      font-weight: 600;
-      color: #334155;
-      margin-bottom: 8px;
-      display: block;
-      line-height: 1.4;
+      color: #64748b;
+      margin-bottom: 12px;
     }
 
     .qr-code-wrapper {
       display: inline-block;
-      padding: 8px;
+      padding: 10px;
       background: white;
       border: 2px solid #e5e7eb;
-      border-radius: 6px;
-      margin-bottom: 8px;
+      border-radius: 8px;
+      margin-bottom: 12px;
     }
 
     /* qrcodejs สร้างทั้ง canvas และ img — ซ่อน img แสดงเฉพาะ canvas */
@@ -117,10 +83,17 @@
       display: none !important;
     }
 
-    .qr-card-footer {
+    .qr-card-hint {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+
+    .qr-card-actions {
       display: flex;
-      justify-content: flex-end;
-      margin-top: 12px;
+      gap: 8px;
+      justify-content: center;
     }
 
     /* Print styles */
@@ -128,69 +101,25 @@
       display: none;
     }
 
-    .print-vehicle-block {
-      page-break-inside: avoid;
-      margin-bottom: 28px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      padding: 16px;
-    }
-
-    .print-vehicle-title {
-      font-weight: 700;
-      font-size: 16px;
-      margin-bottom: 4px;
-    }
-
-    .print-vehicle-sub {
-      font-size: 12px;
-      color: #555;
-      margin-bottom: 12px;
-    }
-
-    .print-qr-row {
-      display: flex;
-      gap: 16px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    .print-qr-cell {
+    .print-item {
       text-align: center;
-      flex: 1;
-      min-width: 130px;
-      max-width: 180px;
+      border: 1px dashed #bbb;
+      padding: 16px;
+      page-break-inside: avoid;
+      margin-bottom: 20px;
     }
 
-    .print-qr-cell-label {
-      font-size: 11px;
-      font-weight: 600;
-      margin-bottom: 6px;
-      color: #333;
-    }
-
-    .print-qr-cell-footer {
-      font-size: 10px;
-      color: #888;
-      margin-top: 4px;
-    }
+    .print-item-title { font-weight: 700; font-size: 18px; margin-bottom: 4px; }
+    .print-item-sub   { font-size: 12px; color: #555; margin-bottom: 8px; }
+    .print-item-hint  { font-size: 10px; color: #777; margin-top: 6px; }
 
     @media print {
-      body * {
-        visibility: hidden !important;
-      }
-
-      .print-area,
-      .print-area * {
-        visibility: visible !important;
-      }
-
+      body * { visibility: hidden !important; }
+      .print-area, .print-area * { visibility: visible !important; }
       .print-area {
         display: block !important;
         position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
+        left: 0; top: 0; width: 100%;
       }
     }
 
@@ -231,18 +160,8 @@
     }
 
     @media (max-width: 600px) {
-      .qr-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .qr-controls {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .qr-type-item {
-        min-width: 100px;
-      }
+      .qr-grid { grid-template-columns: 1fr; }
+      .qr-controls { flex-direction: column; align-items: stretch; }
     }
   </style>
 </head>
@@ -251,7 +170,7 @@
   <div class="container">
     <div class="header">
       <h1>📱 จัดการ QR Code</h1>
-      <p>สร้างและพิมพ์ QR Code สำหรับติดที่รถแต่ละคัน (3 QR ต่อคัน)</p>
+      <p>สร้างและพิมพ์ QR Code สำหรับติดที่รถแต่ละคัน (1 QR/รถ รวม 4 รายการ)</p>
     </div>
     <div id="navigation"></div>
 
@@ -282,15 +201,8 @@
   </div>
 
   <div class="print-area" id="printArea"></div>
-
   <script>
     var allVehicles = [];
-
-    var QR_TYPES = [
-      { key: 'usage', label: '📋 บันทึกใช้รถ' },
-      { key: 'fuel',  label: '⛽ บันทึกน้ำมัน' },
-      { key: 'check', label: '🔧 ตรวจสภาพ/แจ้งซ่อม' }
-    ];
 
     async function loadVehicles() {
       try {
@@ -324,14 +236,8 @@
       return window.location.origin + window.location.pathname.replace(/[^/]*$/, '');
     }
 
-    function buildQRUrl(vehicleId, type) {
-      var base = getBaseURL();
-      var pages = {
-        usage: 'qr-usage-record.html',
-        fuel:  'qr-fuel-record.html',
-        check: 'qr-daily-check.html'
-      };
-      return base + pages[type] + '?car=' + encodeURIComponent(vehicleId);
+    function buildHubUrl(vehicleId) {
+      return getBaseURL() + 'qr-hub.html?car=' + encodeURIComponent(vehicleId);
     }
 
     function makeQR(containerId, url, size) {
@@ -381,42 +287,26 @@
         var title = v.license_plate || 'ไม่ระบุทะเบียน';
         var sub = [v.brand, v.model, v.type].filter(Boolean).join(' ') || 'ไม่ระบุรุ่น';
         var titleEnc = encodeURIComponent(title);
-
-        // สร้าง 3 QR type items
-        var typeItemsHtml = QR_TYPES.map(function (t) {
-          return '<div class="qr-type-item">' +
-            '<span class="qr-type-label">' + t.label + '</span>' +
-            '<div class="qr-code-wrapper"><div id="qr-' + v.id + '-' + t.key + '"></div></div><br>' +
-            '<button class="btn btn-sm btn-secondary" style="font-size:12px;padding:4px 10px;" ' +
-            'onclick="downloadQR(\'' + v.id + '\',\'' + t.key + '\',\'' + titleEnc + '\')">💾 ดาวน์โหลด</button>' +
-            '</div>';
-        }).join('');
+        var hubUrl = buildHubUrl(v.id);
 
         card.innerHTML =
-          '<div class="qr-card-header">' +
-            '<div>' +
-              '<div class="qr-card-title">' + title + '</div>' +
-              '<div class="qr-card-sub">' + sub + ' ' + statusBadge + '</div>' +
-            '</div>' +
-          '</div>' +
-          '<div class="qr-types-row">' + typeItemsHtml + '</div>' +
-          '<div class="qr-card-footer">' +
-            '<button class="btn btn-sm btn-primary" onclick="printSingleQR(\'' + v.id + '\')">🖨️ พิมพ์รถคันนี้</button>' +
+          '<div class="qr-card-title">' + title + '</div>' +
+          '<div class="qr-card-sub">' + sub + ' ' + statusBadge + '</div>' +
+          '<div class="qr-code-wrapper"><div id="qr-' + v.id + '"></div></div>' +
+          '<div class="qr-card-hint">📍 สแกนเพื่อเลือกรายการ<br>(ใช้รถ · น้ำมัน · ตรวจสภาพ · แจ้งซ่อม)</div>' +
+          '<div class="qr-card-actions">' +
+          '<button class="btn btn-sm btn-secondary" onclick="downloadQR(\'' + v.id + '\',\'' + titleEnc + '\')">💾 ดาวน์โหลด</button>' +
+          '<button class="btn btn-sm btn-primary" onclick="printSingleQR(\'' + v.id + '\')">🖨️ พิมพ์</button>' +
           '</div>';
 
         grid.appendChild(card);
-
-        // สร้าง QR ทั้ง 3 ประเภทสำหรับรถคันนี้
-        QR_TYPES.forEach(function (t) {
-          makeQR('qr-' + v.id + '-' + t.key, buildQRUrl(v.id, t.key), 128);
-        });
+        makeQR('qr-' + v.id, hubUrl, 160);
       });
     }
 
-    function downloadQR(vehicleId, type, encodedTitle) {
+    function downloadQR(vehicleId, encodedTitle) {
       var title = decodeURIComponent(encodedTitle);
-      var typeLabel = { usage: 'บันทึกใช้รถ', fuel: 'บันทึกน้ำมัน', check: 'ตรวจสภาพ' }[type] || type;
-      var container = document.getElementById('qr-' + vehicleId + '-' + type);
+      var container = document.getElementById('qr-' + vehicleId);
       if (!container) return;
 
       var canvas = container.querySelector('canvas');
@@ -428,8 +318,8 @@
         var img = container.querySelector('img');
         if (img) {
           var c = document.createElement('canvas');
-          c.width = img.naturalWidth || 128;
-          c.height = img.naturalHeight || 128;
+          c.width = img.naturalWidth || 160;
+          c.height = img.naturalHeight || 160;
           c.getContext('2d').drawImage(img, 0, 0);
           dataUrl = c.toDataURL('image/png');
         }
@@ -437,7 +327,7 @@
 
       if (!dataUrl) return;
       var link = document.createElement('a');
-      link.download = 'QR_' + title + '_' + typeLabel + '.png';
+      link.download = 'QR_' + title + '.png';
       link.href = dataUrl;
       document.body.appendChild(link);
       link.click();
@@ -457,9 +347,7 @@
         var text = ((v.license_plate || '') + ' ' + (v.brand || '') + ' ' + (v.model || '')).toLowerCase();
         return text.indexOf(search) !== -1;
       });
-      if (filtered.length === 0) {
-        alert('ไม่มีรถที่จะพิมพ์'); return;
-      }
+      if (filtered.length === 0) { alert('ไม่มีรถที่จะพิมพ์'); return; }
       preparePrintArea(filtered);
     }
 
@@ -468,56 +356,35 @@
       area.innerHTML = '';
 
       vehicles.forEach(function (v) {
-        var block = document.createElement('div');
-        block.className = 'print-vehicle-block';
+        var item = document.createElement('div');
+        item.className = 'print-item';
         var title = v.license_plate || 'ไม่ระบุ';
         var sub = [v.brand, v.model].filter(Boolean).join(' ');
+        var hubUrl = buildHubUrl(v.id);
 
-        var qrCellsHtml = QR_TYPES.map(function (t) {
-          return '<div class="print-qr-cell">' +
-            '<div class="print-qr-cell-label">' + t.label + '</div>' +
-            '<div id="pqr-' + v.id + '-' + t.key + '" style="display:inline-block;"></div>' +
-            '<div class="print-qr-cell-footer">PPK DriveHub</div>' +
-            '</div>';
-        }).join('');
+        item.innerHTML =
+          '<div class="print-item-title">' + title + '</div>' +
+          '<div class="print-item-sub">' + sub + '</div>' +
+          '<div id="pqr-' + v.id + '" style="display:inline-block;margin:8px 0;"></div>' +
+          '<div class="print-item-hint">PPK DriveHub — สแกนเพื่อเลือกรายการ</div>';
 
-        block.innerHTML =
-          '<div class="print-vehicle-title">' + title + '</div>' +
-          '<div class="print-vehicle-sub">' + sub + '</div>' +
-          '<div class="print-qr-row">' + qrCellsHtml + '</div>';
+        area.appendChild(item);
 
-        area.appendChild(block);
+        try {
+          new QRCode(document.getElementById('pqr-' + v.id), {
+            text: hubUrl,
+            width: 180, height: 180,
+            colorDark: '#000000', colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.M
+          });
+        } catch (e) {}
       });
 
-      // สร้าง QR ในพื้นที่พิมพ์
-      vehicles.forEach(function (v) {
-        QR_TYPES.forEach(function (t) {
-          var el = document.getElementById('pqr-' + v.id + '-' + t.key);
-          if (!el) return;
-          try {
-            new QRCode(el, {
-              text: buildQRUrl(v.id, t.key),
-              width: 150,
-              height: 150,
-              colorDark: '#000000',
-              colorLight: '#ffffff',
-              correctLevel: QRCode.CorrectLevel.M
-            });
-          } catch (e) {}
-        });
-      });
-
-      // รอ img load ทั้งหมด (qrcodejs สร้าง img ใน print area) แล้วค่อย print
       var imgs = area.querySelectorAll('img');
       var promises = Array.prototype.map.call(imgs, function (img) {
         if (img.complete && img.naturalWidth > 0) return Promise.resolve();
-        return new Promise(function (resolve) {
-          img.onload = resolve;
-          img.onerror = resolve;
-        });
+        return new Promise(function (resolve) { img.onload = resolve; img.onerror = resolve; });
       });
-
-      // ถ้าไม่มี img (browser ใช้ canvas) รอ 1 frame แล้ว print
       if (imgs.length === 0) {
         requestAnimationFrame(function () { window.print(); });
       } else {
