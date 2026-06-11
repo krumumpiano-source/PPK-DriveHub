@@ -38,6 +38,11 @@ export default defineConfig({
       name: 'qr-system',
       testMatch: /qr-system\.test\.mjs/,
     },
+    {
+      name: 'qr-hub-smoke',
+      testMatch: /qr-hub-smoke\.test\.mjs/,
+      use: { ...devices['Pixel 7'] },
+    },
     // Runs ALL e2e specs (including ui-*.spec.mjs) on Desktop Chrome
     {
       name: 'e2e-chromium',

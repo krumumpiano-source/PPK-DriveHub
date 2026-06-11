@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "ppk-drivehub",
   "private": true,
   "version": "1.0.0",
@@ -23,5 +23,8 @@
     "@playwright/test": "^1.59.1",
     "eslint": "^10.4.0",
     "wrangler": "^4.90.0"
+  },
+  "dependencies": {
+    "docx": "^9.7.1"
   }
 }

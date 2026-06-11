@@ -422,7 +422,7 @@ export async function onRequest(context) {
 
     const sets = [];
     const params = [];
-    const fields = ['car_id','driver_id','record_type','datetime','mileage','location','notes','queue_id'];
+    const fields = ['car_id','driver_id','record_type','datetime','mileage','location','notes','queue_id','destination','requester_name','purpose','driver_name_manual'];
     for (const f of fields) {
       if (body[f] !== undefined) { sets.push(`${f} = ?`); params.push(body[f]); }
     }
