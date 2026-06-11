@@ -917,10 +917,11 @@
           html += '<tr ' + trClass + '>';
           var manageTd = '';
           if (isAdmin && trip.status !== 'undocumented_gap') {
-            manageTd = '<td style="white-space:nowrap">' +
-              '<button class="btn-sm" style="background:#2196f3;color:white;margin-right:4px" onclick="openEditModal(' + idx + ')" title="แก้ไข">✏️ แก้ไข</button>' +
-              '<button class="btn-sm btn-danger" onclick="deleteTrip(' + idx + ')" title="ลบ">🗑️ ลบ</button>' +
-              '</td>';
+            manageTd = '<td style="white-space:nowrap;min-width:90px">' +
+              '<div style="display:flex;flex-direction:column;gap:4px">' +
+              '<button class="btn-sm" style="background:#2196f3;color:white" onclick="openEditModal(' + idx + ')">✏️ แก้ไข</button>' +
+              '<button class="btn-sm btn-danger" onclick="deleteTrip(' + idx + ')">🗑️ ลบ</button>' +
+              '</div></td>';
           } else if (isAdmin) {
             manageTd = '<td>-</td>';
           }
