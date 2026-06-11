@@ -426,14 +426,7 @@
     document.addEventListener('DOMContentLoaded', function () {
       var isAuthenticated = requireAuth();
 
-      // Show admin controls
-      try {
-        if (typeof hasPermission === 'function' && hasPermission(['admin', 'super_admin'])) {
-          isAdmin = true;
-          document.getElementById('btnBatchHeal').style.display = '';
-          document.getElementById('thManage').style.display = '';
-        }
-      } catch(e) {}
+      // Admin detection will be re-evaluated in displayRecords()
       if (!isAuthenticated) {
         console.warn('Not authenticated, but showing page anyway');
         return; // แสดงหน้าได้แต่ไม่โหลดข้อมูล
@@ -816,9 +809,37 @@
       document.getElementById('statsContainer').style.display = 'block';
     }
 
+    function checkIsAdmin() {
+      try {
+        // Try hasPermission (common.js)
+        if (typeof hasPermission === 'function' && hasPermission(['admin', 'super_admin'])) return true;
+        // Try getCurrentUser
+        if (typeof getCurrentUser === 'function') {
+          var u = getCurrentUser();
+          if (u && (u.role === 'admin' || u.role === 'super_admin')) return true;
+        }
+        // Try API.getUser
+        if (typeof API !== 'undefined' && typeof API.getUser === 'function') {
+          var u2 = API.getUser();
+          if (u2 && (u2.role === 'admin' || u2.role === 'super_admin')) return true;
+        }
+        // Try raw localStorage / sessionStorage
+        var raw = localStorage.getItem('ppk_user') || sessionStorage.getItem('ppk_user') || '{}';
+        var parsed = JSON.parse(raw);
+        if (parsed && (parsed.role === 'admin' || parsed.role === 'super_admin')) return true;
+      } catch(e) {}
+      return false;
+    }
+
     function displayRecords() {
+      isAdmin = checkIsAdmin();
       var html = '';
       var totalCols = isAdmin ? 13 : 12;
+      // Sync header and batch-heal visibility
+      var thManage = document.getElementById('thManage');
+      var btnBatchHeal = document.getElementById('btnBatchHeal');
+      if (thManage) thManage.style.display = isAdmin ? '' : 'none';
+      if (btnBatchHeal) btnBatchHeal.style.display = isAdmin ? '' : 'none';
 
       if (trips.length === 0) {
         html = '<tr><td colspan="' + totalCols + '" class="empty-state"><div class="empty-state-icon">📝</div><p>ไม่พบข้อมูล</p></td></tr>';
