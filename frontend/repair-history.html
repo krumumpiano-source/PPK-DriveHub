@@ -306,7 +306,7 @@
 
     async function waitForDeps(){
       var i = 0;
-      while (i < 80) {
+      while (i < 40) {
         if (typeof apiCall === 'function') return true;
         await new Promise(function(r){ setTimeout(r, 100); });
         i += 1;
@@ -482,12 +482,15 @@
       state.reqSeq += 1;
       var reqId = state.reqSeq;
 
+      var btnRefresh = byId('btnRefresh');
+      btnRefresh.disabled = true;
+      btnRefresh.textContent = '⏳ กำลังโหลด...';
       byId('hLoading').style.display = 'block';
       byId('hSummaryStats').style.display = 'none';
 
       try {
         // โหลดทั้งหมด — filter รถ/ประเภท/ปี ทำ client-side ใน applySearchAndRender()
-        var r = await withTimeout(apiCall('getRepairs', { status:'completed' }), 30000, 'หมดเวลาเชื่อมต่อ API');
+        var r = await withTimeout(apiCall('getRepairs', { status:'completed' }), 15000, 'หมดเวลาเชื่อมต่อ API');
         if (reqId !== state.reqSeq) return;
         if (!r || !r.success) throw new Error((r && r.message) || 'โหลดข้อมูลไม่สำเร็จ');
 
@@ -503,6 +506,8 @@
       } finally {
         state.loading = false;
         byId('hLoading').style.display = 'none';
+        byId('btnRefresh').disabled = false;
+        byId('btnRefresh').textContent = '🔃 รีเฟรช';
       }
     }
 
