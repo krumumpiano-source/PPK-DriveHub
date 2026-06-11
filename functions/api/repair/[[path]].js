@@ -203,15 +203,15 @@ export async function onRequest(context) {
     // Driver role: allow viewing own repair requests
     if (user.role === 'driver') {
       const rows = await dbAll(env.DB,
-        `SELECT rl.*, c.license_plate, c.brand,
+        `SELECT rl.*, c.license_plate, c.brand, c.model,
                 uc.display_name AS created_by_name,
                 uu.display_name AS updated_by_name
          FROM repair_log rl
          LEFT JOIN cars c ON rl.car_id = c.id
          LEFT JOIN users uc ON rl.created_by = uc.id
          LEFT JOIN users uu ON rl.updated_by = uu.id
-         WHERE rl.reporter_id = ? OR rl.requested_by_driver_id = ?
-         ORDER BY rl.date_reported DESC LIMIT 100`,
+         WHERE (rl.reporter_id = ? OR rl.requested_by_driver_id = ?) AND rl.status = 'completed'
+         ORDER BY COALESCE(rl.date_completed, rl.date_reported) DESC LIMIT 100`,
         [user.id, user.driver_id || user.id]
       );
       return success(rows);
@@ -225,9 +225,9 @@ export async function onRequest(context) {
     if (carId) { where.push('rl.car_id = ?'); params.push(carId); }
     if (status) { where.push('rl.status = ?'); params.push(status); }
     if (activeOnly === '1') { where.push("rl.status != 'completed'"); }
-    const limit = activeOnly === '1' ? 100 : 300;
+    const limit = activeOnly === '1' ? 100 : 1000;
     const rows = await dbAll(env.DB,
-      `SELECT rl.*, c.license_plate, c.brand,
+      `SELECT rl.*, c.license_plate, c.brand, c.model,
               uc.display_name AS created_by_name,
               uu.display_name AS updated_by_name
        FROM repair_log rl
@@ -235,7 +235,7 @@ export async function onRequest(context) {
        LEFT JOIN users uc ON rl.created_by = uc.id
        LEFT JOIN users uu ON rl.updated_by = uu.id
        ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
-       ORDER BY rl.date_reported DESC LIMIT ${limit}`,
+       ORDER BY COALESCE(rl.date_completed, rl.date_reported) DESC LIMIT ${limit}`,
       params
     );
     return success(rows);
@@ -246,7 +246,7 @@ export async function onRequest(context) {
     try { requirePermission(user, 'repair', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/').pop();
     const row = await dbFirst(env.DB,
-      `SELECT rl.*, c.license_plate, c.brand,
+      `SELECT rl.*, c.license_plate, c.brand, c.model,
               uc.display_name AS created_by_name,
               uu.display_name AS updated_by_name
        FROM repair_log rl

@@ -11,11 +11,11 @@
     globalThis.REQUIRE_AUTH = true;
   </script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js" defer></script>
   <link rel="stylesheet" href="common.css">
-  <script src="js/api.js"></script>
-  <script src="js/export-utils.js"></script>
-  <script src="common.js"></script>
+  <script src="js/api.js" defer></script>
+  <script src="js/export-utils.js" defer></script>
+  <script src="common.js" defer></script>
   <style>
     .h-toolbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:1rem; }
     .h-control { padding:8px; border:1px solid var(--color-border); border-radius:var(--radius-md); font-size:.88rem; }
@@ -228,7 +228,14 @@
 
   <script>
     var PAGE_SIZE = 50;
-    var state = { vehicles: [], drivers: [], historyData: [], filteredData: [], page: 0, loading: false, reqSeq: 0, editingId: null, itemRowCount: 0, search: '' };
+    var state = {
+      vehicles: [], vehiclesMap: {},
+      drivers: [], driversMap: {},
+      historyData: [], filteredData: [],
+      page: 0, loading: false, reqSeq: 0,
+      editingId: null, itemRowCount: 0, search: '',
+      _renderToken: 0
+    };
 
     var SERVICE_TYPE_MAP = {
       repair: { label: 'ซ่อมทั่วไป', css: 'h-s-repair', icon: '🔧' },
@@ -262,12 +269,13 @@
       return Number.isFinite(n) ? n : 0;
     }
 
+    var MONTH_TH = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+
     function fmtDate(s){
       if (!s) return '-';
       try {
         var p = String(s).split(/[T ]/); var dd = p[0].split('-');
-        var months = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-        return Number.parseInt(dd[2],10) + ' ' + months[Number.parseInt(dd[1],10)-1] + ' ' + (Number.parseInt(dd[0],10)+543);
+        return Number.parseInt(dd[2],10) + ' ' + MONTH_TH[Number.parseInt(dd[1],10)-1] + ' ' + (Number.parseInt(dd[0],10)+543);
       } catch (_) { return String(s); }
     }
 
@@ -283,7 +291,7 @@
       if (!u) {
         return false;
       }
-      if (u.role === 'admin') {
+      if (u.role === 'admin' || u.role === 'super_admin') {
         return true;
       }
       return (typeof hasModulePermission === 'function') && hasModulePermission('repair','edit');
@@ -318,12 +326,12 @@
       if (row && (row.license_plate || row.brand || row.model)) {
         return ((row.license_plate || '') + ' ' + (row.brand || '') + ' ' + (row.model || '')).trim() || carId || '-';
       }
-      var v = state.vehicles.find(function(x){ return String(x.id || x.car_id) === String(carId); });
+      var v = state.vehiclesMap[String(carId)];
       return v ? ((v.license_plate || '') + ' ' + (v.brand || '') + ' ' + (v.model || '')).trim() : (carId || '-');
     }
 
     function driverLabel(driverId){
-      var d = state.drivers.find(function(x){ return String(x.driver_id) === String(driverId); });
+      var d = state.driversMap[String(driverId)];
       return d ? ((d.title || '') + ' ' + (d.first_name || '') + ' ' + (d.last_name || '')).trim() : (driverId || '-');
     }
 
@@ -337,7 +345,11 @@
       byId('hFilterType').addEventListener('change', function(){ applySearchAndRender(); });
       byId('hFilterYear').addEventListener('change', function(){ applySearchAndRender(); });
 
-      byId('hSearch').addEventListener('input', function(e){ state.search = String(e.target.value || '').trim().toLowerCase(); applySearchAndRender(); });
+      byId('hSearch').addEventListener('input', function(e){
+        clearTimeout(state._searchTimer);
+        var val = String(e.target.value || '').trim().toLowerCase();
+        state._searchTimer = setTimeout(function(){ state.search = val; applySearchAndRender(); }, 200);
+      });
 
       byId('hTableBody').addEventListener('click', function(e){
         var btn = e.target.closest('button[data-action]');
@@ -356,6 +368,17 @@
 
       byId('cmpClose').addEventListener('click', closeCompletedModal);
       byId('detailClose').addEventListener('click', closeDetailModal);
+
+      // click overlay to close
+      byId('completedModal').addEventListener('click', function(e){ if (e.target === this) closeCompletedModal(); });
+      byId('detailModal').addEventListener('click', function(e){ if (e.target === this) closeDetailModal(); });
+
+      // ESC to close
+      document.addEventListener('keydown', function(e){
+        if (e.key !== 'Escape') return;
+        if (byId('completedModal').classList.contains('show')) { closeCompletedModal(); return; }
+        if (byId('detailModal').classList.contains('show')) { closeDetailModal(); }
+      });
 
       byId('cmp_service_type').addEventListener('change', function(){
         var v = byId('cmp_service_type').value;
@@ -376,12 +399,7 @@
       byId('completedForm').addEventListener('submit', submitCompleted);
     }
 
-    async function loadVehicles(){
-      try {
-        var r = await withTimeout(apiCall('getVehicles', {}), 10000, 'โหลดข้อมูลรถไม่สำเร็จ');
-        if (r && r.success && r.data && Array.isArray(r.data.vehicles)) state.vehicles = r.data.vehicles;
-      } catch (e) { console.error('loadVehicles:', e); }
-
+    function _buildVehicleDropdowns(){
       var filterHtml = '<option value="">รถทั้งหมด</option>';
       var modalHtml = '<option value="">เลือกรถ</option>';
       state.vehicles.forEach(function(v){
@@ -390,7 +408,6 @@
         filterHtml += '<option value="' + id + '">' + txt + '</option>';
         modalHtml += '<option value="' + id + '">' + txt + '</option>';
       });
-
       var oldFilter = byId('hFilterCar').value;
       var oldModal = byId('cmp_car_id').value;
       byId('hFilterCar').innerHTML = filterHtml;
@@ -399,12 +416,30 @@
       if (oldModal) byId('cmp_car_id').value = oldModal;
     }
 
-    async function loadDrivers(){
+    async function loadVehicles(){
       try {
-        var r = await withTimeout(apiCall('getDrivers', { status:'active' }), 10000, 'โหลดข้อมูลพนักงานขับรถไม่สำเร็จ');
-        if (r && r.success && r.data && Array.isArray(r.data.drivers)) state.drivers = r.data.drivers;
-      } catch (e) { console.error('loadDrivers:', e); }
+        var cached = JSON.parse(sessionStorage.getItem('ppk_vh_c') || 'null');
+        if (cached && Array.isArray(cached.d) && (Date.now() - cached.t) < 300000) {
+          state.vehicles = cached.d;
+          state.vehiclesMap = {};
+          state.vehicles.forEach(function(v){ state.vehiclesMap[String(v.id || v.car_id)] = v; });
+          _buildVehicleDropdowns();
+          return;
+        }
+      } catch(_) {}
+      try {
+        var r = await withTimeout(apiCall('getVehicles', {}), 10000, 'โหลดข้อมูลรถไม่สำเร็จ');
+        if (r && r.success && r.data && Array.isArray(r.data.vehicles)) {
+          state.vehicles = r.data.vehicles;
+          state.vehiclesMap = {};
+          state.vehicles.forEach(function(v) { state.vehiclesMap[String(v.id || v.car_id)] = v; });
+          try { sessionStorage.setItem('ppk_vh_c', JSON.stringify({ t: Date.now(), d: state.vehicles })); } catch(_) {}
+        }
+      } catch (e) { console.error('loadVehicles:', e); }
+      _buildVehicleDropdowns();
+    }
 
+    function _buildDriverDropdown(){
       var html = '<option value="">-- เลือก --</option>';
       state.drivers.forEach(function(d){
         var dId = d.driver_id || d.id || '';
@@ -412,6 +447,29 @@
         html += '<option value="' + escAttr(dId) + '">' + escHtml(dName) + '</option>';
       });
       byId('cmp_taken_by').innerHTML = html;
+    }
+
+    async function loadDrivers(){
+      try {
+        var cached = JSON.parse(sessionStorage.getItem('ppk_dr_c') || 'null');
+        if (cached && Array.isArray(cached.d) && (Date.now() - cached.t) < 300000) {
+          state.drivers = cached.d;
+          state.driversMap = {};
+          state.drivers.forEach(function(d){ state.driversMap[String(d.driver_id || d.id)] = d; });
+          _buildDriverDropdown();
+          return;
+        }
+      } catch(_) {}
+      try {
+        var r = await withTimeout(apiCall('getDrivers', { status:'active' }), 10000, 'โหลดข้อมูลพนักงานขับรถไม่สำเร็จ');
+        if (r && r.success && r.data && Array.isArray(r.data.drivers)) {
+          state.drivers = r.data.drivers;
+          state.driversMap = {};
+          state.drivers.forEach(function(d) { state.driversMap[String(d.driver_id || d.id)] = d; });
+          try { sessionStorage.setItem('ppk_dr_c', JSON.stringify({ t: Date.now(), d: state.drivers })); } catch(_) {}
+        }
+      } catch (e) { console.error('loadDrivers:', e); }
+      _buildDriverDropdown();
     }
 
     async function loadHistory(showNotice){
@@ -430,15 +488,7 @@
         if (!r || !r.success) throw new Error((r && r.message) || 'โหลดข้อมูลไม่สำเร็จ');
 
         var list = Array.isArray(r.data) ? r.data.slice() : [];
-
-        list.sort(function(a,b){
-          var da = String(a.date_completed || a.date_reported || '');
-          var db = String(b.date_completed || b.date_reported || '');
-          if (da < db) return 1;
-          if (da > db) return -1;
-          return 0;
-        });
-
+        // backend ส่งข้อมูลเรียงโดย COALESCE(date_completed, date_reported) DESC แล้ว
         state.historyData = list;
         applySearchAndRender();
         if (showNotice) showAlert('รีเฟรชข้อมูลเรียบร้อย', 'success');
@@ -531,29 +581,47 @@
       var pageList = state.filteredData.slice(start, start + PAGE_SIZE);
       var canEdit = canEditRepair();
 
-      var html = '';
-      pageList.forEach(function(rp){
-        var st = SERVICE_TYPE_MAP[rp.service_type] || SERVICE_TYPE_MAP.repair;
-        var totalCost = toNum(rp.grand_total || rp.cost || 0);
-        var mileIn = rp.mileage_at_repair ? Number(rp.mileage_at_repair).toLocaleString() : '—';
+      body.innerHTML = '';
+      var _tkn = ++state._renderToken;
+      var _idx = 0;
+      var CHUNK = 10; // แบ่งโหลดทีละ 10 แถวเพื่อให้ Browser ยังตอบสนองได้
 
-        html += '<tr>';
-        html += '<td style="white-space:nowrap">' + escHtml(fmtDate(rp.date_completed || rp.date_reported)) + '</td>';
-        html += '<td class="t-veh">' + escHtml(vehicleLabel(rp.car_id, rp)) + '</td>';
-        html += '<td><span class="h-service ' + st.css + '">' + escHtml(st.icon) + ' ' + escHtml(st.label) + '</span></td>';
-        html += '<td class="t-desc" title="' + escAttr(rp.issue_description || '-') + '">' + escHtml(rp.issue_description || '-') + '</td>';
-        html += '<td class="h-hide-sm t-muted">' + escHtml(rp.garage_name || '—') + '</td>';
-        html += '<td class="h-hide-sm t-muted">' + escHtml(rp.invoice_number || '—') + '</td>';
-        html += '<td class="h-hide-sm t-mile">' + escHtml(mileIn) + '</td>';
-        html += '<td class="t-cost">' + (totalCost ? totalCost.toLocaleString() : '—') + '</td>';
-        html += '<td class="t-action">';
-        html += '<button class="btn btn-ghost" style="padding:3px 8px;font-size:.78rem" data-action="view" data-id="' + escAttr(rp.id || '') + '">📄 ดู</button>';
-        if (canEdit) html += '<button class="btn btn-ghost" style="padding:3px 8px;font-size:.78rem" data-action="edit" data-id="' + escAttr(rp.id || '') + '">✏️</button>';
-        html += '</td></tr>';
-      });
+      function renderChunk() {
+        if (_tkn !== state._renderToken) return;
+        var html = '';
+        var end = Math.min(_idx + CHUNK, pageList.length);
 
-      body.innerHTML = html;
-      renderPagination(total);
+        for (; _idx < end; _idx++) {
+          var rp = pageList[_idx];
+          var st = SERVICE_TYPE_MAP[rp.service_type] || SERVICE_TYPE_MAP.repair;
+          var totalCost = toNum(rp.grand_total || rp.cost || 0);
+          var mileIn = rp.mileage_at_repair ? Number(rp.mileage_at_repair).toLocaleString() : '—';
+
+          html += '<tr>';
+          html += '<td style="white-space:nowrap">' + escHtml(fmtDate(rp.date_completed || rp.date_reported)) + '</td>';
+          html += '<td class="t-veh">' + escHtml(vehicleLabel(rp.car_id, rp)) + '</td>';
+          html += '<td><span class="h-service ' + st.css + '">' + escHtml(st.icon) + ' ' + escHtml(st.label) + '</span></td>';
+          html += '<td class="t-desc" title="' + escAttr(rp.issue_description || '-') + '">' + escHtml(rp.issue_description || '-') + '</td>';
+          html += '<td class="h-hide-sm t-muted">' + escHtml(rp.garage_name || '—') + '</td>';
+          html += '<td class="h-hide-sm t-muted">' + escHtml(rp.invoice_number || '—') + '</td>';
+          html += '<td class="h-hide-sm t-mile">' + escHtml(mileIn) + '</td>';
+          html += '<td class="t-cost">' + (totalCost ? totalCost.toLocaleString() : '—') + '</td>';
+          html += '<td class="t-action">';
+          html += '<button class="btn btn-ghost" style="padding:3px 8px;font-size:.78rem" data-action="view" data-id="' + escAttr(rp.id || '') + '">📄 ดู</button>';
+          if (canEdit) html += '<button class="btn btn-ghost" style="padding:3px 8px;font-size:.78rem" data-action="edit" data-id="' + escAttr(rp.id || '') + '">✏️</button>';
+          html += '</td></tr>';
+        }
+
+        body.insertAdjacentHTML('beforeend', html);
+
+        if (_idx < pageList.length) {
+          requestAnimationFrame(renderChunk);
+        } else {
+          renderPagination(total);
+        }
+      }
+
+      renderChunk();
     }
 
     function renderPagination(total){
@@ -779,6 +847,7 @@
 
         byId('cmp_insurance_section').style.display = (rp.service_type === 'accident' || rp.service_type === 'insurance') ? '' : 'none';
         byId('completedModal').classList.add('show');
+        setTimeout(function(){ if (typeof initAllThaiDateTimePickers === 'function') initAllThaiDateTimePickers(); }, 100);
       } catch (e) {
         showAlert(e.message || 'เกิดข้อผิดพลาด', 'error');
       }
@@ -913,7 +982,10 @@
         return;
       }
 
-      if (typeof requireAuth === 'function' && !requireAuth()) return;
+      if (typeof requireAuth === 'function' && !requireAuth()) {
+        window.location.href = 'login.html';
+        return;
+      }
 
       bindEvents();
       initYearFilter();
@@ -937,4 +1009,3 @@
   </script>
 </body>
 </html>
-

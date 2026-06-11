@@ -1,6 +1,8 @@
 ﻿// @ts-check
 // Load test credentials from .env.test (gitignored — never committed to repo)
-const { readFileSync } = require('fs');
+import { readFileSync } from 'fs';
+import { defineConfig, devices } from '@playwright/test';
+
 try {
   readFileSync('.env.test', 'utf8').split('\n').forEach(line => {
     const trimmed = line.trim();
@@ -10,9 +12,7 @@ try {
   });
 } catch { /* .env.test not found — rely on env vars set externally */ }
 
-const { defineConfig, devices } = require('@playwright/test');
-
-module.exports = defineConfig({
+export default defineConfig({
   globalSetup: './tests/global-setup.mjs',
   testDir: './tests',
   fullyParallel: false,
