@@ -440,7 +440,7 @@
       </div>
 
       <!-- Form -->
-      <form id="usageForm" onsubmit="handleSubmit(event); return false;" style="display: none;">
+      <form id="usageForm" onsubmit="handleSubmit(event); return false;">
 
         <!-- Mode indicator -->
         <div id="modeIndicator" class="alert alert-info" style="margin-bottom:16px; font-size:0.9em;"></div>
@@ -1008,7 +1008,6 @@
       detectMode();
 
       document.getElementById('loading').style.display = 'none';
-      document.getElementById('usageForm').style.display = 'block';
 
       var now = new Date();
       document.getElementById('date').value = formatDate(now);

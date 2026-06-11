@@ -20,6 +20,83 @@
       box-sizing: border-box;
     }
 
+    /* ── QR Mode Selection Modal ── */
+    .qr-mode-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .qr-mode-dialog {
+      background: white;
+      border-radius: 20px;
+      padding: 28px 24px 24px;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+      text-align: center;
+      animation: qr-modal-in 0.25s cubic-bezier(.34,1.56,.64,1) both;
+    }
+    @keyframes qr-modal-in {
+      from { opacity:0; transform: scale(0.85) translateY(20px); }
+      to   { opacity:1; transform: scale(1) translateY(0); }
+    }
+    .qr-mode-icon { font-size: 2.4em; margin-bottom: 10px; }
+    .qr-mode-title {
+      font-size: 1.15em;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 6px;
+    }
+    .qr-mode-sub {
+      font-size: 0.85em;
+      color: #64748b;
+      margin-bottom: 22px;
+      line-height: 1.5;
+    }
+    .qr-mode-car {
+      background: #f1f5f9;
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: 0.9em;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 22px;
+      display: inline-block;
+    }
+    .qr-mode-btn {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: transform 0.12s, box-shadow 0.12s;
+    }
+    .qr-mode-btn:active { transform: scale(0.97); }
+    .qr-mode-btn.check {
+      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      color: white;
+      box-shadow: 0 4px 14px rgba(79,70,229,0.35);
+    }
+    .qr-mode-btn.repair {
+      background: linear-gradient(135deg, #dc2626, #ef4444);
+      color: white;
+      box-shadow: 0 4px 14px rgba(220,38,38,0.30);
+    }
+
     body {
       font-family: var(--font-family);
       background: var(--gradient-warning);
@@ -576,6 +653,22 @@
     <div id="navigation"></div>
 
     <div class="content">
+      <!-- Modal: เลือกโหมดการใช้งาน -->
+      <div class="qr-mode-overlay" id="qrModeOverlay">
+        <div class="qr-mode-dialog">
+          <div class="qr-mode-icon">📱</div>
+          <div class="qr-mode-title">ต้องการทำอะไร?</div>
+          <div class="qr-mode-sub">เลือกประเภทการบันทึกสำหรับรถคันนี้</div>
+          <div class="qr-mode-car" id="qrModeCarLabel">กำลังโหลด...</div>
+          <button class="qr-mode-btn check" onclick="selectQrMode('check')">
+            ✅ ตรวจสภาพรถประจำวัน
+          </button>
+          <button class="qr-mode-btn repair" onclick="selectQrMode('repair')">
+            🔧 แจ้งซ่อม
+          </button>
+        </div>
+      </div>
+
       <div class="alert" id="alert"></div>
 
       <div id="modeIndicator" class="alert" style="display:none;"></div>
@@ -1515,8 +1608,50 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
+      // Show mode modal first
+      var params = new URLSearchParams(window.location.search);
+      var cId = params.get('car') || params.get('qr') || params.get('car_id');
+      var carLabel = document.getElementById('qrModeCarLabel');
+
+      if (cId) {
+        // Try to show car name in modal
+        fetch('/api/vehicles/qr-info?car_id=' + encodeURIComponent(cId))
+          .then(function(r) { return r.json(); })
+          .catch(function() { return {}; })
+          .then(function(res) {
+            if (res.success && res.data) {
+              var d = res.data;
+              carLabel.textContent = (d.license_plate || cId) + (d.brand ? ' · ' + d.brand + ' ' + (d.model || '') : '');
+            } else {
+              carLabel.textContent = 'ทะเบียน: ' + cId;
+            }
+          });
+      } else {
+        carLabel.textContent = 'ไม่ระบุรถ';
+      }
+
       loadVehicleData();
     });
+
+    function selectQrMode(mode) {
+      var overlay = document.getElementById('qrModeOverlay');
+      if (mode === 'check') {
+        // ปิด modal แล้วใช้ฟอร์มปกติ
+        overlay.style.opacity = '0';
+        overlay.style.transition = 'opacity 0.2s';
+        setTimeout(function() { overlay.style.display = 'none'; }, 200);
+      } else if (mode === 'repair') {
+        var params = new URLSearchParams(window.location.search);
+        var cId = params.get('car') || params.get('qr') || params.get('car_id');
+        var token = (typeof API !== 'undefined') ? API.getToken() : null;
+        if (token) {
+          window.location.href = 'repair.html' + (cId ? '?car_id=' + encodeURIComponent(cId) : '');
+        } else {
+          var nextUrl = 'repair.html' + (cId ? '?car_id=' + encodeURIComponent(cId) : '');
+          window.location.href = 'login.html?next=' + encodeURIComponent(nextUrl);
+        }
+      }
+    }
   </script>
 
   <div

@@ -409,7 +409,7 @@
       <div id="guestWarning" class="alert alert-warning" style="display:none;">⚠️ คุณยังไม่ได้เข้าสู่ระบบ — กรุณากรอกชื่อผู้เบิกเอง</div>
 
       <!-- Form -->
-      <form id="fuelForm" onsubmit="handleSubmit(event); return false;" style="display: none;">
+      <form id="fuelForm" onsubmit="handleSubmit(event); return false;">
         <!-- ผู้เบิกน้ำมัน (Logged-in mode) -->
         <div id="driverLoginSection" class="form-group" style="display:none;">
           <label>ผู้เบิกน้ำมัน</label>
@@ -586,7 +586,6 @@
       detectMode();
 
       document.getElementById('loading').style.display = 'none';
-      document.getElementById('fuelForm').style.display = 'block';
       loadFuelTypes();
       setDefaultDateTime();
 
@@ -613,7 +612,7 @@
         if (currentMode === 'logged_in') {
           result = await apiCall('getVehicle', { id: carId });
         } else {
-          var resp = await fetch(API_BASE_URL + '/api/vehicles/qr-info?car_id=' + encodeURIComponent(carId));
+          var resp = await fetch('/api/vehicles/qr-info?car_id=' + encodeURIComponent(carId));
           result = await resp.json();
         }
 
