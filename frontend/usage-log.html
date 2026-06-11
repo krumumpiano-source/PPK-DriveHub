@@ -428,8 +428,7 @@
 
       // Show admin controls
       try {
-        var _u = getCurrentUser();
-        if (_u && (_u.role === 'admin' || _u.role === 'superadmin' || _u.role === 'super_admin')) {
+        if (typeof hasPermission === 'function' && hasPermission(['admin', 'super_admin'])) {
           isAdmin = true;
           document.getElementById('btnBatchHeal').style.display = '';
           document.getElementById('thManage').style.display = '';
