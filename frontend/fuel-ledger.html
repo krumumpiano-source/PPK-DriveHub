@@ -1733,9 +1733,22 @@
     function printGovRegForm() {
       if (!ledgerData) return;
       var mode = document.getElementById('grmMode').value;
-      var approvalNo = (document.getElementById('grmApprovalNo').value || '').trim() || '...................................';
+      var approvalNo = (document.getElementById('grmApprovalNo').value || '').trim();
       var approvalBudget = (document.getElementById('grmApprovalBudget').value || '').trim();
-      var budgetLabel = approvalBudget ? Number(approvalBudget).toLocaleString('th-TH', {minimumFractionDigits:2}) + ' บาท' : '...................................';
+      var reviewer = (document.getElementById('grmReviewer').value || '').trim();
+      var missing = [];
+      if (!approvalNo) missing.push('เลขที่รายงานขอซื้อ');
+      if (!approvalBudget) missing.push('วงเงินที่อนุมัติ');
+      if (!reviewer) missing.push('ชื่อผู้ตรวจสอบ');
+      var msgEl = document.getElementById('grmValidMsg');
+      if (missing.length > 0) {
+        msgEl.textContent = '⚠️ กรุณากรอกข้อมูลให้ครบ: ' + missing.join(', ');
+        msgEl.style.display = 'block';
+        msgEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        return;
+      }
+      msgEl.style.display = 'none';
+      var budgetLabel = Number(approvalBudget).toLocaleString('th-TH', {minimumFractionDigits:2}) + ' บาท';
       var records = (ledgerData.records || []).slice().sort(function(a,b){
         return (a.date+(a.time||'')).localeCompare(b.date+(b.time||''));
       });
@@ -1768,11 +1781,11 @@
 
       if (filtered.length === 0) { alert('ไม่มีข้อมูลในช่วงที่เลือก'); return; }
       closeGovRegModal();
-      _printGovRegDoc(filtered, periodLabel, approvalNo, budgetLabel);
+      _printGovRegDoc(filtered, periodLabel, approvalNo, budgetLabel, reviewer);
     }
     window.printGovRegForm = printGovRegForm;
 
-    function _printGovRegDoc(records, periodLabel, approvalNo, budgetLabel) {
+    function _printGovRegDoc(records, periodLabel, approvalNo, budgetLabel, reviewer) {
       var thMo = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
       function fmtGovD(iso) {
         if (!iso) return '';
@@ -1858,7 +1871,7 @@
         '<div class="sig-area">' +
         '<div class="sig-box">' +
         '<div class="sig-dot"></div>' +
-        '<div>(.........................................)</div>' +
+        '<div>(' + reviewer + ')</div>' +
         '<div class="sig-name">ผู้ตรวจสอบ</div>' +
         '</div></div>';
 
@@ -1924,18 +1937,26 @@
       </div>
 
       <hr style="margin:16px 0;border:none;border-top:1px solid #e0e0e0;">
-      <p style="font-size:.88em;font-weight:700;color:#555;margin:0 0 10px 0;">ข้อมูลส่วนหัวเอกสาร (ตามแบบฟอร์มราชการ)</p>
+      <p style="font-size:.88em;font-weight:700;color:#555;margin:0 0 10px 0;">ข้อมูลส่วนหัวเอกสาร (บังคับกรอกทุกช่อง)</p>
+
+      <div id="grmValidMsg" style="display:none;padding:8px 12px;background:#fff3e0;border-left:3px solid #f57c00;border-radius:4px;font-size:.88em;color:#e65100;margin-bottom:12px;"></div>
 
       <div class="grm-field">
-        <label>รายงานขอซื้อที่หัวหน้าหน่วยงานของรัฐให้ความเห็นชอบ เลขที่</label>
+        <label>รายงานขอซื้อที่หัวหน้าหน่วยงานของรัฐให้ความเห็นชอบ เลขที่ <span style="color:#c62828;">*</span></label>
         <input type="text" id="grmApprovalNo" placeholder="เช่น พย.0025/2567">
-        <div class="help">เลขที่หนังสือรายงานขอซื้อที่ผู้บริหารอนุมัติ (ถ้ามี)</div>
+        <div class="help">เลขที่หนังสือรายงานขอซื้อที่ผู้บริหารอนุมัติ</div>
       </div>
 
       <div class="grm-field">
-        <label>วงเงินที่หัวหน้าหน่วยงานของรัฐให้ความเห็นชอบ (บาท)</label>
+        <label>วงเงินที่หัวหน้าหน่วยงานของรัฐให้ความเห็นชอบ (บาท) <span style="color:#c62828;">*</span></label>
         <input type="number" id="grmApprovalBudget" step="0.01" min="0" placeholder="เช่น 150000">
-        <div class="help">วงเงินที่ได้รับอนุมัติ (ถ้ามี)</div>
+        <div class="help">วงเงินที่ได้รับอนุมัติ</div>
+      </div>
+
+      <div class="grm-field">
+        <label>ชื่อผู้ตรวจสอบ <span style="color:#c62828;">*</span></label>
+        <input type="text" id="grmReviewer" placeholder="ชื่อ-นามสกุล ผู้ตรวจสอบ">
+        <div class="help">ชื่อที่จะปรากฏในช่องลายเซ็นผู้ตรวจสอบท้ายเอกสาร</div>
       </div>
 
       <div style="display:flex;gap:10px;margin-top:20px;">
