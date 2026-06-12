@@ -101,8 +101,8 @@ export async function onRequest(context) {
     const whereClause = 'WHERE ' + where.join(' AND ');
 
     const rows = await dbAll(env.DB,
-      `SELECT fl.id, fl.date, fl.car_id, c.license_plate, c.brand,
-       COALESCE(d.name, fl.driver_name_manual) AS driver_name, fl.driver_id,
+      `SELECT fl.id, fl.date, fl.time, fl.car_id, c.license_plate, c.brand, c.model, c.vehicle_type, c.color,
+       COALESCE(d.first_name||' '||d.last_name, fl.driver_name_manual) AS driver_name, fl.driver_id,
        fl.liters, fl.price_per_liter, fl.amount,
        fl.fuel_type, fl.gas_station_name, fl.gas_station_tax_id,
        fl.mileage_before, fl.mileage_after,
@@ -114,7 +114,7 @@ export async function onRequest(context) {
        LEFT JOIN cars c ON fl.car_id = c.id
        LEFT JOIN drivers d ON fl.driver_id = d.id
        ${whereClause}
-       ORDER BY fl.date DESC LIMIT 1000`,
+       ORDER BY fl.date ASC, fl.time ASC LIMIT 2000`,
       params
     );
 
