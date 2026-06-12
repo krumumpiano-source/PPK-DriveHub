@@ -86,6 +86,8 @@
     .word-card .btn-word:hover{opacity:.88;}
     .word-card .btn-word:disabled{opacity:.5;cursor:not-allowed;}
     .word-info{background:#eef2ff;border:1px solid #c7d2fe;border-radius:var(--radius-lg);padding:14px 18px;margin-bottom:16px;font-size:.85rem;color:#3730a3;}
+    .wmode-pill{padding:6px 14px;border:none;border-radius:20px;font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;background:transparent;color:var(--color-text-muted);transition:all .15s;}
+    .wmode-pill.active{background:var(--color-primary);color:white;}
     @media(max-width:480px){ .stats-grid{grid-template-columns:repeat(2,1fr);gap:8px} .stat-card .value{font-size:1.5rem} }
   </style>
 </head>
@@ -471,6 +473,7 @@
         if (currentTab==='repairs') html=await renderRepairs();
         if (currentTab==='word')    html=renderWordTab();
         document.getElementById('reportContent').innerHTML=html;
+        if (currentTab==='word') { setTimeout(_wUpdateLabel, 50); }
       } catch(e) {
         console.error(e);
         document.getElementById('reportContent').innerHTML=emptyState('⚠️','โหลดข้อมูลไม่สำเร็จ: '+(e.message||''));
@@ -873,14 +876,137 @@
     }
 
     /* ═══ WORD TAB ═══════════════════════════════════════════════════ */
+
+    /* ─── Word date range picker ──────────────────────────────────── */
+    var _wMode = 'fiscal'; // default
+
+    function _wPad(n){return String(n).padStart(2,'0');}
+    function _lastDay(y,m){return new Date(y,m,0).getDate();}
+
+    function getWordDateRange() {
+      var mode = _wMode;
+      var ce, from, to, label;
+      if (mode === 'month') {
+        var sel = document.getElementById('wSelMonth');
+        var selY = document.getElementById('wSelMonthYear');
+        if (!sel||!selY) return null;
+        var m = +sel.value, bsY = +selY.value, ceY = bsY-543;
+        from = ceY+'-'+_wPad(m)+'-01';
+        to   = ceY+'-'+_wPad(m)+'-'+_wPad(_lastDay(ceY,m));
+        label = MONTHS_TH[m]+' พ.ศ. '+bsY;
+      } else if (mode === 'year') {
+        var selY2 = document.getElementById('wSelYear');
+        if (!selY2) return null;
+        var bsY2 = +selY2.value, ceY2 = bsY2-543;
+        from = ceY2+'-01-01'; to = ceY2+'-12-31';
+        label = 'ปี พ.ศ. '+bsY2;
+      } else if (mode === 'ay') {
+        var selAY = document.getElementById('wSelAY');
+        if (!selAY) return null;
+        var ay = +selAY.value, ceAY = ay-543;
+        from = ceAY+'-05-01'; to = (ceAY+1)+'-04-30';
+        label = 'ปีการศึกษา '+ay;
+      } else if (mode === 'sem') {
+        var selSem = document.getElementById('wSelSem');
+        var selSemAY = document.getElementById('wSelSemAY');
+        if (!selSem||!selSemAY) return null;
+        var sem = +selSem.value, ayS = +selSemAY.value, ceS = ayS-543;
+        if (sem===1) { from=ceS+'-05-01'; to=ceS+'-10-31'; label='ภาคเรียนที่ 1 ปีการศึกษา '+ayS; }
+        else         { from=ceS+'-11-01'; to=(ceS+1)+'-04-30'; label='ภาคเรียนที่ 2 ปีการศึกษา '+ayS; }
+      } else if (mode === 'fiscal') {
+        var selFY = document.getElementById('wSelFY');
+        if (!selFY) return null;
+        var fy = +selFY.value, ceFY = fy-543;
+        from = (ceFY-1)+'-10-01'; to = ceFY+'-09-30';
+        label = 'ปีงบประมาณ พ.ศ. '+fy;
+      } else if (mode === 'quarter') {
+        var selQ = document.getElementById('wSelQ');
+        var selQFY = document.getElementById('wSelQFY');
+        if (!selQ||!selQFY) return null;
+        var q = +selQ.value, qfy = +selQFY.value, ceQFY = qfy-543;
+        var qMap = {1:[(ceQFY-1)+'-10-01',(ceQFY-1)+'-12-31'],2:[ceQFY+'-01-01',ceQFY+'-03-31'],3:[ceQFY+'-04-01',ceQFY+'-06-30'],4:[ceQFY+'-07-01',ceQFY+'-09-30']};
+        from = qMap[q][0]; to = qMap[q][1];
+        label = 'ไตรมาส '+q+' ปีงบประมาณ '+qfy;
+      }
+      return {from:from, to:to, label:label};
+    }
+
+    function _buildYearOpts(elId, defaultBsY) {
+      var cur = new Date().getFullYear()+543;
+      var s=''; for(var y=cur+1;y>=cur-10;y--) s+='<option value="'+y+'"'+(y===defaultBsY?' selected':'')+'>'+y+'</option>';
+      return '<select id="'+elId+'" onchange="_wUpdateLabel()" style="padding:6px 8px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:.88rem;">'+s+'</select>';
+    }
+    function _buildAYOpts(elId, defaultAY) {
+      var cur = new Date().getFullYear()+543 + (new Date().getMonth()>=4?1:0);
+      var s=''; for(var y=cur+1;y>=cur-5;y--) s+='<option value="'+y+'"'+(y===defaultAY?' selected':'')+'>'+y+'</option>';
+      return '<select id="'+elId+'" onchange="_wUpdateLabel()" style="padding:6px 8px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:.88rem;">'+s+'</select>';
+    }
+
+    function _wModeControls(mode) {
+      var curY = new Date().getFullYear()+543;
+      var curAY = curY + (new Date().getMonth()>=4?1:0);
+      var curFY = curY + (new Date().getMonth()>=9?1:0);
+      var inp = 'padding:6px 8px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:.88rem;';
+      if (mode==='month') {
+        var mo=''; MONTHS_TH.forEach(function(n,i){if(i>0)mo+='<option value="'+i+'"'+(i===new Date().getMonth()+1?' selected':'')+'>'+n+'</option>';});
+        return '<select id="wSelMonth" onchange="_wUpdateLabel()" style="'+inp+'">'+mo+'</select> '
+             + _buildYearOpts('wSelMonthYear', curY);
+      }
+      if (mode==='year') return _buildYearOpts('wSelYear', curY);
+      if (mode==='ay')  return _buildAYOpts('wSelAY', curAY);
+      if (mode==='sem') {
+        return '<select id="wSelSem" onchange="_wUpdateLabel()" style="'+inp+'"><option value="1">ภาคเรียนที่ 1</option><option value="2">ภาคเรียนที่ 2</option></select> '
+             + _buildAYOpts('wSelSemAY', curAY);
+      }
+      if (mode==='fiscal') return _buildYearOpts('wSelFY', curFY);
+      if (mode==='quarter') {
+        return '<select id="wSelQ" onchange="_wUpdateLabel()" style="'+inp+'"><option value="1">ไตรมาส 1 (ต.ค.–ธ.ค.)</option><option value="2">ไตรมาส 2 (ม.ค.–มี.ค.)</option><option value="3">ไตรมาส 3 (เม.ย.–มิ.ย.)</option><option value="4">ไตรมาส 4 (ก.ค.–ก.ย.)</option></select> '
+             + _buildYearOpts('wSelQFY', curFY);
+      }
+      return '';
+    }
+
+    function _wUpdateLabel() {
+      var r = getWordDateRange();
+      var el = document.getElementById('wRangeLabel');
+      if (el && r) el.textContent = r.label + '  (' + r.from + ' – ' + r.to + ')';
+    }
+
+    function switchWordMode(mode, btn) {
+      _wMode = mode;
+      document.querySelectorAll('.wmode-pill').forEach(function(b){b.classList.remove('active');});
+      btn.classList.add('active');
+      var box = document.getElementById('wModeControls');
+      if (box) box.innerHTML = _wModeControls(mode);
+      _wUpdateLabel();
+    }
+
     function renderWordTab() {
-      return '<div class="word-info">📄 สร้างเอกสาร Word (.docx) ที่พร้อมส่ง — ใช้ฟ้อนต์ TH Sarabun New และโครงสร้างเดียวกับเอกสารราชการ<br>กรุณาเปิดไฟล์ที่ดาวน์โหลดด้วย Microsoft Word และติดตั้งฟ้อนต์ TH Sarabun New ก่อนพิมพ์</div>'
-        +'<div class="word-cards">'
-        +wordCard('📋 ทะเบียนควบคุมการจัดซื้อน้ำมัน','ปีงบประมาณ พ.ศ. ๒๕๖๘  (๑ ต.ค. ๒๕๖๗ – ๓๐ ก.ย. ๒๕๖๘)','แยกรายเดือน พร้อมสรุปยอดรวมและลายเซ็นอนุมัติ','generateFuelRegisterDocx(this)')
-        +wordCard('📒 บัญชีคุมน้ำมันเชื้อเพลิง','ปีงบประมาณ พ.ศ. ๒๕๖๘  (๑ ต.ค. ๒๕๖๗ – ๓๐ ก.ย. ๒๕๖๘)','แยกรายคัน รายเดือน พร้อมอัตราสิ้นเปลือง','generateFuelLedgerDocx(this)')
-        +wordCard('📅 รายงานประจำเดือน','เลือกเดือนที่ต้องการด้านล่าง','บันทึกการใช้รถ เชื้อเพลิง พนักงานขับรถ ซ่อมบำรุง','generateMonthlyDocx(this)',' <div style="margin-top:8px"><label style="font-size:.82rem;font-weight:600;color:var(--color-text-muted)">เดือน</label><input type="month" id="wordMonthPick" style="display:block;margin-top:4px;padding:6px 10px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:.9rem;" value="'+(function(){var d=new Date();return d.getFullYear()+'-'+(String(d.getMonth()+1).padStart(2,'0'));})()+'"></div>')
-        +wordCard('📊 รายงานงานยานพาหนะ (ชุดใหญ่)','ปีการศึกษา ๒๕๖๘  (พ.ค. ๒๕๖๘ – เม.ย. ๒๕๖๙)','5 หมวด: ข้อมูลรถ พนักงาน บันทึกใช้รถ น้ำมัน ซ่อมบำรุง','generateAnnualDocx(this)')
+      var curY = new Date().getFullYear()+543;
+      var curFY = curY + (new Date().getMonth()>=9?1:0);
+      var pillStyle = 'padding:6px 14px;border:none;border-radius:20px;font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;background:transparent;color:var(--color-text-muted);transition:all .15s;';
+      var pillActiveStyle = 'background:var(--color-primary);color:white;';
+      var html = '<div class="word-info">📄 สร้างเอกสาร Word (.docx) ที่พร้อมส่ง — ใช้ฟ้อนต์ TH Sarabun New และโครงสร้างเดียวกับเอกสารราชการ<br>กรุณาเปิดไฟล์ที่ดาวน์โหลดด้วย Microsoft Word และติดตั้งฟ้อนต์ TH Sarabun New ก่อนพิมพ์</div>';
+      // Date picker panel
+      html += '<div style="background:white;border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:16px;box-shadow:var(--shadow-sm);">';
+      html += '<div style="font-size:.75rem;font-weight:700;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;">📅 ช่วงเวลา</div>';
+      html += '<div style="display:flex;gap:4px;flex-wrap:wrap;background:var(--color-bg-light);border:1px solid var(--color-border);border-radius:20px;padding:3px;margin-bottom:12px;width:fit-content;">';
+      var modes = [['month','เดือน'],['year','ปี พ.ศ.'],['ay','ปีการศึกษา'],['sem','ภาคเรียน'],['fiscal','ปีงบประมาณ'],['quarter','ไตรมาส']];
+      modes.forEach(function(m){
+        var isActive = m[0]==='fiscal';
+        html += '<button class="wmode-pill'+(isActive?' active':'')+'" onclick="switchWordMode(\''+m[0]+'\',this)" style="'+pillStyle+(isActive?pillActiveStyle:'')+'">'+m[1]+'</button>';
+      });
+      html += '</div>';
+      html += '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;" id="wModeControls">'+_wModeControls('fiscal')+'</div>';
+      html += '<div style="margin-top:10px;font-size:.84rem;color:var(--color-text-muted);background:var(--color-bg-light);padding:6px 12px;border-radius:var(--radius-md);" id="wRangeLabel"></div>';
+      html += '</div>';
+      html += '<div class="word-cards">'
+        +wordCard('📋 ทะเบียนควบคุมการจัดซื้อน้ำมัน','ดึงข้อมูลจากช่วงเวลาที่เลือกด้านบน','แยกรายเดือน พร้อมสรุปยอดรวมและลายเซ็นอนุมัติ','generateFuelRegisterDocx(this)')
+        +wordCard('📒 บัญชีคุมน้ำมันเชื้อเพลิง','ดึงข้อมูลจากช่วงเวลาที่เลือกด้านบน','แยกรายคัน รายเดือน พร้อมอัตราสิ้นเปลือง','generateFuelLedgerDocx(this)')
+        +wordCard('📅 รายงานประจำเดือน/ช่วงเวลา','ดึงข้อมูลจากช่วงเวลาที่เลือกด้านบน','บันทึกการใช้รถ เชื้อเพลิง พนักงานขับรถ ซ่อมบำรุง','generateMonthlyDocx(this)')
+        +wordCard('📊 รายงานงานยานพาหนะ (ชุดใหญ่)','ดึงข้อมูลจากช่วงเวลาที่เลือกด้านบน','5 หมวด: ข้อมูลรถ พนักงาน บันทึกใช้รถ น้ำมัน ซ่อมบำรุง','generateAnnualDocx(this)')
         +'</div>';
+      return html;
     }
     function wordCard(title,meta,desc,onclick,extra) {
       return '<div class="word-card"><h3>'+title+'</h3>'
@@ -989,11 +1115,12 @@
 
     /* ─── 1. ทะเบียนควบคุมการจัดซื้อน้ำมัน ─────────────────────── */
     async function generateFuelRegisterDocx(btn) {
+      var _wr=getWordDateRange(); if(!_wr){alert('กรุณาเลือกช่วงเวลา');return;}
       setBtn(btn,true);
       try {
         if(!await ensureDocx()){alert('โหลดไลบรารี docx ไม่สำเร็จ กรุณารีโหลดหน้าแล้วลองใหม่');setBtn(btn,false);return;}
         var d=window.docx;
-        var r=await API.get('/api/reports/fuel?date_from='+FY_FROM+'&date_to='+FY_TO);
+        var r=await API.get('/api/reports/fuel?date_from='+_wr.from+'&date_to='+_wr.to);
         var recs=(r&&r.data)?r.data.records||[]:(r.records||[]);
         // Group by month
         var byMonth={};
@@ -1008,7 +1135,7 @@
         pNodes.push(...el(4));
         pNodes.push(ppc('แบบ ทบ.3',{size:_SB,sp:{before:0,after:20}}));
         pNodes.push(ppc('ทะเบียนควบคุมการจัดซื้อน้ำมันเชื้อเพลิง',{size:_ST,bold:true,sp:{before:0,after:20}}));
-        pNodes.push(ppc('ปีงบประมาณ พ.ศ. ๒๕๖๘',{size:_ST,bold:true,sp:{before:0,after:40}}));
+        pNodes.push(ppc(_wr.label,{size:_ST,bold:true,sp:{before:0,after:40}}));
         pNodes.push(ppc(SCHOOL_TH,{size:_SH,sp:{before:0,after:20}}));
         pNodes.push(ppc(ZONE_TH,{size:_SB,sp:{before:0,after:100}}));
         pNodes.push(pb());
@@ -1129,11 +1256,12 @@
 
     /* ─── 2. บัญชีคุมน้ำมันเชื้อเพลิง ───────────────────────────── */
     async function generateFuelLedgerDocx(btn) {
+      var _wr=getWordDateRange(); if(!_wr){alert('กรุณาเลือกช่วงเวลา');return;}
       setBtn(btn,true);
       try {
         if(!await ensureDocx()){alert('โหลดไลบรารี docx ไม่สำเร็จ กรุณารีโหลดหน้าแล้วลองใหม่');setBtn(btn,false);return;}
         var d=window.docx;
-        var r=await API.get('/api/reports/fuel?date_from='+FY_FROM+'&date_to='+FY_TO);
+        var r=await API.get('/api/reports/fuel?date_from='+_wr.from+'&date_to='+_wr.to);
         var recs=(r&&r.data)?r.data.records||[]:(r.records||[]);
         var carR=await API.get('/api/cars?per_page=200');
         var carList=(carR&&carR.data)?(carR.data.cars||carR.data):(carR.cars||[]);
@@ -1156,10 +1284,16 @@
           var color=carInfo.color||'-';
           var totL=0,totA=0,runAmt=0;
           // Monthly breakdown
-          var months=['2024-10','2024-11','2024-12','2025-01','2025-02','2025-03','2025-04','2025-05','2025-06','2025-07','2025-08','2025-09'];
+          var months=(function(){
+            var res=[],cur=new Date(_wr.from),end=new Date(_wr.to);
+            while(cur<=end){
+              res.push(cur.getFullYear()+'-'+_wPad(cur.getMonth()+1));
+              cur.setMonth(cur.getMonth()+1);
+            }return res;
+          })();
           // Cover for this vehicle
           allNodes.push(ppc('บัญชีคุมน้ำมันเชื้อเพลิง',{size:_SH,bold:true,sp:{before:0,after:10}}));
-          allNodes.push(ppc('ปีงบประมาณ พ.ศ. ๒๕๖๘  (๑ ตุลาคม ๒๕๖๗ – ๓๐ กันยายน ๒๕๖๘)',{size:_SB,sp:{before:0,after:10}}));
+          allNodes.push(ppc(_wr.label,{size:_SB,sp:{before:0,after:10}}));
           allNodes.push(ppR([tr('ทะเบียน ',{size:_SB,bold:true}),tr(lp,{size:_SB}),tr('   ยี่ห้อ ',{size:_SB,bold:true}),tr(brand,{size:_SB}),tr('   สี ',{size:_SB,bold:true}),tr(color,{size:_SB})],{sp:{before:0,after:60}}));
           // Build header row
           var hRow=new d.TableRow({tableHeader:true,children:[
@@ -1208,7 +1342,7 @@
           ]}));
           allNodes.push(new d.Table({width:{size:100,type:d.WidthType.PERCENTAGE},rows:dataRows}));
           allNodes.push(...el(1));
-          allNodes.push(ppc('ขอรับรองว่าบัญชีคุมน้ำมันเชื้อเพลิง ทะเบียน '+lp+' ปีงบประมาณ พ.ศ. ๒๕๖๘ มีรายละเอียดครบถ้วน ถูกต้องตามความเป็นจริงทุกประการ',{size:_SB,bold:true,sp:{before:40,after:40}}));
+          allNodes.push(ppc('ขอรับรองว่าบัญชีคุมน้ำมันเชื้อเพลิง ทะเบียน '+lp+' '+_wr.label+' มีรายละเอียดครบถ้วน ถูกต้องตามความเป็นจริงทุกประการ',{size:_SB,bold:true,sp:{before:40,after:40}}));
           allNodes.push(disclaimerP());
           allNodes.push(...sigV('ผู้จัดทำ',P_AUTHOR.name,P_AUTHOR.pos));
           allNodes.push(...sigV('ผู้ตรวจสอบ',P_PURCHASE.name,P_PURCHASE.pos));
@@ -1227,16 +1361,13 @@
 
     /* ─── 3. รายงานประจำเดือน ────────────────────────────────────── */
     async function generateMonthlyDocx(btn) {
-      var ym=document.getElementById('wordMonthPick').value;
-      if(!ym){alert('กรุณาเลือกเดือน');return;}
+      var _wr=getWordDateRange(); if(!_wr){alert('กรุณาเลือกช่วงเวลา');return;}
       setBtn(btn,true);
       try {
         if(!await ensureDocx()){alert('โหลดไลบรารี docx ไม่สำเร็จ กรุณารีโหลดหน้าแล้วลองใหม่');setBtn(btn,false);return;}
         var d=window.docx;
-        var p=ym.split('-');
-        var lastDay=new Date(+p[0],+p[1],0).getDate();
-        var df=ym+'-01',dt=ym+'-'+String(lastDay).padStart(2,'0');
-        var thMon=MONTHS_TH[+p[1]];var thYr=''+(+p[0]+543);
+        var df=_wr.from, dt=_wr.to;
+        var periodLabel=_wr.label;
         var [fuelR,repR,tripsR]=await Promise.all([
           API.get('/api/reports/fuel?date_from='+df+'&date_to='+dt),
           API.get('/api/reports/repairs?date_from='+df+'&date_to='+dt),
@@ -1252,7 +1383,7 @@
         var sec1=[];
         sec1.push(...el(3));
         sec1.push(ppc('รายงานงานยานพาหนะ',{size:_ST,bold:true,sp:{before:0,after:20}}));
-        sec1.push(ppc('ประจำเดือน '+thMon+' พ.ศ. '+thYr,{size:_SH,bold:true,sp:{before:0,after:40}}));
+        sec1.push(ppc(periodLabel,{size:_SH,bold:true,sp:{before:0,after:40}}));
         sec1.push(ppc(SCHOOL_TH,{size:_SH,sp:{before:0,after:20}}));
         sec1.push(ppc(ZONE_TH,{size:_SB,sp:{before:0,after:100}}));
         // Summary stats
@@ -1269,7 +1400,7 @@
         sec1.push(new d.Table({width:{size:100,type:d.WidthType.PERCENTAGE},rows:sumTbl}));
         // Section 2 (Landscape): บันทึกการใช้รถ
         var sec2=[];
-        sec2.push(ppc('บันทึกการใช้รถ ประจำเดือน '+thMon+' พ.ศ. '+thYr,{size:_SH,bold:true,sp:{before:0,after:20}}));
+        sec2.push(ppc('บันทึกการใช้รถ '+periodLabel,{size:_SH,bold:true,sp:{before:0,after:20}}));
         if(tripRecs.length){
           var bH=[{w:500,t:'ที่'},{w:740,t:'วันที่'},{w:760,t:'ทะเบียน'},{w:800,t:'ผู้ขอใช้'},{w:1400,t:'ปลายทาง/วัตถุประสงค์'},{w:760,t:'ผู้ขับ'},{w:800,t:'เวลาออก\n(แผน)'},{w:800,t:'เวลากลับ\n(แผน)'},{w:900,t:'เวลาออก\n(จริง)'},{w:900,t:'เวลากลับ\n(จริง)'},{w:700,t:'ไมล์ออก'},{w:700,t:'ไมล์กลับ'},{w:700,t:'ระยะ\n(กม.)'},{w:746,t:'หมายเหตุ'}];
           var bHdr=new d.TableRow({tableHeader:true,children:bH.map(function(c){return hCell(c.t,c.w,{size:_SC});})});
@@ -1291,10 +1422,10 @@
             ]}));
           });
           sec2.push(new d.Table({width:{size:100,type:d.WidthType.PERCENTAGE},rows:bRows}));
-        } else {sec2.push(ppc('ไม่มีข้อมูลการใช้รถในเดือนนี้',{size:_SB,sp:{before:40,after:40}}));}
+        } else {sec2.push(ppc('ไม่มีข้อมูลการใช้รถในช่วงนี้',{size:_SB,sp:{before:40,after:40}})};
         // Section 3 (Landscape): บัญชีคุมน้ำมัน
         var sec3=[];
-        sec3.push(ppc('บัญชีคุมน้ำมันเชื้อเพลิง ประจำเดือน '+thMon+' พ.ศ. '+thYr,{size:_SH,bold:true,sp:{before:0,after:20}}));
+        sec3.push(ppc('บัญชีคุมน้ำมันเชื้อเพลิง '+periodLabel,{size:_SH,bold:true,sp:{before:0,after:20}}));
         if(fuelRecs.length){
           var fH=[{w:500,t:'ที่'},{w:740,t:'วันที่'},{w:740,t:'เวลา'},{w:900,t:'ทะเบียน'},{w:1000,t:'เลขที่ใบเสร็จ'},{w:560,t:'ชนิด\nน้ำมัน'},{w:560,t:'ปริมาณ\n(ลิตร)'},{w:700,t:'ราคา/\nลิตร'},{w:800,t:'จำนวนเงิน'},{w:900,t:'วงเงิน\nสะสม'},{w:700,t:'เลขมาตร'},{w:700,t:'กม./ลิตร'},{w:1000,t:'ผู้เบิก/ผู้ขับ'},{w:1306,t:'สถานีบริการ'},{w:980,t:'หมายเหตุ'}];
           var fHdr=new d.TableRow({tableHeader:true,children:fH.map(function(c){return hCell(c.t,c.w,{size:_SC});})});
@@ -1351,7 +1482,7 @@
           {properties:{page:{size:{width:11906,height:16838},margin:{top:1080,bottom:1080,left:1440,right:1080}}},children:sec4},
         ]});
         var buf=await d.Packer.toBuffer(doc);
-        var fname='รายงานประจำเดือน-'+ym+'.docx';
+        var fname='รายงาน-'+_wr.label.replace(/\s+/g,'-')+'.docx';
         dlDocx(buf,fname);
       } catch(e){console.error(e);alert('เกิดข้อผิดพลาด: '+e.message);}
       setBtn(btn,false);
@@ -1359,14 +1490,15 @@
 
     /* ─── 4. รายงานชุดใหญ่ (ปีการศึกษา 2568) ───────────────────── */
     async function generateAnnualDocx(btn) {
+      var _wr=getWordDateRange(); if(!_wr){alert('กรุณาเลือกช่วงเวลา');return;}
       setBtn(btn,true);
       try {
         if(!await ensureDocx()){alert('โหลดไลบรารี docx ไม่สำเร็จ กรุณารีโหลดหน้าแล้วลองใหม่');setBtn(btn,false);return;}
         var d=window.docx;
         var [fuelR,repR,tripsR,carR]=await Promise.all([
-          API.get('/api/reports/fuel?date_from='+AY_FROM+'&date_to='+AY_TO),
-          API.get('/api/reports/repairs?date_from='+AY_FROM+'&date_to='+AY_TO),
-          API.get('/api/reports/trips?date_from='+AY_FROM+'&date_to='+AY_TO),
+          API.get('/api/reports/fuel?date_from='+_wr.from+'&date_to='+_wr.to),
+          API.get('/api/reports/repairs?date_from='+_wr.from+'&date_to='+_wr.to),
+          API.get('/api/reports/trips?date_from='+_wr.from+'&date_to='+_wr.to),
           API.get('/api/cars?per_page=200'),
         ]);
         var fuelRecs=(fuelR&&fuelR.data)?fuelR.data.records||[]:(fuelR.records||[]);
@@ -1380,8 +1512,8 @@
         var sec1=[];
         sec1.push(...el(3));
         sec1.push(ppc('รายงานงานยานพาหนะ',{size:_ST,bold:true,sp:{before:0,after:20}}));
-        sec1.push(ppc('ปีการศึกษา ๒๕๖๘',{size:_SH,bold:true,sp:{before:0,after:20}}));
-        sec1.push(ppc('(๑ พฤษภาคม ๒๕๖๘ – ๓๐ เมษายน ๒๕๖๙)',{size:_SB,sp:{before:0,after:40}}));
+        sec1.push(ppc(_wr.label,{size:_SH,bold:true,sp:{before:0,after:20}}));
+        sec1.push(ppc('('+_wr.from+' – '+_wr.to+')',{size:_SB,sp:{before:0,after:40}}));
         sec1.push(ppc(SCHOOL_TH,{size:_SH,sp:{before:0,after:20}}));
         sec1.push(ppc(ZONE_TH,{size:_SB,sp:{before:0,after:100}}));
         sec1.push(pb());
@@ -1402,7 +1534,7 @@
         sec1.push(new d.Table({width:{size:100,type:d.WidthType.PERCENTAGE},rows:vRows}));
         sec1.push(pb());
         // Summary stats
-        sec1.push(ppc('สรุปผลการดำเนินงาน ปีการศึกษา ๒๕๖๘',{size:_SH,bold:true,sp:{before:0,after:20}}));
+        sec1.push(ppc('สรุปผลการดำเนินงาน '+_wr.label,{size:_SH,bold:true,sp:{before:0,after:20}}));
         var stH=[{w:2000,t:'หัวข้อ'},{w:1400,t:'จำนวน'},{w:800,t:'หน่วย'},{w:4906,t:'หมายเหตุ'}];
         var stHdr=new d.TableRow({tableHeader:true,children:stH.map(function(c){return hCell(c.t,c.w);})});
         var stRows=[stHdr];
@@ -1417,7 +1549,7 @@
         sec1.push(new d.Table({width:{size:100,type:d.WidthType.PERCENTAGE},rows:stRows}));
         // Section 2 (Landscape): บันทึกการใช้รถ
         var sec2=[];
-        sec2.push(ppc('บันทึกการใช้รถ ปีการศึกษา ๒๕๖๘',{size:_SH,bold:true,sp:{before:0,after:20}}));
+        sec2.push(ppc('บันทึกการใช้รถ '+_wr.label,{size:_SH,bold:true,sp:{before:0,after:20}}));
         if(tripRecs.length){
           // helper: estimate mileage from nearby records with same license_plate
           function estMil(plate,refDate,type,recs){
@@ -1468,7 +1600,7 @@
         } else {sec2.push(ppc('ไม่มีข้อมูลการใช้รถ',{size:_SB,sp:{before:40,after:40}}));}
         // Section 3 (Landscape): น้ำมัน
         var sec3=[];
-        sec3.push(ppc('บัญชีคุมน้ำมันเชื้อเพลิง ปีการศึกษา ๒๕๖๘',{size:_SH,bold:true,sp:{before:0,after:20}}));
+        sec3.push(ppc('บัญชีคุมน้ำมันเชื้อเพลิง '+_wr.label,{size:_SH,bold:true,sp:{before:0,after:20}}));
         if(fuelRecs.length){
           var fH2=[{w:500,t:'ที่'},{w:740,t:'วันที่'},{w:900,t:'ทะเบียน'},{w:1200,t:'เลขที่ใบเสร็จ'},{w:560,t:'ชนิด'},{w:680,t:'ปริมาณ\n(ลิตร)'},{w:800,t:'จำนวนเงิน'},{w:900,t:'วงเงิน\nสะสม'},{w:700,t:'เลขมาตร'},{w:700,t:'กม./ลิตร'},{w:1000,t:'ผู้เบิก'},{w:1426,t:'สถานี'},{w:900,t:'หมายเหตุ'}];
           var fHdr2=new d.TableRow({tableHeader:true,children:fH2.map(function(c){return hCell(c.t,c.w,{size:_SC});})});
@@ -1490,7 +1622,7 @@
         } else {sec3.push(ppc('ไม่มีข้อมูลน้ำมัน',{size:_SB,sp:{before:40,after:40}}));}
         // Section 4 (Portrait): ซ่อมบำรุง
         var sec4=[];
-        sec4.push(ppc('รายงานซ่อมบำรุง ปีการศึกษา ๒๕๖๘',{size:_SH,bold:true,sp:{before:0,after:20}}));
+        sec4.push(ppc('รายงานซ่อมบำรุง '+_wr.label,{size:_SH,bold:true,sp:{before:0,after:20}}));
         if(repRecs.length){
           var rH2=[{w:500,t:'ที่'},{w:860,t:'วันที่แจ้ง'},{w:960,t:'ทะเบียน'},{w:1400,t:'ปัญหา'},{w:1500,t:'รายละเอียด'},{w:1200,t:'ผู้รับซ่อม'},{w:900,t:'ค่าใช้จ่าย'},{w:786,t:'สถานะ'}];
           var rHdr2=new d.TableRow({tableHeader:true,children:rH2.map(function(c){return hCell(c.t,c.w);})});
@@ -1519,7 +1651,7 @@
           {properties:{page:{size:{width:11906,height:16838},margin:{top:1080,bottom:1080,left:1440,right:1080}}},children:sec4},
         ]});
         var buf=await d.Packer.toBuffer(doc);
-        dlDocx(buf,'รายงานงานยานพาหนะ-ปีการศึกษา2568.docx');
+        dlDocx(buf,'รายงานยานพาหนะ-'+_wr.label.replace(/\s+/g,'-')+'.docx');
       } catch(e){console.error(e);alert('เกิดข้อผิดพลาด: '+e.message);}
       setBtn(btn,false);
     }
