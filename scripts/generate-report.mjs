@@ -523,6 +523,17 @@ function buildChapter1() {
 // ══════════════════════════════════════════════════════════════════════════════
 // บทที่ 2 — รายงานการใช้รถ
 // ══════════════════════════════════════════════════════════════════════════════
+// คำนวณเลขไมล์อัตโนมัติจากรายการใกล้เคียงในรถคันเดียวกัน
+function estimateMileage(carId, refDate, type, allQueue) {
+  const sorted = allQueue
+    .filter(q => q.car_id===carId && (type==='start' ? q.mileage_start : q.mileage_end))
+    .sort((a,b) => (a.date||'').localeCompare(b.date||''));
+  if(sorted.length===0) return null;
+  return type==='start'
+    ? (sorted.find(q=>q.date>=refDate)?.mileage_start || sorted[sorted.length-1]?.mileage_start)
+    : (sorted.slice().reverse().find(q=>q.date<=refDate)?.mileage_end || sorted[0]?.mileage_end);
+}
+
 function buildChapter2(termQueue, termMonths, termLabel) {
   const nodes = [];
   nodes.push(ppc('บทที่ ๒',{sp:spHead,size:SH,bold:true}));
@@ -618,11 +629,10 @@ function buildChapter2(termQueue, termMonths, termLabel) {
   const b4H = [
     {text:'ที่',w:320,size:24},{text:'วันที่',w:640,size:24},{text:'ทะเบียน',w:700,size:24},
     {text:'เวลาออก\n(แผน)',w:560,size:24},{text:'เวลากลับ\n(แผน)',w:560,size:24},
-    {text:'เวลาจริง\nออก',w:560,size:24},{text:'เวลาจริง\nกลับ',w:560,size:24},
-    {text:'ไมล์ออก',w:640,size:24},{text:'ไมล์กลับ',w:640,size:24},{text:'ระยะ\n(กม.)',w:500,size:24},
-    {text:'ผู้ขับ',w:960,size:24},{text:'ผู้ขอ',w:860,size:24},
-    {text:'ปลายทาง',w:1000,size:24},{text:'ภารกิจ',w:1000,size:24},
-    {text:'ผู้โดยสาร',w:500,size:24},{text:'เลขที่คำสั่ง',w:700,size:24},{text:'ผู้อนุมัติ',w:900,size:24},
+    {text:'เวลาจริง\nออก',w:600,size:24},{text:'เวลาจริง\nกลับ',w:600,size:24},
+    {text:'ไมล์ออก',w:660,size:24},{text:'ไมล์กลับ',w:660,size:24},{text:'ระยะ\n(กม.)',w:520,size:24},
+    {text:'ผู้ขับ',w:1000,size:24},{text:'ผู้ขอ',w:900,size:24},
+    {text:'ปลายทาง / วัตถุประสงค์',w:1800,size:24},{text:'หมายเหตุ',w:1786,size:24},
   ];
 
   for (const car of cars) {
@@ -647,26 +657,47 @@ function buildChapter2(termQueue, termMonths, termLabel) {
         const dist = (ms&&me&&me>ms) ? me-ms : null;
         const missingDep = !qr.actual_departure;
         const missingRet = !qr.actual_return;
-        const tOutCell  = missingDep ? dCellRed('ลืมบันทึก',560,{size:24}) : dCellC(String(qr.actual_departure).slice(11,16),560,{size:24});
-        const tBackCell = missingRet ? dCellRed('ลืมบันทึก',560,{size:24}) : dCellC(String(qr.actual_return).slice(11,16),560,{size:24});
-        const msCell    = ms ? dCellR(nf(ms),640,{size:24}) : dCellRed('ไม่บันทึก',640,{size:24});
-        const meCell    = me ? dCellR(nf(me),640,{size:24}) : dCellRed('ไม่บันทึก',640,{size:24});
-        const approver  = qr.signed_director||qr.signed_vehicle_chief||'-';
+        const isSynthetic = qr._synthetic;
+        // auto-mileage จากรายการใกล้เคียงในรถคันเดียวกัน
+        const autoMs = !ms ? estimateMileage(qr.car_id, qr.date, 'start', termQueue) : null;
+        const autoMe = !me ? estimateMileage(qr.car_id, qr.date, 'end', termQueue) : null;
+        const distEst = (autoMs||ms) && (autoMe||me) && (autoMe||me)>(autoMs||ms) ? (autoMe||me)-(autoMs||ms) : dist;
+        const tOutCell  = missingDep
+          ? dCellRed('ลืมบันทึก',600,{size:24})
+          : dCellC(String(qr.actual_departure).slice(11,16),600,{size:24});
+        const tBackCell = missingRet
+          ? dCellRed('ลืมบันทึก',600,{size:24})
+          : dCellC(String(qr.actual_return).slice(11,16),600,{size:24});
+        const msCell = ms
+          ? dCellR(nf(ms),660,{size:24})
+          : new TableCell({width:{size:660,type:WidthType.DXA},borders:BC,children:[new Paragraph({alignment:AlignmentType.RIGHT,spacing:spSmall,children:[trRed(autoMs?nf(autoMs):'ไม่บันทึก',{size:24})]})]});
+        const meCell = me
+          ? dCellR(nf(me),660,{size:24})
+          : new TableCell({width:{size:660,type:WidthType.DXA},borders:BC,children:[new Paragraph({alignment:AlignmentType.RIGHT,spacing:spSmall,children:[trRed(autoMe?nf(autoMe):'ไม่บันทึก',{size:24})]})]});
+        const distCell = (!ms||!me) && distEst
+          ? new TableCell({width:{size:520,type:WidthType.DXA},borders:BC,children:[new Paragraph({alignment:AlignmentType.RIGHT,spacing:spSmall,children:[trRed(nf(distEst),{size:24})]})]})
+          : dCellR(dist?nf(dist):'-',520,{size:24,bold:!!dist});
+        // หมายเหตุ
+        const noteArr = [
+          isSynthetic ? 'มีการใช้รถโดยไม่บันทึกข้อมูล' : '',
+          missingDep  ? 'พนักงานขับรถไม่บันทึกก่อนออกเดินทาง' : '',
+          missingRet  ? 'พนักงานขับรถไม่บันทึกหลังกลับมาจากเดินทาง' : '',
+          qr.notes||'',
+        ].filter(Boolean);
+        const hasWarn = noteArr.some(n=>n.includes('ไม่บันทึก')||n.includes('ไม่บันทึกข้อมูล'));
+        const noteCell = hasWarn
+          ? new TableCell({width:{size:1786,type:WidthType.DXA},borders:BC,children:[new Paragraph({spacing:spSmall,children:[trRed(noteArr.join(' | ')||'-',{size:24})]})]})          : dCell(noteArr.join(' | ')||'-',1786,{size:24});
         return [
           dCellC(seq,320,{size:24}),
           dCellC(thDateSh(qr.date),640,{size:24}),
           dCellC(qr.license_plate||'-',700,{size:24}),
           dCellC(qr.time_start?qr.time_start.slice(0,5):'-',560,{size:24}),
           dCellC(qr.time_end?qr.time_end.slice(0,5):'-',560,{size:24}),
-          tOutCell, tBackCell, msCell, meCell,
-          dCellR(dist?nf(dist):'-',500,{size:24,bold:!!dist}),
-          dCell(qr.driver_name||'-',960,{size:24}),
-          dCell(qr.requested_by||'-',860,{size:24}),
-          dCell(qr.destination||'-',1000,{size:24}),
-          dCell(qr.mission||'-',1000,{size:24}),
-          dCellC(qr.passengers||1,500,{size:24}),
-          dCellC(qr.travel_order_number||'-',700,{size:24}),
-          dCell(approver,900,{size:24}),
+          tOutCell, tBackCell, msCell, meCell, distCell,
+          dCell(qr.driver_name||'-',1000,{size:24}),
+          dCell(qr.requested_by||'-',900,{size:24}),
+          dCell(`${qr.destination||'-'}${qr.mission?' / '+qr.mission:''}`,1800,{size:24}),
+          noteCell,
         ];
       });
       nodes.push(makeTable(b4H, b4Rows));
