@@ -1935,10 +1935,6 @@
         '<div class="sig-pos">' + esc((sig&&sig.pos)||defaultLbl) + '</div>' +
         '</div>';
     }
-        if (!iso) return '';
-        var p = iso.split('-'); if (p.length < 3) return iso;
-        return parseInt(p[2]) + ' ' + thMo[parseInt(p[1])] + ' ' + (parseInt(p[0])+543);
-      }
       var css = '@import url("https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap");' +
         '@page { size:A4 landscape; margin:10mm 15mm; }' +
         'body { font-family:"TH Sarabun New",Sarabun,sans-serif; font-size:14pt; line-height:1.4; margin:0; color:#000; }' +
