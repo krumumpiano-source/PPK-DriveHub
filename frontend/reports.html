@@ -889,6 +889,18 @@
         +'<button class="btn-word" onclick="'+onclick+'">⬇ ดาวน์โหลด .docx</button></div>';
     }
 
+    /* ─── ensure docx library loaded ──────────────────────────────── */
+    function ensureDocx() {
+      if (window.docx) return Promise.resolve(true);
+      return new Promise(function(resolve) {
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/docx@9.7.1/build/index.umd.js';
+        s.onload = function() { resolve(!!window.docx); };
+        s.onerror = function() { resolve(false); };
+        document.head.appendChild(s);
+      });
+    }
+
     /* ─── shared helpers ──────────────────────────────────────────── */
     var _F = 'TH Sarabun New';
     var _SC = 24, _SB = 28, _SS = 28, _SH = 36, _ST = 48;
@@ -979,6 +991,7 @@
     async function generateFuelRegisterDocx(btn) {
       setBtn(btn,true);
       try {
+        if(!await ensureDocx()){alert('โหลดไลบรารี docx ไม่สำเร็จ กรุณารีโหลดหน้าแล้วลองใหม่');setBtn(btn,false);return;}
         var d=window.docx;
         var r=await API.get('/api/reports/fuel?date_from='+FY_FROM+'&date_to='+FY_TO);
         var recs=(r&&r.data)?r.data.records||[]:(r.records||[]);
@@ -1118,6 +1131,7 @@
     async function generateFuelLedgerDocx(btn) {
       setBtn(btn,true);
       try {
+        if(!await ensureDocx()){alert('โหลดไลบรารี docx ไม่สำเร็จ กรุณารีโหลดหน้าแล้วลองใหม่');setBtn(btn,false);return;}
         var d=window.docx;
         var r=await API.get('/api/reports/fuel?date_from='+FY_FROM+'&date_to='+FY_TO);
         var recs=(r&&r.data)?r.data.records||[]:(r.records||[]);
@@ -1217,6 +1231,7 @@
       if(!ym){alert('กรุณาเลือกเดือน');return;}
       setBtn(btn,true);
       try {
+        if(!await ensureDocx()){alert('โหลดไลบรารี docx ไม่สำเร็จ กรุณารีโหลดหน้าแล้วลองใหม่');setBtn(btn,false);return;}
         var d=window.docx;
         var p=ym.split('-');
         var lastDay=new Date(+p[0],+p[1],0).getDate();
@@ -1346,6 +1361,7 @@
     async function generateAnnualDocx(btn) {
       setBtn(btn,true);
       try {
+        if(!await ensureDocx()){alert('โหลดไลบรารี docx ไม่สำเร็จ กรุณารีโหลดหน้าแล้วลองใหม่');setBtn(btn,false);return;}
         var d=window.docx;
         var [fuelR,repR,tripsR,carR]=await Promise.all([
           API.get('/api/reports/fuel?date_from='+AY_FROM+'&date_to='+AY_TO),
