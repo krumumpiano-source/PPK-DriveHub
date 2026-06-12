@@ -103,8 +103,11 @@
             <div class="date-mode-pills">
               <button class="date-mode-pill active" onclick="setDateMode('day',this)">วัน</button>
               <button class="date-mode-pill" onclick="setDateMode('month',this)">เดือน</button>
-              <button class="date-mode-pill" onclick="setDateMode('year',this)">ปี</button>
+              <button class="date-mode-pill" onclick="setDateMode('quarter',this)">ไตรมาส</button>
+              <button class="date-mode-pill" onclick="setDateMode('semester',this)">ภาคเรียน</button>
+              <button class="date-mode-pill" onclick="setDateMode('academic',this)">ปีการศึกษา</button>
               <button class="date-mode-pill" onclick="setDateMode('fiscal',this)">ปีงบประมาณ</button>
+              <button class="date-mode-pill" onclick="setDateMode('year',this)">ปีพ.ศ.</button>
             </div>
             <div class="date-range-pills" style="margin-top:6px;display:flex;gap:6px;">
               <button class="date-range-pill active" onclick="setRangeMode('single',this)">เดี่ยว</button>
@@ -126,6 +129,34 @@
           <div id="filter-fiscal" class="filter-row" style="gap:8px;display:none">
             <div class="filter-group"><label id="lbl-fiscal-from">ปีงบประมาณ (พ.ศ.)</label><select id="fiscalYear" onchange="onSingleDateChange('fiscal')"></select></div>
             <div class="filter-group" id="fg-fiscal-to"><label>ถึงปีงบประมาณ (พ.ศ.)</label><select id="fiscalYearTo" onchange="loadReport()"></select></div>
+          </div>
+          <div id="filter-quarter" class="filter-row" style="gap:8px;display:none">
+            <div class="filter-group"><label id="lbl-quarter-from">ไตรมาส (ปีงบ)</label>
+              <div style="display:flex;gap:6px">
+                <select id="quarterQ" onchange="loadReport()" style="width:100px">
+                  <option value="1">ไตรมาส 1 (ต.ค.–ธ.ค.)</option>
+                  <option value="2">ไตรมาส 2 (ม.ค.–มี.ค.)</option>
+                  <option value="3">ไตรมาส 3 (เม.ย.–มิ.ย.)</option>
+                  <option value="4">ไตรมาส 4 (ก.ค.–ก.ย.)</option>
+                </select>
+                <select id="quarterYear" onchange="loadReport()"></select>
+              </div>
+            </div>
+          </div>
+          <div id="filter-semester" class="filter-row" style="gap:8px;display:none">
+            <div class="filter-group"><label id="lbl-semester-from">ภาคเรียน (ปีการศึกษา)</label>
+              <div style="display:flex;gap:6px">
+                <select id="semesterSem" onchange="loadReport()" style="width:130px">
+                  <option value="1">ภาคเรียนที่ 1 (พ.ค.–ต.ค.)</option>
+                  <option value="2">ภาคเรียนที่ 2 (พ.ย.–มี.ค.)</option>
+                </select>
+                <select id="semesterYear" onchange="loadReport()"></select>
+              </div>
+            </div>
+          </div>
+          <div id="filter-academic" class="filter-row" style="gap:8px;display:none">
+            <div class="filter-group"><label id="lbl-academic-from">ปีการศึกษา (พ.ศ.)</label><select id="academicYear" onchange="onSingleDateChange('academic')"></select></div>
+            <div class="filter-group" id="fg-academic-to"><label>ถึงปีการศึกษา (พ.ศ.)</label><select id="academicYearTo" onchange="loadReport()"></select></div>
           </div>
           <div class="filter-sep"></div>
           <div class="filter-group" id="fg-car" style="display:none">
@@ -194,16 +225,38 @@
       var yearTo = document.getElementById('yearTo');
       var fiscalYear = document.getElementById('fiscalYear');
       var fiscalYearTo = document.getElementById('fiscalYearTo');
+      var academicYear = document.getElementById('academicYear');
+      var academicYearTo = document.getElementById('academicYearTo');
+      var quarterYear = document.getElementById('quarterYear');
+      var semesterYear = document.getElementById('semesterYear');
       var cy = new Date().getFullYear() + 543;
       for (var y = cy + 1; y >= cy - 10; y--) {
         var o1 = document.createElement('option'); o1.value = y; o1.textContent = y; yearFrom.appendChild(o1);
         var o2 = document.createElement('option'); o2.value = y; o2.textContent = y; yearTo.appendChild(o2);
         var o3 = document.createElement('option'); o3.value = y; o3.textContent = 'พ.ศ. '+y; fiscalYear.appendChild(o3);
         var o4 = document.createElement('option'); o4.value = y; o4.textContent = 'พ.ศ. '+y; fiscalYearTo.appendChild(o4);
+        var o5 = document.createElement('option'); o5.value = y; o5.textContent = 'ปีการศึกษา '+y; academicYear.appendChild(o5);
+        var o6 = document.createElement('option'); o6.value = y; o6.textContent = 'ปีการศึกษา '+y; academicYearTo.appendChild(o6);
+        var o7 = document.createElement('option'); o7.value = y; o7.textContent = 'ปีงบ '+y; quarterYear.appendChild(o7);
+        var o8 = document.createElement('option'); o8.value = y; o8.textContent = 'ปีการศึกษา '+y; semesterYear.appendChild(o8);
       }
-      var currentFY = new Date().getFullYear() + 543 + (new Date().getMonth() >= 9 ? 1 : 0);
+      var now = new Date();
+      var currentFY = now.getFullYear() + 543 + (now.getMonth() >= 9 ? 1 : 0);
       fiscalYear.value = currentFY;
       fiscalYearTo.value = currentFY;
+      quarterYear.value = currentFY;
+      // ไตรมาสปัจจุบัน (เทียบกับปีงบ)
+      var qMon = now.getMonth(); // 0-based
+      var curQ = qMon >= 9 ? 1 : qMon >= 6 ? 4 : qMon >= 3 ? 3 : 2;
+      document.getElementById('quarterQ').value = curQ;
+      // ปีการศึกษาปัจจุบัน: เดือน 5(พ.ค.)–12 = ปีปัจจุบัน, ม.ค.–เม.ย. = ปีก่อน
+      var currentAY = now.getFullYear() + 543 - (now.getMonth() < 4 ? 1 : 0);
+      academicYear.value = currentAY;
+      academicYearTo.value = currentAY;
+      semesterYear.value = currentAY;
+      // ภาคเรียนปัจจุบัน: พ.ค.–ต.ค.(เดือน 4-9) = ภาค 1, พ.ย.–มี.ค. = ภาค 2
+      var curSem = (qMon >= 4 && qMon <= 9) ? 1 : 2;
+      document.getElementById('semesterSem').value = curSem;
     }
 
     function pad(n) { return String(n).padStart(2,'0'); }
@@ -342,6 +395,28 @@
         var lastDay=new Date(parseInt(mt.substr(0,4)),parseInt(mt.substr(5,2)),0);
         return {date_from:mf+'-01', date_to:fmtDate(lastDay)};
       }
+      if (dateMode==='quarter') {
+        // ไตรมาสยึดตามปีงบประมาณ (Q1=ต.ค.–ธ.ค., Q2=ม.ค.–มี.ค., Q3=เม.ย.–มิ.ย., Q4=ก.ค.–ก.ย.)
+        var fy=parseInt(document.getElementById('quarterYear').value)-543; // CE
+        var q=parseInt(document.getElementById('quarterQ').value);
+        var QS={1:[fy-1,10,1],2:[fy,1,1],3:[fy,4,1],4:[fy,7,1]};
+        var QE={1:[fy-1,12,31],2:[fy,3,31],3:[fy,6,30],4:[fy,9,30]};
+        var s=QS[q], e=QE[q];
+        return {date_from:s[0]+'-'+pad(s[1])+'-'+pad(s[2]), date_to:e[0]+'-'+pad(e[1])+'-'+pad(e[2])};
+      }
+      if (dateMode==='semester') {
+        // ภาคเรียนยึดตามปีการศึกษา (S1=พ.ค.–ต.ค., S2=พ.ย.–มี.ค.)
+        var ay=parseInt(document.getElementById('semesterYear').value)-543; // CE
+        var s2=parseInt(document.getElementById('semesterSem').value);
+        if (s2===1) return {date_from:ay+'-05-01', date_to:ay+'-10-31'};
+        else        return {date_from:ay+'-11-01', date_to:(ay+1)+'-03-31'};
+      }
+      if (dateMode==='academic') {
+        // ปีการศึกษา (พ.ค. – มี.ค. ปีถัดไป)
+        var ayf=parseInt(document.getElementById('academicYear').value)-543;
+        var ayt=rangeMode==='single'?ayf:(parseInt(document.getElementById('academicYearTo').value)-543);
+        return {date_from:ayf+'-05-01', date_to:(ayt+1)+'-03-31'};
+      }
       if (dateMode==='year') {
         var yf=parseInt(document.getElementById('yearFrom').value)-543;
         var yt=rangeMode==='single'?yf:(parseInt(document.getElementById('yearTo').value)-543);
@@ -358,9 +433,30 @@
     function getRangeLabel() {
       var r=getDateRange();
       if (!r.date_from && !r.date_to) return '';
+      if (dateMode==='quarter') {
+        var ql=['ไตรมาส 1','ไตรมาส 2','ไตรมาส 3','ไตรมาส 4'];
+        var qv=parseInt(document.getElementById('quarterQ').value)-1;
+        var qy=document.getElementById('quarterYear').value;
+        return ql[qv]+' ปีงบประมาณ '+qy;
+      }
+      if (dateMode==='semester') {
+        var sv=document.getElementById('semesterSem').value;
+        var syl=document.getElementById('semesterYear').value;
+        return 'ภาคเรียนที่ '+sv+' ปีการศึกษา '+syl;
+      }
+      if (dateMode==='academic') {
+        var avy=document.getElementById('academicYear').value;
+        var avyt=rangeMode==='single'?avy:document.getElementById('academicYearTo').value;
+        return avy===avyt?'ปีการศึกษา '+avy:'ปีการศึกษา '+avy+'–'+avyt;
+      }
+      if (dateMode==='fiscal') {
+        var fv=document.getElementById('fiscalYear').value;
+        var fvt=rangeMode==='single'?fv:document.getElementById('fiscalYearTo').value;
+        return fv===fvt?'ปีงบประมาณ '+fv:'ปีงบ '+fv+'–'+fvt;
+      }
       if (rangeMode==='single') return fmtDateTH(r.date_from);
       if (r.date_from===r.date_to) return fmtDateTH(r.date_from);
-      return fmtDateTH(r.date_from)+' - '+fmtDateTH(r.date_to);
+      return fmtDateTH(r.date_from)+' – '+fmtDateTH(r.date_to);
     }
 
     function switchTab(tab,el) {
@@ -374,10 +470,12 @@
       dateMode=mode;
       document.querySelectorAll('.date-mode-pill').forEach(function(p){p.classList.remove('active');});
       el.classList.add('active');
-      document.getElementById('filter-day').style.display=mode==='day'?'':'none';
-      document.getElementById('filter-month').style.display=mode==='month'?'':'none';
-      document.getElementById('filter-year').style.display=mode==='year'?'':'none';
-      document.getElementById('filter-fiscal').style.display=mode==='fiscal'?'':'none';
+      var allFilters=['filter-day','filter-month','filter-year','filter-fiscal','filter-quarter','filter-semester','filter-academic'];
+      allFilters.forEach(function(id){document.getElementById(id).style.display='none';});
+      document.getElementById('filter-'+mode).style.display='';
+      // ไตรมาส/ภาคเรียน ไม่ใช้ range mode
+      var noRange=['quarter','semester'];
+      document.querySelector('.date-range-pills').style.visibility=noRange.indexOf(mode)>=0?'hidden':'';
       _applyRangeModeVisibility();
       loadReport();
     }
@@ -390,15 +488,17 @@
     }
     function _applyRangeModeVisibility() {
       var isRange=rangeMode==='range';
-      var toIds={day:'fg-day-to',month:'fg-month-to',year:'fg-year-to',fiscal:'fg-fiscal-to'};
-      var lblFrom={day:'lbl-day-from',month:'lbl-month-from',year:'lbl-year-from',fiscal:'lbl-fiscal-from'};
+      var toIds={day:'fg-day-to',month:'fg-month-to',year:'fg-year-to',fiscal:'fg-fiscal-to',academic:'fg-academic-to'};
+      var lblFrom={day:'lbl-day-from',month:'lbl-month-from',year:'lbl-year-from',fiscal:'lbl-fiscal-from',academic:'lbl-academic-from',quarter:'lbl-quarter-from',semester:'lbl-semester-from'};
       Object.keys(toIds).forEach(function(m){
         var el=document.getElementById(toIds[m]);
         if(el) el.style.display=isRange?'':'none';
       });
+      var noRange=['quarter','semester'];
+      document.querySelector('.date-range-pills').style.visibility=noRange.indexOf(dateMode)>=0?'hidden':'';
       var lbl=document.getElementById(lblFrom[dateMode]);
       if(lbl){
-        var map={day:{single:'\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48',range:'\u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48'},month:{single:'\u0e40\u0e14\u0e37\u0e2d\u0e19',range:'\u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48\u0e40\u0e14\u0e37\u0e2d\u0e19'},year:{single:'\u0e1b\u0e35 (\u0e1e.\u0e28.)',range:'\u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48\u0e1b\u0e35 (\u0e1e.\u0e28.)'},fiscal:{single:'\u0e1b\u0e35\u0e07\u0e1a\u0e1b\u0e23\u0e30\u0e21\u0e32\u0e13 (\u0e1e.\u0e28.)',range:'\u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48\u0e1b\u0e35\u0e07\u0e1a (\u0e1e.\u0e28.)'}};
+        var map={day:{single:'วันที่',range:'ตั้งแต่วันที่'},month:{single:'เดือน',range:'ตั้งแต่เดือน'},year:{single:'ปี (พ.ศ.)',range:'ตั้งแต่ปี (พ.ศ.)'},fiscal:{single:'ปีงบประมาณ (พ.ศ.)',range:'ตั้งแต่ปีงบ (พ.ศ.)'},academic:{single:'ปีการศึกษา (พ.ศ.)',range:'ตั้งแต่ปีการศึกษา'}};
         if(map[dateMode]) lbl.textContent=map[dateMode][rangeMode]||lbl.textContent;
       }
     }
@@ -408,6 +508,7 @@
         else if(mode==='month') document.getElementById('monthTo').value=document.getElementById('monthFrom').value;
         else if(mode==='year') document.getElementById('yearTo').value=document.getElementById('yearFrom').value;
         else if(mode==='fiscal') document.getElementById('fiscalYearTo').value=document.getElementById('fiscalYear').value;
+        else if(mode==='academic') document.getElementById('academicYearTo').value=document.getElementById('academicYear').value;
       }
       loadReport();
     }
