@@ -1403,11 +1403,38 @@
         var sec2=[];
         sec2.push(ppc('บันทึกการใช้รถ ปีการศึกษา ๒๕๖๘',{size:_SH,bold:true,sp:{before:0,after:20}}));
         if(tripRecs.length){
+          // helper: estimate mileage from nearby records with same license_plate
+          function estMil(plate,refDate,type,recs){
+            var sorted=recs.filter(function(q){return q.license_plate==plate&&(type==='start'?q.mileage_start!=null:q.mileage_end!=null);})
+              .sort(function(a,b){return(a.date||'').localeCompare(b.date||'');});
+            if(!sorted.length)return null;
+            if(type==='start'){var f=sorted.find(function(q){return q.date>=refDate;});return f?+f.mileage_start:+sorted[sorted.length-1].mileage_start;}
+            else{var rv=sorted.slice().reverse();var g=rv.find(function(q){return q.date<=refDate;});return g?+g.mileage_end:+sorted[0].mileage_end;}
+          }
+          function redCellC(txt,w){return new d.TableCell({width:{size:w,type:d.WidthType.DXA},borders:_BC,
+            children:[ppR([tr(txt,{size:_SC,bold:true,color:'C62828'})],{align:window.docx.AlignmentType.CENTER,sp:{before:20,after:20}})]});}
+          function redCell(txt,w){return new d.TableCell({width:{size:w,type:d.WidthType.DXA},borders:_BC,
+            children:[ppR([tr(txt,{size:_SC,bold:true,color:'C62828'})],{sp:{before:20,after:20}})]});}
           var tH=[{w:500,t:'ที่'},{w:740,t:'วันที่'},{w:800,t:'ทะเบียน'},{w:1000,t:'ผู้ขอใช้'},{w:1600,t:'ปลายทาง/วัตถุประสงค์'},{w:900,t:'ผู้ขับ'},{w:700,t:'เวลาออก'},{w:700,t:'เวลากลับ'},{w:640,t:'ไมล์ออก'},{w:640,t:'ไมล์กลับ'},{w:640,t:'ระยะ\n(กม.)'},{w:746,t:'หมายเหตุ'}];
           var tHdr=new d.TableRow({tableHeader:true,children:tH.map(function(c){return hCell(c.t,c.w,{size:_SC});})});
           var tRows=[tHdr];
           tripRecs.forEach(function(rec,i){
-            var km=rec.mileage_start!=null&&rec.mileage_end!=null?nf(rec.mileage_end-rec.mileage_start):'-';
+            var ms=rec.mileage_start!=null?+rec.mileage_start:null;
+            var me=rec.mileage_end!=null?+rec.mileage_end:null;
+            var autoMs=ms==null?estMil(rec.license_plate,rec.date,'start',tripRecs):null;
+            var autoMe=me==null?estMil(rec.license_plate,rec.date,'end',tripRecs):null;
+            var dispMs=ms!=null?String(ms):(autoMs!=null?String(autoMs):'ไม่บันทึก');
+            var dispMe=me!=null?String(me):(autoMe!=null?String(autoMe):'ไม่บันทึก');
+            var msRed=ms==null; var meRed=me==null;
+            var effMs=ms!=null?ms:autoMs; var effMe=me!=null?me:autoMe;
+            var dist=effMs!=null&&effMe!=null?nf(effMe-effMs):'-';
+            var distRed=(ms==null||me==null)&&dist!='-';
+            var noteArr=[];
+            if(ms==null&&me==null)noteArr.push('มีการใช้รถโดยไม่บันทึกข้อมูล');
+            else if(ms==null)noteArr.push('พนักงานขับรถไม่บันทึกก่อนออกเดินทาง');
+            else if(me==null)noteArr.push('พนักงานขับรถไม่บันทึกหลังกลับมาจากเดินทาง');
+            var noteStr=noteArr.length?noteArr.join(' | '):(rec.notes||'-');
+            var noteRed=noteArr.length>0;
             tRows.push(new d.TableRow({children:[
               dCellC(i+1,tH[0].w),dCellC(thDateSh(rec.date),tH[1].w),
               dCellC(rec.license_plate||'-',tH[2].w),dCell(rec.requester_display_name||rec.requested_by||'-',tH[3].w),
@@ -1415,9 +1442,10 @@
               dCell(rec.driver_name||'-',tH[5].w),
               dCellC((rec.actual_departure||'').substr(11,5)||'-',tH[6].w),
               dCellC((rec.actual_return||'').substr(11,5)||'-',tH[7].w),
-              dCellC(rec.mileage_start!=null?String(rec.mileage_start):'-',tH[8].w),
-              dCellC(rec.mileage_end!=null?String(rec.mileage_end):'-',tH[9].w),
-              dCellC(km,tH[10].w),dCell(rec.notes||'-',tH[11].w),
+              msRed?redCellC(dispMs,tH[8].w):dCellC(dispMs,tH[8].w),
+              meRed?redCellC(dispMe,tH[9].w):dCellC(dispMe,tH[9].w),
+              distRed?redCellC(dist,tH[10].w):dCellC(dist,tH[10].w),
+              noteRed?redCell(noteStr,tH[11].w):dCell(noteStr,tH[11].w),
             ]}));
           });
           sec2.push(new d.Table({width:{size:100,type:d.WidthType.PERCENTAGE},rows:tRows}));
