@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 // scripts/generate-report.mjs
 // รายงานงานยานพาหนะ ปีการศึกษา 2568 — โรงเรียนพะเยาพิทยาคม
 // จัดทำโดย นายพงศธร โพธิแก้ว รองหัวหน้างานยานพาหนะ
@@ -141,6 +141,18 @@ function dCell(text, w, opts={}) {
 function dCellC(t,w,o={}) { return dCell(t,w,{...o,align:AlignmentType.CENTER}); }
 function dCellR(t,w,o={}) { return dCell(t,w,{...o,align:AlignmentType.RIGHT}); }
 
+// ─── Red bold helpers (สำหรับข้อมูลที่ขาดหาย / ผิดปกติ) ──────────────────────
+function trRed(text,opts={}) {
+  return new TextRun({ text:String(text??''), font:F, size:opts.size||SB, bold:true, color:'CC0000' });
+}
+function dCellRed(text,w,opts={}) {
+  return new TableCell({
+    width:w?{size:w,type:WidthType.DXA}:undefined, borders:BC, verticalAlign:'center',
+    children:[new Paragraph({ alignment:opts.align||AlignmentType.CENTER, spacing:spSmall,
+      children:[trRed(String(text??'-'),{size:opts.size||SB})] })]
+  });
+}
+
 function makeTable(headers, rows) {
   // headers: [{text,w,size?}], rows: TableCell[][]
   return new Table({
@@ -168,13 +180,13 @@ console.log(`  ✓ ข้อมูลรถ: ${cars.length} คัน`);
 const drivers = qDB(`SELECT id,title,first_name,last_name,license_number,license_expiry,phone,status,discipline_score,fatigue_flag,position,assignment_type FROM drivers ORDER BY status,first_name`);
 console.log(`  ✓ พนักงานขับรถ: ${drivers.length} คน`);
 
-const queue = qDB(`SELECT q.id,q.date,q.time_start,q.time_end,q.car_id,c.license_plate,q.driver_id,COALESCE(d.first_name||' '||d.last_name,'') AS driver_name,q.requested_by,q.mission,q.destination,q.passengers,q.status,q.notes FROM queue q LEFT JOIN cars c ON c.id=q.car_id LEFT JOIN drivers d ON d.id=q.driver_id WHERE q.date>='${YS}' AND q.date<='${YE}' AND q.status!='cancelled' ORDER BY q.date,q.time_start`);
+const queue = qDB(`SELECT q.id,q.date,q.time_start,q.time_end,q.car_id,c.license_plate,c.brand,c.model,q.driver_id,COALESCE(d.first_name||' '||d.last_name,'') AS driver_name,q.requested_by,q.mission,q.destination,q.passengers,q.status,q.notes,q.travel_order_number,q.signed_vehicle_chief,q.signed_director,dep.datetime AS actual_departure,dep.mileage AS mileage_start,ret.datetime AS actual_return,ret.mileage AS mileage_end FROM queue q LEFT JOIN cars c ON c.id=q.car_id LEFT JOIN drivers d ON d.id=q.driver_id LEFT JOIN usage_records dep ON dep.queue_id=q.id AND dep.record_type='departure' LEFT JOIN usage_records ret ON ret.queue_id=q.id AND ret.record_type='return' WHERE q.date>='${YS}' AND q.date<='${YE}' AND q.status!='cancelled' ORDER BY q.date,q.time_start`);
 console.log(`  ✓ รายการใช้รถ: ${queue.length} รายการ`);
 
 const usage = qDB(`SELECT u.id,u.car_id,c.license_plate,u.record_type,u.datetime,u.mileage,u.destination,u.purpose,u.passengers,u.requester_name,u.queue_id,u.data_quality,COALESCE(d.first_name||' '||d.last_name,u.driver_name_manual) AS driver_name FROM usage_records u LEFT JOIN cars c ON c.id=u.car_id LEFT JOIN drivers d ON d.id=u.driver_id WHERE u.datetime>='${YS}T00:00:00' AND u.datetime<='${YE_DT}' ORDER BY u.datetime`);
 console.log(`  ✓ บันทึกการใช้รถ: ${usage.length} รายการ`);
 
-const fuel = qDB(`SELECT f.id,f.date,f.time,f.car_id,c.license_plate,COALESCE(d.first_name||' '||d.last_name,f.driver_name_manual) AS driver_name,f.liters,f.price_per_liter,f.amount,f.fuel_type,f.gas_station_name,f.mileage_before,f.fuel_consumption_rate,f.document_number,f.expense_type,f.purpose,f.anomaly_flag,f.notes FROM fuel_log f LEFT JOIN cars c ON c.id=f.car_id LEFT JOIN drivers d ON d.id=f.driver_id WHERE f.date>='${YS}' AND f.date<='${YE}' AND f.deleted_at IS NULL ORDER BY f.date,f.time`);
+const fuel = qDB(`SELECT f.id,f.date,f.time,f.car_id,c.license_plate,c.brand,c.model,COALESCE(d.first_name||' '||d.last_name,f.driver_name_manual) AS driver_name,f.liters,f.price_per_liter,f.amount,f.fuel_type,f.gas_station_name,f.mileage_before,f.mileage_after,f.fuel_consumption_rate,f.document_number,f.receipt_number,f.expense_type,f.purpose,f.purpose_detail,f.anomaly_flag,f.notes,f.signed_supply_chief FROM fuel_log f LEFT JOIN cars c ON c.id=f.car_id LEFT JOIN drivers d ON d.id=f.driver_id WHERE f.date>='${YS}' AND f.date<='${YE}' AND f.deleted_at IS NULL ORDER BY f.car_id,f.date,f.time`);
 console.log(`  ✓ บันทึกน้ำมัน: ${fuel.length} รายการ`);
 
 const repair = qDB(`SELECT r.id,r.car_id,c.license_plate,r.date_reported,r.date_started,r.date_completed,r.status,r.service_type,r.garage_name,r.mechanic_name,r.issue_description,r.labour_cost,r.parts_cost,r.grand_total,r.invoice_number,r.work_order_number,r.insurance_company,r.claim_number,r.mileage_at_repair FROM repair_log r LEFT JOIN cars c ON c.id=r.car_id WHERE (r.date_reported>='${YS}' OR r.date_completed>='${YS}') AND (r.date_reported<='${YE}' OR r.date_completed IS NULL) AND r.status NOT IN ('cancelled') ORDER BY COALESCE(r.date_completed,r.date_reported)`);
@@ -292,8 +304,9 @@ const topRepairCar         = Object.entries(highRepairCars).sort((a,b)=>b[1]-a[1
 // ══════════════════════════════════════════════════════════════════════════════
 // COVER PAGE
 // ══════════════════════════════════════════════════════════════════════════════
-function buildCover() {
-  return [
+function buildCover(termLabel='') {
+  const termLine = termLabel ? ppc(termLabel, {sp:{...spCover,before:60}, size:ST, bold:true}) : null;
+  const nodes = [
     ...el(2),
     ppc('❧', {sp:spCover, size:56}),
     ...el(1),
@@ -307,6 +320,9 @@ function buildCover() {
     ppc('กระทรวงศึกษาธิการ', {sp:{...spCover,before:40}, size:32}),
     ...el(1),
     ppc('ปีการศึกษา ๒๕๖๘', {sp:spCover, size:ST, bold:true}),
+  ];
+  if (termLine) nodes.push(termLine);
+  nodes.push(...[
     ppc('(๑ พฤษภาคม ๒๕๖๘ – ๓๐ เมษายน ๒๕๖๙)', {sp:{...spCover,before:60}, size:SB}),
     ...el(2),
     ppc('─────────────────────────────', {sp:{before:0,after:0,line:280,lineRule:'auto'}, size:28}),
@@ -316,7 +332,8 @@ function buildCover() {
     ppc(P.author.pos, {sp:{...spCover,before:40}, size:SB}),
     ppc(SCHOOL, {sp:{...spCover,before:40}, size:SB}),
     pb(),
-  ];
+  ]);
+  return nodes;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -506,15 +523,33 @@ function buildChapter1() {
 // ══════════════════════════════════════════════════════════════════════════════
 // บทที่ 2 — รายงานการใช้รถ
 // ══════════════════════════════════════════════════════════════════════════════
-function buildChapter2() {
+function buildChapter2(termQueue, termMonths, termLabel) {
   const nodes = [];
   nodes.push(ppc('บทที่ ๒',{sp:spHead,size:SH,bold:true}));
   nodes.push(ppc('รายงานการใช้รถราชการ',{sp:{...spHead,before:60},size:SH,bold:true}));
   nodes.push(...el(1));
 
-  const totalTrips = queue.length;
-  const totalPax   = queue.reduce((s,q)=>s+(+q.passengers||0),0);
-  nodes.push(pp(`          ในปีการศึกษา ๒๕๖๘ (๑ พฤษภาคม ๒๕๖๘ – ๓๐ เมษายน ๒๕๖๙) งานยานพาหนะได้ให้บริการยานพาหนะแก่บุคลากรและนักเรียน${SCHOOL} รวมทั้งสิ้น ${nf(totalTrips)} เที่ยว รวมผู้โดยสาร ${nf(totalPax)} คน-ครั้ง โดยมีรายละเอียดการใช้รถรายคัน รายเดือน และบันทึกการใช้รถตามแบบ ๔ ดังต่อไปนี้`,
+  // ─── compute term stats ───
+  const tTotalTrips = termQueue.length;
+  const tTotalPax   = termQueue.reduce((s,q)=>s+(+q.passengers||0),0);
+  const tQueueByCar    = {};
+  const tQueueByMonth  = {};
+  const tDistByCar     = {};
+  for (const qr of termQueue) {
+    const plate = qr.license_plate||qr.car_id;
+    if (!tQueueByCar[plate]) tQueueByCar[plate]={trips:0,passengers:0,missions:{},destinations:{}};
+    tQueueByCar[plate].trips++;
+    tQueueByCar[plate].passengers+=(+qr.passengers||0);
+    if (qr.mission) tQueueByCar[plate].missions[qr.mission]=(tQueueByCar[plate].missions[qr.mission]||0)+1;
+    if (qr.destination) tQueueByCar[plate].destinations[qr.destination]=(tQueueByCar[plate].destinations[qr.destination]||0)+1;
+    const ym=getYM(qr.date);
+    if (ym){if(!tQueueByMonth[ym])tQueueByMonth[ym]={trips:0,passengers:0};tQueueByMonth[ym].trips++;tQueueByMonth[ym].passengers+=(+qr.passengers||0);}
+    const ms=qr.mileage_start,me=qr.mileage_end;
+    if(ms&&me&&me>ms&&me-ms<2000)tDistByCar[plate]=(tDistByCar[plate]||0)+(me-ms);
+  }
+
+  nodes.push(ppc(termLabel,{sp:{before:0,after:60,line:360,lineRule:'auto'},size:SB,bold:true}));
+  nodes.push(pp(`          ใน${termLabel} ปีการศึกษา ๒๕๖๘ งานยานพาหนะได้ให้บริการยานพาหนะแก่บุคลากรและนักเรียน${SCHOOL} รวมทั้งสิ้น ${nf(tTotalTrips)} เที่ยว รวมผู้โดยสาร ${nf(tTotalPax)} คน-ครั้ง โดยมีรายละเอียดการใช้รถรายคัน รายเดือน และบันทึกการใช้รถตามแบบ ๔ ดังต่อไปนี้`,
     {sp:{before:0,after:100,line:360,lineRule:'auto'}}));
 
   // 2.1 สรุปรายคัน
@@ -528,10 +563,10 @@ function buildChapter2() {
   ];
   const carSumRows = cars.map((c,i)=>{
     const plate = c.license_plate;
-    const stat  = queueByCar[plate] || { trips:0, passengers:0, missions:{}, destinations:{} };
+    const stat  = tQueueByCar[plate] || { trips:0, passengers:0, missions:{}, destinations:{} };
     const topM  = Object.entries(stat.missions).sort((a,b)=>b[1]-a[1])[0];
     const topD  = Object.entries(stat.destinations).sort((a,b)=>b[1]-a[1])[0];
-    const dist  = distByCar[plate];
+    const dist  = tDistByCar[plate];
     return [
       dCellC(i+1,400),
       dCellC(plate,800),
@@ -553,8 +588,8 @@ function buildChapter2() {
 
   const monHeaders = [{text:'ลำดับ',w:400},{text:'เดือน',w:1400},{text:'จำนวนเที่ยว',w:900},{text:'จำนวนผู้โดยสาร (คน-ครั้ง)',w:1200},{text:'หมายเหตุ',w:2000}];
   let totalMonTrips=0, totalMonPax=0;
-  const monRows = YEAR_MONTHS.map((ym,i)=>{
-    const s = queueByMonth[ym]||{trips:0,passengers:0};
+  const monRows = termMonths.map((ym,i)=>{
+    const s = tQueueByMonth[ym]||{trips:0,passengers:0};
     totalMonTrips+=s.trips; totalMonPax+=s.passengers;
     return [
       dCellC(i+1,400),
@@ -575,36 +610,69 @@ function buildChapter2() {
   nodes.push(sourceNote());
   nodes.push(...el(1));
 
-  // 2.3 บันทึกแบบ 4 (20 รายการล่าสุด)
-  nodes.push(ppbold('๒.๓  บันทึกการใช้รถตามแบบ ๔ (ตัวอย่าง ๒๐ รายการล่าสุด)',{sp:{before:120,after:60,line:360,lineRule:'auto'}}));
-  nodes.push(pp('          ข้อมูลบันทึกการใช้รถทุกรายการถูกบันทึกตามรูปแบบสมุดบันทึกการใช้รถราชการ (แบบ ๔) โดยมีข้อมูลครบถ้วน ได้แก่ วันที่, เวลาออก-กลับ, เลขไมล์ออก-กลับ, ผู้ขับ, ปลายทาง, วัตถุประสงค์ และจำนวนผู้โดยสาร ตัวอย่างรายการล่าสุด ๒๐ รายการ ดังตารางด้านล่าง',
+  // 2.3 บันทึกแบบ 4 — แยกรายคัน แยกเดือน + สีแดงสำหรับที่ลืมบันทึก
+  nodes.push(ppbold('๒.๓  บันทึกการใช้รถตามแบบ ๔ — แยกรายคัน แยกเดือน',{sp:{before:120,after:60,line:360,lineRule:'auto'}}));
+  nodes.push(pp([tr('หมายเหตุ: ',{bold:true,size:SB}),trRed('ข้อความสีแดง',{size:SB}),tr(' หมายถึง ลืมบันทึก / ไม่มีการบันทึกการใช้รถในระบบ',{size:SB})],
     {sp:{before:0,after:100,line:360,lineRule:'auto'}}));
 
-  // Get last 20 queue items
-  const last20 = [...queue].slice(-20);
-  const b4Headers = [
-    {text:'ลำดับ',w:380,size:26},{text:'วันที่',w:700,size:26},{text:'ทะเบียน',w:700,size:26},
-    {text:'เวลาออก',w:600,size:26},{text:'เวลากลับ',w:600,size:26},
-    {text:'ผู้ขับ',w:1000,size:26},{text:'ผู้ขอ',w:900,size:26},
-    {text:'ปลายทาง',w:1100,size:26},{text:'ภารกิจ',w:1100,size:26},
-    {text:'ผู้โดยสาร',w:600,size:26},
+  const b4H = [
+    {text:'ที่',w:320,size:24},{text:'วันที่',w:640,size:24},{text:'ทะเบียน',w:700,size:24},
+    {text:'เวลาออก\n(แผน)',w:560,size:24},{text:'เวลากลับ\n(แผน)',w:560,size:24},
+    {text:'เวลาจริง\nออก',w:560,size:24},{text:'เวลาจริง\nกลับ',w:560,size:24},
+    {text:'ไมล์ออก',w:640,size:24},{text:'ไมล์กลับ',w:640,size:24},{text:'ระยะ\n(กม.)',w:500,size:24},
+    {text:'ผู้ขับ',w:960,size:24},{text:'ผู้ขอ',w:860,size:24},
+    {text:'ปลายทาง',w:1000,size:24},{text:'ภารกิจ',w:1000,size:24},
+    {text:'ผู้โดยสาร',w:500,size:24},{text:'เลขที่คำสั่ง',w:700,size:24},{text:'ผู้อนุมัติ',w:900,size:24},
   ];
-  const b4Rows = last20.map((qr,i)=>[
-    dCellC(i+1,380,{size:26}),
-    dCellC(thDateSh(qr.date),700,{size:26}),
-    dCellC(qr.license_plate||'-',700,{size:26}),
-    dCellC(qr.time_start?qr.time_start.slice(0,5):'-',600,{size:26}),
-    dCellC(qr.time_end?qr.time_end.slice(0,5):'-',600,{size:26}),
-    dCell(qr.driver_name||'-',1000,{size:26}),
-    dCell(qr.requested_by||'-',900,{size:26}),
-    dCell(qr.destination||'-',1100,{size:26}),
-    dCell(qr.mission||'-',1100,{size:26}),
-    dCellC(qr.passengers||1,600,{size:26}),
-  ]);
-  nodes.push(makeTable(b4Headers, b4Rows));
-  nodes.push(pp([tr('หมายเหตุ: ',{bold:true,size:26}),tr(`ข้อมูลบันทึกการใช้รถครบทั้ง ${nf(totalTrips)} รายการ ปรากฏในระบบ PPK-DriveHub สามารถพิมพ์รายงานรายละเอียดแยกต่างหากได้`,{size:26})],
-    {sp:{before:60,after:0,line:300,lineRule:'auto'}}));
-  nodes.push(sourceNote());
+
+  for (const car of cars) {
+    const plate = car.license_plate;
+    const carTrips = termQueue.filter(q=>q.license_plate===plate);
+    if (carTrips.length === 0) continue;
+    const carLabel = `${plate} — ${car.brand||''} ${car.model||''}`.trim();
+    nodes.push(ppbold(`  ทะเบียน ${carLabel} (รวม ${nf(carTrips.length)} เที่ยว)`,
+      {sp:{before:180,after:60,line:360,lineRule:'auto'}}));
+
+    for (const ym of termMonths) {
+      const monthTrips = carTrips.filter(q=>getYM(q.date)===ym);
+      if (monthTrips.length === 0) continue;
+
+      nodes.push(pp([tr(`    เดือน${thMonthYear(ym)}  (${nf(monthTrips.length)} เที่ยว)`,{bold:true,size:SB})],
+        {sp:{before:120,after:40,line:360,lineRule:'auto'}}));
+
+      let seq = 0;
+      const b4Rows = monthTrips.map(qr=>{
+        seq++;
+        const ms = qr.mileage_start, me = qr.mileage_end;
+        const dist = (ms&&me&&me>ms) ? me-ms : null;
+        const missingDep = !qr.actual_departure;
+        const missingRet = !qr.actual_return;
+        const tOutCell  = missingDep ? dCellRed('ลืมบันทึก',560,{size:24}) : dCellC(String(qr.actual_departure).slice(11,16),560,{size:24});
+        const tBackCell = missingRet ? dCellRed('ลืมบันทึก',560,{size:24}) : dCellC(String(qr.actual_return).slice(11,16),560,{size:24});
+        const msCell    = ms ? dCellR(nf(ms),640,{size:24}) : dCellRed('ไม่บันทึก',640,{size:24});
+        const meCell    = me ? dCellR(nf(me),640,{size:24}) : dCellRed('ไม่บันทึก',640,{size:24});
+        const approver  = qr.signed_director||qr.signed_vehicle_chief||'-';
+        return [
+          dCellC(seq,320,{size:24}),
+          dCellC(thDateSh(qr.date),640,{size:24}),
+          dCellC(qr.license_plate||'-',700,{size:24}),
+          dCellC(qr.time_start?qr.time_start.slice(0,5):'-',560,{size:24}),
+          dCellC(qr.time_end?qr.time_end.slice(0,5):'-',560,{size:24}),
+          tOutCell, tBackCell, msCell, meCell,
+          dCellR(dist?nf(dist):'-',500,{size:24,bold:!!dist}),
+          dCell(qr.driver_name||'-',960,{size:24}),
+          dCell(qr.requested_by||'-',860,{size:24}),
+          dCell(qr.destination||'-',1000,{size:24}),
+          dCell(qr.mission||'-',1000,{size:24}),
+          dCellC(qr.passengers||1,500,{size:24}),
+          dCellC(qr.travel_order_number||'-',700,{size:24}),
+          dCell(approver,900,{size:24}),
+        ];
+      });
+      nodes.push(makeTable(b4H, b4Rows));
+      nodes.push(sourceNote());
+    }
+  }
   nodes.push(pb());
   return nodes;
 }
@@ -668,23 +736,102 @@ function buildChapter3() {
 // ══════════════════════════════════════════════════════════════════════════════
 // บทที่ 4 — น้ำมันเชื้อเพลิง
 // ══════════════════════════════════════════════════════════════════════════════
-function buildChapter4() {
+function buildChapter4(termFuel, termMonths, termLabel) {
   const nodes = [];
   nodes.push(ppc('บทที่ ๔',{sp:spHead,size:SH,bold:true}));
   nodes.push(ppc('รายงานการเบิกจ่ายน้ำมันเชื้อเพลิง',{sp:{...spHead,before:60},size:SH,bold:true}));
   nodes.push(...el(1));
 
-  nodes.push(pp(`          ในปีการศึกษา ๒๕๖๘ งานยานพาหนะได้บันทึกการเบิกจ่ายน้ำมันเชื้อเพลิงรวมทั้งสิ้น ${nf(fuel.length)} รายการ รวมปริมาณน้ำมัน ${nf(totalFuelLiters,2)} ลิตร รวมค่าใช้จ่าย ${bf(totalFuelAmount)} บาท โดยการเบิกจ่ายทุกรายการมีการแนบใบเสร็จรับเงินเป็นหลักฐานตามระเบียบกระทรวงการคลัง`,
+  // ─── compute term fuel stats ───
+  let tFuelLiters=0, tFuelAmount=0;
+  const tFuelByMonth={};
+  const tFuelByCar={};
+  for (const f of termFuel) {
+    tFuelLiters+=(+f.liters||0); tFuelAmount+=(+f.amount||0);
+    const ym=getYM(f.date);
+    if(ym){if(!tFuelByMonth[ym])tFuelByMonth[ym]={count:0,liters:0,amount:0};tFuelByMonth[ym].count++;tFuelByMonth[ym].liters+=(+f.liters||0);tFuelByMonth[ym].amount+=(+f.amount||0);}
+    const plate=f.license_plate||f.car_id;
+    if(!tFuelByCar[plate])tFuelByCar[plate]={count:0,liters:0,amount:0,rates:[]};
+    tFuelByCar[plate].count++;tFuelByCar[plate].liters+=(+f.liters||0);tFuelByCar[plate].amount+=(+f.amount||0);
+    if(f.fuel_consumption_rate&&+f.fuel_consumption_rate>0)tFuelByCar[plate].rates.push(+f.fuel_consumption_rate);
+  }
+  for(const[,v]of Object.entries(tFuelByCar)){v.avgRate=v.rates.length?v.rates.reduce((a,b)=>a+b,0)/v.rates.length:null;}
+  const tFuelAnomalies = termFuel.filter(f=>f.anomaly_flag==1||f.anomaly_flag==='1');
+
+  nodes.push(ppc(termLabel,{sp:{before:0,after:60,line:360,lineRule:'auto'},size:SB,bold:true}));
+  nodes.push(pp(`          ใน${termLabel} ปีการศึกษา ๒๕๖๘ งานยานพาหนะได้บันทึกการเบิกจ่ายน้ำมันเชื้อเพลิงรวมทั้งสิ้น ${nf(termFuel.length)} รายการ รวมปริมาณน้ำมัน ${nf(tFuelLiters,2)} ลิตร รวมค่าใช้จ่าย ${bf(tFuelAmount)} บาท โดยการเบิกจ่ายทุกรายการมีการแนบใบเสร็จรับเงินเป็นหลักฐานตามระเบียบกระทรวงการคลัง`,
     {sp:{before:0,after:100,line:360,lineRule:'auto'}}));
+  nodes.push(pp([tr('หมายเหตุ: ',{bold:true,size:SB}),trRed('ผู้เบิกไม่บันทึกเลขไมล์ขณะเติม',{size:SB}),tr(' = แสดงเป็นตัวอักษรสีแดงตัวหนาในช่องเลขไมล์',{size:SB})],
+    {sp:{before:0,after:100,line:360,lineRule:'auto'}}));
+
+  // 4.0 ทะเบียนน้ำมัน — จัดรายเดือน (ทุกรายการ)
+  nodes.push(ppbold('๔.๐  ทะเบียนการเบิกจ่ายน้ำมันเชื้อเพลิง — จัดทำรายเดือน',{sp:{before:120,after:60,line:360,lineRule:'auto'}}));
+
+  const fDetH = [
+    {text:'ที่',w:320,size:24},{text:'วันที่',w:640,size:24},{text:'เวลา',w:480,size:24},
+    {text:'ทะเบียนรถ',w:680,size:24},{text:'เลขที่เอกสาร',w:900,size:24},{text:'ประเภทน้ำมัน',w:800,size:24},
+    {text:'ลิตร',w:480,size:24},{text:'บาท/ลิตร',w:560,size:24},{text:'จำนวนเงิน (บาท)',w:800,size:24},
+    {text:'วงเงินสะสม (บาท)',w:900,size:24},
+    {text:'เลขไมล์',w:840,size:24},{text:'กม./ลิตร',w:560,size:24},
+    {text:'ผู้เบิก',w:960,size:24},{text:'สถานีบริการ',w:860,size:24},
+    {text:'วัตถุประสงค์',w:700,size:24},{text:'ผิดปกติ',w:480,size:24},
+  ];
+
+  for (const ym of termMonths) {
+    const monthFuel = termFuel.filter(f=>getYM(f.date)===ym);
+    nodes.push(ppbold(`  เดือน${thMonthYear(ym)}${ monthFuel.length===0 ? ' — ไม่มีข้อมูล' : ` (${nf(monthFuel.length)} รายการ)`}`,
+      {sp:{before:180,after:60,line:360,lineRule:'auto'}}));
+    if (monthFuel.length === 0) continue;
+
+    let running=0, mLiters=0, mAmount=0, fSeq=0;
+    const fDetRows = monthFuel.map(f=>{
+      fSeq++; running+=(+f.amount||0); mLiters+=(+f.liters||0); mAmount+=(+f.amount||0);
+      const fuelTh = FUEL_TYPE_TH[f.fuel_type]||f.fuel_type||'-';
+      const purposeTh = f.purpose_detail||PURPOSE_TH[f.purpose]||f.purpose||'-';
+      const noMileage = !f.mileage_before && f.mileage_before !== 0;
+      const mileageCell = noMileage
+        ? dCellRed('ผู้เบิกไม่บันทึกเลขไมล์ขณะเติม',840,{size:22})
+        : dCellR(nf(f.mileage_before),840,{size:24});
+      return [
+        dCellC(fSeq,320,{size:24}),
+        dCellC(thDateSh(f.date),640,{size:24}),
+        dCellC(f.time?f.time.slice(0,5):'-',480,{size:24}),
+        dCellC(f.license_plate||'-',680,{size:24}),
+        dCellC(f.document_number||f.receipt_number||'-',900,{size:24}),
+        dCellC(fuelTh,800,{size:24}),
+        dCellR(nf(f.liters,2),480,{size:24}),
+        dCellR(nf(f.price_per_liter,2),560,{size:24}),
+        dCellR(bf(f.amount),800,{size:24}),
+        dCellR(bf(running),900,{size:24,bold:true}),
+        mileageCell,
+        dCellC(f.fuel_consumption_rate?nf(f.fuel_consumption_rate,2):'-',560,{size:24}),
+        dCell(f.driver_name||'-',960,{size:24}),
+        dCell(f.gas_station_name||'-',860,{size:24}),
+        dCell(purposeTh,700,{size:24}),
+        dCellC((f.anomaly_flag==1||f.anomaly_flag==='1')?'⚠️':'-',480,{size:24}),
+      ];
+    });
+    // แถวรวมเดือน
+    fDetRows.push([
+      new TableCell({columnSpan:6,width:{size:4300,type:WidthType.DXA},borders:BC,shading:HS2,children:[pp([tr('รวมเดือน'+thMonthYear(ym),{bold:true,size:24})],{sp:spSmall,align:AlignmentType.CENTER})]}),
+      new TableCell({width:{size:480,type:WidthType.DXA},borders:BC,shading:HS2,children:[ppr(nf(mLiters,2),{sp:spSmall,bold:true,size:24})]}),
+      new TableCell({width:{size:560,type:WidthType.DXA},borders:BC,shading:HS2,children:[pp('',{sp:spSmall})]}),
+      new TableCell({width:{size:800,type:WidthType.DXA},borders:BC,shading:HS2,children:[ppr(bf(mAmount),{sp:spSmall,bold:true,size:24})]}),
+      new TableCell({width:{size:900,type:WidthType.DXA},borders:BC,shading:HS2,children:[ppr(bf(mAmount),{sp:spSmall,bold:true,size:24})]}),
+      new TableCell({columnSpan:6,width:{size:4300,type:WidthType.DXA},borders:BC,shading:HS2,children:[pp('',{sp:spSmall})]}),
+    ]);
+    nodes.push(makeTable(fDetH, fDetRows));
+    nodes.push(sourceNote());
+  }
 
   // 4.1 รายเดือน
   nodes.push(ppbold('๔.๑  สรุปการเบิกจ่ายน้ำมันรายเดือน',{sp:{before:120,after:80,line:360,lineRule:'auto'}}));
-  nodes.push(ppc('ตารางที่ ๔-๑  สรุปการเบิกจ่ายน้ำมันเชื้อเพลิงรายเดือน ปีการศึกษา ๒๕๖๘',{sp:{before:0,after:80,line:360,lineRule:'auto'},size:SB,bold:true}));
+  nodes.push(ppc(`ตารางที่ ๔-๑  สรุปการเบิกจ่ายน้ำมันเชื้อเพลิงรายเดือน ${termLabel} ปีการศึกษา ๒๕๖๘`,{sp:{before:0,after:80,line:360,lineRule:'auto'},size:SB,bold:true}));
 
   const f1Headers = [{text:'ลำดับ',w:400},{text:'เดือน',w:1200},{text:'จำนวนครั้ง',w:700},{text:'ปริมาณรวม (ลิตร)',w:900},{text:'ค่าใช้จ่ายรวม (บาท)',w:1000},{text:'เฉลี่ย บาท/ลิตร',w:900},{text:'หมายเหตุ',w:1600}];
   let sumF1L=0, sumF1A=0, sumF1C=0;
-  const f1Rows = YEAR_MONTHS.map((ym,i)=>{
-    const s = fuelByMonth[ym]||{count:0,liters:0,amount:0};
+  const f1Rows = termMonths.map((ym,i)=>{
+    const s = tFuelByMonth[ym]||{count:0,liters:0,amount:0};
     sumF1C+=s.count; sumF1L+=s.liters; sumF1A+=s.amount;
     const avg = s.liters>0 ? s.amount/s.liters : null;
     return [
@@ -718,7 +865,7 @@ function buildChapter4() {
 
   const f2Headers = [{text:'ลำดับ',w:400},{text:'ทะเบียนรถ',w:800},{text:'ยี่ห้อ/รุ่น',w:1200},{text:'จำนวนครั้ง',w:700},{text:'ลิตรรวม',w:800},{text:'ค่าใช้จ่ายรวม (บาท)',w:1000},{text:'อัตราสิ้นเปลือง (กม./ลิตร)',w:1000},{text:'เทียบเกณฑ์',w:800},{text:'หมายเหตุ',w:1200}];
   const f2Rows = cars.map((c,i)=>{
-    const s = fuelByCar[c.license_plate]||{count:0,liters:0,amount:0,avgRate:null};
+    const s = tFuelByCar[c.license_plate]||{count:0,liters:0,amount:0,avgRate:null};
     const belowStd = s.avgRate!=null && s.avgRate < 8;
     const std = s.avgRate!=null ? (belowStd?'ต่ำกว่าเกณฑ์':'ผ่านเกณฑ์') : '-';
     return [
@@ -739,13 +886,13 @@ function buildChapter4() {
 
   // 4.3 Anomaly
   nodes.push(ppbold('๔.๓  รายการเบิกจ่ายน้ำมันที่มีความผิดปกติ (Anomaly)',{sp:{before:120,after:80,line:360,lineRule:'auto'}}));
-  if (fuelAnomalies.length === 0) {
-    nodes.push(pp('          ไม่พบรายการเบิกจ่ายน้ำมันที่มีความผิดปกติในปีการศึกษา ๒๕๖๘',{sp:{before:0,after:100,line:360,lineRule:'auto'}}));
+  if (tFuelAnomalies.length === 0) {
+    nodes.push(pp(`          ไม่พบรายการเบิกจ่ายน้ำมันที่มีความผิดปกติใน${termLabel}`,{sp:{before:0,after:100,line:360,lineRule:'auto'}}));
   } else {
-    nodes.push(pp(`          พบรายการที่ระบบตรวจพบความผิดปกติ ${fuelAnomalies.length} รายการ ดังตารางที่ ๔-๓`,{sp:{before:0,after:100,line:360,lineRule:'auto'}}));
+    nodes.push(pp(`          พบรายการที่ระบบตรวจพบความผิดปกติ ${tFuelAnomalies.length} รายการ ดังตารางที่ ๔-๓`,{sp:{before:0,after:100,line:360,lineRule:'auto'}}));
     nodes.push(ppc('ตารางที่ ๔-๓  รายการเบิกจ่ายน้ำมันที่มีความผิดปกติ',{sp:{before:0,after:80,line:360,lineRule:'auto'},size:SB,bold:true}));
     const f3Headers = [{text:'ลำดับ',w:400},{text:'วันที่',w:700},{text:'เลขที่เอกสาร',w:1000},{text:'ทะเบียน',w:800},{text:'ผู้เบิก',w:1000},{text:'ลิตร',w:600},{text:'จำนวนเงิน',w:900},{text:'หมายเหตุ',w:2300}];
-    const f3Rows = fuelAnomalies.map((f,i)=>[
+    const f3Rows = tFuelAnomalies.map((f,i)=>[
       dCellC(i+1,400),
       dCellC(thDateSh(f.date),700),
       dCellC(f.document_number||'-',1000),
@@ -1073,87 +1220,100 @@ function buildAppendix() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// ASSEMBLE DOCUMENT
+// TERM DEFINITIONS + BUILD 2 FILES
 // ══════════════════════════════════════════════════════════════════════════════
-console.log('  📄 สร้างปกหน้าและคำนำ...');
-const coverNodes  = buildCover();
-const khamnamNodes = buildKhamnam();
-
-console.log('  📄 สร้างสารบัญ...');
-const tocNodes    = buildTOC();
-
-console.log('  📄 บทที่ ๑ ข้อมูลพื้นฐาน...');
-const ch1Nodes    = buildChapter1();
-
-console.log('  📄 บทที่ ๒ การใช้รถ...');
-const ch2Nodes    = buildChapter2();
-
-console.log('  📄 บทที่ ๓ พนักงานขับรถ...');
-const ch3Nodes    = buildChapter3();
-
-console.log('  📄 บทที่ ๔ น้ำมันเชื้อเพลิง...');
-const ch4Nodes    = buildChapter4();
-
-console.log('  📄 บทที่ ๕ ซ่อมบำรุง...');
-const ch5Nodes    = buildChapter5();
-
-console.log('  📄 บทที่ ๖ สรุปสถิติ...');
-const ch6Nodes    = buildChapter6();
-
-console.log('  📄 บทที่ ๗ ปัญหาและอุปสรรค...');
-const ch7Nodes    = buildChapter7();
-
-console.log('  📄 บทที่ ๘ ข้อเสนอแนะ...');
-const ch8Nodes    = buildChapter8();
-
-console.log('  📄 หน้าลงนาม + ภาคผนวก...');
-const sigNodes    = buildSignaturePage();
-const appNodes    = buildAppendix();
-
-const allChildren = [
-  ...coverNodes, ...khamnamNodes, ...tocNodes,
-  ...ch1Nodes, ...ch2Nodes, ...ch3Nodes,
-  ...ch4Nodes, ...ch5Nodes, ...ch6Nodes,
-  ...ch7Nodes, ...ch8Nodes,
-  ...sigNodes, ...appNodes,
+const TERMS = [
+  { label:'ภาคเรียนที่ ๑', start:'2025-05-01', end:'2025-10-31',
+    months:['2025-05','2025-06','2025-07','2025-08','2025-09','2025-10'],
+    file:'รายงานงานยานพาหนะ-2568-ภาคเรียน1.docx' },
+  { label:'ภาคเรียนที่ ๒', start:'2025-11-01', end:'2026-04-30',
+    months:['2025-11','2025-12','2026-01','2026-02','2026-03','2026-04'],
+    file:'รายงานงานยานพาหนะ-2568-ภาคเรียน2.docx' },
 ];
 
-const doc = new Document({
-  styles: {
-    default: {
-      document: {
-        run: { font: F, size: SB },
-        paragraph: { spacing: spNormal },
-      },
-    },
-  },
-  sections: [{
-    properties: {
-      page: {
-        size: { width: 11906, height: 16838 },     // A4
-        margin: { top: 1440, bottom: 1440, left: 1701, right: 1440 }, // 2.54cm / 3cm
-      },
-    },
-    children: allChildren,
-  }],
-});
+function byDate(arr, field, s, e) {
+  return arr.filter(r=>{ const d=String(r[field]||'').slice(0,10); return d>=s && d<=e; });
+}
 
-// ─── Write file ──────────────────────────────────────────────────────────────
-console.log('\n💾 กำลังบันทึกไฟล์...\n');
 try { mkdirSync(OUTPUT_DIR, { recursive: true }); } catch(e) {}
 
-const buffer = await Packer.toBuffer(doc);
-writeFileSync(OUTPUT_FILE, buffer);
+for (const term of TERMS) {
+  const termQueue  = byDate(queue,  'date',          term.start, term.end);
+  const termFuel   = byDate(fuel,   'date',          term.start, term.end);
 
-const sizeMB = (buffer.length / 1024 / 1024).toFixed(2);
-console.log(`✅ สร้างรายงานสำเร็จ!`);
-console.log(`📁 ไฟล์: ${OUTPUT_FILE}`);
-console.log(`📊 ขนาดไฟล์: ${sizeMB} MB`);
-console.log(`\n📋 สรุปเนื้อหา:`);
+  console.log(`\n📘 สร้างไฟล์ ${term.label}...`);
+  console.log(`   ใช้รถ: ${nf(termQueue.length)} เที่ยว | น้ำมัน: ${nf(termFuel.length)} รายการ`);
+
+  console.log('  📄 สร้างปกหน้าและคำนำ...');
+  const coverNodes   = buildCover(term.label);
+  const khamnamNodes = buildKhamnam();
+
+  console.log('  📄 สร้างสารบัญ...');
+  const tocNodes     = buildTOC();
+
+  console.log('  📄 บทที่ ๑ ข้อมูลพื้นฐาน...');
+  const ch1Nodes = buildChapter1();
+
+  console.log('  📄 บทที่ ๒ การใช้รถ...');
+  const ch2Nodes = buildChapter2(termQueue, term.months, term.label);
+
+  console.log('  📄 บทที่ ๓ พนักงานขับรถ...');
+  const ch3Nodes = buildChapter3();
+
+  console.log('  📄 บทที่ ๔ น้ำมันเชื้อเพลิง...');
+  const ch4Nodes = buildChapter4(termFuel, term.months, term.label);
+
+  console.log('  📄 บทที่ ๕-๖ ซ่อมบำรุง + สรุปสถิติ...');
+  const ch5Nodes = buildChapter5();
+  const ch6Nodes = buildChapter6();
+
+  console.log('  📄 บทที่ ๗-๘ ปัญหา + ข้อเสนอแนะ...');
+  const ch7Nodes = buildChapter7();
+  const ch8Nodes = buildChapter8();
+
+  console.log('  📄 หน้าลงนาม + ภาคผนวก...');
+  const sigNodes  = buildSignaturePage();
+  const appNodes  = buildAppendix();
+
+  const doc = new Document({
+    styles: { default: { document: { run:{font:F,size:SB}, paragraph:{spacing:spNormal} } } },
+    sections: [
+      {
+        properties: { page: { size:{width:11906,height:16838}, margin:{top:1440,bottom:1440,left:1701,right:1440} } },
+        children: [...coverNodes, ...khamnamNodes, ...tocNodes, ...ch1Nodes],
+      },
+      {
+        properties: { page: { size:{width:16838,height:11906}, margin:{top:1080,bottom:1080,left:1080,right:1080} } },
+        children: [...ch2Nodes],
+      },
+      {
+        properties: { page: { size:{width:11906,height:16838}, margin:{top:1440,bottom:1440,left:1701,right:1440} } },
+        children: [...ch3Nodes],
+      },
+      {
+        properties: { page: { size:{width:16838,height:11906}, margin:{top:1080,bottom:1080,left:1080,right:1080} } },
+        children: [...ch4Nodes],
+      },
+      {
+        properties: { page: { size:{width:11906,height:16838}, margin:{top:1440,bottom:1440,left:1701,right:1440} } },
+        children: [...ch5Nodes, ...ch6Nodes, ...ch7Nodes, ...ch8Nodes, ...sigNodes, ...appNodes],
+      },
+    ],
+  });
+
+  const buffer = await Packer.toBuffer(doc);
+  const outPath = `${OUTPUT_DIR}\\${term.file}`;
+  writeFileSync(outPath, buffer);
+  const sizeMB = (buffer.length/1024/1024).toFixed(2);
+  console.log(`  ✅ ${outPath}  (${sizeMB} MB)`);
+}
+
+console.log(`\n🎉 สร้างรายงานครบทั้ง ${TERMS.length} ภาคเรียนแล้ว!`);
+console.log(`📁 ดูไฟล์ได้ที่: ${OUTPUT_DIR}`);
+console.log(`\n📋 สรุปข้อมูลทั้งปี:`);
 console.log(`   - รถราชการ: ${cars.length} คัน`);
 console.log(`   - พนักงานขับรถ: ${drivers.length} คน`);
-console.log(`   - รายการใช้รถ: ${nf(queue.length)} เที่ยว`);
-console.log(`   - บันทึกน้ำมัน: ${nf(fuel.length)} รายการ (${nf(totalFuelLiters,2)} ลิตร / ${bf(totalFuelAmount)} บาท)`);
-console.log(`   - การซ่อมบำรุง: ${repair.length} ครั้ง (${bf(totalRepairCost)} บาท)`);
-console.log(`\n🔍 กรุณาเปิดไฟล์ด้วย Microsoft Word เพื่อตรวจสอบ`);
-console.log(`   (ต้องมีฟ้อนต์ TH Sarabun New ติดตั้งในเครื่อง)`);
+console.log(`   - รายการใช้รถรวม: ${nf(queue.length)} เที่ยว`);
+console.log(`   - บันทึกน้ำมันรวม: ${nf(fuel.length)} รายการ`);
+console.log(`   - การซ่อมบำรุงรวม: ${repair.length} ครั้ง`);
+console.log(`\n🔍 กรุณาเปิดด้วย Microsoft Word (ต้องมีฟ้อนต์ TH Sarabun New ติดตั้ง)`);
