@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 
 <head>
@@ -872,6 +872,30 @@
         input.maxLength = 10;
         input.placeholder = 'เช่น 0812345678';
         input.value = currentValue;
+      } else if (fieldName === 'department') {
+        input = document.createElement('select');
+        var depts = [
+          '',
+          'ฝ่ายบริหาร',
+          'กลุ่มสาระการเรียนรู้คณิตศาสตร์',
+          'กลุ่มสาระการเรียนรู้วิทยาศาสตร์และเทคโนโลยี',
+          'กลุ่มสาระการเรียนรู้ภาษาไทย',
+          'กลุ่มสาระการเรียนรู้ภาษาต่างประเทศ',
+          'กลุ่มสาระการเรียนรู้สังคมศึกษา ศาสนา และวัฒนธรรม',
+          'กลุ่มสาระการเรียนรู้ศิลปะ',
+          'กลุ่มสาระการเรียนรู้การงานอาชีพ',
+          'กลุ่มสาระการเรียนรู้สุขศึกษาและพลศึกษา',
+          'กิจกรรมพัฒนาผู้เรียน',
+          'เจ้าหน้าที่',
+          'อื่นๆ'
+        ];
+        depts.forEach(function(d) {
+          var opt = document.createElement('option');
+          opt.value = d;
+          opt.textContent = d || '-- เลือกกลุ่มสาระ/หน่วยงาน --';
+          input.appendChild(opt);
+        });
+        input.value = currentValue;
       } else {
         input = document.createElement('input');
         input.type = 'text';
@@ -879,8 +903,6 @@
         if (fieldName === 'full_name') {
           input.required = true;
           input.placeholder = 'กรุณากรอกชื่อ-สกุล';
-        } else if (fieldName === 'department') {
-          input.placeholder = 'เช่น งานยานพาหนะ, กลุ่มสาระการเรียนรู้';
         }
       }
 
