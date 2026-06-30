@@ -95,9 +95,11 @@
               <div class="form-group" style="grid-column:1/-1">
                 <label>สถานที่ปลายทาง <span style="color:var(--color-danger)">*</span></label>
                 <div style="position:relative; margin-bottom:8px;">
-                  <input type="text" id="fDestination" class="form-control" required placeholder="พิมพ์ค้นหาสถานที่ หรือคลิกบนแผนที่เพื่อปักหมุด" oninput="debounceSearch()" style="width: 100%;">
+                  <input type="text" id="fDestSearch" class="form-control" placeholder="พิมพ์ค้นหาสถานที่ หรือคลิกบนแผนที่เพื่อปักหมุด" oninput="debounceSearch()" style="width: 100%;">
                   <div id="autocomplete-list" class="autocomplete-items"></div>
                 </div>
+                <div id="destListContainer" style="margin-bottom:8px;"></div>
+                <input type="hidden" id="fDestination">
                 
                 <div id="map"></div>
                 <div style="margin-top:8px; font-size:0.85rem; color:var(--color-text-light);">
@@ -247,6 +249,13 @@
 
     async function submitRequest(e) {
       e.preventDefault();
+      var finalDest = document.getElementById('fDestination').value.trim();
+      var searchVal = document.getElementById('fDestSearch').value.trim();
+      if (!finalDest && searchVal) {
+         finalDest = searchVal;
+      } else if (searchVal && !finalDest.includes(searchVal)) {
+         finalDest += ', ' + searchVal;
+      }
       var data = {
         requester_name: document.getElementById('fRequesterName').value.trim(),
         department: document.getElementById('fDepartment').value.trim(),
@@ -254,7 +263,7 @@
         return_date: document.getElementById('fReturnDate').value,
         time_start: document.getElementById('fTimeStart').value || null,
         time_end: document.getElementById('fTimeEnd').value || null,
-        destination: document.getElementById('fDestination').value.trim(),
+        destination: finalDest,
         route: document.getElementById('fRoute').value.trim(),
         purpose: document.getElementById('fPurpose').value.trim(),
         passengers: parseInt(document.getElementById('fPassengers').value) || 1,
@@ -272,6 +281,9 @@
           showAlert('ส่งคำขอใช้รถเรียบร้อยแล้ว', 'success');
           document.getElementById('requestForm').reset();
           document.getElementById('passengerList').innerHTML = '';
+          if (typeof clearWaypoints === 'function') clearWaypoints();
+          document.getElementById('destListContainer').innerHTML = '';
+          document.getElementById('fDestSearch').value = '';
         } else {
           showAlert((res && res.error) || 'เกิดข้อผิดพลาด', 'danger');
         }
@@ -282,7 +294,7 @@
       var name = document.getElementById('fRequesterName').value || '-';
       var dept = document.getElementById('fDepartment').value || '-';
       var date = document.getElementById('fDate').value || '-';
-      var dest = document.getElementById('fDestination').value || '-';
+      var dest = document.getElementById('fDestination').value || document.getElementById('fDestSearch').value || '-';
       var route = document.getElementById('fRoute').value || '-';
       var purpose = document.getElementById('fPurpose').value || '-';
       var passengers = getPassengerNames().join(', ') || '-';
@@ -534,16 +546,32 @@
       });
     }
 
-    function addWaypointPin(lat, lng) {
+    function addWaypointPin(lat, lng, name) {
       var m = L.marker([lat, lng], { draggable: true }).addTo(map);
+      m.destName = name || 'จุดที่ระบุบนแผนที่';
       markers.push(m);
-      m.on('dragend', updateRoute);
-      m.on('dblclick', function() {
-        map.removeLayer(m);
-        markers = markers.filter(x => x !== m);
+      m.on('dragend', function() {
+        m.destName = 'จุดที่ระบุบนแผนที่ (ย้ายพิกัดแล้ว)';
         updateRoute();
       });
+      m.on('dblclick', function() {
+        removeWaypointByMarker(m);
+      });
       updateRoute();
+    }
+
+    function removeWaypointByMarker(m) {
+      map.removeLayer(m);
+      markers = markers.filter(x => x !== m);
+      updateRoute();
+    }
+
+    function removeWaypoint(idx) {
+      if (idx >= 0 && idx < markers.length) {
+        map.removeLayer(markers[idx]);
+        markers.splice(idx, 1);
+        updateRoute();
+      }
     }
 
     function clearWaypoints() {
@@ -553,6 +581,20 @@
     }
 
     async function updateRoute() {
+      // Update destination list UI and hidden input
+      var destListHTML = '';
+      var destNames = [];
+      markers.forEach(function(m, idx) {
+        var name = m.destName || 'จุดที่ ' + (idx + 1);
+        destNames.push(name);
+        destListHTML += '<div style="display:flex; justify-content:space-between; align-items:center; background:#f9fafb; padding:8px 12px; border:1px solid #e5e7eb; border-radius:6px; margin-bottom:4px;">';
+        destListHTML += '<span>📍 ' + htmlEsc(name) + '</span>';
+        destListHTML += '<button type="button" onclick="removeWaypoint(' + idx + ')" style="background:none; border:none; cursor:pointer; color:#ef4444; font-size:1.1rem;">🗑️</button>';
+        destListHTML += '</div>';
+      });
+      document.getElementById('destListContainer').innerHTML = destListHTML;
+      document.getElementById('fDestination').value = destNames.join(', ');
+
       if (markers.length === 0) {
         if (routeLine) map.removeLayer(routeLine);
         document.getElementById('mapStatus').innerText = 'คลิกบนแผนที่เพื่อเพิ่มจุดแวะพัก/ปลายทาง (ลากเพื่อย้าย ดับเบิ้ลคลิกเพื่อลบหมุด)';
@@ -605,7 +647,7 @@
     var searchTimeout = null;
     function debounceSearch() {
       clearTimeout(searchTimeout);
-      var query = document.getElementById('fDestination').value.trim();
+      var query = document.getElementById('fDestSearch').value.trim();
       if (!query) {
         document.getElementById('autocomplete-list').innerHTML = '';
         return;
@@ -648,15 +690,15 @@
     }
 
     function selectLocation(lat, lng, name) {
-      document.getElementById('fDestination').value = name;
+      document.getElementById('fDestSearch').value = ''; // clear search box after selection
       document.getElementById('autocomplete-list').innerHTML = ''; // close dropdown
       map.setView([lat, lng], 13);
-      addWaypointPin(lat, lng);
+      addWaypointPin(lat, lng, name);
     }
     
     // Close dropdown when clicking outside
     document.addEventListener("click", function (e) {
-      if (e.target.id !== "fDestination") {
+      if (e.target.id !== "fDestSearch") {
         var list = document.getElementById('autocomplete-list');
         if (list) list.innerHTML = '';
       }
