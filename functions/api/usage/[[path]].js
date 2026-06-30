@@ -149,6 +149,7 @@ export async function onRequest(context) {
     let autoCreatedQueueId = null;
 
     if (body.record_type === 'return') {
+      let linkedQueueId = null;
       // หา queue ที่ผูกอยู่: ถ้ามี queue_id ตรงๆ ใช้เลย, ถ้าไม่มีให้ค้นจาก car_id ที่ยังไม่ปิด
       let targetQueueId = body.queue_id || null;
       if (!targetQueueId) {
@@ -186,7 +187,7 @@ export async function onRequest(context) {
           [body.car_id]
         );
         if (depRecord) {
-          let linkedQueueId = depRecord.queue_id;
+          linkedQueueId = depRecord.queue_id;
           if (!linkedQueueId) {
             // สร้าง queue ย้อนหลังจาก departure record
             const driverId = await resolveDriverId(depRecord.driver_id, depRecord.driver_name_manual);
@@ -228,8 +229,6 @@ export async function onRequest(context) {
             const surveyUrl = `https://ppk-drivehub.pages.dev/qr-survey.html?queue_id=${finalQueueId}`;
             await createNotification(env.DB, qRow.requester_id, 'survey', `เดินทางเสร็จสิ้น โปรดประเมินคนขับ`,
               `การเดินทางวันที่ ${qRow.date} ไป${qRow.destination || ''} เสร็จสิ้นแล้ว โปรดให้คะแนนและประเมินพนักงานขับรถได้ที่นี่: ${surveyUrl}`);
-            // ส่ง Telegram แทรกลิงก์
-            await sendTelegramMessage(env, `🏁 <b>เดินทางเสร็จสิ้น</b>\n📍 ${qRow.destination || 'ไม่ระบุ'}\n👤 ผู้ขอ: ${qRow.requested_by || ''}\n\n📝 <a href="${surveyUrl}">คุณครูโปรดคลิกที่นี่เพื่อประเมินคนขับรถและให้คะแนน 1-5 ดาว</a>`);
           }
         }
       }
