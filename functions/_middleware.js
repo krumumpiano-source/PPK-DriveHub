@@ -1,4 +1,4 @@
-﻿import { error, dbFirst, dbRun, dbAll } from './_helpers.js';
+import { error, dbFirst, dbRun, dbAll } from './_helpers.js';
 
 const PUBLIC_PATHS = [
   '/api/auth/login',
@@ -44,7 +44,7 @@ const CSP = [
   "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://unpkg.com",
   "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
   "img-src 'self' data: blob: https:",
-  "connect-src 'self' https://generativelanguage.googleapis.com https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net",
+  "connect-src 'self' https://generativelanguage.googleapis.com https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net https://nominatim.openstreetmap.org https://router.project-osrm.org https://unpkg.com",
   "media-src 'self' blob:",
   "worker-src 'self' blob:"
 ].join('; ');
