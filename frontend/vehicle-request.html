@@ -113,8 +113,10 @@
                 <label>จำนวนผู้ร่วมเดินทาง</label>
                 <input type="number" id="fPassengers" class="form-control" min="1" value="1" onchange="updatePassengerFields()">
               </div>
-              <div class="form-group">
-                <label><input type="checkbox" id="fUrgent"> กรณีฉุกเฉิน (ไม่ถึง 3 วันทำการ)</label>
+              <div class="form-group" style="grid-column:1/-1">
+                <div style="background:#fff3cd; color:#856404; padding:10px; border-radius:var(--radius-md); font-size:0.9rem; border:1px solid #ffeeba;">
+                  ⚠️ <strong>หมายเหตุ:</strong> การขอใช้รถปกติควรดำเนินการล่วงหน้าอย่างน้อย 3 วันทำการ <b>กรณีฉุกเฉินหรือเร่งด่วน</b> โปรดติดต่อหัวหน้างานยานพาหนะโดยตรง
+                </div>
               </div>
               <div class="form-group" style="grid-column:1/-1">
                 <label>รายชื่อผู้ร่วมเดินทาง</label>
@@ -250,7 +252,6 @@
         passengers: parseInt(document.getElementById('fPassengers').value) || 1,
         passenger_names: getPassengerNames(),
         priority: document.getElementById('fPriority').value,
-        is_urgent: document.getElementById('fUrgent').checked,
         notes: document.getElementById('fNotes').value.trim(),
         waypoints: document.getElementById('fWaypoints').value || null,
         dest_lat: parseFloat(document.getElementById('fDestLat').value) || null,
