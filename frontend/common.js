@@ -1,4 +1,4 @@
-﻿if (typeof flatpickr !== 'undefined') {
+if (typeof flatpickr !== 'undefined') {
     flatpickr.localize({
         weekdays: {
             shorthand: ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'],
@@ -161,7 +161,7 @@ function renderNavigation() {
     if (true) {
         nav += _sidebarSection('คิวและการใช้รถ');
         // driver ไม่ต้องขอใช้รถ — แสดงเฉพาะ non-driver หรือ admin
-        if (user.role !== 'driver') nav += _sidebarItem('vehicle-request.html', 'vehicle-request', '📝', 'ขอใช้รถ');
+        if (user.role !== 'driver') nav += _sidebarItem('vehicle-request.html?v=2', 'vehicle-request', '📝', 'ขอใช้รถ');
         if (hasQueue) nav += _sidebarItem('queue-manage.html', 'queue', '📅', 'จัดการคิวรถ');
         if (hasUsage) nav += _sidebarItem('usage-log.html', 'usage-log', '📝', 'บันทึกการใช้รถ');
         if (hasHistory) nav += _sidebarItem('driver-history.html', 'driver-history', '📋', 'คิวและประวัติส่วนตัว');
