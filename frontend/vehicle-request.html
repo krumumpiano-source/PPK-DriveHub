@@ -34,6 +34,16 @@
     .passenger-row input{flex:1}
     .approve-section{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--radius-lg);padding:1rem;margin-top:1rem}
     .school-icon{font-size:24px; text-align:center; line-height:24px; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))}
+    #map { height: 380px; border-radius: var(--radius-md); border: 2px solid var(--color-border); z-index: 1; }
+    .autocomplete-items {
+      position: absolute; border: 1px solid #d4d4d4; border-bottom: none; border-top: none;
+      z-index: 99; top: 100%; left: 0; right: 0; background-color: #fff;
+      max-height: 250px; overflow-y: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-radius: 0 0 8px 8px;
+    }
+    .autocomplete-items div {
+      padding: 12px; cursor: pointer; border-bottom: 1px solid #d4d4d4; font-size: 0.92rem;
+    }
+    .autocomplete-items div:hover { background-color: #f3f4f6; color: var(--color-primary); }
   </style>
 </head>
 <body>
@@ -84,9 +94,9 @@
               </div>
               <div class="form-group" style="grid-column:1/-1">
                 <label>สถานที่ปลายทาง <span style="color:var(--color-danger)">*</span></label>
-                <div style="display:flex; gap:8px; margin-bottom:8px;">
-                  <input type="text" id="fDestination" class="form-control" required placeholder="ค้นหาหรือคลิกบนแผนที่เพื่อปักหมุด" style="flex:1">
-                  <button type="button" class="btn btn-outline" onclick="searchMap()">🔍 ค้นหา</button>
+                <div style="position:relative; margin-bottom:8px;">
+                  <input type="text" id="fDestination" class="form-control" required placeholder="พิมพ์ค้นหาสถานที่ หรือคลิกบนแผนที่เพื่อปักหมุด" oninput="debounceSearch()" style="width: 100%;">
+                  <div id="autocomplete-list" class="autocomplete-items"></div>
                 </div>
                 
                 <div id="map"></div>
@@ -591,28 +601,55 @@
       }
     }
 
-    async function searchMap() {
+    var searchTimeout = null;
+    function debounceSearch() {
+      clearTimeout(searchTimeout);
       var query = document.getElementById('fDestination').value.trim();
       if (!query) {
-        showAlert('กรุณากรอกชื่อสถานที่', 'warning');
+        document.getElementById('autocomplete-list').innerHTML = '';
         return;
       }
-      document.getElementById('mapStatus').innerText = 'กำลังค้นหา...';
+      searchTimeout = setTimeout(function() {
+        searchNominatim(query);
+      }, 500); // 500ms delay
+    }
+
+    async function searchNominatim(query) {
+      document.getElementById('autocomplete-list').innerHTML = '<div style="color:#666">กำลังค้นหา...</div>';
       try {
         var res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
         var data = await res.json();
+        var listHTML = '';
         if (data && data.length > 0) {
-          var lat = parseFloat(data[0].lat);
-          var lng = parseFloat(data[0].lon);
-          map.setView([lat, lng], 13);
-          addWaypointPin(lat, lng);
+          data.forEach(function(item) {
+            var lat = parseFloat(item.lat);
+            var lon = parseFloat(item.lon);
+            var displayName = htmlEsc(item.display_name);
+            listHTML += `<div onclick="selectLocation(${lat}, ${lon}, '${displayName.replace(/'/g, "\\'")}')">${displayName}</div>`;
+          });
         } else {
-          document.getElementById('mapStatus').innerText = 'ไม่พบสถานที่นี้ ลองเปลี่ยนคำค้นหา';
+          listHTML = '<div style="color:#999">ไม่พบสถานที่นี้ (คุณสามารถคลิกบนแผนที่ได้โดยตรง)</div>';
         }
+        document.getElementById('autocomplete-list').innerHTML = listHTML;
       } catch(e) {
-        document.getElementById('mapStatus').innerText = 'ค้นหาล้มเหลว';
+        document.getElementById('autocomplete-list').innerHTML = '<div style="color:#d32f2f">ค้นหาล้มเหลว กรุณาลองใหม่</div>';
       }
     }
+
+    function selectLocation(lat, lng, name) {
+      document.getElementById('fDestination').value = name;
+      document.getElementById('autocomplete-list').innerHTML = ''; // close dropdown
+      map.setView([lat, lng], 13);
+      addWaypointPin(lat, lng);
+    }
+    
+    // Close dropdown when clicking outside
+    document.addEventListener("click", function (e) {
+      if (e.target.id !== "fDestination") {
+        var list = document.getElementById('autocomplete-list');
+        if (list) list.innerHTML = '';
+      }
+    });
 
     // Init
     function waitForCommon(){return new Promise(function(r){if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){r();return}var c=0;var t=setInterval(function(){c++;if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){clearInterval(t);r()}else if(c>50){clearInterval(t);r()}},100)})}
