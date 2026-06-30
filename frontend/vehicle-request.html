@@ -581,7 +581,7 @@
       document.getElementById('fWaypoints').value = JSON.stringify(wps);
 
       try {
-        var res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=full&geometries=geojson`);
+        var res = await fetch(`/api/maps/route?coords=${encodeURIComponent(coordsStr)}`);
         var data = await res.json();
         if (data.routes && data.routes.length > 0) {
           var distanceKm = (data.routes[0].distance / 1000).toFixed(2);
@@ -617,7 +617,7 @@
     async function searchNominatim(query) {
       document.getElementById('autocomplete-list').innerHTML = '<div style="color:#666">กำลังค้นหา...</div>';
       try {
-        var res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&accept-language=th&q=${encodeURIComponent(query)}`);
+        var res = await fetch(`/api/maps/search?q=${encodeURIComponent(query)}`);
         var data = await res.json();
         var listHTML = '';
         if (data && data.length > 0) {
