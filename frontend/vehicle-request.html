@@ -110,10 +110,7 @@
                   <input type="hidden" id="fEstimatedKm">
                 </div>
               </div>
-              <div class="form-group" style="grid-column:1/-1">
-                <label>เส้นทาง</label>
-                <input type="text" id="fRoute" class="form-control" placeholder="เช่น พะเยา - เชียงใหม่ - พะเยา">
-              </div>
+
               <div class="form-group" style="grid-column:1/-1">
                 <label>วัตถุประสงค์</label>
                 <textarea id="fPurpose" class="form-control" rows="2"></textarea>
@@ -264,7 +261,7 @@
         time_start: document.getElementById('fTimeStart').value || null,
         time_end: document.getElementById('fTimeEnd').value || null,
         destination: finalDest,
-        route: document.getElementById('fRoute').value.trim(),
+        route: '',
         purpose: document.getElementById('fPurpose').value.trim(),
         passengers: parseInt(document.getElementById('fPassengers').value) || 1,
         passenger_names: getPassengerNames(),
@@ -295,7 +292,7 @@
       var dept = document.getElementById('fDepartment').value || '-';
       var date = document.getElementById('fDate').value || '-';
       var dest = document.getElementById('fDestination').value || document.getElementById('fDestSearch').value || '-';
-      var route = document.getElementById('fRoute').value || '-';
+      var route = '-';
       var purpose = document.getElementById('fPurpose').value || '-';
       var passengers = getPassengerNames().join(', ') || '-';
       var timeS = document.getElementById('fTimeStart').value || '-';
@@ -308,7 +305,7 @@
       w.document.write('<tr><td><strong>วันที่</strong></td><td>' + date + '</td></tr>');
       w.document.write('<tr><td><strong>เวลา</strong></td><td>' + timeS + ' - ' + timeE + '</td></tr>');
       w.document.write('<tr><td><strong>สถานที่ปลายทาง</strong></td><td>' + dest + '</td></tr>');
-      w.document.write('<tr><td><strong>เส้นทาง</strong></td><td>' + route + '</td></tr>');
+
       w.document.write('<tr><td><strong>วัตถุประสงค์</strong></td><td>' + purpose + '</td></tr>');
       w.document.write('<tr><td><strong>ผู้ร่วมเดินทาง</strong></td><td>' + passengers + '</td></tr></table>');
       w.document.write('<div class="sig"><div><div class="line"></div>(ผู้ขอใช้รถ)</div><div><div class="line"></div>(ผู้อนุมัติ)</div></div>');
