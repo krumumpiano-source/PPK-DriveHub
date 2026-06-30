@@ -276,6 +276,10 @@
         var res = await apiCall('createVehicleRequest', data);
         if (res && res.success) {
           showAlert('ส่งคำขอใช้รถเรียบร้อยแล้ว', 'success');
+          // Save department for next time
+          var dept = document.getElementById('fDepartment').value.trim();
+          if (dept) localStorage.setItem('last_department', dept);
+          
           document.getElementById('requestForm').reset();
           document.getElementById('passengerList').innerHTML = '';
           if (typeof clearWaypoints === 'function') clearWaypoints();
@@ -709,14 +713,30 @@
       var user = getCurrentUser();
       // Prefill requester name
       document.getElementById('fRequesterName').value = user.full_name || user.display_name || user.username || '';
+      // Prefill department from localStorage
+      var savedDept = localStorage.getItem('last_department');
+      if (savedDept) document.getElementById('fDepartment').value = savedDept;
+
       // Show approve tab for queue manager / admin
       var canApprove = false;
       try { canApprove = hasModulePermission('queue', 'edit') || hasPermission(['admin', 'super_admin']); } catch(e) {}
       if (canApprove) document.getElementById('tabApprove').style.display = '';
+      
       // Init date picker
       if (typeof flatpickr !== 'undefined') {
-        flatpickr('#fDate', { locale: 'th', dateFormat: 'Y-m-d', minDate: 'today' });
-        flatpickr('#fReturnDate', { locale: 'th', dateFormat: 'Y-m-d', minDate: 'today' });
+        var returnPicker = flatpickr('#fReturnDate', { locale: 'th', dateFormat: 'Y-m-d', minDate: 'today' });
+        flatpickr('#fDate', { 
+          locale: 'th', 
+          dateFormat: 'Y-m-d', 
+          minDate: 'today',
+          onChange: function(selectedDates, dateStr, instance) {
+            // Auto set return date if it's empty
+            var returnInput = document.getElementById('fReturnDate').value;
+            if (!returnInput && dateStr) {
+              returnPicker.setDate(dateStr);
+            }
+          }
+        });
       }
       setTimeout(initMap, 500); // Initialize map after UI renders
     });
