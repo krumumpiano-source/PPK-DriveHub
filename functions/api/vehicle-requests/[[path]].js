@@ -71,13 +71,27 @@ export async function onRequest(context) {
     if (!body?.date || !body?.destination) return error('กรุณาระบุวันที่และสถานที่ปลายทาง');
     const id = generateUUID();
     const ts = now();
+    const reqDateObj = body.date ? new Date(body.date) : new Date();
+    const yearBE = (reqDateObj.getFullYear() || new Date().getFullYear()) + 543;
+    const prefixLike = `พค.(ยพ.) %/${yearBE}`;
+    
+    const maxRow = await dbFirst(env.DB, `SELECT MAX(request_no) as max_no FROM vehicle_requests WHERE request_no LIKE ?`, [prefixLike]);
+    let nextNum = 1;
+    if (maxRow && maxRow.max_no) {
+      const match = maxRow.max_no.match(/พค\.\(ยพ\.\)\s+(\d+)\/\d{4}/);
+      if (match && match[1]) {
+        nextNum = parseInt(match[1], 10) + 1;
+      }
+    }
+    const requestNo = `พค.(ยพ.) ${nextNum.toString().padStart(4, '0')}/${yearBE}`;
+
     await dbRun(env.DB,
-      `INSERT INTO vehicle_requests (id, requester_id, requester_name, requester_department,
+      `INSERT INTO vehicle_requests (id, request_no, requester_id, requester_name, requester_department,
         date, return_date, time_start, time_end, destination, route, purpose,
         passengers, passenger_names, priority, is_urgent,
         status, notes, waypoints, dest_lat, dest_lng, estimated_km, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)`,
-      [id, user.id, body.requester_name || user.display_name || '',
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)`,
+      [id, requestNo, user.id, body.requester_name || user.display_name || '',
        body.requester_department || body.department || '',
        body.date, body.return_date || body.date, body.time_start || null, body.time_end || null,
        body.destination, body.route || '',

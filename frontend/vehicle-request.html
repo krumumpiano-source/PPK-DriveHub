@@ -173,6 +173,10 @@
       <!-- Tab 3: Approve (queue manager/admin) -->
       <div id="panelApprove" class="vr-panel">
         <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
+          <input type="text" id="filterApproveSearch" placeholder="ค้นหาชื่อ, สถานที่, หรือเลขที่" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem;flex:1;min-width:150px" oninput="debounceLoadPending()">
+          <input type="date" id="filterApproveDateFrom" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem" onchange="loadPendingRequests()">
+          <span style="align-self:center">-</span>
+          <input type="date" id="filterApproveDateTo" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem" onchange="loadPendingRequests()">
           <select id="filterApproveStatus" onchange="loadPendingRequests()" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem">
             <option value="pending">รออนุมัติ</option>
             <option value="">ทั้งหมด</option>
@@ -194,18 +198,29 @@
         <div class="vr-form-grid">
           <div class="form-group">
             <label>เลือกรถ <span style="color:var(--color-danger)">*</span></label>
-            <select id="mAssignCar" class="form-control"><option value="">โหลดรายการรถ...</option></select>
+            <select id="mAssignCar" class="form-control" onchange="checkConflicts()"><option value="">โหลดรายการรถ...</option></select>
           </div>
           <div class="form-group">
             <label>เลือกพนักงานขับรถ <span style="color:var(--color-danger)">*</span></label>
-            <select id="mAssignDriver" class="form-control"><option value="">โหลดรายการพนักงาน...</option></select>
+            <select id="mAssignDriver" class="form-control" onchange="checkConflicts()"><option value="">โหลดรายการพนักงาน...</option></select>
           </div>
         </div>
+        <div id="conflictWarning" style="display:none;background:#fee2e2;color:#991b1b;padding:8px;border-radius:var(--radius-md);margin-bottom:1rem;font-size:0.9rem"></div>
         <input type="hidden" id="fModalEstimatedFuel">
-        <div class="form-group"><label>หมายเหตุ</label><textarea id="mNotes" class="form-control" rows="2"></textarea></div>
-        <div style="display:flex;gap:8px;margin-top:1rem">
-          <button class="btn btn-primary" onclick="doApprove()">✅ เสนออนุมัติและจัดคิว</button>
-          <button class="btn btn-danger" onclick="doReject()">❌ ไม่อนุมัติ</button>
+        <input type="hidden" id="fModalReqDate">
+        <div class="form-group">
+          <label>หมายเหตุ / เหตุผลที่ไม่อนุมัติ</label>
+          <div style="margin-bottom:8px;display:flex;gap:4px;flex-wrap:wrap">
+            <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('mNotes').value='รถราชการไม่ว่าง'">รถไม่ว่าง</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('mNotes').value='พนักงานขับรถไม่เพียงพอ'">คนขับไม่พอ</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('mNotes').value='ให้ใช้รถยนต์ส่วนตัว'">ใช้รถส่วนตัว</button>
+          </div>
+          <textarea id="mNotes" class="form-control" rows="2" placeholder="ระบุหมายเหตุ หรือเหตุผลกรณีไม่อนุมัติ"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap">
+          <button id="btnApprove" class="btn btn-primary" onclick="doApprove()">✅ เสนออนุมัติและจัดคิว</button>
+          <button id="btnAdminPrint" class="btn btn-outline" style="display:none" onclick="printAdminRequest()">🖨️ พิมพ์ใบคำขอ</button>
+          <button id="btnReject" class="btn btn-danger" onclick="doReject()">❌ ไม่อนุมัติ</button>
           <button class="btn btn-outline" onclick="closeModal('approveModal')">ปิด</button>
         </div>
       </div>
@@ -317,7 +332,9 @@
       var timeE = document.getElementById('fTimeEnd').value || '-';
       var w = window.open('', '_blank', 'width=800,height=600');
       w.document.write('<html><head><title>แบบฟอร์มขอใช้รถ</title><style>body{font-family:Sarabun,sans-serif;padding:40px;font-size:14px}h2{text-align:center}table{width:100%;border-collapse:collapse;margin-top:20px}td{padding:6px 8px;border:1px solid #ccc}.sig{margin-top:60px;display:flex;justify-content:space-around}.sig div{text-align:center;width:200px}.sig .line{border-bottom:1px solid #333;margin-bottom:8px;height:40px}</style></head><body>');
+      var reqNo = document.getElementById('fRequestNo') ? document.getElementById('fRequestNo').value : '-';
       w.document.write('<h2>แบบฟอร์มขอใช้รถราชการ</h2><p style="text-align:center">โรงเรียนพะเยาพิทยาคม</p>');
+      if (reqNo && reqNo !== '-') w.document.write('<p style="text-align:right"><strong>เลขที่:</strong> ' + reqNo + '</p>');
       w.document.write('<table><tr><td style="width:30%"><strong>ผู้ขอใช้รถ</strong></td><td>' + name + '</td></tr>');
       w.document.write('<tr><td><strong>กลุ่มสาระ/หน่วยงาน</strong></td><td>' + dept + '</td></tr>');
       w.document.write('<tr><td><strong>วันที่</strong></td><td>' + date + '</td></tr>');
@@ -340,6 +357,7 @@
       try { var pn = JSON.parse(r.passenger_names || '[]'); passengers = pn.join(', '); } catch(e) {}
       var h = '<div class="vr-card">';
       h += '<div class="vr-header"><div>';
+      if (r.request_no) h += '<span style="color:var(--color-primary);font-weight:bold;margin-right:8px">' + r.request_no + '</span>';
       h += '<strong>' + (r.date || '-') + '</strong> &nbsp; <span class="vr-badge ' + (statusClass[r.status] || '') + '">' + (statusLabel[r.status] || r.status) + '</span>';
       if (r.is_urgent) h += ' <span class="vr-badge" style="background:#fef3c7;color:#92400e">🚨 ฉุกเฉิน</span>';
       h += '</div></div>';
@@ -391,15 +409,37 @@
       }
     }
 
+    var approveSearchTimeout;
+    function debounceLoadPending() {
+      clearTimeout(approveSearchTimeout);
+      approveSearchTimeout = setTimeout(loadPendingRequests, 500);
+    }
+
     async function loadPendingRequests() {
       var status = document.getElementById('filterApproveStatus').value;
+      var q = document.getElementById('filterApproveSearch') ? document.getElementById('filterApproveSearch').value.trim().toLowerCase() : '';
+      var dFrom = document.getElementById('filterApproveDateFrom') ? document.getElementById('filterApproveDateFrom').value : '';
+      var dTo = document.getElementById('filterApproveDateTo') ? document.getElementById('filterApproveDateTo').value : '';
+      
       var params = {};
       if (status) params.status = status;
+      if (dFrom) params.date_from = dFrom;
+      if (dTo) params.date_to = dTo;
+      
       try {
         var res = await apiCall('getVehicleRequests', params);
         var list = (res && res.success && Array.isArray(res.data)) ? res.data : [];
+        
+        if (q) {
+          list = list.filter(function(r) {
+            return (r.requester_name && r.requester_name.toLowerCase().includes(q)) ||
+                   (r.destination && r.destination.toLowerCase().includes(q)) ||
+                   (r.request_no && r.request_no.toLowerCase().includes(q));
+          });
+        }
+        
         if (list.length === 0) {
-          document.getElementById('pendingRequestList').innerHTML = '<p style="color:var(--color-text-muted);text-align:center;padding:2rem">ไม่มีคำขอ</p>';
+          document.getElementById('pendingRequestList').innerHTML = '<p style="color:var(--color-text-muted);text-align:center;padding:2rem">ไม่มีคำขอที่ตรงกับเงื่อนไข</p>';
           return;
         }
         var h = '';
@@ -454,6 +494,7 @@
         } else {
           document.getElementById('fModalEstimatedFuel').value = '';
         }
+        document.getElementById('fModalReqDate').value = r.date;
         body += '</div>';
         document.getElementById('approveModalBody').innerHTML = body;
       } catch(e) {}
@@ -481,8 +522,17 @@
         var workload = (d.week_queues !== undefined) ? ` (สัปดาห์นี้: ${d.week_queues}, วันนี้: ${d.today_queues})` : '';
         drvSel += '<option value="' + d.id + '">' + (d.name || '') + workload + '</option>';
       });
+      });
       document.getElementById('mAssignDriver').innerHTML = drvSel;
       document.getElementById('mNotes').value = '';
+      document.getElementById('conflictWarning').style.display = 'none';
+      if (r.status === 'approved') {
+        document.getElementById('btnAdminPrint').style.display = 'inline-block';
+        document.getElementById('mAssignCar').value = r.assigned_car_id || '';
+        document.getElementById('mAssignDriver').value = r.assigned_driver_id || '';
+      } else {
+        document.getElementById('btnAdminPrint').style.display = 'none';
+      }
       document.getElementById('approveModal').style.display = 'flex';
     }
 
@@ -517,26 +567,101 @@
       } catch (err) { showAlert('เกิดข้อผิดพลาด: ' + err.message, 'danger'); }
     }
 
-    async function doReject() {
-      var reason = prompt('เหตุผลที่ไม่อนุมัติ:');
-      if (reason === null) return;
-      try {
-        var res = await apiCall('rejectVehicleRequest', { id: currentApproveId, reason: reason });
-        if (res && res.success) {
-          showAlert('ปฏิเสธคำขอเรียบร้อย', 'success');
-          closeModal('approveModal');
-          loadPendingRequests();
-        } else { showAlert((res && res.error) || 'เกิดข้อผิดพลาด', 'danger'); }
-      } catch (err) { showAlert('เกิดข้อผิดพลาด', 'danger'); }
+    function doReject() {
+      var reason = document.getElementById('mNotes').value.trim();
+      if (!reason) {
+        reason = prompt('กรุณาระบุเหตุผลที่ไม่อนุมัติ:');
+        if (!reason) return;
+      } else {
+        if (!confirm('ยืนยันไม่อนุมัติคำขอ เนื่องจาก: ' + reason + ' ?')) return;
+      }
+      quickReject(currentApproveId, reason);
     }
 
-    async function quickReject(id) {
-      var reason = prompt('เหตุผลที่ไม่อนุมัติ:');
-      if (reason === null) return;
+    async function checkConflicts() {
+      var carId = document.getElementById('mAssignCar').value;
+      var drvId = document.getElementById('mAssignDriver').value;
+      var date = document.getElementById('fModalReqDate').value;
+      var warningEl = document.getElementById('conflictWarning');
+      
+      if (!date || (!carId && !drvId)) {
+        warningEl.style.display = 'none';
+        return;
+      }
+      
+      try {
+        var res = await apiCall('getVehicleRequests', { status: 'approved', date: date });
+        var list = (res && res.success && Array.isArray(res.data)) ? res.data : [];
+        var conflicts = [];
+        
+        list.forEach(function(r) {
+          if (r.id === currentApproveId) return; // skip self
+          if (carId && r.assigned_car_id === carId) {
+            conflicts.push('🚗 รถถูกจัดคิวแล้ว: ' + r.time_start + '-' + r.time_end + ' (' + r.destination + ')');
+          }
+          if (drvId && r.assigned_driver_id === drvId) {
+            conflicts.push('👤 คนขับติดงานแล้ว: ' + r.time_start + '-' + r.time_end + ' (' + r.destination + ')');
+          }
+        });
+        
+        if (conflicts.length > 0) {
+          warningEl.innerHTML = '<strong>⚠️ แจ้งเตือนคิวชนกัน:</strong><br>' + conflicts.join('<br>');
+          warningEl.style.display = 'block';
+        } else {
+          warningEl.style.display = 'none';
+        }
+      } catch (e) {
+        warningEl.style.display = 'none';
+      }
+    }
+
+    async function printAdminRequest() {
+      try {
+        var res = await apiCall('getVehicleRequest', { id: currentApproveId });
+        if (!res || !res.success) return;
+        var r = res.data;
+        var name = r.requester_name || '-';
+        var dept = r.requester_department || '-';
+        var date = r.date || '-';
+        var dest = r.destination || '-';
+        var purpose = r.purpose || '-';
+        var passengers = '';
+        try { passengers = JSON.parse(r.passenger_names || '[]').join(', '); } catch(e){}
+        var timeS = r.time_start || '-';
+        var timeE = r.time_end || '-';
+        var w = window.open('', '_blank', 'width=800,height=600');
+        w.document.write('<html><head><title>แบบฟอร์มขอใช้รถ (จัดคิวแล้ว)</title><style>body{font-family:Sarabun,sans-serif;padding:40px;font-size:14px}h2{text-align:center}table{width:100%;border-collapse:collapse;margin-top:20px}td{padding:6px 8px;border:1px solid #ccc}.sig{margin-top:60px;display:flex;justify-content:space-around}.sig div{text-align:center;width:200px}.sig .line{border-bottom:1px solid #333;margin-bottom:8px;height:40px}</style></head><body>');
+        if (r.request_no) w.document.write('<p style="text-align:right"><strong>เลขที่:</strong> ' + r.request_no + '</p>');
+        w.document.write('<h2>แบบฟอร์มขอใช้รถราชการ</h2><p style="text-align:center">โรงเรียนพะเยาพิทยาคม</p>');
+        w.document.write('<table><tr><td style="width:30%"><strong>ผู้ขอใช้รถ</strong></td><td>' + name + '</td></tr>');
+        w.document.write('<tr><td><strong>กลุ่มสาระ/หน่วยงาน</strong></td><td>' + dept + '</td></tr>');
+        w.document.write('<tr><td><strong>วันที่</strong></td><td>' + date + '</td></tr>');
+        w.document.write('<tr><td><strong>เวลา</strong></td><td>' + timeS + ' - ' + timeE + '</td></tr>');
+        w.document.write('<tr><td><strong>สถานที่ปลายทาง</strong></td><td>' + dest + '</td></tr>');
+        w.document.write('<tr><td><strong>วัตถุประสงค์</strong></td><td>' + purpose + '</td></tr>');
+        w.document.write('<tr><td><strong>ผู้ร่วมเดินทาง</strong></td><td>' + (passengers || '-') + '</td></tr>');
+        w.document.write('<tr><td colspan="2" style="background:#f9fafb;text-align:center"><strong>-- ส่วนของการจัดคิว --</strong></td></tr>');
+        w.document.write('<tr><td><strong>รถยนต์ที่จัดให้</strong></td><td>' + (r.license_plate || '-') + ' ' + (r.car_brand || '') + '</td></tr>');
+        w.document.write('<tr><td><strong>พนักงานขับรถ</strong></td><td>' + (r.driver_name || '-') + '</td></tr>');
+        w.document.write('</table>');
+        w.document.write('<div class="sig"><div><div class="line"></div>(ผู้อนุมัติ/ผู้จัดคิว)</div><div><div class="line"></div>(ผู้อำนวยการ)</div></div>');
+        w.document.write('</body></html>');
+        w.document.close();
+        w.print();
+      } catch(e) { showAlert('พิมพ์ไม่สำเร็จ', 'danger'); }
+    }
+
+    async function quickReject(id, reasonOpt) {
+      var reason = reasonOpt;
+      if (!reason) {
+        reason = prompt('เหตุผลที่ไม่อนุมัติ:');
+        if (reason === null) return;
+      }
       try {
         var res = await apiCall('rejectVehicleRequest', { id: id, reason: reason });
         if (res && res.success) {
           showAlert('ปฏิเสธคำขอเรียบร้อย', 'success');
+          closeModal('approveModal');
           loadPendingRequests();
         } else { showAlert((res && res.error) || 'เกิดข้อผิดพลาด', 'danger'); }
       } catch (err) { showAlert('เกิดข้อผิดพลาด', 'danger'); }
