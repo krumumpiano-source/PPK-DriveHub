@@ -615,26 +615,35 @@
       }, 500); // 500ms delay
     }
 
+    function htmlEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
     async function searchNominatim(query) {
       document.getElementById('autocomplete-list').innerHTML = '<div style="color:#666">กำลังค้นหา...</div>';
       try {
-        var res = await fetch(`/api/maps/search?q=${encodeURIComponent(query)}`);
+        var res = await fetch('/api/maps/search?q=' + encodeURIComponent(query));
+        if (!res.ok) {
+          var errText = await res.text();
+          console.error('Map search HTTP error:', res.status, errText);
+          document.getElementById('autocomplete-list').innerHTML = '<div style="color:#d32f2f">เซิร์ฟเวอร์ตอบกลับ: ' + res.status + '</div>';
+          return;
+        }
         var json = await res.json();
-        var data = json.data;
+        var data = json.data || json;
         var listHTML = '';
         if (data && data.length > 0) {
           data.forEach(function(item) {
             var lat = parseFloat(item.lat);
             var lon = parseFloat(item.lon);
             var displayName = htmlEsc(item.display_name);
-            listHTML += `<div onclick="selectLocation(${lat}, ${lon}, '${displayName.replace(/'/g, "\\'")}')">${displayName}</div>`;
+            listHTML += '<div onclick="selectLocation(' + lat + ', ' + lon + ', \'' + displayName.replace(/'/g, "\\'") + '\')">' + displayName + '</div>';
           });
         } else {
           listHTML = '<div style="color:#999">ไม่พบสถานที่นี้ (คุณสามารถคลิกบนแผนที่ได้โดยตรง)</div>';
         }
         document.getElementById('autocomplete-list').innerHTML = listHTML;
       } catch(e) {
-        document.getElementById('autocomplete-list').innerHTML = '<div style="color:#d32f2f">ค้นหาล้มเหลว กรุณาลองใหม่</div>';
+        console.error('Map search error:', e);
+        document.getElementById('autocomplete-list').innerHTML = '<div style="color:#d32f2f">ค้นหาล้มเหลว: ' + (e.message || e) + '</div>';
       }
     }
 
