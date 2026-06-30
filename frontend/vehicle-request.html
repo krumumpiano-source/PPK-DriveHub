@@ -69,14 +69,7 @@
                 <label>วันที่ใช้รถ <span style="color:var(--color-danger)">*</span></label>
                 <input type="text" id="fDate" class="form-control" placeholder="เลือกวันที่" required>
               </div>
-              <div class="form-group">
-                <label>ลำดับความสำคัญ</label>
-                <select id="fPriority" class="form-control">
-                  <option value="general">ทั่วไป</option>
-                  <option value="teaching">สนับสนุนการสอน</option>
-                  <option value="urgent">เร่งด่วน</option>
-                </select>
-              </div>
+
               <div class="form-group">
                 <label>เวลาออก</label>
                 <input type="time" id="fTimeStart" class="form-control">
@@ -251,7 +244,6 @@
         purpose: document.getElementById('fPurpose').value.trim(),
         passengers: parseInt(document.getElementById('fPassengers').value) || 1,
         passenger_names: getPassengerNames(),
-        priority: document.getElementById('fPriority').value,
         notes: document.getElementById('fNotes').value.trim(),
         waypoints: document.getElementById('fWaypoints').value || null,
         dest_lat: parseFloat(document.getElementById('fDestLat').value) || null,
