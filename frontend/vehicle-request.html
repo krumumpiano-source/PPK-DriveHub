@@ -582,36 +582,55 @@
       var carId = document.getElementById('mAssignCar').value;
       var drvId = document.getElementById('mAssignDriver').value;
       var date = document.getElementById('fModalReqDate').value;
+      var estKm = document.getElementById('fModalEstimatedFuel').value ? (parseFloat(document.getElementById('fModalEstimatedFuel').value)/3) : 0;
       var warningEl = document.getElementById('conflictWarning');
+      var btnApprove = document.getElementById('btnApprove');
       
       if (!date || (!carId && !drvId)) {
         warningEl.style.display = 'none';
+        btnApprove.disabled = false;
         return;
       }
       
       try {
-        var res = await apiCall('getVehicleRequests', { status: 'approved', date: date });
-        var list = (res && res.success && Array.isArray(res.data)) ? res.data : [];
-        var conflicts = [];
-        
-        list.forEach(function(r) {
-          if (r.id === currentApproveId) return; // skip self
-          if (carId && r.assigned_car_id === carId) {
-            conflicts.push('🚗 รถถูกจัดคิวแล้ว: ' + r.time_start + '-' + r.time_end + ' (' + r.destination + ')');
+        var res = await apiCall('getQueueAvailability', { date: date, car_id: carId, driver_id: drvId, estimated_km: estKm });
+        if (res && res.success) {
+          var blockers = res.data.blockers || [];
+          var warnings = res.data.warnings || [];
+          
+          if (blockers.length === 0 && warnings.length === 0) {
+            warningEl.style.display = 'none';
+            btnApprove.disabled = false;
+            return;
           }
-          if (drvId && r.assigned_driver_id === drvId) {
-            conflicts.push('👤 คนขับติดงานแล้ว: ' + r.time_start + '-' + r.time_end + ' (' + r.destination + ')');
+          
+          var html = '';
+          if (blockers.length > 0) {
+            html += '<strong>🔴 ไม่สามารถจัดคิวได้:</strong><ul style="margin:4px 0 8px 20px">';
+            blockers.forEach(function(b) { html += '<li>' + b + '</li>'; });
+            html += '</ul>';
           }
-        });
-        
-        if (conflicts.length > 0) {
-          warningEl.innerHTML = '<strong>⚠️ แจ้งเตือนคิวชนกัน:</strong><br>' + conflicts.join('<br>');
+          if (warnings.length > 0) {
+            html += '<strong>🟠 ข้อควรระวัง (ยังคงจัดคิวได้):</strong><ul style="margin:4px 0 0 20px;color:#9a3412">';
+            warnings.forEach(function(w) { html += '<li>' + w + '</li>'; });
+            html += '</ul>';
+          }
+          
+          warningEl.innerHTML = html;
           warningEl.style.display = 'block';
-        } else {
-          warningEl.style.display = 'none';
+          
+          if (blockers.length > 0) {
+            warningEl.style.background = '#fee2e2';
+            warningEl.style.color = '#991b1b';
+            btnApprove.disabled = true;
+          } else {
+            warningEl.style.background = '#ffedd5';
+            warningEl.style.color = '#9a3412';
+            btnApprove.disabled = false;
+          }
         }
       } catch (e) {
-        warningEl.style.display = 'none';
+        console.error(e);
       }
     }
 

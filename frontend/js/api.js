@@ -1,4 +1,4 @@
-﻿const API = (() => {
+const API = (() => {
   const BASE = '';  // relative paths — works on any domain
 
   function getToken() {
@@ -134,6 +134,7 @@ const ACTION_MAP = {
   'completeQueue':       (d) => API.put(`/api/queue/${d.id}/complete`, d),
   'getQueueTimeline':    (d) => API.get('/api/queue/timeline' + _q(d)),
   'getQueueRules':       ()  => API.get('/api/queue/rules'),
+  'getQueueAvailability':(d) => API.get('/api/queue/availability' + _q(d)),
   'updateQueueRules':    (d) => API.put('/api/queue/rules', d),
 
   // Fuel
