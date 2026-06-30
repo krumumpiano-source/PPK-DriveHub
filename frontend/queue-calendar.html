@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ปฏิทินคิวรถ - PPK DriveHub</title>
+  
+  <script src="config.js"></script>
+  <script src="js/api.js"></script>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="common.css">
+  
+  <!-- FullCalendar CSS -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+
+  <style>
+    .fc-event {
+      cursor: pointer;
+    }
+    .fc-event-title {
+      font-weight: 600;
+    }
+    .calendar-container {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-top: 20px;
+    }
+    /* Status colors */
+    .status-scheduled { background-color: #1976d2; border-color: #1565c0; color: white; }
+    .status-active { background-color: #2e7d32; border-color: #1b5e20; color: white; }
+    .status-completed { background-color: #757575; border-color: #616161; color: white; }
+    .status-cancelled { background-color: #d32f2f; border-color: #b71c1c; color: white; }
+  </style>
+</head>
+<body class="light-mode">
+  <div class="layout">
+    <div id="sidebar-container"></div>
+    
+    <div class="main-content">
+      <div id="header-container"></div>
+      
+      <div class="content-header">
+        <h1 class="page-title">📅 ปฏิทินคิวรถ</h1>
+        <div class="page-actions">
+          <a href="queue-manage.html" class="btn btn-outline">
+            <span>📋 กลับไปหน้ารายการคิว</span>
+          </a>
+        </div>
+      </div>
+      
+      <div class="calendar-container">
+        <div id="calendar"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="common.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async function() {
+      // Require auth and permission
+      var user = getCurrentUser();
+      if (!user) {
+        window.location.href = 'login.html';
+        return;
+      }
+      
+      if (!hasModulePermission('queue', 'view') && !hasPermission(['admin'])) {
+        alert('คุณไม่มีสิทธิ์เข้าถึงหน้านี้');
+        window.location.href = 'dashboard.html';
+        return;
+      }
+
+      var calendarEl = document.getElementById('calendar');
+      var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+          left: 'prev,next today',
+          center: 'title',
+          right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        locale: 'th',
+        editable: hasModulePermission('queue', 'edit') || hasPermission(['admin']),
+        eventDrop: async function(info) {
+          if (!confirm("คุณต้องการเลื่อนคิวไปเป็นวันที่ " + info.event.start.toLocaleDateString('th-TH') + " ใช่หรือไม่?")) {
+            info.revert();
+            return;
+          }
+          
+          try {
+            // Update queue date
+            var newDate = info.event.start.toISOString().split('T')[0];
+            var qId = info.event.id;
+            
+            // We need to fetch original queue to keep existing time_start/time_end, then update
+            var res = await apiCall('getQueue', { id: qId });
+            if (res && res.success) {
+              var q = res.data;
+              var updateData = {
+                car_id: q.car_id,
+                driver_id: q.driver_id,
+                date: newDate,
+                time_start: q.time_start,
+                time_end: q.time_end,
+                status: q.status,
+                destination: q.destination
+              };
+              var updateRes = await apiCall('updateQueue', { id: qId, ...updateData });
+              if (updateRes.success) {
+                showToast('อัปเดตวันที่สำเร็จ', 'success');
+              } else {
+                alert(updateRes.message || 'เกิดข้อผิดพลาด');
+                info.revert();
+              }
+            } else {
+              info.revert();
+            }
+          } catch (e) {
+            console.error(e);
+            alert('เกิดข้อผิดพลาด: ' + e.message);
+            info.revert();
+          }
+        },
+        events: async function(fetchInfo, successCallback, failureCallback) {
+          try {
+            var dateFrom = fetchInfo.startStr.split('T')[0];
+            var dateTo = fetchInfo.endStr.split('T')[0];
+            
+            var res = await apiCall('getQueues', { date_from: dateFrom, date_to: dateTo });
+            if (res && res.success) {
+              var events = res.data.map(function(q) {
+                var className = 'status-scheduled';
+                if (q.status === 'completed') className = 'status-completed';
+                else if (q.status === 'cancelled') className = 'status-cancelled';
+                
+                var title = (q.license_plate||'ไม่มีรถ') + ' (' + (q.driver_name||'ไม่มีคนขับ') + ') - ' + (q.destination||'ไม่ระบุ');
+                
+                return {
+                  id: q.id,
+                  title: title,
+                  start: q.date + 'T' + (q.time_start || '00:00') + ':00',
+                  end: (q.return_date || q.date) + 'T' + (q.time_end || '23:59') + ':00',
+                  classNames: [className],
+                  extendedProps: {
+                    car_id: q.car_id,
+                    driver_id: q.driver_id,
+                    status: q.status
+                  }
+                };
+              });
+              successCallback(events);
+            } else {
+              failureCallback();
+            }
+          } catch (e) {
+            console.error(e);
+            failureCallback(e);
+          }
+        }
+      });
+      
+      calendar.render();
+    });
+  </script>
+</body>
+</html>

@@ -239,8 +239,10 @@ export async function onRequest(context) {
       await createNotification(env.DB, driverUser.id, 'queue', `มีคิวใหม่${isPooled}`,
         `คิววันที่ ${row.date} ไป${row.destination} — รถ: ${carLabel}${isPooled}${notesStr}`);
     }
+    const closeQueueUrl = `https://ppk-drivehub.pages.dev/qr-usage-record.html?type=return&car_id=${body.assigned_car_id}&queue_id=${queueId}`;
+
     await sendTelegramMessage(env,
-      `✅ <b>จัดรถและเสนออนุมัติเรียบร้อย</b>${isPooled}\n📅 ${row.date} (${timeStart}-${timeEnd})\n📍 ${row.destination}\n🚗 ${carLabel}\n👤 ${driverCheck.name}\n👨‍💼 จัดรถโดย: ${user.displayName}\n📋 ขอโดย: ${row.requester_name}${notesStr}`);
+      `✅ <b>จัดรถและเสนออนุมัติเรียบร้อย</b>${isPooled}\n📅 ${row.date} (${timeStart}-${timeEnd})\n📍 ${row.destination}\n🚗 ${carLabel}\n👤 @${driverCheck.name.replace(/\s+/g,'')} (คนขับ)\n👨‍💼 จัดรถโดย: ${user.displayName}\n📋 ขอโดย: ${row.requester_name}${notesStr}\n\n▶️ <a href="${closeQueueUrl}">กดที่นี่เพื่อบันทึกปิดคิวและกรอกเลขไมล์</a>`);
 
     return success({ id, queue_id: queueId, message: 'อนุมัติคำขอและสร้างคิวเรียบร้อย' });
   }

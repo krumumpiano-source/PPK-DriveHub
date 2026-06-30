@@ -1,7 +1,7 @@
-﻿// Usage records — event-based (departure/return/refuel/inspection) + Auto-Heal
+// Usage records — event-based (departure/return/refuel/inspection) + Auto-Heal
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
-  parseBody, requirePermission, extractParam, notifyAllAdmins, uploadToR2
+  parseBody, requirePermission, extractParam, notifyAllAdmins, uploadToR2, createNotification, sendTelegramMessage
 } from '../../_helpers.js';
 import { autoHeal } from '../../_lib/auto-heal.js';
 
@@ -217,6 +217,19 @@ export async function onRequest(context) {
           if (linkedQueueId) {
             await dbRun(env.DB, 'UPDATE usage_records SET queue_id = ? WHERE id = ?', [linkedQueueId, id]);
             queueCompleted = true;
+          }
+        }
+      }
+      if (queueCompleted) {
+        let finalQueueId = targetQueueId || linkedQueueId;
+        if (finalQueueId) {
+          const qRow = await dbFirst(env.DB, 'SELECT requester_id, requested_by, destination, date FROM queue WHERE id = ?', [finalQueueId]);
+          if (qRow && qRow.requester_id) {
+            const surveyUrl = `https://ppk-drivehub.pages.dev/qr-survey.html?queue_id=${finalQueueId}`;
+            await createNotification(env.DB, qRow.requester_id, 'survey', `เดินทางเสร็จสิ้น โปรดประเมินคนขับ`,
+              `การเดินทางวันที่ ${qRow.date} ไป${qRow.destination || ''} เสร็จสิ้นแล้ว โปรดให้คะแนนและประเมินพนักงานขับรถได้ที่นี่: ${surveyUrl}`);
+            // ส่ง Telegram แทรกลิงก์
+            await sendTelegramMessage(env, `🏁 <b>เดินทางเสร็จสิ้น</b>\n📍 ${qRow.destination || 'ไม่ระบุ'}\n👤 ผู้ขอ: ${qRow.requested_by || ''}\n\n📝 <a href="${surveyUrl}">คุณครูโปรดคลิกที่นี่เพื่อประเมินคนขับรถและให้คะแนน 1-5 ดาว</a>`);
           }
         }
       }
