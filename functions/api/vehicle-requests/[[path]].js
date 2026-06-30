@@ -73,13 +73,13 @@ export async function onRequest(context) {
     const ts = now();
     await dbRun(env.DB,
       `INSERT INTO vehicle_requests (id, requester_id, requester_name, requester_department,
-        date, time_start, time_end, destination, route, purpose,
+        date, return_date, time_start, time_end, destination, route, purpose,
         passengers, passenger_names, priority, is_urgent,
         status, notes, waypoints, dest_lat, dest_lng, estimated_km, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)`,
       [id, user.id, body.requester_name || user.display_name || '',
        body.requester_department || body.department || '',
-       body.date, body.time_start || null, body.time_end || null,
+       body.date, body.return_date || body.date, body.time_start || null, body.time_end || null,
        body.destination, body.route || '',
        body.purpose || '', body.passengers || 1,
        JSON.stringify(body.passenger_names || []),
@@ -93,11 +93,12 @@ export async function onRequest(context) {
     );
     for (const mgr of queueManagers) {
       await createNotification(env.DB, mgr.id, 'vehicle_request', 'คำขอใช้รถใหม่',
-        `${body.requester_name || user.display_name || ''} ขอใช้รถวันที่ ${body.date} ไป${body.destination}`);
+        `${body.requester_name || user.display_name || ''} ขอใช้รถวันที่ ${body.date}${body.return_date && body.return_date !== body.date ? ' ถึง ' + body.return_date : ''} ไป${body.destination}`);
     }
     const urgentLabel = body.is_urgent ? ' 🚨 ฉุกเฉิน' : '';
+    const dateRangeStr = body.return_date && body.return_date !== body.date ? `${body.date} ถึง ${body.return_date}` : body.date;
     await sendTelegramMessage(env,
-      `📋 <b>คำขอใช้รถใหม่${urgentLabel}</b>\n📅 ${body.date} (${body.time_start || '-'} - ${body.time_end || '-'})\n📍 ${body.destination}\n📝 ${body.purpose || '-'}\n👤 ${body.requester_name || user.display_name || ''}\n👥 ผู้ร่วมเดินทาง ${body.passengers || 1} คน`);
+      `📋 <b>คำขอใช้รถใหม่${urgentLabel}</b>\n📅 ${dateRangeStr} (${body.time_start || '-'} - ${body.time_end || '-'})\n📍 ${body.destination}\n📝 ${body.purpose || '-'}\n👤 ${body.requester_name || user.display_name || ''}\n👥 ผู้ร่วมเดินทาง ${body.passengers || 1} คน`);
     return success({ id, message: 'สร้างคำขอใช้รถเรียบร้อย' }, 201);
   }
 
@@ -113,7 +114,7 @@ export async function onRequest(context) {
     const body = await parseBody(request);
     const sets = [];
     const params = [];
-    const fields = ['date','time_start','time_end','destination','route','purpose',
+    const fields = ['date','return_date','time_start','time_end','destination','route','purpose',
       'passengers','requester_department','priority','is_urgent','notes','requester_name',
       'dest_lat','dest_lng','estimated_km'];
     for (const f of fields) {
@@ -191,11 +192,11 @@ export async function onRequest(context) {
     // สร้างคิวอัตโนมัติ
     const queueId = generateUUID();
     await dbRun(env.DB,
-      `INSERT INTO queue (id, date, time_start, time_end, car_id, driver_id,
+      `INSERT INTO queue (id, date, return_date, time_start, time_end, car_id, driver_id,
         requester_id, requested_by, mission, destination, passengers,
         status, notes, waypoints, estimated_km, estimated_fuel_cost, created_by, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?, ?, ?, ?, ?, ?, ?)`,
-      [queueId, row.date, timeStart, timeEnd,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?, ?, ?, ?, ?, ?, ?)`,
+      [queueId, row.date, row.return_date || row.date, timeStart, timeEnd,
        body.assigned_car_id, body.assigned_driver_id,
        row.requester_id, row.requester_name,
        row.purpose || '', row.destination, row.passengers || 1,

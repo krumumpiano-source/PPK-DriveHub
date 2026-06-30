@@ -127,14 +127,14 @@ export async function onRequest(context) {
     const id = generateUUID();
     const ts = now();
     await dbRun(env.DB,
-      `INSERT INTO queue (id, date, time_start, time_end, car_id, driver_id,
+      `INSERT INTO queue (id, date, return_date, time_start, time_end, car_id, driver_id,
         requester_id, requested_by, mission, destination, passengers,
         status, notes, backup_driver_id, estimated_km, waypoints, estimated_fuel_cost,
         travel_order_number, purpose_category,
         signed_vehicle_chief, signed_deputy_director, signed_director,
         created_by, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, body.date, timeStart, timeEnd,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, body.date, body.return_date || body.date, timeStart, timeEnd,
        body.car_id, body.driver_id || null,
        body.requester_id || user.id, body.requested_by || body.requester_name || user.displayName || '',
        body.mission || body.purpose || '', body.destination || '',
@@ -184,7 +184,7 @@ export async function onRequest(context) {
       if (backupCheck?.license_expiry && backupCheck.license_expiry < new Date().toISOString().substr(0,10)) return error('ใบขับขี่พนักงานสำรองหมดอายุ');
     }
 
-    const fields = ['date','time_start','time_end','car_id','driver_id',
+    const fields = ['date','return_date','time_start','time_end','car_id','driver_id',
       'requester_id','requested_by','mission','destination','passengers',
       'status','cancel_reason','notes','backup_driver_id','estimated_km','waypoints','estimated_fuel_cost','distance_justification',
       'travel_order_number','purpose_category',
