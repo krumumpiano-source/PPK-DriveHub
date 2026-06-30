@@ -1,4 +1,4 @@
-﻿// Vehicle dispatch queue management
+// Vehicle dispatch queue management
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, extractParam, writeAuditLog,
@@ -107,19 +107,21 @@ export async function onRequest(context) {
     // Backend conflict detection — prevent double-booking
     const timeStart = body.time_start || body.departure_time || '00:00';
     const timeEnd = body.time_end || body.return_time || '23:59';
-    const conflicts = await dbAll(env.DB,
-      `SELECT q.id, q.time_start, q.time_end, c.license_plate, d.name AS driver_name
-       FROM queue q
-       LEFT JOIN cars c ON q.car_id = c.id
-       LEFT JOIN drivers d ON q.driver_id = d.id
-       WHERE q.date = ? AND q.status NOT IN ('cancelled','completed')
-       AND ((q.car_id = ?) OR (q.driver_id = ? AND ? IS NOT NULL))
-       AND q.time_start < ? AND q.time_end > ?`,
-      [body.date, body.car_id, body.driver_id || null, body.driver_id || null, timeEnd, timeStart]
-    );
-    if (conflicts.length > 0) {
-      const labels = conflicts.map(c => `${c.license_plate || ''} ${c.driver_name || ''} (${c.time_start}-${c.time_end})`).join(', ');
-      return error(`คิวซ้อนกัน: ${labels}`, 409);
+    if (!body.allow_flexible && !body.emergency_override && !body.force_queue) {
+      const conflicts = await dbAll(env.DB,
+        `SELECT q.id, q.time_start, q.time_end, c.license_plate, d.name AS driver_name
+         FROM queue q
+         LEFT JOIN cars c ON q.car_id = c.id
+         LEFT JOIN drivers d ON q.driver_id = d.id
+         WHERE q.date = ? AND q.status NOT IN ('cancelled','completed')
+         AND ((q.car_id = ?) OR (q.driver_id = ? AND ? IS NOT NULL))
+         AND q.time_start < ? AND q.time_end > ?`,
+        [body.date, body.car_id, body.driver_id || null, body.driver_id || null, timeEnd, timeStart]
+      );
+      if (conflicts.length > 0) {
+        const labels = conflicts.map(c => `${c.license_plate || ''} ${c.driver_name || ''} (${c.time_start}-${c.time_end})`).join(', ');
+        return error(`คิวซ้อนกัน: ${labels}`, 409);
+      }
     }
 
     const id = generateUUID();
@@ -127,17 +129,17 @@ export async function onRequest(context) {
     await dbRun(env.DB,
       `INSERT INTO queue (id, date, time_start, time_end, car_id, driver_id,
         requester_id, requested_by, mission, destination, passengers,
-        status, notes, backup_driver_id,
+        status, notes, backup_driver_id, estimated_km, waypoints, estimated_fuel_cost,
         travel_order_number, purpose_category,
         signed_vehicle_chief, signed_deputy_director, signed_director,
         created_by, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, body.date, timeStart, timeEnd,
        body.car_id, body.driver_id || null,
        body.requester_id || user.id, body.requested_by || body.requester_name || user.displayName || '',
        body.mission || body.purpose || '', body.destination || '',
        body.passengers || body.passenger_count || '',
-       body.notes || '', body.backup_driver_id || null,
+       body.notes || '', body.backup_driver_id || null, body.estimated_km || null, body.waypoints || null, body.estimated_fuel_cost || null,
        body.travel_order_number || null, body.purpose_category || null,
        body.signed_vehicle_chief || null, body.signed_deputy_director || null, body.signed_director || null,
        user.id, ts, ts]
@@ -184,7 +186,7 @@ export async function onRequest(context) {
 
     const fields = ['date','time_start','time_end','car_id','driver_id',
       'requester_id','requested_by','mission','destination','passengers',
-      'status','cancel_reason','notes','backup_driver_id',
+      'status','cancel_reason','notes','backup_driver_id','estimated_km','waypoints','estimated_fuel_cost','distance_justification',
       'travel_order_number','purpose_category',
       'signed_vehicle_chief','signed_deputy_director','signed_director'];
     for (const f of fields) {
@@ -204,6 +206,18 @@ export async function onRequest(context) {
     const id = extractParam(path, '/api/queue/');
     await dbRun(env.DB, 'DELETE FROM queue WHERE id = ?', [id]);
     return success({ message: 'ลบคิวเรียบร้อย' });
+  }
+
+  // --- PUT /api/queue/:id/justification ---
+  if (path.match(/\/api\/queue\/[^/]+\/justification/) && method === 'PUT') {
+    try { requirePermission(user, 'queue', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const id = path.split('/')[3];
+    const body = await parseBody(request);
+    await dbRun(env.DB,
+      `UPDATE queue SET distance_justification = ?, updated_by = ?, updated_at = ? WHERE id = ?`,
+      [body.justification || '', user.id, now(), id]
+    );
+    return success({ message: 'บันทึกคำชี้แจงเรียบร้อย' });
   }
 
   // --- PUT /api/queue/:id/freeze ---

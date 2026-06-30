@@ -1,4 +1,4 @@
-﻿// Reports & dashboard analytics
+// Reports & dashboard analytics
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission
@@ -675,7 +675,7 @@ export async function onRequest(context) {
     const rows = await dbAll(env.DB,
       `SELECT q.id, q.date, q.time_start, q.time_end, q.status,
        q.mission, q.destination, q.passengers, q.notes, q.cancel_reason,
-       q.requested_by, q.requester_id,
+       q.requested_by, q.requester_id, q.estimated_km, q.waypoints, q.distance_justification,
        q.purpose_category, q.travel_order_number,
        q.signed_vehicle_chief, q.signed_deputy_director, q.signed_director,
        c.license_plate, c.brand, c.model,

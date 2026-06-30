@@ -1,4 +1,4 @@
-﻿// Driver management + fatigue + leaves
+// Driver management + fatigue + leaves
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, extractParam, uploadToR2, writeAuditLog
@@ -23,7 +23,9 @@ export async function onRequest(context) {
     if (status) { where.push('d.status = ?'); params.push(status); }
     if (search) { where.push("(d.name LIKE ? OR d.license_number LIKE ? OR d.phone LIKE ?)"); params.push(`%${search}%`, `%${search}%`, `%${search}%`); }
     const rows = await dbAll(env.DB,
-      `SELECT d.*, uc.display_name AS created_by_name, uu.display_name AS updated_by_name
+      `SELECT d.*, uc.display_name AS created_by_name, uu.display_name AS updated_by_name,
+       (SELECT COUNT(*) FROM queue q WHERE q.driver_id = d.id AND q.status NOT IN ('cancelled', 'rejected') AND q.date = date('now', 'localtime')) AS today_queues,
+       (SELECT COUNT(*) FROM queue q WHERE q.driver_id = d.id AND q.status NOT IN ('cancelled', 'rejected') AND q.date >= date('now', 'localtime', '-7 days')) AS week_queues
        FROM drivers d
        LEFT JOIN users uc ON d.created_by = uc.id
        LEFT JOIN users uu ON d.updated_by = uu.id
@@ -39,7 +41,9 @@ export async function onRequest(context) {
     try { requirePermission(user, 'drivers', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = extractParam(path, '/api/drivers/');
     const row = await dbFirst(env.DB,
-      `SELECT d.*, uc.display_name AS created_by_name, uu.display_name AS updated_by_name
+      `SELECT d.*, uc.display_name AS created_by_name, uu.display_name AS updated_by_name,
+       (SELECT COUNT(*) FROM queue q WHERE q.driver_id = d.id AND q.status NOT IN ('cancelled', 'rejected') AND q.date = date('now', 'localtime')) AS today_queues,
+       (SELECT COUNT(*) FROM queue q WHERE q.driver_id = d.id AND q.status NOT IN ('cancelled', 'rejected') AND q.date >= date('now', 'localtime', '-7 days')) AS week_queues
        FROM drivers d
        LEFT JOIN users uc ON d.created_by = uc.id
        LEFT JOIN users uu ON d.updated_by = uu.id

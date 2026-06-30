@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/docx@9.7.1/build/index.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="common.css">
   <script src="js/api.js"></script>
   <script src="js/export-utils.js?v=3"></script>
@@ -106,6 +107,8 @@
         <button class="report-tab" onclick="switchTab('drivers',this)">👤 พนักงานขับรถ</button>
         <button class="report-tab" onclick="switchTab('fuel',this)">⛽ เชื้อเพลิง</button>
         <button class="report-tab" onclick="switchTab('repairs',this)">🔧 ซ่อมบำรุง</button>
+        <button class="report-tab" onclick="switchTab('analytics',this)">📈 วิเคราะห์ความคุ้มค่า</button>
+        <button class="report-tab" onclick="switchTab('permit',this)">📝 เสนอเซ็นอนุมัติ</button>
         <button class="report-tab" onclick="switchTab('word',this)">📄 เอกสาร Word</button>
       </div>
 
@@ -382,7 +385,18 @@
       el.classList.add('active');
       var isWord=(tab==='word');
       document.querySelector('.filter-panel').style.display=isWord?'none':'';
-      document.querySelector('.action-bar').style.display=isWord?'none':'';
+      
+      var ab = document.querySelector('.action-bar');
+      if (tab === 'permit' || tab === 'word') {
+        ab.style.display = 'none';
+      } else {
+        ab.style.display = 'flex';
+        var exportBtn = ab.querySelector('button[onclick="exportExcel()"]');
+        var printBtn = ab.querySelector('button[onclick="printReport()"]');
+        if (exportBtn) exportBtn.style.display = (tab==='analytics') ? 'none' : 'inline-block';
+        if (printBtn) printBtn.style.display = (tab==='analytics') ? 'none' : 'inline-block';
+      }
+
       updateFilterVisibility();
       loadReport();
     }
@@ -471,9 +485,12 @@
         if (currentTab==='drivers') html=await renderDrivers();
         if (currentTab==='fuel')    html=await renderFuel();
         if (currentTab==='repairs') html=await renderRepairs();
+        if (currentTab==='permit')  html=await renderPermits();
         if (currentTab==='word')    html=renderWordTab();
+        if (currentTab==='analytics') html=await renderAnalytics();
         document.getElementById('reportContent').innerHTML=html;
         if (currentTab==='word') { setTimeout(_wUpdateLabel, 50); }
+        if (currentTab==='analytics' && window.renderAnalyticsCharts) { setTimeout(window.renderAnalyticsCharts, 50); }
       } catch(e) {
         console.error(e);
         document.getElementById('reportContent').innerHTML=emptyState('⚠️','โหลดข้อมูลไม่สำเร็จ: '+(e.message||''));
@@ -567,7 +584,7 @@
       h+='<div class="report-section"><div class="section-header"><span class="section-title">📋 รายการใช้รถ'+(rl?' ('+rl+')':'')+'</span>'
         +(anomalyCount>0?'<button onclick="this.dataset.f=this.dataset.f===\'1\'?\'0\':\'1\';document.querySelectorAll(\'tr.row-ok\').forEach(function(t){t.style.display=this.dataset.f===\'1\'?\'none\':\'\';}.bind(this));this.textContent=this.dataset.f===\'1\'?\'แสดงทั้งหมด\':\'🔍 แสดงเฉพาะน่าสงสัย ('+anomalyCount+')\'" data-f="0" style="margin-left:auto;padding:4px 12px;font-size:.8rem;border-radius:6px;border:1px solid #d97706;color:#d97706;background:#fffbeb;cursor:pointer">🔍 แสดงเฉพาะน่าสงสัย ('+anomalyCount+')</button>':'')
         +'<span style="font-size:.8rem;color:var(--color-text-muted)">'+fmtNum(processed.length)+' รายการ</span></div>';
-      h+='<div class="section-body"><table class="report-table"><thead><tr><th>วันที่</th><th>เวลา</th><th>ทะเบียน</th><th>ผู้ขอ</th><th>จุดหมาย/ภารกิจ</th><th>คนขับ</th><th>บันทึกออก</th><th>บันทึกกลับ</th><th>ระยะทาง</th><th>สถานะ</th></tr></thead><tbody>';
+      h+='<div class="section-body"><table class="report-table"><thead><tr><th>วันที่</th><th>เวลา</th><th>ทะเบียน</th><th>ผู้ขอ</th><th>จุดหมาย/ภารกิจ</th><th>คนขับ</th><th>บันทึกออก</th><th>บันทึกกลับ</th><th>ระยะทาง (จริง)</th><th>คาดการณ์ (กม.)</th><th>สถานะ</th></tr></thead><tbody>';
       processed.forEach(function(rec) {
         var d=new Date(rec.date);
         var wd=isNaN(d)?'':wds[d.getDay()];
@@ -588,6 +605,21 @@
           kmC+='<div style="font-size:.78em;color:'+(aStyle?'#dc2626':'#d97706')+';margin-top:2px">'
             +rec._anomalies.map(function(a){return '⚠️ '+htmlEsc(a.msg);}).join('<br>')+'</div>';
         }
+        var estKmC='-';
+        if (rec.estimated_km!=null) {
+          estKmC=fmtNum(rec.estimated_km)+' กม.';
+          if (rec._km != null && rec.estimated_km > 0) {
+            var diffPercent = Math.abs(rec._km - rec.estimated_km) / rec.estimated_km;
+            if (diffPercent > 0.3) {
+              estKmC += '<div style="font-size:.78em;color:#dc2626;margin-top:2px">⚠️ คลาดเคลื่อน >30%</div>';
+              if (rec.distance_justification) {
+                estKmC += '<div style="font-size:.78em;color:#1e40af;margin-top:2px">💬 ' + htmlEsc(rec.distance_justification) + '</div>';
+              }
+              var safeJust = (rec.distance_justification || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+              estKmC += '<button class="btn btn-outline" style="margin-top:4px;font-size:0.7em;padding:2px 6px;" onclick="openJustificationModal(\''+rec.id+'\', \''+safeJust+'\')">📝 ชี้แจง</button>';
+            }
+          }
+        }
         h+='<tr class="'+rc+'">';
         h+='<td>'+fmtDateTH(rec.date)+' <span style="font-size:.8em;color:'+(isWE?'#dc2626':'inherit')+'">'+wd+'</span></td>';
         h+='<td style="white-space:nowrap">'+htmlEsc((rec.time_start||'')+(rec.time_end?'–'+rec.time_end:''))+'</td>';
@@ -600,6 +632,7 @@
         h+='<td style="white-space:nowrap">'+dep+'</td>';
         h+='<td style="white-space:nowrap">'+ret+'</td>';
         h+='<td style="white-space:nowrap">'+kmC+'</td>';
+        h+='<td style="white-space:nowrap">'+estKmC+'</td>';
         h+='<td>'+statusBadge(rec.status)+'</td>';
         h+='</tr>';
       });
@@ -1562,7 +1595,7 @@
             children:[ppR([tr(txt,{size:_SC,bold:true,color:'C62828'})],{align:window.docx.AlignmentType.CENTER,sp:{before:20,after:20}})]});}
           function redCell(txt,w){return new d.TableCell({width:{size:w,type:d.WidthType.DXA},borders:_BC,
             children:[ppR([tr(txt,{size:_SC,bold:true,color:'C62828'})],{sp:{before:20,after:20}})]});}
-          var tH=[{w:500,t:'ที่'},{w:740,t:'วันที่'},{w:800,t:'ทะเบียน'},{w:1000,t:'ผู้ขอใช้'},{w:1600,t:'ปลายทาง/วัตถุประสงค์'},{w:900,t:'ผู้ขับ'},{w:700,t:'เวลาออก'},{w:700,t:'เวลากลับ'},{w:640,t:'ไมล์ออก'},{w:640,t:'ไมล์กลับ'},{w:640,t:'ระยะ\n(กม.)'},{w:746,t:'หมายเหตุ'}];
+          var tH=[{w:500,t:'ที่'},{w:740,t:'วันที่'},{w:800,t:'ทะเบียน'},{w:1000,t:'ผู้ขอใช้'},{w:1600,t:'ปลายทาง/จุดแวะ/วัตถุประสงค์'},{w:900,t:'ผู้ขับ'},{w:700,t:'เวลาออก'},{w:700,t:'เวลากลับ'},{w:640,t:'ไมล์ออก'},{w:640,t:'ไมล์กลับ'},{w:700,t:'ระยะจริง\n(คาดการณ์)'},{w:846,t:'หมายเหตุ'}];
           var tHdr=new d.TableRow({tableHeader:true,children:tH.map(function(c){return hCell(c.t,c.w,{size:_SC});})});
           var tRows=[tHdr];
           tripRecs.forEach(function(rec,i){
@@ -1575,17 +1608,26 @@
             var msRed=ms==null; var meRed=me==null;
             var effMs=ms!=null?ms:autoMs; var effMe=me!=null?me:autoMe;
             var dist=effMs!=null&&effMe!=null?nf(effMe-effMs):'-';
+            if (rec.estimated_km != null) dist += '\n(' + rec.estimated_km + ')';
             var distRed=(ms==null||me==null)&&dist!='-';
             var noteArr=[];
             if(ms==null&&me==null)noteArr.push('มีการใช้รถโดยไม่บันทึกข้อมูล');
             else if(ms==null)noteArr.push('พนักงานขับรถไม่บันทึกก่อนออกเดินทาง');
             else if(me==null)noteArr.push('พนักงานขับรถไม่บันทึกหลังกลับมาจากเดินทาง');
-            var noteStr=noteArr.length?noteArr.join(' | '):(rec.notes||'-');
+            if(rec.distance_justification)noteArr.push('ชี้แจง: '+rec.distance_justification);
+            if(rec.notes)noteArr.push(rec.notes);
+            var noteStr=noteArr.length?noteArr.join('\n'):'-';
             var noteRed=noteArr.length>0;
+            var destText = (rec.destination||'-');
+            if (rec.waypoints) {
+               try { var wps=JSON.parse(rec.waypoints); if(wps&&wps.length) destText += ' (แวะ ' + wps.length + ' จุด)'; } catch(e){}
+            }
+            if (rec.mission) destText += '\n/ ' + rec.mission;
+            
             tRows.push(new d.TableRow({children:[
               dCellC(i+1,tH[0].w),dCellC(thDateSh(rec.date),tH[1].w),
               dCellC(rec.license_plate||'-',tH[2].w),dCell(rec.requester_display_name||rec.requested_by||'-',tH[3].w),
-              dCell((rec.destination||'-')+(rec.mission?' / '+rec.mission:''),tH[4].w),
+              dCell(destText,tH[4].w),
               dCell(rec.driver_name||'-',tH[5].w),
               dCellC((rec.actual_departure||'').substr(11,5)||'-',tH[6].w),
               dCellC((rec.actual_return||'').substr(11,5)||'-',tH[7].w),
@@ -1757,6 +1799,11 @@
           + '<span style="font-weight:700;">('+htmlEsc(s.name||'')+')</span><br>'
           + htmlEsc(s.pos||'')+' </div></div>';
       }
+      if (sigs.deputy) {
+        return '<div style="display:flex;justify-content:space-around;margin-top:40pt;">'
+          + box('reporter','เจ้าหน้าที่ยานพาหนะ') + box('deputy','รองผู้อำนวยการ') + box('director','ผู้อำนวยการ')
+          + '</div>';
+      }
       return '<div style="display:flex;justify-content:space-around;margin-top:40pt;">'
         + box('reporter','ผู้รายงาน') + box('chief','หัวหน้างานพัสดุ') + box('director','ผู้อำนวยการ')
         + '</div>';
@@ -1764,17 +1811,26 @@
 
     async function printReport() {
       if (!_lastPayload) { alert('ยังไม่มีข้อมูล'); return; }
-      var sigs = await requireSigs(_SIG_FIELDS_STD, 'ข้อมูลเอกสาร — '+({trips:'การใช้งานรถ',drivers:'พนักงานขับรถ',fuel:'เชื้อเพลิง',repairs:'ซ่อมบำรุง'}[_lastPayload.tab]||_lastPayload.tab));
+      var sigConfig = _SIG_FIELDS_STD;
+      if (_lastPayload.tab === 'permit') {
+        sigConfig = [
+          {key:'reporter', label:'เจ้าหน้าที่ยานพาหนะ'},
+          {key:'deputy', label:'รองผู้อำนวยการ'},
+          {key:'director', label:'ผู้อำนวยการ'}
+        ];
+      }
+      var sigs = await requireSigs(sigConfig, 'ข้อมูลเอกสาร — '+({trips:'การใช้งานรถ',drivers:'พนักงานขับรถ',fuel:'เชื้อเพลิง',repairs:'ซ่อมบำรุง',permit:'เสนอเซ็นอนุมัติ'}[_lastPayload.tab]||_lastPayload.tab));
       if (!sigs) return;
       var t=_lastPayload.tab, p=_lastPayload.payload;
       var rl=getRangeLabel()||'ทั้งหมด';
-      var tn={trips:'การใช้งานรถ',drivers:'พนักงานขับรถ',fuel:'เชื้อเพลิง',repairs:'ซ่อมบำรุง'}[t]||t;
+      var tn={trips:'การใช้งานรถ',drivers:'พนักงานขับรถ',fuel:'เชื้อเพลิง',repairs:'ซ่อมบำรุง',permit:'สรุปคิวรถราชการเพื่อเสนออนุมัติ'}[t]||t;
       var tblHtml='';
       if (t==='trips')   tblHtml=buildPrintTrips(p);
       else if (t==='drivers') tblHtml=buildPrintDrivers(p);
       else if (t==='fuel')    tblHtml=buildPrintFuel(p);
       else if (t==='repairs') tblHtml=buildPrintRepairs(p);
-      var isLandscape=(t==='trips'||t==='fuel');
+      else if (t==='permit')  tblHtml=buildPrintPermits(p);
+      var isLandscape=(t==='trips'||t==='fuel'||t==='permit');
       var w=window.open('','_blank');
       var h='<!DOCTYPE html><html><head><meta charset="utf-8"><title>รายงาน'+tn+'</title>';
       h+='<style>';
@@ -1814,7 +1870,7 @@
         +'<th>ที่</th><th>วันที่</th><th>สแกนออก</th><th>สแกนเข้า</th><th>ทะเบียน</th>'
         +'<th>ผู้ขอ</th><th>จุดหมาย</th><th>ภารกิจ</th><th>คนขับ</th>'
         +'<th>ก่อนออก</th><th>กลับมา</th>'
-        +'<th>ไมล์ออก</th><th>ไมล์กลับ</th><th>ระยะ(กม.)</th>'
+        +'<th>ไมล์ออก</th><th>ไมล์กลับ</th><th>ระยะจริง<br>(คาดการณ์)</th>'
         +'<th>เลขที่คำสั่ง</th><th>ผู้อนุมัติ</th><th>หมายเหตุ</th>'
         +'</tr></thead><tbody>';
       recs.forEach(function(r,i) {
@@ -1831,21 +1887,36 @@
         var remarkStyle=remark?'style="color:red;font-weight:bold"':'';
         var approver=r.signed_director||r.signed_vehicle_chief||'-';
         var orderNo=r.travel_order_number||'-';
+        
+        var distDisplay = km;
+        if (r.estimated_km != null) distDisplay += '<br><span style="color:#10b981;font-size:0.9em">(' + r.estimated_km + ')</span>';
+
+        var destText = (r.destination||'-');
+        if (r.waypoints) {
+           try { var wps=JSON.parse(r.waypoints); if(wps&&wps.length) destText += ' (แวะ ' + wps.length + ' จุด)'; } catch(e){}
+        }
+
+        var notesArr = [];
+        if (remark) notesArr.push('<span style="color:red;font-weight:bold">' + remark + '</span>');
+        if (r.distance_justification) notesArr.push('<span style="color:#1e40af">ชี้แจง: ' + htmlEsc(r.distance_justification) + '</span>');
+        if (r.notes) notesArr.push(htmlEsc(r.notes));
+        var finalNotes = notesArr.length > 0 ? notesArr.join('<br>') : '-';
+
         h+='<tr>'
           +'<td>'+(i+1)+'</td><td>'+thd+'</td>'
           +'<td>'+(r.time_start||'')+'</td><td>'+(r.time_end||'')+'</td>'
           +'<td>'+(r.license_plate||'-')+'</td>'
           +'<td>'+(r.requester_display_name||r.requested_by||'-')+'</td>'
-          +'<td>'+(r.destination||'-')+'</td><td>'+(r.mission||'-')+'</td>'
+          +'<td>'+htmlEsc(destText)+'</td><td>'+(r.mission||'-')+'</td>'
           +'<td>'+(isAutoGap?'<span style="color:#666;font-style:italic">ไม่ทราบ</span>':htmlEsc(r.driver_name||'-'))+'</td>'
           +'<td>'+(isAutoGap?'':fmtDT(r.actual_departure))+'</td>'
           +'<td>'+(isAutoGap?'':fmtDT(r.actual_return))+'</td>'
           +'<td>'+(isAutoGap?'':(r.mileage_start!=null?r.mileage_start:''))+'</td>'
           +'<td>'+(isAutoGap?'':(r.mileage_end!=null?r.mileage_end:''))+'</td>'
-          +'<td>'+km+'</td>'
+          +'<td>'+distDisplay+'</td>'
           +'<td>'+htmlEsc(orderNo)+'</td>'
           +'<td>'+htmlEsc(approver)+'</td>'
-          +'<td '+remarkStyle+'>'+remark+'</td>'
+          +'<td>'+finalNotes+'</td>'
           +'</tr>';
       });
       return h+'</tbody></table>';
@@ -1895,6 +1966,195 @@
       }
       return h||'<p>ไม่มีข้อมูล</p>';
     }
+
+    async function renderPermits() {
+      var range=getDateRange();
+      var params=buildQuery({date_from:range.date_from,date_to:range.date_to});
+      var r=await API.get('/api/queue'+params);
+      var queues=(r&&r.data)?r.data:(r||[]);
+      queues = queues.filter(function(q) { return q.status !== 'cancelled' && q.status !== 'rejected'; });
+      _lastPayload={tab:'permit',payload:{records:queues},range:range};
+      if (!queues.length) return emptyState('📝','ไม่มีข้อมูลคำขออนุมัติในช่วงเวลานี้');
+      var h='<div class="table-responsive"><table class="table" style="font-size:.85rem">';
+      h+='<thead><tr><th>วันที่</th><th>เวลา</th><th>ทะเบียน</th><th>พนักงานขับรถ</th><th>ผู้ขอใช้รถ</th><th>สถานที่ไป</th><th>ภารกิจ</th><th>สถานะ</th></tr></thead><tbody>';
+      queues.forEach(function(q){
+        var isPooled = q.notes && q.notes.includes('วิ่งรอบ') ? '<br><span style="color:var(--color-primary);font-size:0.8em">[วิ่งรอบ]</span>' : '';
+        h+='<tr>'
+          +'<td>'+formatDateThai(q.date)+'</td>'
+          +'<td>'+(q.time_start||'-')+' - '+(q.time_end||'-')+'</td>'
+          +'<td>'+(q.license_plate||'-')+'</td>'
+          +'<td>'+(q.driver_name||'-')+'</td>'
+          +'<td>'+(q.requester_display_name||q.requested_by||'-')+'</td>'
+          +'<td>'+(q.destination||'-')+'</td>'
+          +'<td>'+(q.mission||'-')+isPooled+'</td>'
+          +'<td>'+statusBadge(q.status)+'</td>'
+          +'</tr>';
+      });
+      h+='</tbody></table></div>';
+      return h;
+    }
+
+    function buildPrintPermits(p) {
+      var recs=p.records||[];
+      if (!recs.length) return '<p>ไม่มีข้อมูล</p>';
+      var h='<table class="data"><thead><tr>'
+        +'<th style="width:40px">ที่</th><th style="width:90px">วันที่</th><th style="width:80px">เวลา</th><th style="width:90px">ทะเบียน</th>'
+        +'<th style="width:120px">พนักงานขับรถ</th><th style="width:120px">ผู้ขอใช้รถ</th><th>สถานที่ไป</th><th>ภารกิจ</th><th style="width:100px">หมายเหตุ</th>'
+        +'</tr></thead><tbody>';
+      recs.forEach(function(r,i) {
+        h+='<tr>'
+          +'<td style="text-align:center">'+(i+1)+'</td><td style="text-align:center">'+formatDateThai(r.date)+'</td>'
+          +'<td style="text-align:center">'+(r.time_start||'')+' - '+(r.time_end||'')+'</td>'
+          +'<td style="text-align:center">'+(r.license_plate||'-')+'</td>'
+          +'<td>'+(r.driver_name||'-')+'</td>'
+          +'<td>'+(r.requester_display_name||r.requested_by||'-')+'</td>'
+          +'<td>'+(r.destination||'-')+'</td>'
+          +'<td>'+(r.mission||'-')+'</td>'
+          +'<td>'+(r.notes||'')+'</td>'
+          +'</tr>';
+      });
+      return h+'</tbody></table>';
+    }
+
+    /* ═══ TAB: Analytics ══════════════════════════════════════ */
+    async function renderAnalytics() {
+      var range = getDateRange();
+      var df = range.date_from;
+      var dt = range.date_to;
+      var r = await API.get('/api/reports/trips?date_from='+df+'&date_to='+dt);
+      var recs = (r&&r.data)?r.data.records||[]:(r.records||[]);
+      
+      // Filter only completed trips with both actual and estimated KM
+      var valid = recs.filter(function(q) {
+        return q.status === 'completed' && q.mileage_start != null && q.mileage_end != null && q.estimated_km > 0;
+      });
+
+      var totalActual = 0;
+      var totalEst = 0;
+      var anomalies = [];
+
+      valid.forEach(function(q) {
+        var act = q.mileage_end - q.mileage_start;
+        var est = q.estimated_km;
+        totalActual += act;
+        totalEst += est;
+        
+        var diff = act - est;
+        var diffPct = (diff / est) * 100;
+        
+        if (diffPct > 30) {
+          anomalies.push({
+            id: q.id,
+            date: q.date,
+            plate: q.license_plate,
+            driver: q.driver_name,
+            dest: q.destination,
+            act: act,
+            est: est,
+            diffPct: diffPct
+          });
+        }
+      });
+
+      var overTotal = totalActual - totalEst;
+      var overPct = totalEst > 0 ? (overTotal / totalEst) * 100 : 0;
+
+      var h = '<div class="report-section"><div class="section-header"><span class="section-title">📊 วิเคราะห์ความคุ้มค่าการใช้รถ (ระยะทางจริง เทียบ คาดการณ์)</span></div><div class="section-body" style="padding:16px;">';
+      
+      // Stats
+      h += '<div class="stats-grid">';
+      h += statCard('จำนวนเที่ยวที่วิเคราะห์ได้', fmtNum(valid.length), 'เที่ยว', 'เฉพาะที่บันทึกเลขไมล์ครบ', 'primary');
+      h += statCard('ระยะทางจริงรวม', fmtNum(totalActual), 'กม.', '', 'primary');
+      h += statCard('ระยะทางคาดการณ์รวม', fmtNum(totalEst), 'กม.', 'คำนวณจากระบบแผนที่', 'success');
+      
+      var isOver = overTotal > 0;
+      h += statCard(isOver ? 'ส่วนต่าง (เกิน)' : 'ส่วนต่าง (ต่ำกว่า)', fmtNum(Math.abs(overTotal)), 'กม.', 
+        '<span style="color:'+(isOver?'#dc2626':'#16a34a')+'">'+(isOver?'สูงกว่าคาดการณ์ ':'ต่ำกว่าคาดการณ์ ')+fmtNum(Math.abs(overPct),1)+'%</span>', 
+        isOver ? (overPct > 15 ? 'danger' : 'warn') : 'success');
+      h += '</div>';
+
+      h += '<div style="display:flex;gap:16px;margin-top:20px;flex-wrap:wrap;">';
+      
+      // Chart
+      h += '<div style="flex:1;min-width:300px;background:white;padding:16px;border:1px solid var(--color-border);border-radius:var(--radius-lg);"><canvas id="analyticsChart"></canvas></div>';
+      
+      // Anomalies table
+      h += '<div style="flex:1;min-width:300px;">';
+      h += '<h3>⚠️ รายการที่วิ่งเกินระยะทางคาดการณ์ > 30%</h3>';
+      if (anomalies.length > 0) {
+        anomalies.sort(function(a,b){ return b.diffPct - a.diffPct; });
+        h += '<table class="report-table"><thead><tr><th>วันที่</th><th>รถ</th><th>คนขับ</th><th>ปลายทาง</th><th>จริง</th><th>คาดการณ์</th><th>ส่วนต่าง</th></tr></thead><tbody>';
+        anomalies.forEach(function(a) {
+          h += '<tr class="row-anomaly">';
+          h += '<td>'+fmtDateTH(a.date)+'</td>';
+          h += '<td>'+(a.plate||'-')+'</td>';
+          h += '<td>'+(a.driver||'-')+'</td>';
+          h += '<td>'+(a.dest||'-')+'</td>';
+          h += '<td>'+fmtNum(a.act)+'</td>';
+          h += '<td>'+fmtNum(a.est)+'</td>';
+          h += '<td style="color:#dc2626;font-weight:bold;">+'+fmtNum(a.diffPct,1)+'%</td>';
+          h += '</tr>';
+        });
+        h += '</tbody></table>';
+      } else {
+        h += emptyState('✅', 'ไม่มีรายการที่ออกนอกเส้นทางเกิน 30%');
+      }
+      h += '</div>';
+
+      h += '</div></div></div>';
+
+      window._analyticsData = { act: totalActual, est: totalEst, count: valid.length };
+      return h;
+    }
+
+    window.renderAnalyticsCharts = function() {
+      var ctx = document.getElementById('analyticsChart');
+      if (!ctx) return;
+      var d = window._analyticsData || {act:0,est:0};
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['ระยะทางรวม (กม.)'],
+          datasets: [
+            { label: 'ระยะทางจริง', data: [d.act], backgroundColor: '#ef4444' },
+            { label: 'ระยะทางคาดการณ์', data: [d.est], backgroundColor: '#10b981' }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: { display: true, text: 'เปรียบเทียบระยะทางจริงกับคาดการณ์' }
+          }
+        }
+      });
+    };
+
+    var currentJustifyId = null;
+    window.openJustificationModal = function(id, text) {
+      currentJustifyId = id;
+      document.getElementById('mJustification').value = text || '';
+      document.getElementById('justificationModal').style.display = 'flex';
+    };
+    window.closeJustificationModal = function() {
+      document.getElementById('justificationModal').style.display = 'none';
+      currentJustifyId = null;
+    };
+    window.saveJustification = async function() {
+      if (!currentJustifyId) return;
+      var text = document.getElementById('mJustification').value.trim();
+      try {
+        var res = await apiCall('put', '/api/queue/' + currentJustifyId + '/justification', { justification: text });
+        if (res && res.success) {
+          showAlert('บันทึกคำชี้แจงเรียบร้อย', 'success');
+          closeJustificationModal();
+          // Reload reports
+          window.loadAllData && window.loadAllData();
+        } else {
+          showAlert((res && res.error) || 'เกิดข้อผิดพลาด', 'danger');
+        }
+      } catch (err) { showAlert('เกิดข้อผิดพลาด', 'danger'); }
+    };
   </script>
 
   <div style="background:var(--color-bg-light);padding:16px 20px;text-align:center;color:var(--color-text-muted);font-size:.85em;margin-top:20px">
@@ -1927,6 +2187,24 @@
         <button onclick="_sigReject()" style="flex:1;padding:10px;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer;font-size:1em;font-family:inherit;">ยกเลิก</button>
         <button onclick="_sigClearAll()" style="flex:1;padding:10px;border:1px solid #e57373;border-radius:8px;background:#fff;color:#c62828;cursor:pointer;font-size:1em;font-family:inherit;">ล้างค่า</button>
         <button onclick="_sigConfirm()" style="flex:2;padding:10px;border:none;border-radius:8px;background:var(--color-primary);color:#fff;cursor:pointer;font-size:1em;font-family:inherit;font-weight:700;">✅ ยืนยันและพิมพ์</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Justification Modal ═══ -->
+  <div id="justificationModal" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width:500px;">
+      <div class="modal-header">
+        <h2>📝 ชี้แจงระยะทางที่คลาดเคลื่อน</h2>
+        <span class="close" onclick="closeJustificationModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.9em;color:var(--color-text-muted);">โปรดระบุเหตุผลที่ระยะทางจริงมากกว่าที่คาดการณ์ไว้ (เช่น มีการแวะจุดอื่นเพิ่มเติม, การจราจรติดขัดต้องเลี่ยงเส้นทาง ฯลฯ)</p>
+        <textarea id="mJustification" class="form-control" rows="4" placeholder="พิมพ์คำชี้แจง..."></textarea>
+        <div style="display:flex;gap:8px;margin-top:16px;">
+          <button class="btn btn-primary" onclick="saveJustification()">💾 บันทึก</button>
+          <button class="btn btn-outline" onclick="closeJustificationModal()">ยกเลิก</button>
+        </div>
       </div>
     </div>
   </div>

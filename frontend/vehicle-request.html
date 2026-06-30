@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -8,6 +8,9 @@
   <script>window.API_BASE_URL=CONFIG.API_BASE_URL;window.currentPage='vehicle-request';window.REQUIRE_AUTH=true;</script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <link rel="stylesheet" href="common.css">
   <script src="js/api.js"></script><script src="common.js"></script>
   <style>
@@ -30,6 +33,7 @@
     .passenger-row{display:flex;gap:8px;margin-bottom:6px;align-items:center}
     .passenger-row input{flex:1}
     .approve-section{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--radius-lg);padding:1rem;margin-top:1rem}
+    .school-icon{font-size:24px; text-align:center; line-height:24px; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))}
   </style>
 </head>
 <body>
@@ -44,7 +48,7 @@
       <div class="vr-tabs">
         <div class="vr-tab active" onclick="switchTab('create')">📝 แบบฟอร์มขอใช้รถ</div>
         <div class="vr-tab" onclick="switchTab('mylist')">📋 คำขอของฉัน</div>
-        <div class="vr-tab" id="tabApprove" style="display:none" onclick="switchTab('approve')">✅ อนุมัติคำขอ</div>
+        <div class="vr-tab" id="tabApprove" style="display:none" onclick="switchTab('approve')">✅ เสนออนุมัติ/จัดคิว</div>
       </div>
 
       <!-- Tab 1: Create Request -->
@@ -83,7 +87,19 @@
               </div>
               <div class="form-group" style="grid-column:1/-1">
                 <label>สถานที่ปลายทาง <span style="color:var(--color-danger)">*</span></label>
-                <input type="text" id="fDestination" class="form-control" required>
+                <div style="display:flex; gap:8px; margin-bottom:8px;">
+                  <input type="text" id="fDestination" class="form-control" required placeholder="ค้นหาหรือคลิกบนแผนที่เพื่อปักหมุด" style="flex:1">
+                  <button type="button" class="btn btn-outline" onclick="searchMap()">🔍 ค้นหา</button>
+                </div>
+                
+                <div id="map"></div>
+                <div style="margin-top:8px; font-size:0.85rem; color:var(--color-text-light);">
+                  <span id="mapStatus">คลิกบนแผนที่เพื่อเพิ่มจุดแวะพัก/ปลายทาง (ลากเพื่อย้าย ดับเบิ้ลคลิกเพื่อลบหมุด)</span>
+                  <input type="hidden" id="fWaypoints">
+                  <input type="hidden" id="fDestLat">
+                  <input type="hidden" id="fDestLng">
+                  <input type="hidden" id="fEstimatedKm">
+                </div>
               </div>
               <div class="form-group" style="grid-column:1/-1">
                 <label>เส้นทาง</label>
@@ -124,7 +140,7 @@
           <select id="filterMyStatus" onchange="loadMyRequests()" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem">
             <option value="">ทุกสถานะ</option>
             <option value="pending">รออนุมัติ</option>
-            <option value="approved">อนุมัติแล้ว</option>
+            <option value="approved">จัดคิวแล้ว (รอเซ็น)</option>
             <option value="rejected">ไม่อนุมัติ</option>
             <option value="cancelled">ยกเลิก</option>
           </select>
@@ -138,7 +154,7 @@
           <select id="filterApproveStatus" onchange="loadPendingRequests()" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem">
             <option value="pending">รออนุมัติ</option>
             <option value="">ทั้งหมด</option>
-            <option value="approved">อนุมัติแล้ว</option>
+            <option value="approved">จัดคิวแล้ว (รอเซ็น)</option>
             <option value="rejected">ไม่อนุมัติ</option>
           </select>
         </div>
@@ -150,7 +166,7 @@
   <!-- Approve Modal -->
   <div id="approveModal" class="modal" style="display:none">
     <div class="modal-content" style="max-width:600px">
-      <h3 id="approveModalTitle">อนุมัติคำขอใช้รถ</h3>
+      <h3 id="approveModalTitle">เสนออนุมัติและจัดคิว</h3>
       <div id="approveModalBody"></div>
       <div class="approve-section">
         <div class="vr-form-grid">
@@ -163,9 +179,10 @@
             <select id="mAssignDriver" class="form-control"><option value="">โหลดรายการพนักงาน...</option></select>
           </div>
         </div>
+        <input type="hidden" id="fModalEstimatedFuel">
         <div class="form-group"><label>หมายเหตุ</label><textarea id="mNotes" class="form-control" rows="2"></textarea></div>
         <div style="display:flex;gap:8px;margin-top:1rem">
-          <button class="btn btn-primary" onclick="doApprove()">✅ อนุมัติ + จัดคิว</button>
+          <button class="btn btn-primary" onclick="doApprove()">✅ เสนออนุมัติและจัดคิว</button>
           <button class="btn btn-danger" onclick="doReject()">❌ ไม่อนุมัติ</button>
           <button class="btn btn-outline" onclick="closeModal('approveModal')">ปิด</button>
         </div>
@@ -190,12 +207,25 @@
       var div = document.getElementById('passengerList');
       var row = document.createElement('div');
       row.className = 'passenger-row';
-      row.innerHTML = '<input type="text" class="form-control passenger-name" placeholder="ชื่อ-สกุล" value="' + (name || '') + '"><button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-size:1.1rem">🗑️</button>';
+      row.innerHTML = '<input type="text" class="form-control passenger-name" placeholder="ชื่อ-สกุล" value="' + (name || '') + '"><button type="button" onclick="this.parentElement.remove(); document.getElementById(\'fPassengers\').value = document.getElementById(\'passengerList\').children.length || 1" style="background:none;border:none;cursor:pointer;font-size:1.1rem">🗑️</button>';
       div.appendChild(row);
+      document.getElementById('fPassengers').value = div.children.length || 1;
     }
 
     function updatePassengerFields() {
-      // optional auto-add rows
+      var count = parseInt(document.getElementById('fPassengers').value) || 1;
+      var div = document.getElementById('passengerList');
+      var current = div.children.length;
+      if (count > current) {
+        for (var i = current; i < count; i++) {
+          var row = document.createElement('div');
+          row.className = 'passenger-row';
+          row.innerHTML = '<input type="text" class="form-control passenger-name" placeholder="ชื่อ-สกุล" value=""><button type="button" onclick="this.parentElement.remove(); document.getElementById(\'fPassengers\').value = document.getElementById(\'passengerList\').children.length || 1" style="background:none;border:none;cursor:pointer;font-size:1.1rem">🗑️</button>';
+          div.appendChild(row);
+        }
+      } else if (count < current) {
+        for (var i = current; i > count; i--) { div.lastChild.remove(); }
+      }
     }
 
     function getPassengerNames() {
@@ -221,7 +251,11 @@
         passenger_names: getPassengerNames(),
         priority: document.getElementById('fPriority').value,
         is_urgent: document.getElementById('fUrgent').checked,
-        notes: document.getElementById('fNotes').value.trim()
+        notes: document.getElementById('fNotes').value.trim(),
+        waypoints: document.getElementById('fWaypoints').value || null,
+        dest_lat: parseFloat(document.getElementById('fDestLat').value) || null,
+        dest_lng: parseFloat(document.getElementById('fDestLng').value) || null,
+        estimated_km: parseFloat(document.getElementById('fEstimatedKm').value) || null
       };
       if (!data.date || !data.destination) { showAlert('กรุณากรอกวันที่และสถานที่ปลายทาง', 'danger'); return; }
       try {
@@ -263,7 +297,7 @@
       w.print();
     }
 
-    var statusLabel = { pending: '🟡 รออนุมัติ', approved: '🟢 อนุมัติแล้ว', rejected: '🔴 ไม่อนุมัติ', cancelled: '⚪ ยกเลิก' };
+    var statusLabel = { pending: '🟡 รออนุมัติ', approved: '🟢 จัดคิวแล้ว (รอเซ็น)', rejected: '🔴 ไม่อนุมัติ', cancelled: '⚪ ยกเลิก' };
     var statusClass = { pending: 'st-pending', approved: 'st-approved', rejected: 'st-rejected', cancelled: 'st-cancelled' };
 
     function renderRequestCard(r, showActions) {
@@ -291,7 +325,7 @@
       if (typeof renderAuditMeta === 'function') h += renderAuditMeta(r);
       if (showActions && r.status === 'pending') {
         h += '<div style="margin-top:8px;display:flex;gap:6px">';
-        h += '<button class="btn btn-primary btn-sm" onclick="openApproveModal(\'' + r.id + '\')">✅ จัดรถ+อนุมัติ</button>';
+        h += '<button class="btn btn-primary btn-sm" onclick="openApproveModal(\'' + r.id + '\')">✅ เสนออนุมัติและจัดคิว</button>';
         h += '<button class="btn btn-danger btn-sm" onclick="quickReject(\'' + r.id + '\')">❌ ไม่อนุมัติ</button>';
         h += '</div>';
       }
@@ -364,6 +398,27 @@
         if (r.route) body += '<p>🛣️ ' + r.route + '</p>';
         body += '<p>👤 ' + (r.requester_name || '-') + ' ' + (r.requester_department ? '(' + r.requester_department + ')' : '') + '</p>';
         body += '<p>📝 ' + (r.purpose || '-') + ' &nbsp; 👥 ' + (r.passengers || 1) + ' คน</p>';
+        if (r.estimated_km) {
+          var fuelCost = (parseFloat(r.estimated_km) * 3.0).toFixed(0); // Estimated 3 THB / km
+          body += '<div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px; margin-top:12px;">';
+          body += '<p style="margin:0; color:#166534">🗺️ ระยะทางประเมินไป-กลับ: <strong>' + r.estimated_km + ' กม.</strong></p>';
+          body += '<p style="margin:4px 0 0 0; color:#166534">⛽ งบประมาณน้ำมันประเมิน: <strong>' + fuelCost + ' บาท</strong> <span style="font-size:0.8em">(คำนวณที่ 3 บาท/กม.)</span></p>';
+          
+          var wps = [];
+          try { if (r.waypoints) wps = JSON.parse(r.waypoints); } catch(e){}
+          var routeCoords = [];
+          routeCoords.push(SCHOOL_LAT + '%2C' + SCHOOL_LNG);
+          wps.forEach(w => routeCoords.push(w.lat + '%2C' + w.lng));
+          if (r.dest_lat && r.dest_lng && wps.length === 0) routeCoords.push(r.dest_lat + '%2C' + r.dest_lng);
+          if (routeCoords.length > 1) {
+             var osmLink = 'https://www.openstreetmap.org/directions?engine=osrm_car&route=' + routeCoords.join('%3B');
+             body += '<a href="' + osmLink + '" target="_blank" class="btn btn-outline btn-sm" style="display:inline-block; margin-top:8px; background:white;">📍 ดูเส้นทางบนแผนที่ (OSM)</a>';
+          }
+          body += '</div>';
+          document.getElementById('fModalEstimatedFuel').value = fuelCost;
+        } else {
+          document.getElementById('fModalEstimatedFuel').value = '';
+        }
         body += '</div>';
         document.getElementById('approveModalBody').innerHTML = body;
       } catch(e) {}
@@ -388,7 +443,8 @@
       document.getElementById('mAssignCar').innerHTML = carSel;
       var drvSel = '<option value="">-- เลือกพนักงาน --</option>';
       allDrivers.forEach(function(d) {
-        drvSel += '<option value="' + d.id + '">' + (d.name || '') + '</option>';
+        var workload = (d.week_queues !== undefined) ? ` (สัปดาห์นี้: ${d.week_queues}, วันนี้: ${d.today_queues})` : '';
+        drvSel += '<option value="' + d.id + '">' + (d.name || '') + workload + '</option>';
       });
       document.getElementById('mAssignDriver').innerHTML = drvSel;
       document.getElementById('mNotes').value = '';
@@ -397,7 +453,7 @@
 
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-    async function doApprove() {
+    async function doApprove(forceQueue = false) {
       var carId = document.getElementById('mAssignCar').value;
       var driverId = document.getElementById('mAssignDriver').value;
       if (!carId || !driverId) { showAlert('กรุณาเลือกรถและพนักงานขับรถ', 'warning'); return; }
@@ -406,13 +462,23 @@
           id: currentApproveId,
           assigned_car_id: carId,
           assigned_driver_id: driverId,
-          notes: document.getElementById('mNotes').value
+          notes: document.getElementById('mNotes').value,
+          force_queue: forceQueue,
+          estimated_fuel_cost: parseFloat(document.getElementById('fModalEstimatedFuel').value) || null
         });
         if (res && res.success) {
-          showAlert('อนุมัติคำขอและสร้างคิวเรียบร้อย', 'success');
+          showAlert('เสนออนุมัติและจัดคิวเรียบร้อย', 'success');
           closeModal('approveModal');
           loadPendingRequests();
-        } else { showAlert((res && res.error) || 'เกิดข้อผิดพลาด', 'danger'); }
+        } else {
+          if (res && res.error && res.error.includes('ซ้อน')) {
+            if (confirm(res.error + '\n\nคุณต้องการจัดคิวร่วมกัน (วิ่งรอบ) หรือไม่?')) {
+              doApprove(true);
+            }
+          } else {
+            showAlert((res && res.error) || 'เกิดข้อผิดพลาด', 'danger');
+          }
+        }
       } catch (err) { showAlert('เกิดข้อผิดพลาด: ' + err.message, 'danger'); }
     }
 
@@ -441,6 +507,115 @@
       } catch (err) { showAlert('เกิดข้อผิดพลาด', 'danger'); }
     }
 
+    var map, markers = [], routeLine;
+    var SCHOOL_LAT = 19.1652, SCHOOL_LNG = 99.9048;
+
+    function initMap() {
+      if (typeof L === 'undefined') return;
+      map = L.map('map').setView([SCHOOL_LAT, SCHOOL_LNG], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
+      
+      // School marker
+      var schoolIcon = L.divIcon({className: 'school-icon', html: '🏫', iconSize: [24,24]});
+      L.marker([SCHOOL_LAT, SCHOOL_LNG], {icon: schoolIcon}).addTo(map).bindPopup('โรงเรียนพะเยาพิทยาคม').openPopup();
+
+      map.on('click', function(e) {
+        addWaypointPin(e.latlng.lat, e.latlng.lng);
+      });
+    }
+
+    function addWaypointPin(lat, lng) {
+      var m = L.marker([lat, lng], { draggable: true }).addTo(map);
+      markers.push(m);
+      m.on('dragend', updateRoute);
+      m.on('dblclick', function() {
+        map.removeLayer(m);
+        markers = markers.filter(x => x !== m);
+        updateRoute();
+      });
+      updateRoute();
+    }
+
+    function clearWaypoints() {
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+      updateRoute();
+    }
+
+    async function updateRoute() {
+      if (markers.length === 0) {
+        if (routeLine) map.removeLayer(routeLine);
+        document.getElementById('mapStatus').innerText = 'คลิกบนแผนที่เพื่อเพิ่มจุดแวะพัก/ปลายทาง (ลากเพื่อย้าย ดับเบิ้ลคลิกเพื่อลบหมุด)';
+        document.getElementById('fEstimatedKm').value = '';
+        document.getElementById('fWaypoints').value = '';
+        document.getElementById('fDestLat').value = '';
+        document.getElementById('fDestLng').value = '';
+        return;
+      }
+      document.getElementById('mapStatus').innerText = 'กำลังคำนวณระยะทาง...';
+
+      var coordsStr = `${SCHOOL_LNG},${SCHOOL_LAT};` + markers.map(m => {
+        var pos = m.getLatLng();
+        return `${pos.lng},${pos.lat}`;
+      }).join(';');
+
+      // Save last marker as destination
+      var lastPos = markers[markers.length-1].getLatLng();
+      document.getElementById('fDestLat').value = lastPos.lat;
+      document.getElementById('fDestLng').value = lastPos.lng;
+
+      var wps = markers.map(m => {
+        var pos = m.getLatLng();
+        return { lat: pos.lat, lng: pos.lng };
+      });
+      document.getElementById('fWaypoints').value = JSON.stringify(wps);
+
+      try {
+        var res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=full&geometries=geojson`);
+        var data = await res.json();
+        if (data.routes && data.routes.length > 0) {
+          var distanceKm = (data.routes[0].distance / 1000).toFixed(2);
+          document.getElementById('fEstimatedKm').value = distanceKm;
+          
+          document.getElementById('mapStatus').innerHTML = `ระยะทางคาดการณ์ไป-กลับ: <b style="color:var(--color-primary);font-size:1rem">${distanceKm} กม.</b> (แวะ ${markers.length} จุด)`;
+          
+          if (routeLine) map.removeLayer(routeLine);
+          var coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+          routeLine = L.polyline(coords, {color: 'var(--color-primary)', weight: 4}).addTo(map);
+          map.fitBounds(routeLine.getBounds(), { padding: [20, 20] });
+        } else {
+          document.getElementById('mapStatus').innerText = 'ไม่สามารถคำนวณเส้นทางตามถนนได้';
+        }
+      } catch (err) {
+        document.getElementById('mapStatus').innerText = 'เกิดข้อผิดพลาดในการคำนวณระยะทาง';
+      }
+    }
+
+    async function searchMap() {
+      var query = document.getElementById('fDestination').value.trim();
+      if (!query) {
+        showAlert('กรุณากรอกชื่อสถานที่', 'warning');
+        return;
+      }
+      document.getElementById('mapStatus').innerText = 'กำลังค้นหา...';
+      try {
+        var res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+        var data = await res.json();
+        if (data && data.length > 0) {
+          var lat = parseFloat(data[0].lat);
+          var lng = parseFloat(data[0].lon);
+          map.setView([lat, lng], 13);
+          addWaypointPin(lat, lng);
+        } else {
+          document.getElementById('mapStatus').innerText = 'ไม่พบสถานที่นี้ ลองเปลี่ยนคำค้นหา';
+        }
+      } catch(e) {
+        document.getElementById('mapStatus').innerText = 'ค้นหาล้มเหลว';
+      }
+    }
+
     // Init
     function waitForCommon(){return new Promise(function(r){if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){r();return}var c=0;var t=setInterval(function(){c++;if(typeof apiCall==='function'&&typeof getCurrentUser==='function'){clearInterval(t);r()}else if(c>50){clearInterval(t);r()}},100)})}
     document.addEventListener('DOMContentLoaded', async function() {
@@ -457,6 +632,7 @@
       if (typeof flatpickr !== 'undefined') {
         flatpickr('#fDate', { locale: 'th', dateFormat: 'Y-m-d', minDate: 'today' });
       }
+      setTimeout(initMap, 500); // Initialize map after UI renders
     });
   </script>
 </body>

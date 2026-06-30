@@ -1,4 +1,4 @@
-﻿-- PPK DriveHub — Database Schema
+-- PPK DriveHub — Database Schema
 -- Cloudflare D1 (SQLite)
 -- Migrated from Google Sheets (27 sheets → 27 tables)
 
@@ -283,6 +283,7 @@ CREATE TABLE IF NOT EXISTS queue (
   frozen_reason TEXT,
   cancel_reason TEXT,
   notes TEXT,
+  estimated_km REAL,
   created_by TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,

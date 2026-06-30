@@ -75,8 +75,8 @@ export async function onRequest(context) {
       `INSERT INTO vehicle_requests (id, requester_id, requester_name, requester_department,
         date, time_start, time_end, destination, route, purpose,
         passengers, passenger_names, priority, is_urgent,
-        status, notes, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
+        status, notes, waypoints, dest_lat, dest_lng, estimated_km, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)`,
       [id, user.id, body.requester_name || user.display_name || '',
        body.requester_department || body.department || '',
        body.date, body.time_start || null, body.time_end || null,
@@ -84,7 +84,7 @@ export async function onRequest(context) {
        body.purpose || '', body.passengers || 1,
        JSON.stringify(body.passenger_names || []),
        body.priority || 'general', body.is_urgent ? 1 : 0,
-       body.notes || '', ts, ts]
+       body.notes || '', body.waypoints || null, body.dest_lat || null, body.dest_lng || null, body.estimated_km || null, ts, ts]
     );
     await writeAuditLog(env.DB, user.id, user.displayName, 'create_vehicle_request', 'vehicle_request', id, { date: body.date, destination: body.destination });
     // แจ้งคนจัดคิว + admin
@@ -114,7 +114,8 @@ export async function onRequest(context) {
     const sets = [];
     const params = [];
     const fields = ['date','time_start','time_end','destination','route','purpose',
-      'passengers','requester_department','priority','is_urgent','notes','requester_name'];
+      'passengers','requester_department','priority','is_urgent','notes','requester_name',
+      'dest_lat','dest_lng','estimated_km'];
     for (const f of fields) {
       if (body[f] !== undefined) { sets.push(`${f} = ?`); params.push(body[f]); }
     }
@@ -166,21 +167,39 @@ export async function onRequest(context) {
 
     const ts = now();
     const carLabel = `${carCheck.license_plate} ${carCheck.brand || ''}`.trim();
+    const timeStart = row.time_start || '08:00';
+    const timeEnd = row.time_end || '17:00';
+
+    // Validation: ตรวจสอบคิวซ้อน (Conflict detection)
+    if (!body.force_queue) {
+      const conflicts = await dbAll(env.DB,
+        `SELECT q.id, q.time_start, q.time_end, c.license_plate, d.name AS driver_name
+         FROM queue q
+         LEFT JOIN cars c ON q.car_id = c.id
+         LEFT JOIN drivers d ON q.driver_id = d.id
+         WHERE q.date = ? AND q.status NOT IN ('cancelled','completed')
+         AND (q.car_id = ? OR q.driver_id = ?)
+         AND q.time_start < ? AND q.time_end > ?`,
+        [row.date, body.assigned_car_id, body.assigned_driver_id, timeEnd, timeStart]
+      );
+      if (conflicts.length > 0) {
+        const labels = conflicts.map(c => `${c.license_plate || ''} ${c.driver_name || ''} (${c.time_start}-${c.time_end})`).join(', ');
+        return error(`คิวซ้อนกัน: ${labels}`, 409);
+      }
+    }
 
     // สร้างคิวอัตโนมัติ
     const queueId = generateUUID();
-    const timeStart = row.time_start || '08:00';
-    const timeEnd = row.time_end || '17:00';
     await dbRun(env.DB,
       `INSERT INTO queue (id, date, time_start, time_end, car_id, driver_id,
         requester_id, requested_by, mission, destination, passengers,
-        status, notes, created_by, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?, ?, ?, ?)`,
+        status, notes, waypoints, estimated_km, estimated_fuel_cost, created_by, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?, ?, ?, ?, ?, ?, ?)`,
       [queueId, row.date, timeStart, timeEnd,
        body.assigned_car_id, body.assigned_driver_id,
        row.requester_id, row.requester_name,
-       row.purpose || '', row.destination,
-       row.passengers || 1, body.notes || row.notes || '', user.id, ts, ts]
+       row.purpose || '', row.destination, row.passengers || 1,
+       body.notes || row.notes || '', row.waypoints || null, row.estimated_km || null, body.estimated_fuel_cost || null, user.id, ts, ts]
     );
 
     // อัปเดตคำขอ
@@ -193,17 +212,20 @@ export async function onRequest(context) {
     await writeAuditLog(env.DB, user.id, user.displayName, 'approve_vehicle_request', 'vehicle_request', id,
       { car: carLabel, driver: driverCheck.name, queue_id: queueId });
 
+    const isPooled = body.force_queue ? ' [มีการจัดคิวร่วม/แชร์รถ]' : '';
+    const notesStr = body.notes ? `\nหมายเหตุ: ${body.notes}` : '';
+
     // แจ้งผู้ขอ
-    await createNotification(env.DB, row.requester_id, 'vehicle_request', 'คำขอใช้รถได้รับอนุมัติ',
-      `คำขอวันที่ ${row.date} ไป${row.destination} อนุมัติแล้ว — รถ: ${carLabel} พนักงาน: ${driverCheck.name}`);
+    await createNotification(env.DB, row.requester_id, 'vehicle_request', `จัดรถและเสนออนุมัติเรียบร้อย${isPooled}`,
+      `คำขอวันที่ ${row.date} ไป${row.destination} จัดคิวแล้ว (รอ ผอ.เซ็น) — รถ: ${carLabel} พนักงาน: ${driverCheck.name}${isPooled}${notesStr}`);
     // แจ้งพนักงานขับรถ
     const driverUser = await dbFirst(env.DB, 'SELECT id FROM users WHERE driver_id = ?', [body.assigned_driver_id]);
     if (driverUser) {
-      await createNotification(env.DB, driverUser.id, 'queue', 'มีคิวใหม่',
-        `คิววันที่ ${row.date} ไป${row.destination} — รถ: ${carLabel}`);
+      await createNotification(env.DB, driverUser.id, 'queue', `มีคิวใหม่${isPooled}`,
+        `คิววันที่ ${row.date} ไป${row.destination} — รถ: ${carLabel}${isPooled}${notesStr}`);
     }
     await sendTelegramMessage(env,
-      `✅ <b>อนุมัติคำขอใช้รถ</b>\n📅 ${row.date} (${timeStart}-${timeEnd})\n📍 ${row.destination}\n🚗 ${carLabel}\n👤 ${driverCheck.name}\n👨‍💼 อนุมัติโดย: ${user.displayName}\n📋 ขอโดย: ${row.requester_name}`);
+      `✅ <b>จัดรถและเสนออนุมัติเรียบร้อย</b>${isPooled}\n📅 ${row.date} (${timeStart}-${timeEnd})\n📍 ${row.destination}\n🚗 ${carLabel}\n👤 ${driverCheck.name}\n👨‍💼 จัดรถโดย: ${user.displayName}\n📋 ขอโดย: ${row.requester_name}${notesStr}`);
 
     return success({ id, queue_id: queueId, message: 'อนุมัติคำขอและสร้างคิวเรียบร้อย' });
   }
