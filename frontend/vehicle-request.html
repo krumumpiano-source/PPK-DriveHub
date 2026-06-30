@@ -617,7 +617,7 @@
     async function searchNominatim(query) {
       document.getElementById('autocomplete-list').innerHTML = '<div style="color:#666">กำลังค้นหา...</div>';
       try {
-        var res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+        var res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&accept-language=th&q=${encodeURIComponent(query)}`);
         var data = await res.json();
         var listHTML = '';
         if (data && data.length > 0) {
