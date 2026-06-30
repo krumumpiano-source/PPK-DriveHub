@@ -17,6 +17,7 @@ const PUBLIC_PATHS = [
   '/api/survey/submit',         // QR แบบประเมิน (ไม่ต้อง login)
   '/api/survey/car-info',       // QR ข้อมูลรถสำหรับแบบประเมิน
   '/api/cron/sync-google-forms', // Cron token auth (X-Cron-Token header)
+  '/api/maps'                   // Map proxy endpoints
 ];
 
 // Rate-limited paths: max attempts per window
