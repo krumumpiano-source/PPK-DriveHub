@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>จัดคิว - PPK DriveHub</title>
   <script src="config.js"></script>
   <script>
@@ -718,6 +718,10 @@
       }
     }
   </style>
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="/icon.png">
 </head>
 
 <body>
@@ -731,6 +735,29 @@
 
     <div class="content">
       <div id="alertContainer"></div>
+
+      <div class="tabs" style="display:flex; border-bottom:1px solid #ddd; margin-bottom:20px; gap:10px;">
+        <button class="tab active" onclick="switchTab('calendar')" style="padding:10px 20px; border:none; background:none; border-bottom:3px solid var(--color-primary); color:var(--color-primary); font-weight:bold; cursor:pointer;">📅 ปฏิทินคิวรถ</button>
+        <button class="tab" onclick="switchTab('gantt')" style="padding:10px 20px; border:none; background:none; border-bottom:3px solid transparent; color:#666; font-weight:bold; cursor:pointer;">📊 ตารางการใช้รถ (Gantt)</button>
+      </div>
+
+      <!-- Tab: Gantt Chart -->
+      <div id="ganttTab" class="tab-content" style="display:none;">
+        <div class="actions-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <button class="btn btn-secondary" onclick="changeGanttDate(-1)">‹ วันก่อนหน้า</button>
+            <input type="date" id="ganttDate" class="form-control" style="width:150px; text-align:center;" onchange="loadGantt()">
+            <button class="btn btn-secondary" onclick="changeGanttDate(1)">วันถัดไป ›</button>
+          </div>
+          <button class="btn btn-success" onclick="openCreateModal()">➕ เพิ่มคิว</button>
+        </div>
+        <div style="overflow-x:auto; background:white; border:1px solid #eee; border-radius:8px;">
+          <div id="ganttChart" style="min-width:800px; padding:20px;">
+            <p style="text-align:center; color:#999;">กำลังโหลด...</p>
+          </div>
+        </div>
+      </div>
+      <div id="calendarTab" class="tab-content active" style="display:block;">
 
       <!-- Actions Bar -->
       <div class="actions-bar">
@@ -1308,6 +1335,12 @@
         return;
       }
 
+      // Initialize gantt date to today
+      window.currentGanttDate = new Date();
+      var ganttDateStr = formatDate(window.currentGanttDate);
+      var ganttDateEl = document.getElementById('ganttDate');
+      if (ganttDateEl) ganttDateEl.value = ganttDateStr;
+
       try {
         if (typeof requireAuth === 'function') {
           var authResult = requireAuth();
@@ -1401,6 +1434,130 @@
           console.warn('flatpickr init failed for', id, e);
         }
       });
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab').forEach(function(t) {
+        t.classList.remove('active');
+        t.style.borderBottomColor = 'transparent';
+        t.style.color = '#666';
+      });
+      document.querySelectorAll('.tab-content').forEach(function(tc) {
+        tc.style.display = 'none';
+        tc.classList.remove('active');
+      });
+      
+      var targetTab = document.querySelector(`.tab[onclick="switchTab('${tabId}')"]`);
+      if (targetTab) {
+        targetTab.classList.add('active');
+        targetTab.style.borderBottomColor = 'var(--color-primary)';
+        targetTab.style.color = 'var(--color-primary)';
+      }
+      
+      var targetContent = document.getElementById(tabId + 'Tab');
+      if (targetContent) {
+        targetContent.style.display = 'block';
+        targetContent.classList.add('active');
+      }
+      
+      if (tabId === 'gantt') {
+        loadGantt();
+      }
+    }
+
+    function changeGanttDate(days) {
+      if (!window.currentGanttDate) window.currentGanttDate = new Date();
+      window.currentGanttDate.setDate(window.currentGanttDate.getDate() + days);
+      document.getElementById('ganttDate').value = formatDate(window.currentGanttDate);
+      loadGantt();
+    }
+
+    async function loadGantt() {
+      var dateEl = document.getElementById('ganttDate');
+      if (!dateEl) return;
+      var dateStr = dateEl.value;
+      if (dateStr) {
+        window.currentGanttDate = new Date(dateStr);
+      }
+      
+      document.getElementById('ganttChart').innerHTML = '<p style="text-align:center; color:#999;">กำลังโหลด...</p>';
+      
+      try {
+        var res = await apiCall('getQueues', { start_date: dateStr, end_date: dateStr });
+        var dailyQueues = (res && res.success && Array.isArray(res.data)) ? res.data : [];
+        
+        var vRes = await apiCall('getVehicles');
+        var allVehicles = (vRes && vRes.success && Array.isArray(vRes.data)) ? vRes.data : vehicles;
+        
+        var activeVehicles = allVehicles.filter(v => v.status === 'active' && v.active !== false);
+        
+        var html = '<table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.9em;">';
+        
+        // Header
+        html += '<tr style="background:#f9fafb; border-bottom:2px solid #ddd;">';
+        html += '<th style="padding:10px; width:200px; border-right:1px solid #ddd; position:sticky; left:0; background:#f9fafb; z-index:10;">ยานพาหนะ</th>';
+        for(let h = 6; h <= 18; h++) {
+          html += `<th style="padding:10px; text-align:center; border-right:1px solid #ddd; width:calc((100% - 200px) / 13);">${String(h).padStart(2,'0')}:00</th>`;
+        }
+        html += '</tr>';
+        
+        // Rows
+        activeVehicles.forEach(v => {
+          var vQs = dailyQueues.filter(q => q.car_id === v.id && q.status !== 'cancelled' && q.status !== 'rejected');
+          
+          html += '<tr style="border-bottom:1px solid #eee;">';
+          html += `<td style="padding:10px; border-right:1px solid #ddd; position:sticky; left:0; background:white; z-index:10;">
+                    <strong>${v.license_plate}</strong><br>
+                    <span style="font-size:0.8em; color:#666;">${v.brand || ''} ${v.model || ''}</span>
+                   </td>`;
+                   
+          var cellHtml = '';
+          for(let h = 6; h <= 18; h++) {
+            cellHtml += `<td style="border-right:1px solid #eee; position:relative; height:60px;">`;
+            
+            // Find queues intersecting this hour
+            vQs.forEach(q => {
+              var startH = q.time_start ? parseInt(q.time_start.split(':')[0]) : 8;
+              var startM = q.time_start ? parseInt(q.time_start.split(':')[1]) : 0;
+              var endH = q.time_end ? parseInt(q.time_end.split(':')[0]) : 16;
+              var endM = q.time_end ? parseInt(q.time_end.split(':')[1]) : 0;
+              
+              if (endH < 6) endH = 6;
+              if (startH > 18) startH = 18;
+              
+              if (h >= startH && h <= endH) {
+                var isStartHour = (h === startH);
+                var isEndHour = (h === endH);
+                
+                var leftPct = isStartHour ? (startM / 60 * 100) : 0;
+                var rightPct = isEndHour ? ((60 - endM) / 60 * 100) : 0;
+                var widthPct = 100 - leftPct - rightPct;
+                
+                if (widthPct > 0) {
+                   var bgColor = '#4fc3f7';
+                   if (q.status === 'completed' || q.status === 'done') bgColor = '#81c784';
+                   else if (q.status === 'running') bgColor = '#e57373';
+                   else if (q.status === 'pending') bgColor = '#ffb74d';
+                   
+                   var label = isStartHour ? (q.destination || 'คิวงาน') : '';
+                   
+                   cellHtml += `<div style="position:absolute; top:10px; bottom:10px; left:${leftPct}%; width:${widthPct}%; background:${bgColor}; opacity:0.8; border-radius:3px; z-index:5; font-size:0.75em; padding:2px 4px; overflow:hidden; white-space:nowrap; color:white; font-weight:bold; cursor:pointer;" title="${q.time_start} - ${q.time_end}: ${q.destination} (${q.driver_name})" onclick="openEditModal('${q.id}')">${label}</div>`;
+                }
+              }
+            });
+            
+            cellHtml += `</td>`;
+          }
+          html += cellHtml;
+          html += '</tr>';
+        });
+        
+        html += '</table>';
+        document.getElementById('ganttChart').innerHTML = html;
+        
+      } catch (err) {
+        document.getElementById('ganttChart').innerHTML = '<p style="text-align:center; color:red;">โหลดข้อมูลล้มเหลว</p>';
+      }
     }
 
     function formatDate(date) {

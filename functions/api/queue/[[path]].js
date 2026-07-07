@@ -2,7 +2,7 @@
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, extractParam, writeAuditLog,
-  sendTelegramMessage, createNotification, notifyAllAdmins
+  sendTelegramMessage, createNotification, notifyAllAdmins, sendLineMessage
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
@@ -147,7 +147,7 @@ export async function onRequest(context) {
 
     // Resolve names for notifications
     const car = await dbFirst(env.DB, 'SELECT license_plate, brand FROM cars WHERE id = ?', [body.car_id]);
-    const driver = body.driver_id ? await dbFirst(env.DB, 'SELECT name FROM drivers WHERE id = ?', [body.driver_id]) : null;
+    const driver = body.driver_id ? await dbFirst(env.DB, 'SELECT name, line_id FROM drivers WHERE id = ?', [body.driver_id]) : null;
     const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : body.car_id;
     const driverLabel = driver ? driver.name : '-';
     const mission = body.mission || body.purpose || '-';
@@ -157,6 +157,12 @@ export async function onRequest(context) {
       `${user.displayName} สร้างคิววันที่ ${body.date} | ${carLabel} | ${driverLabel} | ${mission}`);
     await sendTelegramMessage(env,
       `🚐 <b>คิวใหม่</b>\n📅 ${body.date} (${timeStart}-${timeEnd})\n🚗 ${carLabel}\n👤 ${driverLabel}\n📋 ${mission}\n👨‍💼 สร้างโดย: ${user.displayName}`);
+
+    if (driver && driver.line_id) {
+      await sendLineMessage(env, driver.line_id, 
+        `🔔 มีคิวงานใหม่\n📅 ${body.date} (${timeStart}-${timeEnd})\n🚗 รถ: ${carLabel}\n📋 งาน: ${mission}\n📍 ปลายทาง: ${body.destination || '-'}`
+      );
+    }
 
     return success({ id, message: 'สร้างคิวเรียบร้อย' }, 201);
   }

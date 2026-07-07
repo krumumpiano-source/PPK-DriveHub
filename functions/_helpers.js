@@ -196,6 +196,27 @@ export async function sendTelegramMessage(env, message) {
   }
 }
 
+export async function sendLineMessage(env, lineId, message) {
+  const token = env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!token || !lineId) return;
+  try {
+    // Using LINE Messaging API push message
+    await fetch('https://api.line.me/v2/bot/message/push', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        to: lineId,
+        messages: [{ type: 'text', text: message }]
+      })
+    });
+  } catch {
+    // Line failures are non-critical
+  }
+}
+
 export async function createNotification(db, userId, type, title, message) {
   try {
     await dbRun(db,

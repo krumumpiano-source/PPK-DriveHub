@@ -119,8 +119,8 @@ const ACTION_MAP = {
   'updateDriver':        (d) => API.put(`/api/drivers/${d.id}`, d),
   'deactivateDriver':    (d) => API.del(`/api/drivers/${d.id}`),
   'reportFatigue':       (d) => API.post('/api/drivers/fatigue', d),
-  'getDriverLeaves':     (d) => API.get(`/api/drivers/${d.id}/leaves`),
-  'createDriverLeave':   (d) => API.post(`/api/drivers/${d.id}/leaves`, d),
+  'getDriverLeaves':     (d) => API.get('/api/drivers/leaves' + _q(d)),
+  'requestDriverLeave':  (d) => API.post('/api/drivers/leaves', d),
   'deleteDriverLeave':   (d) => API.del(`/api/drivers/leaves/${d.leaveId}`),
 
   // Queue
@@ -260,8 +260,9 @@ const ACTION_MAP = {
   'getVehicleRequest':   (d) => API.get(`/api/vehicle-requests/${d.id}`),
   'createVehicleRequest':(d) => API.post('/api/vehicle-requests', d),
   'updateVehicleRequest':(d) => API.put(`/api/vehicle-requests/${d.id}`, d),
-  'cancelVehicleRequest':(d) => API.del(`/api/vehicle-requests/${d.id}`),
-  'approveVehicleRequest':(d) => API.put(`/api/vehicle-requests/${d.id}/approve`, d),
+  'cancelVehicleRequest':(d) => API.put(`/api/vehicle-requests/${d.id}/cancel`, d),
+  'approveVehicleRequest':(d)=> API.put(`/api/vehicle-requests/${d.id}/approve`, d),
+  'bulkApproveVehicleRequests':(d)=> API.post(`/api/vehicle-requests/bulk-approve`, d),
   'rejectVehicleRequest':(d) => API.put(`/api/vehicle-requests/${d.id}/reject`, d),
   'assignVehicleRequest':(d) => API.put(`/api/vehicle-requests/${d.id}/assign`, d),
 

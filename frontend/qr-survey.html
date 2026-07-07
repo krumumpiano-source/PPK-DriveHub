@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>แบบประเมินผู้โดยสาร - PPK DriveHub</title>
   <script src="config.js"></script>
   <script>window.API_BASE_URL=CONFIG.API_BASE_URL;window.currentPage='qr-survey';window.REQUIRE_AUTH=false;</script>
@@ -31,6 +31,10 @@
     #surveyForm button[type=submit]:disabled{opacity:.5}
     .error-box{background:#fee2e2;color:#991b1b;padding:16px;border-radius:var(--radius-lg);text-align:center;margin:20px}
   </style>
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="/icon.png">
 </head>
 <body>
   <div class="survey-card">

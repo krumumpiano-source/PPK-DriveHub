@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>รายงาน - PPK DriveHub</title>
   <script src="config.js"></script>
   <script>
@@ -91,6 +91,11 @@
     .wmode-pill.active{background:var(--color-primary);color:white;}
     @media(max-width:480px){ .stats-grid{grid-template-columns:repeat(2,1fr);gap:8px} .stat-card .value{font-size:1.5rem} }
   </style>
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="/icon.png">
 </head>
 <body>
   <div class="container">
@@ -1053,7 +1058,7 @@
       if (window.docx) return Promise.resolve(true);
       return new Promise(function(resolve) {
         var s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/docx@9.7.1/build/index.umd.js';
+        s.src = 'https://cdn.jsdelivr.net/npm/docx@9.7.1/dist/index.iife.js';
         s.onload = function() { resolve(!!window.docx); };
         s.onerror = function() { resolve(false); };
         document.head.appendChild(s);
@@ -1401,6 +1406,8 @@
         var d=window.docx;
         var df=_wr.from, dt=_wr.to;
         var periodLabel=_wr.label;
+        var p=df.split('-');
+        var thMon=MONTHS_TH[+p[1]];var thYr=''+(+p[0]+543);
         var [fuelR,repR,tripsR]=await Promise.all([
           API.get('/api/reports/fuel?date_from='+df+'&date_to='+dt),
           API.get('/api/reports/repairs?date_from='+df+'&date_to='+dt),

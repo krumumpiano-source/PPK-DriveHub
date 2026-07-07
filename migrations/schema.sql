@@ -301,6 +301,8 @@ CREATE TABLE IF NOT EXISTS usage_records (
   location TEXT,
   notes TEXT,
   queue_id TEXT,
+  lat REAL,
+  lng REAL,
   created_at TEXT NOT NULL,
   FOREIGN KEY (car_id) REFERENCES cars(id),
   FOREIGN KEY (queue_id) REFERENCES queue(id)

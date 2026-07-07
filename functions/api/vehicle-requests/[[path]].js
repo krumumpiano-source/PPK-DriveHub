@@ -2,7 +2,7 @@
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, writeAuditLog,
-  sendTelegramMessage, createNotification, notifyAllAdmins
+  sendTelegramMessage, createNotification, notifyAllAdmins, sendLineMessage, uploadToR2
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
@@ -21,6 +21,7 @@ export async function onRequest(context) {
     const date = url.searchParams.get('date');
     const dateFrom = url.searchParams.get('date_from');
     const dateTo = url.searchParams.get('date_to');
+    const needsSignature = url.searchParams.get('needs_signature');
     const where = [];
     const params = [];
     if (status) { where.push('vr.status = ?'); params.push(status); }
@@ -28,6 +29,7 @@ export async function onRequest(context) {
     if (date) { where.push('vr.date = ?'); params.push(date); }
     if (dateFrom) { where.push('vr.date >= ?'); params.push(dateFrom); }
     if (dateTo) { where.push('vr.date <= ?'); params.push(dateTo); }
+    if (needsSignature === 'true') { where.push('vr.signature_image IS NULL'); }
     const rows = await dbAll(env.DB,
       `SELECT vr.*, c.license_plate, c.brand AS car_brand,
        d.name AS driver_name, u.display_name AS approved_by_name,
@@ -157,9 +159,36 @@ export async function onRequest(context) {
     return success({ message: 'ยกเลิกคำขอเรียบร้อย' });
   }
 
+  // --- POST /api/vehicle-requests/bulk-approve ---
+  if (path === '/api/vehicle-requests/bulk-approve' && method === 'POST') {
+    try { requirePermission(user, 'queue', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const body = await parseBody(request);
+    if (!body || !body.ids || !Array.isArray(body.ids) || body.ids.length === 0) {
+      return error('ไม่มีรายการที่เลือก');
+    }
+    const ts = now();
+    let signatureImagePath = null;
+    if (body.signature_base64) {
+      const b64Data = body.signature_base64.split(',')[1] || body.signature_base64;
+      signatureImagePath = `signature_bulk_${ts.replace(/[: -]/g, '')}.png`;
+      await uploadToR2(env, b64Data, signatureImagePath, 'SIGNATURES', 'image/png');
+    }
+    
+    for (const id of body.ids) {
+      await dbRun(env.DB,
+        `UPDATE vehicle_requests SET signature_image = ?, updated_by = ?, updated_at = ? WHERE id = ? AND status = 'approved' AND signature_image IS NULL`,
+        [signatureImagePath, user.id, ts, id]
+      );
+      // We don't update queue status here, just add signature.
+      await writeAuditLog(env.DB, user.id, user.displayName, 'bulk_approve_vehicle_request', 'vehicle_request', id, { signature_image: signatureImagePath });
+    }
+    return success({ message: 'อนุมัติเรียบร้อย' });
+  }
+
   // --- PUT /api/vehicle-requests/:id/approve --- คนจัดคิวกดอนุมัติ (หลัง ผอ.เซ็นกระดาษ)
   if (path.match(/^\/api\/vehicle-requests\/[^/]+\/approve$/) && method === 'PUT') {
     try { requirePermission(user, 'queue', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    try {
     const id = path.split('/').slice(-2, -1)[0];
     const row = await dbFirst(env.DB, 'SELECT * FROM vehicle_requests WHERE id = ?', [id]);
     if (!row) return error('ไม่พบคำขอใช้รถ', 404);
@@ -174,7 +203,7 @@ export async function onRequest(context) {
     if (carCheck.status === 'under_repair') return error('รถคันนี้อยู่ระหว่างซ่อม ไม่สามารถจัดให้ได้');
 
     // Validation: ตรวจสอบใบขับขี่
-    const driverCheck = await dbFirst(env.DB, 'SELECT name, license_expiry, status FROM drivers WHERE id = ?', [body.assigned_driver_id]);
+    const driverCheck = await dbFirst(env.DB, 'SELECT name, license_expiry, status, line_id FROM drivers WHERE id = ?', [body.assigned_driver_id]);
     if (!driverCheck) return error('ไม่พบข้อมูลพนักงานขับรถ');
     if (driverCheck.license_expiry && driverCheck.license_expiry < new Date().toISOString().substr(0,10))
       return error('ใบขับขี่พนักงานขับรถหมดอายุ');
@@ -217,11 +246,18 @@ export async function onRequest(context) {
        body.notes || row.notes || '', row.waypoints || null, row.estimated_km || null, body.estimated_fuel_cost || null, user.id, ts, ts]
     );
 
+    let signatureImagePath = null;
+    if (body.signature_base64) {
+      const b64Data = body.signature_base64.split(',')[1] || body.signature_base64;
+      signatureImagePath = `signature_${id}_${ts.replace(/[: -]/g, '')}.png`;
+      await uploadToR2(env, b64Data, signatureImagePath, 'SIGNATURES', 'image/png');
+    }
+
     // อัปเดตคำขอ
     await dbRun(env.DB,
       `UPDATE vehicle_requests SET status = 'approved', approved_by = ?, approved_at = ?,
-       assigned_car_id = ?, assigned_driver_id = ?, assigned_queue_id = ?, updated_by = ?, updated_at = ? WHERE id = ?`,
-      [user.id, ts, body.assigned_car_id, body.assigned_driver_id, queueId, user.id, ts, id]
+       assigned_car_id = ?, assigned_driver_id = ?, assigned_queue_id = ?, signature_image = ?, updated_by = ?, updated_at = ? WHERE id = ?`,
+      [user.id, ts, body.assigned_car_id, body.assigned_driver_id, queueId, signatureImagePath, user.id, ts, id]
     );
 
     await writeAuditLog(env.DB, user.id, user.displayName, 'approve_vehicle_request', 'vehicle_request', id,
@@ -244,7 +280,16 @@ export async function onRequest(context) {
     await sendTelegramMessage(env,
       `✅ <b>จัดรถและเสนออนุมัติเรียบร้อย</b>${isPooled}\n📅 ${row.date} (${timeStart}-${timeEnd})\n📍 ${row.destination}\n🚗 ${carLabel}\n👤 @${driverCheck.name.replace(/\s+/g,'')} (คนขับ)\n👨‍💼 จัดรถโดย: ${user.displayName}\n📋 ขอโดย: ${row.requester_name}${notesStr}\n\n▶️ <a href="${closeQueueUrl}">กดที่นี่เพื่อบันทึกปิดคิวและกรอกเลขไมล์</a>`);
 
+    if (driverCheck && driverCheck.line_id) {
+      await sendLineMessage(env, driverCheck.line_id, 
+        `🔔 จัดคิวงานเรียบร้อย${isPooled}\n📅 ${row.date} (${timeStart}-${timeEnd})\n🚗 รถ: ${carLabel}\n📍 ปลายทาง: ${row.destination}\n📋 ขอโดย: ${row.requester_name}${notesStr}`
+      );
+    }
+
     return success({ id, queue_id: queueId, message: 'อนุมัติคำขอและสร้างคิวเรียบร้อย' });
+    } catch (e) {
+      return error('Server Error: ' + e.message, 500);
+    }
   }
 
   // --- PUT /api/vehicle-requests/:id/reject --- ปฏิเสธ

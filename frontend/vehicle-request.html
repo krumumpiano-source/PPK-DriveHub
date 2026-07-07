@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>ขอใช้รถ - PPK DriveHub</title>
   <script src="config.js"></script>
   <script>window.API_BASE_URL=CONFIG.API_BASE_URL;window.currentPage='vehicle-request';window.REQUIRE_AUTH=true;</script>
@@ -45,6 +45,10 @@
     }
     .autocomplete-items div:hover { background-color: #f3f4f6; color: var(--color-primary); }
   </style>
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="/icon.png">
 </head>
 <body>
   <div class="container">
@@ -59,6 +63,7 @@
         <div class="vr-tab active" onclick="switchTab('create')">📝 แบบฟอร์มขอใช้รถ</div>
         <div class="vr-tab" onclick="switchTab('mylist')">📋 คำขอของฉัน</div>
         <div class="vr-tab" id="tabApprove" style="display:none" onclick="switchTab('approve')">✅ เสนออนุมัติ/จัดคิว</div>
+        <div class="vr-tab" id="tabManager" style="display:none" onclick="switchTab('manager')">✍️ เซ็นอนุมัติ (ผอ.)</div>
       </div>
 
       <!-- Tab 1: Create Request -->
@@ -186,6 +191,21 @@
         </div>
         <div id="pendingRequestList"><p style="color:var(--color-text-muted);text-align:center;padding:2rem">กำลังโหลด...</p></div>
       </div>
+
+      <!-- Tab 4: Manager (bulk approve) -->
+      <div id="panelManager" class="vr-panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap: 10px;">
+          <div>
+            <h3 style="margin: 0; color: var(--color-primary);">รายการรอเซ็นอนุมัติ (ผอ.)</h3>
+            <p style="margin: 5px 0 0 0; font-size: 0.9em; color: var(--color-text-muted);">เลือกรายการที่ต้องการอนุมัติและเซ็นชื่อด้านล่าง</p>
+          </div>
+          <button class="btn btn-primary" onclick="openBulkApproveModal()" id="btnBulkApprove" disabled>✍️ อนุมัติรายการที่เลือก (0)</button>
+        </div>
+        <div style="margin-bottom: 1rem;">
+           <label><input type="checkbox" id="selectAllManager" onchange="toggleSelectAllManager()"> เลือกทั้งหมด</label>
+        </div>
+        <div id="managerRequestList"><p style="color:var(--color-text-muted);text-align:center;padding:2rem">กำลังโหลด...</p></div>
+      </div>
     </div>
   </div>
 
@@ -195,6 +215,9 @@
       <h3 id="approveModalTitle">เสนออนุมัติและจัดคิว</h3>
       <div id="approveModalBody"></div>
       <div class="approve-section">
+        <div style="display:flex; justify-content: flex-end; margin-bottom: 10px;">
+          <button type="button" class="btn btn-sm" style="background:#fef08a; color:#854d0e; border:1px solid #fde047;" onclick="suggestDispatch()">✨ แนะนำอัตโนมัติ</button>
+        </div>
         <div class="vr-form-grid">
           <div class="form-group">
             <label>เลือกรถ <span style="color:var(--color-danger)">*</span></label>
@@ -217,6 +240,14 @@
           </div>
           <textarea id="mNotes" class="form-control" rows="2" placeholder="ระบุหมายเหตุ หรือเหตุผลกรณีไม่อนุมัติ"></textarea>
         </div>
+        <div class="form-group" style="margin-top: 15px;">
+          <label>ลายเซ็นผู้อนุมัติ (ถ้ามี)</label>
+          <div style="border: 2px dashed #ccc; border-radius: var(--radius-md); background: #f9f9f9; width: 100%; height: 150px; position: relative;">
+            <canvas id="signatureCanvas" style="width: 100%; height: 100%; display: block;"></canvas>
+            <button type="button" class="btn btn-sm btn-outline" style="position: absolute; top: 5px; right: 5px; background: rgba(255,255,255,0.8);" onclick="clearSignature()">ล้างลายเซ็น</button>
+          </div>
+          <input type="hidden" id="fSignatureBase64" value="">
+        </div>
         <div style="display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap">
           <button id="btnApprove" class="btn btn-primary" onclick="doApprove()">✅ เสนออนุมัติและจัดคิว</button>
           <button id="btnAdminPrint" class="btn btn-outline" style="display:none" onclick="printAdminRequest()">🖨️ พิมพ์ใบคำขอ</button>
@@ -229,15 +260,108 @@
 
   <script>
     var allCars = [], allDrivers = [], currentApproveId = null;
+    var canvas, ctx, isDrawing = false;
+
+    function initSignaturePad() {
+      canvas = document.getElementById('signatureCanvas');
+      if (!canvas) return;
+      ctx = canvas.getContext('2d');
+      // Set actual internal canvas resolution to match display size
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#000000';
+
+      function getPos(e) {
+        var rect = canvas.getBoundingClientRect();
+        var clientX = e.clientX;
+        var clientY = e.clientY;
+        if (e.touches && e.touches.length > 0) {
+          clientX = e.touches[0].clientX;
+          clientY = e.touches[0].clientY;
+        }
+        return { x: clientX - rect.left, y: clientY - rect.top };
+      }
+
+      function startPosition(e) {
+        isDrawing = true;
+        draw(e);
+      }
+
+      function endPosition() {
+        isDrawing = false;
+        ctx.beginPath();
+        document.getElementById('fSignatureBase64').value = canvas.toDataURL('image/png');
+      }
+
+      function draw(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+        var pos = getPos(e);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+      }
+
+      canvas.addEventListener('mousedown', startPosition);
+      canvas.addEventListener('mouseup', endPosition);
+      canvas.addEventListener('mousemove', draw);
+      canvas.addEventListener('touchstart', startPosition, {passive: false});
+      canvas.addEventListener('touchend', endPosition);
+      canvas.addEventListener('touchmove', draw, {passive: false});
+    }
+
+    function clearSignature() {
+      if (!ctx || !canvas) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      document.getElementById('fSignatureBase64').value = '';
+    }
+
+    // Call initSignaturePad when modal opens
+    // We hook into openModal or whatever function opens the modal
+
+
+    async function suggestDispatch() {
+      var btn = document.querySelector('button[onclick="suggestDispatch()"]');
+      if (btn) btn.innerHTML = '⏳ กำลังคำนวณ...';
+      
+      var reqDate = document.getElementById('fModalReqDate').value;
+      // In practice, time_start and time_end should be passed if available. For simplicity, we just pass date.
+      try {
+        var res = await API.get('/api/queue/suggest?date=' + reqDate);
+        if (res.success && res.data) {
+          if (res.data.best_car) {
+            document.getElementById('mAssignCar').value = res.data.best_car.id;
+          } else {
+            showAlert('ไม่พบรถที่ว่างในวันดังกล่าว', 'error');
+          }
+          
+          if (res.data.best_driver) {
+            document.getElementById('mAssignDriver').value = res.data.best_driver.id;
+          } else {
+            showAlert('ไม่พบพนักงานขับรถที่ว่างในวันดังกล่าว', 'error');
+          }
+          
+          checkConflicts();
+        }
+      } catch(e) {
+        showAlert('เกิดข้อผิดพลาดในการแนะนำ: ' + e.message, 'error');
+      }
+      
+      if (btn) btn.innerHTML = '✨ แนะนำอัตโนมัติ';
+    }
 
     function switchTab(tab) {
       document.querySelectorAll('.vr-tab').forEach(function(t){ t.classList.remove('active'); });
       document.querySelectorAll('.vr-panel').forEach(function(p){ p.classList.remove('active'); });
-      var map = { create:'panelCreate', mylist:'panelMylist', approve:'panelApprove' };
+      var map = { create:'panelCreate', mylist:'panelMylist', approve:'panelApprove', manager:'panelManager' };
       document.getElementById(map[tab]).classList.add('active');
       event.target.classList.add('active');
       if (tab === 'mylist') loadMyRequests();
       if (tab === 'approve') loadPendingRequests();
+      if (tab === 'manager') loadManagerRequests();
     }
 
     function addPassengerRow(name) {
@@ -450,6 +574,99 @@
       }
     }
 
+    async function loadManagerRequests() {
+      try {
+        var res = await apiCall('getVehicleRequests', { status: 'approved', needs_signature: 'true' });
+        var list = (res && res.success && Array.isArray(res.data)) ? res.data : [];
+        if (list.length === 0) {
+          document.getElementById('managerRequestList').innerHTML = '<p style="color:var(--color-text-muted);text-align:center;padding:2rem">ไม่มีคำขอรออนุมัติ</p>';
+          document.getElementById('btnBulkApprove').disabled = true;
+          document.getElementById('btnBulkApprove').innerText = '✍️ อนุมัติรายการที่เลือก (0)';
+          return;
+        }
+        var h = '';
+        list.forEach(function(r) {
+          h += '<div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; padding:10px; border:1px solid #eee; border-radius:8px;">';
+          h += '<input type="checkbox" class="manager-checkbox" value="' + r.id + '" onchange="updateManagerSelection()" style="margin-top:14px; width:20px; height:20px;">';
+          h += '<div style="flex:1;">' + renderRequestCard(r, false) + '</div>';
+          h += '</div>';
+        });
+        document.getElementById('managerRequestList').innerHTML = h;
+        updateManagerSelection();
+      } catch (e) {
+        document.getElementById('managerRequestList').innerHTML = '<p style="color:var(--color-danger)">โหลดข้อมูลไม่สำเร็จ</p>';
+      }
+    }
+
+    function toggleSelectAllManager() {
+      var state = document.getElementById('selectAllManager').checked;
+      var cbs = document.querySelectorAll('.manager-checkbox');
+      cbs.forEach(function(cb) { cb.checked = state; });
+      updateManagerSelection();
+    }
+
+    function updateManagerSelection() {
+      var cbs = document.querySelectorAll('.manager-checkbox:checked');
+      var btn = document.getElementById('btnBulkApprove');
+      if (cbs.length > 0) {
+        btn.disabled = false;
+        btn.innerText = '✍️ อนุมัติรายการที่เลือก (' + cbs.length + ')';
+      } else {
+        btn.disabled = true;
+        btn.innerText = '✍️ อนุมัติรายการที่เลือก (0)';
+      }
+    }
+
+    function openBulkApproveModal() {
+      var cbs = document.querySelectorAll('.manager-checkbox:checked');
+      if (cbs.length === 0) return;
+      document.getElementById('approveModalTitle').innerText = 'ลงนามอนุมัติ (' + cbs.length + ' รายการ)';
+      var body = '<p>กรุณาลงนามด้านล่างเพื่ออนุมัติคำขอที่เลือกทั้งหมด</p>';
+      document.getElementById('approveModalBody').innerHTML = body;
+      
+      // Hide dispatch fields
+      document.getElementById('mAssignCar').parentElement.style.display = 'none';
+      document.getElementById('mAssignDriver').parentElement.style.display = 'none';
+      document.getElementById('mNotes').parentElement.style.display = 'none';
+      document.getElementById('conflictWarning').style.display = 'none';
+      document.getElementById('fModalEstimatedFuel').parentElement.style.display = 'none';
+      document.getElementById('btnAdminPrint').style.display = 'none';
+      document.querySelector('button[onclick="suggestDispatch()"]').style.display = 'none';
+      
+      // Change approve button action
+      var btnApp = document.getElementById('btnApprove');
+      btnApp.onclick = submitBulkApprove;
+      
+      document.getElementById('approveModal').style.display = 'flex';
+      setTimeout(function() {
+        initSignaturePad();
+        clearSignature();
+      }, 100);
+    }
+
+    async function submitBulkApprove() {
+      var cbs = document.querySelectorAll('.manager-checkbox:checked');
+      var ids = Array.from(cbs).map(function(cb) { return cb.value; });
+      if (ids.length === 0) return;
+      
+      var sig = document.getElementById('fSignatureBase64').value;
+      if (!sig) { showAlert('กรุณาเซ็นชื่อ', 'warning'); return; }
+      
+      try {
+        var res = await apiCall('bulkApproveVehicleRequests', { ids: ids, signature_base64: sig });
+        if (res && res.success) {
+          showAlert('อนุมัติเรียบร้อย', 'success');
+          closeModal('approveModal');
+          document.getElementById('selectAllManager').checked = false;
+          loadManagerRequests();
+        } else {
+          showAlert(res.error || 'เกิดข้อผิดพลาด', 'danger');
+        }
+      } catch(e) {
+        showAlert('เกิดข้อผิดพลาด', 'danger');
+      }
+    }
+
     async function cancelRequest(id) {
       if (!confirm('ยืนยันยกเลิกคำขอนี้?')) return;
       try {
@@ -534,6 +751,10 @@
         document.getElementById('btnAdminPrint').style.display = 'none';
       }
       document.getElementById('approveModal').style.display = 'flex';
+      setTimeout(function() {
+        initSignaturePad();
+        clearSignature();
+      }, 100);
     }
 
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
@@ -549,7 +770,8 @@
           assigned_driver_id: driverId,
           notes: document.getElementById('mNotes').value,
           force_queue: forceQueue,
-          estimated_fuel_cost: parseFloat(document.getElementById('fModalEstimatedFuel').value) || null
+          estimated_fuel_cost: parseFloat(document.getElementById('fModalEstimatedFuel').value) || null,
+          signature_base64: document.getElementById('fSignatureBase64').value || null
         });
         if (res && res.success) {
           showAlert('เสนออนุมัติและจัดคิวเรียบร้อย', 'success');
@@ -879,6 +1101,11 @@
       var canApprove = false;
       try { canApprove = hasModulePermission('queue', 'edit') || hasPermission(['admin', 'super_admin']); } catch(e) {}
       if (canApprove) document.getElementById('tabApprove').style.display = '';
+
+      // Show manager tab
+      var canSign = false;
+      try { canSign = hasPermission(['manager', 'admin', 'super_admin']); } catch(e) {}
+      if (canSign) document.getElementById('tabManager').style.display = '';
       
       // Init date picker
       if (typeof flatpickr !== 'undefined') {

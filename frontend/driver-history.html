@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>คิวและประวัติการปฏิบัติงาน - PPK DriveHub</title>
   <script src="config.js"></script>
   <script>window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'driver-history'; window.REQUIRE_AUTH = true;</script>
@@ -631,6 +631,10 @@
       }
     }
   </style>
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="/icon.png">
 </head>
 
 <body>
@@ -659,6 +663,7 @@
       <div class="tabs">
         <button class="tab active" onclick="switchTab('queues')">🚗 คิวของฉัน</button>
         <button class="tab" onclick="switchTab('history')">📝 ประวัติการใช้งาน</button>
+        <button class="tab" onclick="switchTab('leaves')">⛱️ ลางาน</button>
       </div>
 
       <!-- Tab: Queues -->
@@ -743,6 +748,50 @@
         <div id="historyList">
           <div class="loading">กำลังโหลดข้อมูล...</div>
         </div>
+      </div>
+    </div>
+
+      <!-- Tab: Leaves -->
+      <div id="leavesTab" class="tab-content">
+        <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="margin: 0; color: var(--color-primary);">ประวัติการลางาน</h3>
+          <button class="btn btn-primary" onclick="openLeaveModal()">+ แจ้งลางาน</button>
+        </div>
+        <div id="leaveList">
+          <div class="loading">กำลังโหลดข้อมูล...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leave Modal -->
+  <div id="leaveModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999; justify-content:center; align-items:center;">
+    <div class="modal-content" style="background:white; padding:25px; border-radius:12px; width:90%; max-width:500px;">
+      <h2 style="margin-top:0; color:var(--color-primary);">แจ้งลางาน</h2>
+      <div class="form-group" style="margin-bottom:15px;">
+        <label style="display:block; margin-bottom:5px;">ประเภทการลา</label>
+        <select id="lType" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px;">
+          <option value="sick">ป่วย</option>
+          <option value="personal">ลากิจ</option>
+          <option value="vacation">พักร้อน</option>
+          <option value="other">อื่นๆ</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:15px;">
+        <label style="display:block; margin-bottom:5px;">วันที่เริ่มต้น</label>
+        <input type="date" id="lStart" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px;">
+      </div>
+      <div class="form-group" style="margin-bottom:15px;">
+        <label style="display:block; margin-bottom:5px;">วันที่สิ้นสุด</label>
+        <input type="date" id="lEnd" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px;">
+      </div>
+      <div class="form-group" style="margin-bottom:20px;">
+        <label style="display:block; margin-bottom:5px;">เหตุผล / หมายเหตุ</label>
+        <textarea id="lReason" rows="3" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px;"></textarea>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn btn-outline" onclick="document.getElementById('leaveModal').style.display='none'">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="submitLeave()">ส่งคำขอ</button>
       </div>
     </div>
   </div>
@@ -839,6 +888,7 @@
       loadDrivers();
       loadQueues();
       loadTodayHighlight();
+      loadLeaves();
     });
 
     async function displayDriverName() {
@@ -900,6 +950,59 @@
           driverNameEl.textContent = '👤 พนักงานขับรถ';
         }
       }
+    }
+
+    // --- Leave System ---
+    function openLeaveModal() {
+      document.getElementById('lType').value = 'sick';
+      document.getElementById('lStart').value = '';
+      document.getElementById('lEnd').value = '';
+      document.getElementById('lReason').value = '';
+      document.getElementById('leaveModal').style.display = 'flex';
+    }
+
+    async function loadLeaves() {
+      try {
+        var res = await apiCall('getDriverLeaves', {});
+        var list = (res && res.success && Array.isArray(res.data)) ? res.data : [];
+        var h = '';
+        if (list.length === 0) {
+          h = '<div class="empty-state">ไม่มีประวัติการลางาน</div>';
+        } else {
+          var statusMap = { pending: '🟡 รออนุมัติ', approved: '🟢 อนุมัติแล้ว', rejected: '🔴 ไม่อนุมัติ', cancelled: '⚪ ยกเลิก' };
+          var typeMap = { sick: '🤒 ป่วย', personal: 'ธุระส่วนตัว', vacation: '🌴 พักร้อน', other: 'อื่นๆ' };
+          list.forEach(function(l) {
+            h += '<div style="background:white; border:1px solid #eee; border-radius:8px; padding:15px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">';
+            h += '<div>';
+            h += '<strong>' + (typeMap[l.leave_type] || l.leave_type) + '</strong> (' + l.start_date + ' ถึง ' + l.end_date + ')<br>';
+            h += '<span style="font-size:0.9em; color:#666;">เหตุผล: ' + (l.reason || '-') + '</span>';
+            h += '</div>';
+            h += '<div>' + (statusMap[l.status] || l.status) + '</div>';
+            h += '</div>';
+          });
+        }
+        document.getElementById('leaveList').innerHTML = h;
+      } catch (e) {
+        document.getElementById('leaveList').innerHTML = '<div class="empty-state" style="color:red;">โหลดข้อมูลผิดพลาด</div>';
+      }
+    }
+
+    async function submitLeave() {
+      var t = document.getElementById('lType').value;
+      var s = document.getElementById('lStart').value;
+      var e = document.getElementById('lEnd').value;
+      var r = document.getElementById('lReason').value;
+      if (!s || !e) { alert('กรุณาระบุวันที่ให้ครบถ้วน'); return; }
+      try {
+        var res = await apiCall('requestDriverLeave', { leave_type: t, start_date: s, end_date: e, reason: r });
+        if (res && res.success) {
+          alert('ส่งคำขอลางานเรียบร้อย');
+          document.getElementById('leaveModal').style.display = 'none';
+          loadLeaves();
+        } else {
+          alert(res.error || 'เกิดข้อผิดพลาด');
+        }
+      } catch (err) { alert('เกิดข้อผิดพลาด'); }
     }
 
     async function loadTodayHighlight(){
@@ -1254,6 +1357,10 @@
         if (notes !== '-') {
           detailsHtml += '<div class="queue-detail-item" style="grid-column: 1 / -1;"><div class="queue-detail-label">📝 หมายเหตุ</div><div class="queue-detail-value">' + notes + '</div></div>';
         }
+        var mapUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(destination);
+        detailsHtml += '<div style="grid-column: 1 / -1; margin-top: 10px;">';
+        detailsHtml += '<a href="' + mapUrl + '" target="_blank" class="btn btn-outline" style="display:inline-block; text-align:center; padding:8px 16px; border-radius:6px; text-decoration:none; background:#f8f9fa; color:#1976d2; border:1px solid #1976d2;">🗺️ นำทางด้วย Google Maps</a>';
+        detailsHtml += '</div>';
         detailsHtml += '</div>';
         detailsHtml += '</div>';
       });
@@ -1329,7 +1436,8 @@
             futureQueuesHtml += '<div class="future-queue-info">';
             futureQueuesHtml += '<div class="future-queue-time">🕐 ' + timeStart + (timeEnd !== '-' ? ' - ' + timeEnd : '') + ' | ' + statusDisplay + '</div>';
             futureQueuesHtml += '<div class="future-queue-plate">🚗 ' + plate + '</div>';
-            futureQueuesHtml += '<div class="future-queue-destination">📍 ' + destination + '</div>';
+            var mapUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(destination);
+            futureQueuesHtml += '<div class="future-queue-destination">📍 ' + destination + ' <a href="' + mapUrl + '" target="_blank" style="color:#1976d2; text-decoration:none; font-weight:bold; margin-left:8px;">[นำทาง]</a></div>';
             futureQueuesHtml += '<div class="future-queue-destination" style="font-size: 0.85em; color: var(--color-text-muted);">👤 ' + driverName + '</div>';
             futureQueuesHtml += '</div>';
             futureQueuesHtml += '</div>';

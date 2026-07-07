@@ -1,10 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>บันทึกการใช้รถ - PPK DriveHub</title>
@@ -409,6 +408,10 @@
       }
     }
   </style>
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="/icon.png">
 </head>
 
 <body>
@@ -568,6 +571,12 @@
           <strong>📋 หมายเหตุ:</strong><br>
           ข้อมูลนี้ใช้เพื่อความปลอดภัยและการบำรุงรักษา<br>
           กรุณากรอกข้อมูลให้ถูกต้อง
+        </div>
+        
+        <div class="info-footer" style="background:#e3f2fd; color:#0d47a1; margin-top:10px; padding:12px; border-radius:8px;">
+          <strong>📍 แจ้งเตือนเรื่องความเป็นส่วนตัว (GPS):</strong><br>
+          ระบบจะบันทึกพิกัดสถานที่ <u style="font-weight:bold;">เฉพาะวินาทีที่คุณกดปุ่มบันทึกนี้เท่านั้น</u><br>
+          (ไม่มีการติดตามระหว่างขับขี่) เพื่อลดภาระการพิมพ์สถานที่ และยืนยันความโปร่งใส
         </div>
       </form>
 
@@ -950,6 +959,19 @@
       alertContainer.innerHTML = '';
 
       try {
+        // Attempt to get geolocation
+        if (navigator.geolocation) {
+          try {
+            var position = await new Promise((resolve, reject) => {
+              navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000, maximumAge: 0 });
+            });
+            recordData.lat = position.coords.latitude;
+            recordData.lng = position.coords.longitude;
+          } catch (e) {
+            console.warn("GPS tracking not permitted or failed:", e);
+          }
+        }
+
         var result;
         if (currentMode === 'logged_in') {
           recordData.record_source = 'qr_logged_in';

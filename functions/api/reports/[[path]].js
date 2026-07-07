@@ -1033,35 +1033,53 @@ export async function onRequest(context) {
     const whereClause = 'WHERE ' + where.join(' AND ');
 
     const rows = await dbAll(env.DB,
-      `SELECT
-       d.id AS driver_id,
-       d.name AS driver_name,
-       d.status AS driver_status,
+      `WITH combined_trips AS (
+         SELECT q.id AS trip_id, q.driver_id, q.date,
+           dep.datetime AS dep_time, ret.datetime AS ret_time,
+           dep.mileage AS dep_mileage, ret.mileage AS ret_mileage,
+           NULL AS driver_name_manual
+         FROM queue q
+         LEFT JOIN usage_records dep ON dep.queue_id = q.id AND dep.record_type = 'departure'
+         LEFT JOIN usage_records ret ON ret.queue_id = q.id AND ret.record_type = 'return'
+         WHERE q.status IN ('completed','ongoing')
+         UNION ALL
+         SELECT 'gf-' || dep.id, dep.driver_id, DATE(dep.datetime),
+           dep.datetime,
+           (SELECT r.datetime FROM usage_records r WHERE r.car_id=dep.car_id AND r.record_type='return' AND r.queue_id IS NULL AND r.datetime>dep.datetime ORDER BY r.datetime ASC LIMIT 1),
+           dep.mileage,
+           (SELECT r.mileage FROM usage_records r WHERE r.car_id=dep.car_id AND r.record_type='return' AND r.queue_id IS NULL AND r.datetime>dep.datetime ORDER BY r.datetime ASC LIMIT 1),
+           dep.driver_name_manual
+         FROM usage_records dep
+         WHERE dep.queue_id IS NULL AND dep.record_type = 'departure'
+       )
+       SELECT
+       COALESCE(d.id, 'manual-' || ct.driver_name_manual) AS driver_id,
+       COALESCE(d.name, ct.driver_name_manual, 'ไม่ระบุชื่อ') AS driver_name,
+       COALESCE(d.status, 'active') AS driver_status,
        d.license_expiry,
-       COUNT(DISTINCT q.id) AS trip_count,
-       COALESCE(SUM(CASE WHEN dep.mileage IS NOT NULL AND ret.mileage IS NOT NULL AND ret.mileage > dep.mileage
-                        THEN ret.mileage - dep.mileage ELSE 0 END), 0) AS total_km,
-       COUNT(DISTINCT CASE WHEN dep.mileage IS NOT NULL AND ret.mileage IS NOT NULL AND ret.mileage > dep.mileage
-                           THEN q.id END) AS trips_with_km,
+       COUNT(DISTINCT ct.trip_id) AS trip_count,
+       COALESCE(SUM(CASE WHEN ct.dep_mileage IS NOT NULL AND ct.ret_mileage IS NOT NULL AND ct.ret_mileage > ct.dep_mileage
+                        THEN ct.ret_mileage - ct.dep_mileage ELSE 0 END), 0) AS total_km,
+       COUNT(DISTINCT CASE WHEN ct.dep_mileage IS NOT NULL AND ct.ret_mileage IS NOT NULL AND ct.ret_mileage > ct.dep_mileage
+                           THEN ct.trip_id END) AS trips_with_km,
        COALESCE(SUM(CASE
-         WHEN dep.datetime IS NOT NULL AND ret.datetime IS NOT NULL
-         THEN ROUND((JULIANDAY(ret.datetime) - JULIANDAY(dep.datetime)) * 24, 2)
+         WHEN ct.dep_time IS NOT NULL AND ct.ret_time IS NOT NULL
+         THEN ROUND((JULIANDAY(ct.ret_time) - JULIANDAY(ct.dep_time)) * 24, 2)
          ELSE 0 END), 0) AS total_hours,
-       COUNT(DISTINCT CASE WHEN CAST(strftime('%w', q.date) AS INTEGER) NOT IN (0,6)
-                           THEN q.date END) AS weekday_trips,
-       COUNT(DISTINCT CASE WHEN CAST(strftime('%w', q.date) AS INTEGER) IN (0,6)
-                           THEN q.id END) AS weekend_trips,
-       SUM(CASE WHEN dep.datetime IS NULL AND ret.datetime IS NULL THEN 1 ELSE 0 END) AS trips_no_record,
-       SUM(CASE WHEN dep.datetime IS NULL OR ret.datetime IS NULL THEN 1 ELSE 0 END) AS trips_incomplete
-       FROM drivers d
-       LEFT JOIN queue q ON q.driver_id = d.id AND q.status IN ('completed','ongoing')
-         ${dateFrom ? 'AND q.date >= ?' : ''} ${dateTo ? 'AND q.date <= ?' : ''}
-       LEFT JOIN usage_records dep ON dep.queue_id = q.id AND dep.record_type = 'departure'
-       LEFT JOIN usage_records ret ON ret.queue_id = q.id AND ret.record_type = 'return'
-       ${driverId ? 'WHERE d.id = ?' : ''}
-       GROUP BY d.id
+       COUNT(DISTINCT CASE WHEN CAST(strftime('%w', ct.date) AS INTEGER) NOT IN (0,6)
+                           THEN ct.date END) AS weekday_trips,
+       COUNT(DISTINCT CASE WHEN CAST(strftime('%w', ct.date) AS INTEGER) IN (0,6)
+                           THEN ct.trip_id END) AS weekend_trips,
+       SUM(CASE WHEN ct.dep_time IS NULL AND ct.ret_time IS NULL THEN 1 ELSE 0 END) AS trips_no_record,
+       SUM(CASE WHEN ct.dep_time IS NULL OR ct.ret_time IS NULL THEN 1 ELSE 0 END) AS trips_incomplete
+       FROM combined_trips ct
+       LEFT JOIN drivers d ON ct.driver_id = d.id OR (ct.driver_id IS NULL AND REPLACE(ct.driver_name_manual, ' ', '') = REPLACE(d.name, ' ', ''))
+       WHERE 1=1
+         ${dateFrom ? 'AND ct.date >= ?' : ''} ${dateTo ? 'AND ct.date <= ?' : ''}
+       ${driverId ? 'AND (d.id = ? OR ct.driver_id = ?)' : ''}
+       GROUP BY COALESCE(d.id, ct.driver_name_manual)
        ORDER BY trip_count DESC`,
-      [...(dateFrom ? [dateFrom] : []), ...(dateTo ? [dateTo] : []), ...(driverId ? [driverId] : [])]
+      [...(dateFrom ? [dateFrom] : []), ...(dateTo ? [dateTo] : []), ...(driverId ? [driverId, driverId] : [])]
     );
 
     const summary = rows.reduce((acc, r) => {

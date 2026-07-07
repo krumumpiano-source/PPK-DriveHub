@@ -103,14 +103,15 @@ export async function onRequest(context) {
     }
 
     await dbRun(env.DB,
-      `INSERT INTO usage_records (id, car_id, driver_id, record_type, datetime, mileage, location, notes, queue_id, data_quality, requester_name, record_source, purpose, destination, driver_name_manual, passengers, odometer_image, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'normal', ?, 'qr_manual', ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO usage_records (id, car_id, driver_id, record_type, datetime, mileage, location, notes, queue_id, data_quality, requester_name, record_source, purpose, destination, driver_name_manual, passengers, odometer_image, lat, lng, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'normal', ?, 'qr_manual', ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, body.car_id, body.driver_id || null, body.record_type,
        body.datetime || ts, body.mileage || null,
        body.location || '', body.notes || '', body.queue_id || null,
        body.requester_name || null,
        body.purpose || null, body.destination || null, body.driver_name_manual || null,
-       body.passengers || null, odometerImagePath, ts]
+       body.passengers || null, odometerImagePath, 
+       body.lat || null, body.lng || null, ts]
     );
     // Update car mileage if provided
     if (body.mileage && body.mileage > 0) {

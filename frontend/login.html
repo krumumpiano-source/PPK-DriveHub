@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>เข้าสู่ระบบ - PPK DriveHub</title>
   <script src="config.js"></script>
   <script>window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'login';</script>
@@ -281,6 +281,10 @@
       margin: 0;
     }
   </style>
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="/icon.png">
 </head>
 
 <body>
@@ -322,6 +326,11 @@
           <span class="btn-icon">➡️</span>
           <span>เข้าสู่ระบบ</span>
         </button>
+
+        <button type="button" class="btn-login" style="background:#00B900; margin-top: 10px;" onclick="window.location.href='/api/auth/line'">
+          <span class="btn-icon">💬</span>
+          <span>เข้าสู่ระบบด้วย LINE</span>
+        </button>
       </form>
 
       <div class="divider"><span>หรือ</span></div>
@@ -358,6 +367,33 @@
         }
       } catch (e) { /* ignore */ }
     })();
+
+    // Handle LINE login callback via URL params
+    window.onload = function() {
+      var urlParams = new URLSearchParams(window.location.search);
+      var token = urlParams.get('token');
+      var userStr = urlParams.get('user');
+      var err = urlParams.get('error');
+
+      if (err === 'line_not_linked') {
+        showAlert('บัญชี LINE นี้ยังไม่ได้ผูกกับระบบ กรุณาติดต่อแอดมิน', 'error');
+      }
+
+      if (token && userStr) {
+        try {
+          var userObj = JSON.parse(decodeURIComponent(userStr));
+          API.setToken(token, true);
+          API.setUser(userObj);
+          if (userObj.must_change_password) {
+            window.location.href = 'change-password.html';
+          } else {
+            window.location.href = 'dashboard.html';
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    };
 
     async function handleLogin(event) {
       event.preventDefault();
