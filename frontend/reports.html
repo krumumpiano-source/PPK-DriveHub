@@ -1551,6 +1551,34 @@
             new d.TableCell({columnSpan:5,borders:_BC,shading:_HSSUB,children:[ppc('-',{size:_SC})]}),
           ]}));
           sec3.push(new d.Table({width:{size:100,type:d.WidthType.PERCENTAGE},rows:fRows}));
+          // ── สรุปการเบิกน้ำมันรายบุคคล ──
+          var byPerson={}, personOrder=[];
+          fuelRecs.forEach(function(f){
+            var nm=f.driver_name||f.driver_name_manual||'ไม่ระบุ';
+            if(!byPerson[nm]){byPerson[nm]={cnt:0,liters:0,amount:0};personOrder.push(nm);}
+            byPerson[nm].cnt++;
+            byPerson[nm].liters+=(+f.liters||0);
+            byPerson[nm].amount+=(+f.amount||0);
+          });
+          personOrder.sort(function(a,b){return byPerson[b].amount-byPerson[a].amount;});
+          sec3.push(ppc('สรุปการเบิกน้ำมันรายบุคคล '+periodLabel,{size:_SH,bold:true,sp:{before:240,after:20}}));
+          var pH=[{w:600,t:'ที่'},{w:3400,t:'ผู้เบิก'},{w:1600,t:'จำนวนครั้ง'},{w:2200,t:'ปริมาณรวม\n(ลิตร)'},{w:2200,t:'จำนวนเงินรวม\n(บาท)'}];
+          var pHdr=new d.TableRow({tableHeader:true,children:pH.map(function(c){return hCell(c.t,c.w);})});
+          var pRows=[pHdr];
+          personOrder.forEach(function(nm,i){
+            var v=byPerson[nm];
+            pRows.push(new d.TableRow({children:[
+              dCellC(i+1,pH[0].w),dCell(nm,pH[1].w),dCellC(v.cnt,pH[2].w),
+              dCellR(nf(v.liters,2),pH[3].w),dCellR(bf(v.amount),pH[4].w),
+            ]}));
+          });
+          pRows.push(new d.TableRow({children:[
+            new d.TableCell({columnSpan:2,borders:_BC,shading:_HSSUB,children:[ppc('รวมทั้งสิ้น '+personOrder.length+' คน',{size:_SC,bold:true,sp:{before:20,after:20}})]}),
+            new d.TableCell({borders:_BC,shading:_HSSUB,children:[ppc(String(fuelRecs.length),{size:_SC,bold:true,sp:{before:20,after:20}})]}),
+            new d.TableCell({borders:_BC,shading:_HSSUB,children:[new d.Paragraph({alignment:d.AlignmentType.RIGHT,children:[new d.TextRun({text:nf(totFL,2),font:_F,size:_SC,bold:true})],spacing:{before:20,after:20}})]}),
+            new d.TableCell({borders:_BC,shading:_HSSUB,children:[new d.Paragraph({alignment:d.AlignmentType.RIGHT,children:[new d.TextRun({text:bf(totFA),font:_F,size:_SC,bold:true})],spacing:{before:20,after:20}})]}),
+          ]}));
+          sec3.push(new d.Table({width:{size:100,type:d.WidthType.PERCENTAGE},rows:pRows}));
         } else {sec3.push(ppc('ไม่มีข้อมูลน้ำมันในเดือนนี้',{size:_SB,sp:{before:40,after:40}}));}
         // Section 4 (Portrait): ซ่อมบำรุง + sig
         var sec4=[];
