@@ -1488,6 +1488,8 @@
             var bHdr=new d.TableRow({tableHeader:true,children:bH.map(function(c){return hCell(c.t,c.w,{size:_SC});})});
             var bRows=[bHdr];
             var totalKmCar=0;
+            recs.sort(function(a,b){return ((a.date||'')+(a.time_start||'')).localeCompare((b.date||'')+(b.time_start||''));});
+            var prevRetMile=null;
             recs.forEach(function(rec,i){
               var ms=rec.mileage_start!=null?+rec.mileage_start:null;
               var me=rec.mileage_end!=null?+rec.mileage_end:null;
@@ -1496,12 +1498,18 @@
               var kmStr=kmVal!=null?nf(kmVal):'-';
               var dep=(rec.actual_departure||'').substr(11,5)||'-';
               var ret=(rec.actual_return||'').substr(11,5)||'-';
-              // ── หมายเหตุอัตโนมัติ (ตัวหนังสือสีแดงเมื่อบันทึกไม่ครบ) ──
-              var noteTxt, noteRed=false;
-              if(ms==null && me==null){ noteTxt='มีการใช้รถโดยไม่บันทึกข้อมูล'; noteRed=true; }
-              else if(ms==null){ noteTxt='พนักงานขับรถไม่บันทึกข้อมูลก่อนออกเดินทาง'; noteRed=true; }
-              else if(me==null){ noteTxt='พนักงานขับรถไม่บันทึกกลับมาจากเดินทาง'; noteRed=true; }
-              else { noteTxt=rec.notes||'-'; }
+              // ── หมายเหตุ: ใส่เฉพาะกรณีผิดปกติ (เที่ยวปกติเว้นว่าง) ──
+              var notes=[];
+              if(ms==null && me==null){ notes.push('มีการใช้รถโดยไม่บันทึกข้อมูล'); }
+              else {
+                if(ms==null) notes.push('ไม่บันทึกเลขไมล์ก่อนออกเดินทาง');
+                if(me==null) notes.push('ไม่บันทึกเลขไมล์กลับมาจากเดินทาง');
+                if(ms!=null && prevRetMile!=null && ms<prevRetMile) notes.push('เลขไมล์ก่อนออกเดินทางน้อยกว่าไมล์กลับของคิวก่อนหน้า ('+nf(prevRetMile)+')');
+                if(ms!=null && me!=null && me<ms) notes.push('เลขไมล์กลับน้อยกว่าไมล์ออก (บันทึกผิด)');
+              }
+              var noteRed=notes.length>0;
+              var noteTxt=noteRed?notes.join(' / '):'';
+              if(me!=null) prevRetMile=me;
               var noteCell=new d.TableCell({width:{size:bH[12].w,type:d.WidthType.DXA},borders:_BC,
                 children:[ppl(noteTxt,{size:_SC,color:noteRed?'CC0000':undefined,sp:{before:20,after:20}})]});
               bRows.push(new d.TableRow({children:[
