@@ -741,7 +741,11 @@ export async function onRequest(context) {
     if (dateFrom) { gfWhere.push('DATE(dep.datetime) >= ?'); gfParams.push(dateFrom); }
     if (dateTo) { gfWhere.push('DATE(dep.datetime) <= ?'); gfParams.push(dateTo); }
     if (carId) { gfWhere.push('dep.car_id = ?'); gfParams.push(carId); }
-    if (driverId) { gfWhere.push('dep.driver_id = ?'); gfParams.push(driverId); }
+    if (driverId) {
+      // Match driver_id OR fuzzy match manual name (strip spaces, prefixes, and common typos like ค์/ศ์)
+      gfWhere.push(`(dep.driver_id = ? OR (SELECT REPLACE(REPLACE(REPLACE(name, ' ', ''), 'ค์', ''), 'ศ์', '') FROM drivers WHERE id = ?) LIKE '%' || REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(dep.driver_name_manual, 'นาย', ''), 'นางสาว', ''), 'นาง', ''), ' ', ''), 'ค์', '') || '%')`);
+      gfParams.push(driverId, driverId);
+    }
     const gfRows = await dbAll(env.DB,
       `SELECT dep.id, DATE(dep.datetime) AS date, TIME(dep.datetime) AS time_start,
        dep.destination, dep.requester_name AS requested_by,
@@ -1081,8 +1085,35 @@ export async function onRequest(context) {
        ORDER BY trip_count DESC`,
       [...(dateFrom ? [dateFrom] : []), ...(dateTo ? [dateTo] : []), ...(driverId ? [driverId, driverId] : [])]
     );
+    // Merge drivers with similar names or aliases (especially from Google Forms to system drivers)
+    const mergedDrivers = {};
+    rows.forEach(r => {
+      let nName = (r.driver_name || '').replace(/ /g, '').replace(/^นาย/, '').replace(/^นางสาว/, '').replace(/^นาง/, '');
+      nName = nName.replace(/\(.*\)/g, ''); // remove suffixes like (สำรอง1)
+      nName = nName.replace(/ศ์/g, 'ค์'); // handle common typo in this school for ใหญ่วงศ์/ใหญ่วงค์
+      
+      let key = r.driver_id && !r.driver_id.startsWith('manual-') ? r.driver_id : nName;
+      if (mergedDrivers[key]) {
+         mergedDrivers[key].trip_count += r.trip_count;
+         mergedDrivers[key].total_km += r.total_km;
+         mergedDrivers[key].trips_with_km += r.trips_with_km;
+         mergedDrivers[key].total_hours += r.total_hours;
+         mergedDrivers[key].weekday_trips += r.weekday_trips;
+         mergedDrivers[key].weekend_trips += r.weekend_trips;
+         mergedDrivers[key].trips_no_record += r.trips_no_record;
+         mergedDrivers[key].trips_incomplete += r.trips_incomplete;
+         // Keep the registered driver's name if we found a match
+         if (r.driver_id && !r.driver_id.startsWith('manual-')) {
+            mergedDrivers[key].driver_name = r.driver_name;
+            mergedDrivers[key].driver_id = r.driver_id;
+         }
+      } else {
+         mergedDrivers[key] = { ...r };
+      }
+    });
+    const finalDrivers = Object.values(mergedDrivers).sort((a,b) => b.trip_count - a.trip_count);
 
-    const summary = rows.reduce((acc, r) => {
+    const summary = finalDrivers.reduce((acc, r) => {
       acc.total_drivers += r.trip_count > 0 ? 1 : 0;
       acc.total_trips += r.trip_count || 0;
       acc.total_km += r.total_km || 0;
@@ -1091,7 +1122,7 @@ export async function onRequest(context) {
       return acc;
     }, { total_drivers: 0, total_trips: 0, total_km: 0, total_hours: 0, weekend_trips: 0 });
 
-    return success({ drivers: rows, summary, date_from: dateFrom, date_to: dateTo });
+    return success({ drivers: finalDrivers, summary, date_from: dateFrom, date_to: dateTo });
   }
 
   return error('Not Found', 404);
