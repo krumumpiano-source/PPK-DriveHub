@@ -1,4 +1,4 @@
-// Usage records — event-based (departure/return/refuel/inspection) + Auto-Heal
+﻿// Usage records — event-based (departure/return/refuel/inspection) + Auto-Heal
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, extractParam, notifyAllAdmins, uploadToR2, createNotification, sendTelegramMessage
@@ -702,10 +702,11 @@ export async function onRequest(context) {
     );
 
     for (const dep of depRecords) {
-      // หา return record ที่ตามหลัง departure นี้ (ยังไม่มี queue_id ด้วยหรือมีก็ได้)
+      // หา return record ที่ตามหลัง departure นี้ (ต้องยังไม่มี queue_id เพื่อไม่ดึง return ที่ถูกจับคู่ไปแล้ว)
       const retRecord = await dbFirst(env.DB,
         `SELECT id, datetime, queue_id FROM usage_records
          WHERE car_id = ? AND record_type = 'return'
+           AND queue_id IS NULL
            AND datetime > ?
            AND NOT EXISTS (
              SELECT 1 FROM usage_records dep2
@@ -730,6 +731,21 @@ export async function onRequest(context) {
       const newQueueId = generateUUID();
       const depDate = dep.datetime.substr(0, 10);
       const depTime = dep.datetime.length >= 16 ? dep.datetime.substr(11, 5) : '00:00';
+
+      // idempotency guard: ถ้ามีคิวสำหรับ (รถ+วันที่+เวลาออก) นี้อยู่แล้ว ให้ผูก record เข้าคิวเดิม
+      // แทนการสร้างคิวใหม่ (กันการรัน backfill ซ้ำ/ซ้อนแล้วเกิดคิวซ้ำแบบครึ่งๆ)
+      const existingQ = await dbFirst(env.DB,
+        `SELECT id FROM queue WHERE car_id = ? AND date = ? AND time_start = ? LIMIT 1`,
+        [dep.car_id, depDate, depTime]);
+      if (existingQ) {
+        await dbRun(env.DB, 'UPDATE usage_records SET queue_id = ? WHERE id = ?', [existingQ.id, dep.id]);
+        if (retRecord && !retRecord.queue_id) {
+          await dbRun(env.DB, 'UPDATE usage_records SET queue_id = ? WHERE id = ?', [existingQ.id, retRecord.id]);
+        }
+        skipped++;
+        continue;
+      }
+
       const retTime = retRecord ? (retRecord.datetime.length >= 16 ? retRecord.datetime.substr(11, 5) : '00:00') : depTime;
       const qStatus = retRecord ? 'completed' : 'ongoing';
       const bfNote = retRecord
