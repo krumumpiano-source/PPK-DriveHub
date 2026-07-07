@@ -732,6 +732,9 @@ export async function onRequest(context) {
       const depTime = dep.datetime.length >= 16 ? dep.datetime.substr(11, 5) : '00:00';
       const retTime = retRecord ? (retRecord.datetime.length >= 16 ? retRecord.datetime.substr(11, 5) : '00:00') : depTime;
       const qStatus = retRecord ? 'completed' : 'ongoing';
+      const bfNote = retRecord
+        ? 'สร้างอัตโนมัติจากการสแกน QR (ก่อนออกเดินทาง + กลับมาจากเดินทาง)'
+        : 'สร้างอัตโนมัติจากการสแกน QR (เฉพาะก่อนออกเดินทาง ยังไม่สแกนกลับ)';
 
       await dbRun(env.DB,
         `INSERT INTO queue (id, date, time_start, time_end, car_id, driver_id,
@@ -739,7 +742,7 @@ export async function onRequest(context) {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
         [newQueueId, depDate, depTime, retTime, dep.car_id, driverId,
          dep.purpose || 'บันทึกผ่าน QR', dep.destination || '',
-         qStatus, 'สร้างอัตโนมัติ backfill จากการสแกน QR', bfTs, bfTs]
+         qStatus, bfNote, bfTs, bfTs]
       );
       await dbRun(env.DB, 'UPDATE usage_records SET queue_id = ? WHERE id = ?', [newQueueId, dep.id]);
       if (retRecord && !retRecord.queue_id) {
