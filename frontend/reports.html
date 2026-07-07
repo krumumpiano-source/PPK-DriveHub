@@ -1093,7 +1093,14 @@
     }
     function docStyles(){
       var d=window.docx;
-      return {default:{document:{run:{font:_F,size:_SB},paragraph:{spacing:{line:360,lineRule:d.LineRuleType.AUTO}}}}};
+      return {
+        default:{document:{run:{font:_F,size:_SB},paragraph:{spacing:{line:360,lineRule:d.LineRuleType.AUTO}}}},
+        paragraphStyles:[{
+          id:'Heading1', name:'Heading 1', basedOn:'Normal', next:'Normal', quickFormat:true,
+          run:{font:_F,size:_SH,bold:true,color:'000000'},
+          paragraph:{spacing:{before:120,after:120},outlineLevel:0}
+        }]
+      };
     }
     function ppc(text,opts){
       var d=window.docx;
@@ -1111,6 +1118,19 @@
     function tr(text,opts){var d=window.docx;var o=opts||{};return new d.TextRun({text:String(text||''),font:_F,size:o.size||_SB,bold:!!o.bold,underline:o.underline||undefined,color:o.color||undefined});}
     function el(n){var d=window.docx;var a=[];for(var i=0;i<(n||1);i++)a.push(new d.Paragraph({children:[]}));return a;}
     function pb(){return new (window.docx.Paragraph)({children:[],pageBreakBefore:true});}
+    function ppcHead(text,opts){
+      var d=window.docx;var o=opts||{};
+      return new d.Paragraph({heading:d.HeadingLevel.HEADING_1,alignment:d.AlignmentType.CENTER,spacing:o.sp||{before:0,after:120},children:[new d.TextRun({text:String(text||''),font:_F,size:_SH,bold:true,color:'000000'})]});
+    }
+    function pageFooter(){
+      var d=window.docx;
+      return new d.Footer({children:[new d.Paragraph({alignment:d.AlignmentType.CENTER,children:[
+        new d.TextRun({text:'หน้า ',font:_F,size:_SC}),
+        new d.TextRun({children:[d.PageNumber.CURRENT],font:_F,size:_SC}),
+        new d.TextRun({text:' / ',font:_F,size:_SC}),
+        new d.TextRun({children:[d.PageNumber.TOTAL_PAGES],font:_F,size:_SC}),
+      ]})]});
+    }
     var _BC={top:{style:'single',size:4},bottom:{style:'single',size:4},left:{style:'single',size:4},right:{style:'single',size:4}};
     var _BCN={top:{style:'none',size:0},bottom:{style:'none',size:0},left:{style:'none',size:0},right:{style:'none',size:0}};
     var _HS={fill:'e8eaf6',type:'clear'};
@@ -1457,7 +1477,7 @@
         sec1.push(ppc(SCHOOL_TH,{size:_SH,sp:{before:0,after:20}}));
         sec1.push(ppc(ZONE_TH,{size:_SB,sp:{before:0,after:100}}));
         // Summary stats
-        sec1.push(ppc('สรุปภาพรวม',{size:_SH,bold:true,sp:{before:60,after:20}}));
+        sec1.push(ppcHead('สรุปภาพรวม'));
         var sumH=[{w:1200,t:'หัวข้อ'},{w:1200,t:'จำนวน'},{w:1200,t:'หน่วย'},{w:4506,t:'หมายเหตุ'}];
         var sumTbl=[new d.TableRow({tableHeader:true,children:sumH.map(function(c){return hCell(c.t,c.w);})})];
         function sumRow(label,val,unit,note){return new d.TableRow({children:[dCell(label,sumH[0].w),dCellR(val,sumH[1].w),dCell(unit,sumH[2].w),dCell(note||'-',sumH[3].w)]}); }
@@ -1468,9 +1488,24 @@
         sumTbl.push(sumRow('รายการซ่อมบำรุง',nf(repRecs.length),'รายการ',''));
         sumTbl.push(sumRow('ค่าซ่อมบำรุง',bf(totRA),'บาท',''));
         sec1.push(new d.Table({width:{size:100,type:d.WidthType.PERCENTAGE},rows:sumTbl}));
+
+        // ── คำนำ ──
+        var secIntro=[];
+        secIntro.push(ppc('คำนำ',{size:_ST,bold:true,sp:{before:0,after:160}}));
+        secIntro.push(ppl('          รายงานผลการใช้รถราชการฉบับนี้ จัดทำขึ้นโดยงานยานพาหนะ '+SCHOOL_TH+' เพื่อรายงานและสรุปผลการให้บริการรถยนต์ราชการในรอบ'+periodLabel+' ประกอบด้วยข้อมูลการใช้รถ การเบิกจ่ายน้ำมันเชื้อเพลิง การซ่อมบำรุงยานพาหนะ ตลอดจนสถิติการใช้งานรายคันและรายบุคคล',{size:_SB,sp:{before:0,after:80}}));
+        secIntro.push(ppl('          ข้อมูลทั้งหมดประมวลผลจากระบบบริหารจัดการยานพาหนะ PPK-DriveHub ซึ่งบันทึกโดยพนักงานขับรถและผู้ขอใช้รถผ่านระบบดิจิทัล เพื่อให้การบริหารจัดการยานพาหนะเป็นไปอย่างโปร่งใส ตรวจสอบได้ และเกิดประโยชน์สูงสุดต่อทางราชการ',{size:_SB,sp:{before:0,after:80}}));
+        secIntro.push(ppl('          งานยานพาหนะหวังเป็นอย่างยิ่งว่ารายงานฉบับนี้จะเป็นประโยชน์ต่อการวางแผนและการตัดสินใจของผู้บริหาร ตลอดจนการพัฒนาการให้บริการยานพาหนะให้มีประสิทธิภาพยิ่งขึ้นต่อไป',{size:_SB,sp:{before:0,after:120}}));
+        secIntro.push(ppR([tr('งานยานพาหนะ',{size:_SB})],{align:d.AlignmentType.RIGHT,sp:{before:80,after:0}}));
+        secIntro.push(ppR([tr(SCHOOL_TH,{size:_SB})],{align:d.AlignmentType.RIGHT,sp:{before:0,after:0}}));
+
+        // ── สารบัญ (สร้างเลขหน้าอัตโนมัติจากหัวข้อ) ──
+        var secTOC=[];
+        secTOC.push(ppc('สารบัญ',{size:_ST,bold:true,sp:{before:0,after:160}}));
+        secTOC.push(new d.TableOfContents('สารบัญ',{hyperlink:true,headingStyleRange:'1-1'}));
+
         // Section 2 (Landscape): บันทึกการใช้รถ — จัดรายคัน (แต่ละทะเบียนเป็นตารางแยก)
         var sec2=[];
-        sec2.push(ppc('บันทึกการใช้รถ '+periodLabel,{size:_SH,bold:true,sp:{before:0,after:20}}));
+        sec2.push(ppcHead('บันทึกการใช้รถ '+periodLabel));
         if(tripRecs.length){
           var bH=[{w:500,t:'ที่'},{w:780,t:'วันที่'},{w:800,t:'ผู้ขอใช้'},{w:1400,t:'ปลายทาง/วัตถุประสงค์'},{w:800,t:'ผู้ขับ'},{w:820,t:'เวลาออก\n(แผน)'},{w:820,t:'เวลากลับ\n(แผน)'},{w:820,t:'เวลาออก\n(จริง)'},{w:820,t:'เวลากลับ\n(จริง)'},{w:760,t:'ไมล์ออก'},{w:760,t:'ไมล์กลับ'},{w:760,t:'ระยะ\n(กม.)'},{w:766,t:'หมายเหตุ'}];
           // จัดกลุ่มตามทะเบียนรถ เรียงตามวันที่
@@ -1534,7 +1569,7 @@
           });
         } else {sec2.push(ppc('ไม่มีข้อมูลการใช้รถในช่วงนี้',{size:_SB,sp:{before:40,after:40}}));}        // Section 3 (Landscape): บัญชีคุมน้ำมัน
         var sec3=[];
-        sec3.push(ppc('บัญชีคุมน้ำมันเชื้อเพลิง '+periodLabel,{size:_SH,bold:true,sp:{before:0,after:20}}));
+        sec3.push(ppcHead('บัญชีคุมน้ำมันเชื้อเพลิง '+periodLabel));
         if(fuelRecs.length){
           var fH=[{w:500,t:'ที่'},{w:740,t:'วันที่'},{w:740,t:'เวลา'},{w:900,t:'ทะเบียน'},{w:1000,t:'เลขที่ใบเสร็จ'},{w:560,t:'ชนิด\nน้ำมัน'},{w:560,t:'ปริมาณ\n(ลิตร)'},{w:700,t:'ราคา/\nลิตร'},{w:800,t:'จำนวนเงิน'},{w:900,t:'วงเงิน\nสะสม'},{w:700,t:'เลขมาตร'},{w:700,t:'กม./ลิตร'},{w:1000,t:'ผู้เบิก/ผู้ขับ'},{w:1306,t:'สถานีบริการ'},{w:980,t:'หมายเหตุ'}];
           var fHdr=new d.TableRow({tableHeader:true,children:fH.map(function(c){return hCell(c.t,c.w,{size:_SC});})});
@@ -1590,7 +1625,7 @@
         } else {sec3.push(ppc('ไม่มีข้อมูลน้ำมันในเดือนนี้',{size:_SB,sp:{before:40,after:40}}));}
         // Section 4 (Portrait): ซ่อมบำรุง + sig
         var sec4=[];
-        sec4.push(ppc('รายงานซ่อมบำรุง '+periodLabel,{size:_SH,bold:true,sp:{before:0,after:20}}));
+        sec4.push(ppcHead('รายงานซ่อมบำรุง '+periodLabel));
         if(repRecs.length){
           var rH=[{w:500,t:'ที่'},{w:860,t:'วันที่แจ้ง'},{w:900,t:'ทะเบียน'},{w:1400,t:'ปัญหา'},{w:1400,t:'รายละเอียด'},{w:1200,t:'ผู้รับซ่อม'},{w:900,t:'ค่าใช้จ่าย'},{w:946,t:'สถานะ'}];
           var rHdr=new d.TableRow({tableHeader:true,children:rH.map(function(c){return hCell(c.t,c.w);})});
@@ -1605,12 +1640,6 @@
           });
           sec4.push(new d.Table({width:{size:100,type:d.WidthType.PERCENTAGE},rows:rRows}));
         } else {sec4.push(ppc('ไม่มีรายการซ่อมบำรุงในเดือนนี้',{size:_SB,sp:{before:40,after:40}}));}
-        sec4.push(...el(1));
-
-        sec4.push(...sigV('ผู้จัดทำ',P_AUTHOR.name,P_AUTHOR.pos));
-        sec4.push(...sigV('ผู้ตรวจสอบ',P_PURCHASE.name,P_PURCHASE.pos));
-        sec4.push(...sigV('หัวหน้างานยานพาหนะ',P_CHIEF.name,P_CHIEF.pos));
-        sec4.push(...sigV('ผู้อนุมัติ',P_DIRECTOR.name,P_DIRECTOR.pos));
 
         // --- Added: Vehicle & Driver Detailed Stats ---
         var vStats = {};
@@ -1667,7 +1696,7 @@
         });
         
         var sec5=[];
-        sec5.push(ppc('สถิติการใช้งานรายคัน '+periodLabel,{size:_SH,bold:true,sp:{before:0,after:20}}));
+        sec5.push(ppcHead('สถิติการใช้งานรายคัน '+periodLabel));
         var vsH=[{w:500,t:'ที่'},{w:1000,t:'ทะเบียน'},{w:900,t:'จำนวนเที่ยว'},{w:900,t:'ระยะทาง\nรวม (กม.)'},{w:1600,t:'ใกล้สุด'},{w:1600,t:'บ่อยสุด'},{w:1600,t:'ไกลสุด'},{w:1400,t:'ไม่บันทึกข้อมูล\n(ครั้ง/กม.)'}];
         var vsHdr=new d.TableRow({tableHeader:true,children:vsH.map(function(c){return hCell(c.t,c.w);})});
         var vsRows=[vsHdr];
@@ -1683,7 +1712,7 @@
         sec5.push(new d.Table({width:{size:100,type:d.WidthType.PERCENTAGE},rows:vsRows}));
 
         var sec6=[];
-        sec6.push(ppc('สถิติการทำงานรายบุคคล '+periodLabel,{size:_SH,bold:true,sp:{before:0,after:20}}));
+        sec6.push(ppcHead('สถิติการทำงานรายบุคคล '+periodLabel));
         var dsH=[{w:500,t:'ที่'},{w:1500,t:'ชื่อ-สกุล'},{w:900,t:'จำนวนเที่ยว'},{w:900,t:'ระยะทาง\nรวม (กม.)'},{w:1600,t:'ใกล้สุด'},{w:1600,t:'บ่อยสุด'},{w:1600,t:'ไกลสุด'},{w:1000,t:'ลืมบันทึก\n(ครั้ง)'}];
         var dsHdr=new d.TableRow({tableHeader:true,children:dsH.map(function(c){return hCell(c.t,c.w);})});
         var dsRows=[dsHdr];
@@ -1699,14 +1728,86 @@
         sec6.push(new d.Table({width:{size:100,type:d.WidthType.PERCENTAGE},rows:dsRows}));
         // --- End Added ---
 
-        var doc=new d.Document({styles:docStyles(),sections:[
-          {properties:{page:{size:{width:11906,height:16838},margin:{top:1080,bottom:1080,left:1440,right:1080}}},children:secMemo},
-          {properties:{page:{size:{width:11906,height:16838},margin:{top:1080,bottom:1080,left:1440,right:1080}}},children:sec1},
-          {properties:{page:{size:{width:16838,height:11906},margin:{top:1080,bottom:1080,left:1080,right:1080}}},children:sec2},
-          {properties:{page:{size:{width:16838,height:11906},margin:{top:1080,bottom:1080,left:1080,right:1080}}},children:sec3},
-          {properties:{page:{size:{width:11906,height:16838},margin:{top:1080,bottom:1080,left:1440,right:1080}}},children:sec4},
-          {properties:{page:{size:{width:16838,height:11906},margin:{top:1080,bottom:1080,left:1080,right:1080}}},children:sec5},
-          {properties:{page:{size:{width:16838,height:11906},margin:{top:1080,bottom:1080,left:1080,right:1080}}},children:sec6},
+        // ── ข้อเสนอแนะและแนวทางแก้ไข (วิเคราะห์จากข้อมูลจริง) ──
+        var secRecommend=[];
+        secRecommend.push(ppcHead('ข้อเสนอแนะและแนวทางแก้ไข'));
+        var driversForgot=Object.keys(dStats).filter(function(k){return k!=='-'&&dStats[k].forgotCount>0;})
+          .map(function(k){return {name:k,cnt:dStats[k].forgotCount};}).sort(function(a,b){return b.cnt-a.cnt;});
+        var vehiclesUnrec=Object.keys(vStats).filter(function(k){return k!=='-'&&vStats[k].unrecordedCount>0;})
+          .map(function(k){return {plate:k,cnt:vStats[k].unrecordedCount};}).sort(function(a,b){return b.cnt-a.cnt;});
+        var mileErrCnt=0;
+        (function(){
+          var grp={};
+          tripRecs.forEach(function(r){var lp=r.license_plate||'-';(grp[lp]=grp[lp]||[]).push(r);});
+          Object.keys(grp).forEach(function(lp){
+            var arr=grp[lp].slice().sort(function(a,b){return((a.date||'')+(a.time_start||'')).localeCompare((b.date||'')+(b.time_start||''));});
+            var prev=null;
+            arr.forEach(function(r){
+              var ms=r.mileage_start!=null?+r.mileage_start:null;
+              var me=r.mileage_end!=null?+r.mileage_end:null;
+              if(ms!=null&&prev!=null&&ms<prev)mileErrCnt++;
+              else if(ms!=null&&me!=null&&me<ms)mileErrCnt++;
+              if(me!=null)prev=me;
+            });
+          });
+        })();
+        var recItems=[];
+        if(driversForgot.length){
+          recItems.push({
+            h:'การบันทึกเลขไมล์ไม่ครบถ้วน',
+            p:'พบพนักงานขับรถที่บันทึกเลขไมล์ก่อนออกเดินทางหรือกลับมาจากเดินทางไม่ครบ จำนวน '+driversForgot.length+' คน ได้แก่ '+driversForgot.map(function(x){return x.name+' ('+x.cnt+' ครั้ง)';}).join(', '),
+            s:'ขอความร่วมมือให้พนักงานขับรถบันทึกเลขไมล์ทั้งก่อนออกเดินทางและเมื่อกลับถึงหน่วยงานทุกครั้งผ่านระบบ QR Code และให้หัวหน้างานยานพาหนะกำกับติดตามการบันทึกให้ครบถ้วน'
+          });
+        }
+        if(vehiclesUnrec.length){
+          recItems.push({
+            h:'รถที่มีการใช้งานโดยไม่บันทึกข้อมูล',
+            p:'พบรถที่มีการใช้งานแต่ไม่มีการบันทึกเลขไมล์ทั้งขาออกและขากลับ จำนวน '+vehiclesUnrec.length+' คัน ได้แก่ '+vehiclesUnrec.map(function(x){return x.plate+' ('+x.cnt+' ครั้ง)';}).join(', '),
+            s:'ควรตรวจสอบสาเหตุและย้ำเตือนผู้ใช้รถให้ดำเนินการขออนุญาตใช้รถและบันทึกข้อมูลการเดินทางในระบบทุกครั้งก่อนและหลังการใช้งาน'
+          });
+        }
+        if(mileErrCnt>0){
+          recItems.push({
+            h:'ความคลาดเคลื่อนของเลขไมล์',
+            p:'ตรวจพบรายการที่เลขไมล์ไม่สอดคล้องกัน (เลขไมล์ก่อนออกเดินทางน้อยกว่าไมล์กลับของคิวก่อนหน้า หรือเลขไมล์กลับน้อยกว่าเลขไมล์ออก) จำนวน '+mileErrCnt+' รายการ',
+            s:'ควรตรวจสอบและแก้ไขความถูกต้องของเลขไมล์ในระบบ และเน้นย้ำให้พนักงานขับรถบันทึกเลขไมล์ตามที่ปรากฏบนหน้าปัดจริง เพื่อให้การคำนวณระยะทางและอัตราสิ้นเปลืองเชื้อเพลิงถูกต้อง'
+          });
+        }
+        if(!recItems.length){
+          secRecommend.push(ppl('          ในรอบ'+periodLabel+' การบันทึกข้อมูลการใช้รถราชการเป็นไปอย่างครบถ้วนและถูกต้อง ไม่พบข้อบกพร่องที่มีนัยสำคัญ ทั้งนี้ ควรรักษามาตรฐานการบันทึกข้อมูลและการกำกับติดตามให้คงอยู่ในระดับที่ดีต่อไป',{size:_SB,sp:{before:40,after:40}}));
+        } else {
+          secRecommend.push(ppl('          จากการประมวลผลข้อมูลการใช้รถราชการในรอบ'+periodLabel+' งานยานพาหนะมีข้อสังเกตและข้อเสนอแนะเพื่อการปรับปรุงการดำเนินงาน ดังนี้',{size:_SB,sp:{before:40,after:80}}));
+          recItems.forEach(function(it,i){
+            secRecommend.push(ppl((i+1)+'. '+it.h,{size:_SB,bold:true,sp:{before:80,after:20}}));
+            secRecommend.push(ppl('     ข้อสังเกต: '+it.p,{size:_SB,sp:{before:0,after:20}}));
+            secRecommend.push(ppl('     แนวทางแก้ไข: '+it.s,{size:_SB,sp:{before:0,after:40}}));
+          });
+        }
+        secRecommend.push(...el(1));
+        secRecommend.push(disclaimer());
+
+        // ── ลายเซ็นผู้จัดทำและผู้อนุมัติ ──
+        var secSign=[];
+        secSign.push(ppcHead('ผู้จัดทำและผู้อนุมัติรายงาน'));
+        secSign.push(...el(1));
+        secSign.push(...sigV('ผู้จัดทำ',P_AUTHOR.name,P_AUTHOR.pos));
+        secSign.push(...sigV('หัวหน้างานยานพาหนะ',P_CHIEF.name,P_CHIEF.pos));
+        secSign.push(...sigV('ผู้อนุมัติ',P_DIRECTOR.name,P_DIRECTOR.pos));
+
+        var PORT={size:{width:11906,height:16838},margin:{top:1080,bottom:1080,left:1440,right:1080}};
+        var LAND={size:{width:16838,height:11906},margin:{top:1080,bottom:1080,left:1080,right:1080}};
+        var doc=new d.Document({styles:docStyles(),features:{updateFields:true},sections:[
+          {properties:{page:PORT},children:secMemo},
+          {properties:{page:PORT},footers:{default:pageFooter()},children:sec1},
+          {properties:{page:PORT},footers:{default:pageFooter()},children:secIntro},
+          {properties:{page:PORT},footers:{default:pageFooter()},children:secTOC},
+          {properties:{page:LAND},footers:{default:pageFooter()},children:sec2},
+          {properties:{page:LAND},footers:{default:pageFooter()},children:sec3},
+          {properties:{page:PORT},footers:{default:pageFooter()},children:sec4},
+          {properties:{page:LAND},footers:{default:pageFooter()},children:sec5},
+          {properties:{page:LAND},footers:{default:pageFooter()},children:sec6},
+          {properties:{page:PORT},footers:{default:pageFooter()},children:secRecommend},
+          {properties:{page:PORT},footers:{default:pageFooter()},children:secSign},
         ]});
         var buf=await d.Packer.toBlob(doc);
         var fname='รายงาน-'+_wr.label.replace(/\s+/g,'-')+'.docx';
