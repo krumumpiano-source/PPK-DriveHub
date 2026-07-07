@@ -1418,6 +1418,37 @@
         var totFL=fuelRecs.reduce(function(s,f){return s+(+f.liters||0);},0);
         var totFA=fuelRecs.reduce(function(s,f){return s+(+f.amount||0);},0);
         var totRA=repRecs.reduce(function(s,r){return s+(+(r.grand_total||r.cost)||0);},0);
+        var totKmSum=0;
+        tripRecs.forEach(function(rec){var ms=rec.mileage_start,me=rec.mileage_end;if(ms!=null&&me!=null&&(+me)>=(+ms))totKmSum+=((+me)-(+ms));});
+
+        // ── หน้าที่ 1: บันทึกข้อความนำรายงาน (เอกสารราชการ) ──
+        var genDateTH=thDate(fmtDate(new Date()));
+        function sigRight(name,pos){
+          var A=d.AlignmentType.RIGHT;
+          return [
+            ppR([tr('ลงชื่อ .............................................',{size:_SB})],{align:A,sp:{before:120,after:0}}),
+            ppR([tr('('+name+')',{size:_SB})],{align:A,sp:{before:0,after:0}}),
+            ppR([tr(pos,{size:_SB})],{align:A,sp:{before:0,after:0}}),
+          ];
+        }
+        var secMemo=[];
+        secMemo.push(ppc('บันทึกข้อความ',{size:_ST,bold:true,sp:{before:0,after:120}}));
+        secMemo.push(ppl('ส่วนราชการ  งานยานพาหนะ '+SCHOOL_TH+'  '+ZONE_TH,{size:_SB,sp:{before:0,after:60}}));
+        secMemo.push(ppR([tr('ที่ ................/................',{size:_SB}),tr('                    วันที่ '+genDateTH,{size:_SB})],{sp:{before:0,after:60}}));
+        secMemo.push(ppl('เรื่อง  รายงานผลการใช้รถราชการ ประจำ'+periodLabel,{size:_SB,bold:true,sp:{before:0,after:60}}));
+        secMemo.push(ppl('เรียน  '+P_DIRECTOR.pos,{size:_SB,sp:{before:0,after:80}}));
+        secMemo.push(ppl('          ตามที่งานยานพาหนะ '+SCHOOL_TH+' ได้ให้บริการรถยนต์ราชการแก่บุคลากรของโรงเรียนในช่วง'+periodLabel+' นั้น บัดนี้ งานยานพาหนะได้รวบรวมและสรุปผลการดำเนินงานเรียบร้อยแล้ว โดยในช่วงดังกล่าวมีการใช้รถจำนวน '+nf(tripRecs.length)+' เที่ยว ระยะทางรวม '+nf(totKmSum)+' กิโลเมตร มีการเติมน้ำมันเชื้อเพลิง '+nf(fuelRecs.length)+' ครั้ง เป็นเงิน '+bf(totFA)+' บาท และมีการซ่อมบำรุงยานพาหนะ '+nf(repRecs.length)+' รายการ เป็นเงิน '+bf(totRA)+' บาท รายละเอียดปรากฏตามเอกสารแนบท้ายบันทึกฉบับนี้',{size:_SB,sp:{before:0,after:40}}));
+        secMemo.push(ppl('          จึงเรียนมาเพื่อโปรดทราบและพิจารณา',{size:_SB,sp:{before:0,after:160}}));
+        secMemo.push(...sigRight(P_AUTHOR.name,P_AUTHOR.pos));
+        secMemo.push(...el(1));
+        secMemo.push(ppl('ความเห็น'+P_CHIEF.pos,{size:_SB,sp:{before:120,after:0}}));
+        secMemo.push(ppl('.......................................................................................',{size:_SB,sp:{before:0,after:60}}));
+        secMemo.push(...sigRight(P_CHIEF.name,P_CHIEF.pos));
+        secMemo.push(...el(1));
+        secMemo.push(ppl('คำสั่ง / ความเห็นผู้อำนวยการ',{size:_SB,sp:{before:120,after:0}}));
+        secMemo.push(ppl('.......................................................................................',{size:_SB,sp:{before:0,after:60}}));
+        secMemo.push(...sigRight(P_DIRECTOR.name,P_DIRECTOR.pos));
+
         // Section 1: Cover
         var sec1=[];
         sec1.push(...el(3));
@@ -1465,6 +1496,14 @@
               var kmStr=kmVal!=null?nf(kmVal):'-';
               var dep=(rec.actual_departure||'').substr(11,5)||'-';
               var ret=(rec.actual_return||'').substr(11,5)||'-';
+              // ── หมายเหตุอัตโนมัติ (ตัวหนังสือสีแดงเมื่อบันทึกไม่ครบ) ──
+              var noteTxt, noteRed=false;
+              if(ms==null && me==null){ noteTxt='มีการใช้รถโดยไม่บันทึกข้อมูล'; noteRed=true; }
+              else if(ms==null){ noteTxt='พนักงานขับรถไม่บันทึกข้อมูลก่อนออกเดินทาง'; noteRed=true; }
+              else if(me==null){ noteTxt='พนักงานขับรถไม่บันทึกกลับมาจากเดินทาง'; noteRed=true; }
+              else { noteTxt=rec.notes||'-'; }
+              var noteCell=new d.TableCell({width:{size:bH[12].w,type:d.WidthType.DXA},borders:_BC,
+                children:[ppl(noteTxt,{size:_SC,color:noteRed?'CC0000':undefined,sp:{before:20,after:20}})]});
               bRows.push(new d.TableRow({children:[
                 dCellC(i+1,bH[0].w),dCellC(thDateSh(rec.date),bH[1].w),
                 dCell(rec.requester_display_name||rec.requested_by||'-',bH[2].w),
@@ -1474,7 +1513,7 @@
                 dCellC(dep,bH[7].w),dCellC(ret,bH[8].w),
                 dCellC(ms!=null?String(ms):'-',bH[9].w),
                 dCellC(me!=null?String(me):'-',bH[10].w),
-                dCellC(kmStr,bH[11].w),dCell(rec.notes||'-',bH[12].w),
+                dCellC(kmStr,bH[11].w),noteCell,
               ]}));
             });
             // footer row รวมระยะทาง
@@ -1625,6 +1664,7 @@
         // --- End Added ---
 
         var doc=new d.Document({styles:docStyles(),sections:[
+          {properties:{page:{size:{width:11906,height:16838},margin:{top:1080,bottom:1080,left:1440,right:1080}}},children:secMemo},
           {properties:{page:{size:{width:11906,height:16838},margin:{top:1080,bottom:1080,left:1440,right:1080}}},children:sec1},
           {properties:{page:{size:{width:16838,height:11906},margin:{top:1080,bottom:1080,left:1080,right:1080}}},children:sec2},
           {properties:{page:{size:{width:16838,height:11906},margin:{top:1080,bottom:1080,left:1080,right:1080}}},children:sec3},
