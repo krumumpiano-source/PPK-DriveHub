@@ -67,7 +67,7 @@
                 // We'll use the driver's own ID. We need to fetch it from their profile if they are a driver.
                 // Assuming `window.currentUser.driver_id` is available, if not we fetch pending directly
                 
-                const res = await window.apiFetch(`/api/warnings/pending`);
+                const res = await API.request(`/api/warnings/pending`);
                 const container = document.getElementById('warningsList');
                 container.innerHTML = '';
                 
@@ -143,7 +143,7 @@
                 if (result.isConfirmed) {
                     try {
                         Swal.showLoading();
-                        await window.apiFetch(`/api/warnings/${id}/acknowledge`, { method: 'POST' });
+                        await API.request(`/api/warnings/${id}/acknowledge`, { method: 'POST' });
                         Swal.fire('บันทึกสำเร็จ', 'ขอบคุณที่รับทราบข้อความเตือน', 'success');
                         await loadMyWarnings();
                     } catch (err) {
