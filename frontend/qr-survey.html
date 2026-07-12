@@ -96,9 +96,30 @@
       var forceDriverId=params.get('driver')||params.get('driver_id');
       
       if(!carId && !forceDriverId){
-        document.getElementById('carInfo').textContent='ไม่พบข้อมูล กรุณาสแกน QR Code ใหม่ หรือตรวจสอบลิงก์';
-        document.getElementById('errorSection').innerHTML='<div class="error-box">❌ ไม่พบข้อมูลรถหรือพนักงานขับรถ</div>';
-        document.getElementById('errorSection').style.display='block';
+        // Generic mode: let user select driver
+        document.getElementById('carInfo').innerHTML = '<span>กำลังโหลดรายชื่อพนักงาน...</span>';
+        try {
+            var r = await API.get('/api/survey/drivers');
+            if(r.success && r.data.length > 0) {
+                var selectHtml = '<div style="margin-top:8px; text-align:left;"><label style="font-size:0.9rem; font-weight:bold;">เลือกพนักงานขับรถที่คุณใช้บริการ:</label><select id="driverSelect" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ccc; margin-top:5px; font-size:1rem;">';
+                selectHtml += '<option value="">-- กรุณาเลือก --</option>';
+                r.data.forEach(function(d) {
+                    selectHtml += '<option value="'+d.id+'">'+d.name+'</option>';
+                });
+                selectHtml += '</select></div>';
+                document.getElementById('carInfo').innerHTML = selectHtml;
+                
+                // When driver is selected, update driverId
+                document.getElementById('driverSelect').addEventListener('change', function(e) {
+                    driverId = e.target.value;
+                });
+            } else {
+                document.getElementById('carInfo').textContent='ไม่พบพนักงานขับรถในระบบ';
+            }
+        } catch(e) {
+            document.getElementById('carInfo').textContent='เกิดข้อผิดพลาดในการโหลดรายชื่อ';
+        }
+        document.getElementById('formSection').style.display='block';
         return;
       }
       try{
@@ -124,6 +145,13 @@
     async function submitSurvey(e){
       e.preventDefault();
       // Validate all scores filled
+      if(!driverId && !carId) {
+          alert('กรุณาเลือกพนักงานขับรถที่ท่านใช้บริการ');
+          var select = document.getElementById('driverSelect');
+          if(select) select.focus();
+          return;
+      }
+      
       var data={car_id:carId,driver_id:driverId};
       var allFilled=true;
       SCORES.forEach(function(name){

@@ -11,6 +11,12 @@ export async function onRequest(context) {
   const path = url.pathname;
   const method = request.method;
 
+  // --- GET /api/survey/drivers --- PUBLIC (สำหรับดึงรายชื่อคนขับให้ผู้โดยสารเลือกเอง)
+  if (path === '/api/survey/drivers' && method === 'GET') {
+      const drivers = await dbAll(env.DB, `SELECT id, name FROM drivers WHERE status = 'active' ORDER BY name ASC`);
+      return success(drivers);
+  }
+
   // --- GET /api/survey/info --- PUBLIC (สำหรับ QR survey page หรือส่งลิงก์ตรง)
   if (path === '/api/survey/info' && method === 'GET') {
     const carId = url.searchParams.get('car_id');
