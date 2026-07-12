@@ -61,6 +61,39 @@
             </tr>
         </table>
 
+        <!-- Section 1.5: Comparative Summary -->
+        <h5 class="fw-bold mt-4"><i class="fa-solid fa-chart-pie text-success"></i> สรุปสัดส่วนเปรียบเทียบกับคนขับทุกคนรวมกัน (ในรอบปีงบประมาณ)</h5>
+        <table class="table-custom text-center">
+            <thead>
+                <tr>
+                    <th>รายการ</th>
+                    <th>รวมทุกคน</th>
+                    <th>คนขับท่านนี้</th>
+                    <th>คิดเป็น %</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-start fw-bold" style="background:#f9f9f9;">📋 คิวงาน (เที่ยวที่วิ่งเสร็จสิ้น)</td>
+                    <td id="compAllQueues">--</td>
+                    <td id="compDriverQueues">--</td>
+                    <td class="fw-bold text-primary" id="compQueuePct">--%</td>
+                </tr>
+                <tr>
+                    <td class="text-start fw-bold" style="background:#f9f9f9;">🛣️ ระยะทางรวม (กม.)</td>
+                    <td id="compAllKm">--</td>
+                    <td id="compDriverKm">--</td>
+                    <td class="fw-bold text-primary" id="compKmPct">--%</td>
+                </tr>
+                <tr>
+                    <td class="text-start fw-bold" style="background:#f9f9f9;">⚠️ ลืมบันทึกไมล์ (ครั้ง)</td>
+                    <td id="compAllMissed">--</td>
+                    <td id="compDriverMissed" class="text-danger fw-bold">--</td>
+                    <td class="fw-bold text-danger" id="compMissedPct">--%</td>
+                </tr>
+            </tbody>
+        </table>
+
         <!-- Section 2: Monthly Stats -->
         <h5 class="fw-bold mt-4"><i class="fa-solid fa-calendar-days text-primary"></i> 2. สรุปสถิติการวิ่งรถและการบันทึกไมล์ (รายเดือน)</h5>
         <table class="table-custom text-center">
@@ -159,6 +192,20 @@
                 // Fetch detailed empirical data (sections 2 and 3)
                 const empRes = await API.get(`/api/evaluations/empirical/${driverId}?year=${year}`);
                 const empData = empRes.data;
+
+                // Render Comparative Summary
+                if (empData.comparative) {
+                    const c = empData.comparative;
+                    document.getElementById('compAllQueues').textContent = c.all_queues.toLocaleString();
+                    document.getElementById('compDriverQueues').textContent = c.driver_queues.toLocaleString();
+                    document.getElementById('compQueuePct').textContent = c.queue_pct + '%';
+                    document.getElementById('compAllKm').textContent = c.all_km.toLocaleString();
+                    document.getElementById('compDriverKm').textContent = c.driver_km.toLocaleString();
+                    document.getElementById('compKmPct').textContent = c.km_pct + '%';
+                    document.getElementById('compAllMissed').textContent = c.all_missed.toLocaleString();
+                    document.getElementById('compDriverMissed').textContent = c.driver_missed.toLocaleString();
+                    document.getElementById('compMissedPct').textContent = c.missed_pct + '%';
+                }
 
                 // Render Monthly Stats
                 const monthTbody = document.getElementById('monthlyStatsTable');

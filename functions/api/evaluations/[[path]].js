@@ -183,11 +183,78 @@ export async function onRequest(context) {
             });
         }
 
+        // === Comparative stats: all drivers combined in the same fiscal year ===
+        // Total queues for ALL drivers
+        const allQueuesTotal = await db.prepare(`
+            SELECT COUNT(id) as total FROM queue WHERE status = 'completed' AND date >= ? AND date <= ?
+        `).bind(startDate, endDate).first();
+
+        // This driver's queue count
+        const driverQueueCount = queues.results ? queues.results.length : 0;
+
+        // Total mileage for ALL drivers (sum of return mileage - departure mileage per queue)
+        const allMileage = await db.prepare(`
+            SELECT 
+                q.driver_id,
+                SUM(COALESCE(ur_ret.mileage, 0) - COALESCE(ur_dep.mileage, 0)) as total_km
+            FROM queue q
+            LEFT JOIN usage_records ur_dep ON q.id = ur_dep.queue_id AND ur_dep.record_type = 'departure'
+            LEFT JOIN usage_records ur_ret ON q.id = ur_ret.queue_id AND ur_ret.record_type = 'return'
+            WHERE q.status = 'completed' AND q.date >= ? AND q.date <= ?
+            GROUP BY q.driver_id
+        `).bind(startDate, endDate).all();
+
+        let allDriversKm = 0;
+        let thisDriverKm = 0;
+        if (allMileage.results) {
+            allMileage.results.forEach(r => {
+                const km = Math.max(0, r.total_km || 0);
+                allDriversKm += km;
+                if (r.driver_id === driverId) thisDriverKm = km;
+            });
+        }
+
+        // Total missed logs for ALL drivers
+        const allMissed = await db.prepare(`
+            SELECT 
+                q.driver_id,
+                COUNT(q.id) as total_queues,
+                SUM(CASE WHEN ur_dep.id IS NULL THEN 1 ELSE 0 END) as missed_dep,
+                SUM(CASE WHEN ur_ret.id IS NULL THEN 1 ELSE 0 END) as missed_ret
+            FROM queue q
+            LEFT JOIN usage_records ur_dep ON q.id = ur_dep.queue_id AND ur_dep.record_type = 'departure'
+            LEFT JOIN usage_records ur_ret ON q.id = ur_ret.queue_id AND ur_ret.record_type = 'return'
+            WHERE q.status = 'completed' AND q.date >= ? AND q.date <= ?
+            GROUP BY q.driver_id
+        `).bind(startDate, endDate).all();
+
+        let allDriversMissed = 0;
+        let thisDriverMissed = 0;
+        let allDriversQueues = allQueuesTotal.total || 0;
+        if (allMissed.results) {
+            allMissed.results.forEach(r => {
+                const missed = (r.missed_dep || 0) + (r.missed_ret || 0);
+                allDriversMissed += missed;
+                if (r.driver_id === driverId) thisDriverMissed = missed;
+            });
+        }
+
         return success({
             driver_id: driverId,
             academic_year: year,
             monthly_stats: Object.values(monthlyStats),
-            missed_details: missedDetails
+            missed_details: missedDetails,
+            comparative: {
+                all_queues: allDriversQueues,
+                driver_queues: driverQueueCount,
+                queue_pct: allDriversQueues > 0 ? ((driverQueueCount / allDriversQueues) * 100).toFixed(1) : '0.0',
+                all_km: Math.round(allDriversKm),
+                driver_km: Math.round(thisDriverKm),
+                km_pct: allDriversKm > 0 ? ((thisDriverKm / allDriversKm) * 100).toFixed(1) : '0.0',
+                all_missed: allDriversMissed,
+                driver_missed: thisDriverMissed,
+                missed_pct: allDriversQueues > 0 ? ((thisDriverMissed / (allDriversQueues * 2)) * 100).toFixed(1) : '0.0'
+            }
         });
     }
 
