@@ -139,6 +139,7 @@ export async function onRequest(context) {
                 q.id as queue_id,
                 q.date,
                 q.mission,
+                q.destination,
                 c.license_plate,
                 MAX(CASE WHEN u.record_type = 'departure' THEN 1 ELSE 0 END) as has_departure,
                 MAX(CASE WHEN u.record_type = 'return' THEN 1 ELSE 0 END) as has_return
@@ -165,17 +166,26 @@ export async function onRequest(context) {
                 let missedForThisTrip = 0;
                 let missedParts = [];
 
-                if (q.has_departure) logsForThisTrip++; else { missedForThisTrip++; missedParts.push('ไมล์เข้า (ออกรถ)'); }
-                if (q.has_return) logsForThisTrip++; else { missedForThisTrip++; missedParts.push('ไมล์ออก (กลับถึง)'); }
+                if (q.has_departure) logsForThisTrip++; else { missedForThisTrip++; missedParts.push('ไม่บันทึกก่อนออกเดินทาง'); }
+                if (q.has_return) logsForThisTrip++; else { missedForThisTrip++; missedParts.push('ไม่บันทึกกลับมาจากเดินทาง'); }
 
                 monthlyStats[monthKey].has_logs += logsForThisTrip;
                 monthlyStats[monthKey].missed_logs += missedForThisTrip;
 
                 if (missedForThisTrip > 0) {
+                    let displayMission = q.mission;
+                    if (q.mission === 'บันทึกผ่าน QR' && q.destination) {
+                        displayMission = `บันทึกผ่าน QR (${q.destination})`;
+                    } else if (q.mission === 'บันทึกผ่าน QR' && !q.destination) {
+                        displayMission = 'บันทึกผ่าน QR (ไม่ระบุสถานที่)';
+                    } else if (q.destination) {
+                        displayMission = `${q.mission} (${q.destination})`;
+                    }
+
                     missedDetails.push({
                         date: q.date,
                         queue_id: q.queue_id,
-                        mission: q.mission,
+                        mission: displayMission,
                         car: q.license_plate,
                         missed: missedParts.join(', ')
                     });
