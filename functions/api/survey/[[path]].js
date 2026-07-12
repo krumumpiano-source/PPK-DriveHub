@@ -45,13 +45,16 @@ export async function onRequest(context) {
       `INSERT INTO survey_responses (id, car_id, queue_id, driver_id,
         politeness_score, safety_score, punctuality_score,
         cleanliness_score, appearance_score, overall_score,
-        comment, respondent_name, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        comment, respondent_name, ip_address, user_agent, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, body.car_id, queueId, driverId,
        body.politeness_score || null, body.safety_score || null,
        body.punctuality_score || null, body.cleanliness_score || null,
        body.appearance_score || null, body.overall_score || null,
-       body.comment || '', body.respondent_name || '', now()]
+       body.comment || '', body.respondent_name || '',
+       request.headers.get('CF-Connecting-IP') || request.headers.get('x-real-ip') || '',
+       request.headers.get('User-Agent') || '',
+       now()]
     );
     return success({ id, message: 'ขอบคุณสำหรับการประเมิน' }, 201);
   }
