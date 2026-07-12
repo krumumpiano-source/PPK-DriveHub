@@ -17,7 +17,8 @@
     .car-info{background:rgba(255,255,255,.15);padding:10px;border-radius:var(--radius-md);margin-top:10px;font-size:.9rem}
     .survey-body{padding:20px}
     .q-item{margin-bottom:20px}
-    .q-label{font-weight:600;font-size:.9rem;margin-bottom:8px;color:var(--color-text)}
+    .q-label{font-weight:600;font-size:.9rem;margin-bottom:2px;color:var(--color-text)}
+    .q-hint{font-size:.75rem;color:var(--color-text-muted);margin-bottom:8px;line-height:1.3}
     .stars{display:flex;gap:4px;direction:rtl;justify-content:flex-end}
     .stars input{display:none}
     .stars label{font-size:1.8rem;cursor:pointer;color:#d1d5db;transition:color .15s}
@@ -46,12 +47,36 @@
 
     <div id="formSection" class="survey-body" style="display:none">
       <form id="surveyForm" onsubmit="submitSurvey(event)">
-        <div class="q-item"><div class="q-label">1. ความสุภาพ ให้เกียรติผู้ใช้บริการ</div><div class="stars" id="s_politeness"></div></div>
-        <div class="q-item"><div class="q-label">2. ขับรถปลอดภัย (ไม่เร็วหวาดเสียว/เบรกกระชาก)</div><div class="stars" id="s_safety"></div></div>
-        <div class="q-item"><div class="q-label">3. ตรงต่อเวลา</div><div class="stars" id="s_punctuality"></div></div>
-        <div class="q-item"><div class="q-label">4. ความสะอาดของรถ</div><div class="stars" id="s_cleanliness"></div></div>
-        <div class="q-item"><div class="q-label">5. บุคลิกภาพ/บริการ (ไม่งอแง, แต่งกายดี, ไม่มีกลิ่นบุหรี่/กลิ่นตัว)</div><div class="stars" id="s_appearance"></div></div>
-        <div class="q-item"><div class="q-label">6. ความพึงพอใจโดยรวม</div><div class="stars" id="s_overall"></div></div>
+        <div class="q-item">
+          <div class="q-label">1. ความสุภาพ ให้เกียรติผู้ใช้บริการ</div>
+          <div class="q-hint">5 ดาว = สุภาพมาก พูดจาดี / 1 ดาว = พูดจาไม่ดี หยาบคาย</div>
+          <div class="stars" id="s_politeness"></div>
+        </div>
+        <div class="q-item">
+          <div class="q-label">2. ขับรถปลอดภัย (ไม่เร็วหวาดเสียว/เบรกกระชาก)</div>
+          <div class="q-hint">5 ดาว = ขับนิ่มนวล ปลอดภัย / 1 ดาว = ขับเร็ว หวาดเสียว</div>
+          <div class="stars" id="s_safety"></div>
+        </div>
+        <div class="q-item">
+          <div class="q-label">3. ตรงต่อเวลา</div>
+          <div class="q-hint">5 ดาว = มาก่อนเวลาหรือตรงเวลาเป๊ะ / 1 ดาว = มาสายรอนาน</div>
+          <div class="stars" id="s_punctuality"></div>
+        </div>
+        <div class="q-item">
+          <div class="q-label">4. ความสะอาดของรถ</div>
+          <div class="q-hint">5 ดาว = สะอาดเอี่ยม ไม่มีกลิ่นอับ / 1 ดาว = สกปรก มีขยะ</div>
+          <div class="stars" id="s_cleanliness"></div>
+        </div>
+        <div class="q-item">
+          <div class="q-label">5. บุคลิกภาพ/บริการ (ไม่งอแง, แต่งกายดี, ไม่มีกลิ่นตัว)</div>
+          <div class="q-hint">5 ดาว = บริการดีเยี่ยม ไม่มีกลิ่นรบกวน / 1 ดาว = งอแง มีกลิ่นรบกวน</div>
+          <div class="stars" id="s_appearance"></div>
+        </div>
+        <div class="q-item">
+          <div class="q-label">6. ความพึงพอใจโดยรวม</div>
+          <div class="q-hint">5 ดาว = ประทับใจมาก / 1 ดาว = ต้องปรับปรุงด่วน</div>
+          <div class="stars" id="s_overall"></div>
+        </div>
         <div class="q-item">
           <div class="q-label">ข้อเสนอแนะ (ถ้ามี)</div>
           <textarea id="comment" rows="3" style="width:100%;padding:10px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:.9rem" placeholder="พิมพ์ข้อเสนอแนะ..."></textarea>
