@@ -13,7 +13,12 @@ export async function onRequest(context) {
 
   // --- GET /api/survey/drivers --- PUBLIC (สำหรับดึงรายชื่อคนขับให้ผู้โดยสารเลือกเอง)
   if (path === '/api/survey/drivers' && method === 'GET') {
-      const drivers = await dbAll(env.DB, `SELECT id, name FROM drivers WHERE status = 'active' ORDER BY name ASC`);
+      const drivers = await dbAll(env.DB, `
+        SELECT id, name FROM drivers 
+        WHERE status = 'active' 
+        AND (name LIKE '%ชารี%' OR name LIKE '%ณัฐวุฒิ%' OR name LIKE '%สมชาย%' OR name LIKE '%สุรเชษฐ์%')
+        ORDER BY name ASC
+      `);
       return success(drivers);
   }
 
