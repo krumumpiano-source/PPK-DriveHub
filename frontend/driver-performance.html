@@ -295,7 +295,7 @@
             const currentYear = new Date().getFullYear() + 543;
             for(let i=0; i<3; i++) {
                 const y = currentYear - i;
-                yearSelect.innerHTML += `<option value="${y}">ปีการศึกษา ${y}</option>`;
+                yearSelect.innerHTML += `<option value="${y}">ปีงบประมาณ ${y}</option>`;
             }
             yearSelect.addEventListener('change', () => {
                 if (currentDriverId) loadDriverDashboard(currentDriverId);
