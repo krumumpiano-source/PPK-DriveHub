@@ -316,7 +316,7 @@
         async function loadDrivers() {
             try {
                 const res = await API.get('/api/drivers');
-                const drivers = res.data.filter(d => d.status === 'active');
+                const drivers = (res.data.drivers || res.data || []).filter(d => d.status === 'active');
                 const list = document.getElementById('driverList');
                 list.innerHTML = '';
                 
