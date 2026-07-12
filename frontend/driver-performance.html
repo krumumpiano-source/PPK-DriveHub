@@ -62,8 +62,9 @@
                         <div class="card-header bg-dark text-white d-flex flex-wrap justify-content-between align-items-center gap-2">
                             <h5 class="card-title mb-0" id="selectedDriverName">เลือกพนักงานขับรถ</h5>
                             <div>
-                                <button class="btn btn-sm btn-info text-white me-2" onclick="openPrintForm()"><i class="fa-solid fa-file-pdf"></i> พิมพ์ใบประเมิน (คณะกรรมการ)</button>
-                                <button class="btn btn-sm btn-primary me-2" onclick="openPrintEmpirical()"><i class="fa-solid fa-chart-line"></i> พิมพ์รายงานสถิติประกอบ (อ้างอิง)</button>
+                                <button class="btn btn-sm btn-info text-white me-2 mb-2" onclick="openPrintForm()"><i class="fa-solid fa-file-pdf"></i> ใบประเมิน (คณะกรรมการ)</button>
+                                <button class="btn btn-sm btn-primary me-2 mb-2" onclick="openPrintEmpirical()"><i class="fa-solid fa-chart-line"></i> สถิติประกอบ (อ้างอิง)</button>
+                                <button class="btn btn-sm btn-warning mb-2" onclick="openPrintPassengerSurvey()"><i class="fa-solid fa-users"></i> แบบประเมินผู้โดยสาร</button>
                             </div>
                         </div>
                         <div class="card-body">
@@ -277,7 +278,13 @@
             window.openPrintEmpirical = function() {
                 if (!currentDriverId) return;
                 const year = document.getElementById('academicYearFilter').value;
-                window.open(`print-empirical.html?driver_id=${currentDriverId}&year=${year}`, '_blank');
+                window.open(`print-empirical.html?driverId=${currentDriverId}&year=${year}`, '_blank');
+            };
+
+            window.openPrintPassengerSurvey = function() {
+                if (!currentDriverId) return;
+                const year = document.getElementById('academicYearFilter').value;
+                window.open(`print-passenger-survey.html?driverId=${currentDriverId}&year=${year}`, '_blank');
             };
             
             // Only admin/committee can access
@@ -483,6 +490,7 @@
             
             warningModal.show();
         }
+
 
         async function submitWarning() {
             if (!currentDriverId) return;
