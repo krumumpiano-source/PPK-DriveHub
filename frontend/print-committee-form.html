@@ -167,7 +167,7 @@
 
             try {
                 // Fetch driver details
-                const driversRes = await API.request('/api/drivers');
+                const driversRes = await API.get('/api/drivers');
                 const driver = driversRes.data.find(d => d.id === driverId);
                 if(driver) {
                     document.getElementById('displayDriverName').textContent = `ชื่อ-สกุล: ${driver.title || ''}${driver.first_name} ${driver.last_name}`;

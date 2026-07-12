@@ -143,7 +143,7 @@
 
             try {
                 // Fetch driver details
-                const driversRes = await API.request('/api/drivers');
+                const driversRes = await API.get('/api/drivers');
                 const driver = driversRes.data.find(d => d.id === driverId);
                 if(driver) {
                     document.getElementById('displayDriverName').textContent = `ชื่อ-สกุล: ${driver.title || ''}${driver.first_name} ${driver.last_name}`;
@@ -151,13 +151,13 @@
                 }
 
                 // Fetch passenger evaluation stats (for section 1)
-                const evalRes = await API.request(`/api/evaluations/driver/${driverId}?year=${year}`);
+                const evalRes = await API.get(`/api/evaluations/driver/${driverId}?year=${year}`);
                 const data = evalRes.data;
                 document.getElementById('statPassengerScore').textContent = data.passenger_weighted ? data.passenger_weighted.toFixed(2) : '0.00';
                 document.getElementById('statPassengerTrips').textContent = data.passenger_stats?.total_trips || 0;
 
                 // Fetch detailed empirical data (sections 2 and 3)
-                const empRes = await API.request(`/api/evaluations/empirical/${driverId}?year=${year}`);
+                const empRes = await API.get(`/api/evaluations/empirical/${driverId}?year=${year}`);
                 const empData = empRes.data;
 
                 // Render Monthly Stats
@@ -209,7 +209,7 @@
                 }
 
                 // Fetch warnings (section 4)
-                const warnRes = await API.request(`/api/warnings/driver/${driverId}?year=${year}`);
+                const warnRes = await API.get(`/api/warnings/driver/${driverId}?year=${year}`);
                 const warnTbody = document.getElementById('warningsTable');
                 if (warnRes.data && warnRes.data.length > 0) {
                     warnTbody.innerHTML = '';

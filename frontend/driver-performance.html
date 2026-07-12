@@ -315,7 +315,7 @@
 
         async function loadDrivers() {
             try {
-                const res = await API.request('/api/drivers');
+                const res = await API.get('/api/drivers');
                 const drivers = res.data.filter(d => d.status === 'active');
                 const list = document.getElementById('driverList');
                 list.innerHTML = '';
@@ -356,7 +356,7 @@
 
             try {
                 // Load scores
-                const res = await API.request(`/api/evaluations/driver/${driverId}?year=${year}`);
+                const res = await API.get(`/api/evaluations/driver/${driverId}?year=${year}`);
                 const data = res.data;
 
                 // Update UI
@@ -402,7 +402,7 @@
 
         async function loadWarnings(driverId, year) {
             try {
-                const res = await API.request(`/api/warnings/driver/${driverId}?year=${year}`);
+                const res = await API.get(`/api/warnings/driver/${driverId}?year=${year}`);
                 const tbody = document.querySelector('#warningTable tbody');
                 tbody.innerHTML = '';
                 
@@ -456,10 +456,7 @@
                 btn.disabled = true;
                 btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> บันทึก...';
 
-                await API.request('/api/evaluations', {
-                    method: 'POST',
-                    body: JSON.stringify(body)
-                });
+                await API.post('/api/evaluations', body);
                 
                 Swal.fire('สำเร็จ', 'บันทึกคะแนนของกรรมการ (ส่วนที่ 60%) เรียบร้อยแล้ว', 'success');
                 document.getElementById('committeeEvalForm').reset();
@@ -504,16 +501,13 @@
                 btn.disabled = true;
                 btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> ส่ง...';
 
-                await API.request('/api/warnings', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        driver_id: currentDriverId,
-                        warning_type: type,
-                        reason: reason,
-                        pip_start_date: start,
-                        pip_end_date: end,
-                        academic_year: year
-                    })
+                await API.post('/api/warnings', {
+                    driver_id: currentDriverId,
+                    warning_type: type,
+                    reason: reason,
+                    pip_start_date: start,
+                    pip_end_date: end,
+                    academic_year: year
                 });
                 
                 warningModal.hide();
