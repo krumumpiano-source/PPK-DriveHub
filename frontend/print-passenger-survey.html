@@ -96,7 +96,8 @@
                 // Fetch drivers to get name
                 const drRes = await API.get('/api/drivers');
                 if (drRes.success) {
-                    const driver = drRes.data.find(d => d.id === driverId);
+                    const driversArray = drRes.data.drivers || drRes.data;
+                    const driver = driversArray.find(d => d.id === driverId);
                     if (driver) {
                         document.getElementById('displayDriverName').textContent = `ชื่อ-สกุล: ${driver.name}`;
                     }
