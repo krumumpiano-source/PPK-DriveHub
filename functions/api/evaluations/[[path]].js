@@ -46,14 +46,16 @@ export async function onRequest(context) {
         ORDER BY e.created_at DESC
       `).bind(driverId, year).all();
 
-      // Get usage log stats (empirical evidence for committee)
-      // Since academic year might not perfectly align with calendar year in created_at, 
-      // we'll just pull a rough count for the past 12 months for now or use the whole history
+      // Get usage log stats filtered by fiscal year (Oct 1 - Sep 30)
+      const fiscalGregorianYear = parseInt(year) - 543;
+      const fiscalStart = `${fiscalGregorianYear - 1}-10-01`;
+      const fiscalEnd = `${fiscalGregorianYear}-09-30`;
+
       const usageStatsRaw = await db.prepare(`
         SELECT 
-          (SELECT COUNT(id) FROM queue WHERE driver_id = ? AND status = 'completed') as total_completed_trips,
-          (SELECT COUNT(id) FROM usage_records WHERE driver_id = ?) as total_logs
-      `).bind(driverId, driverId).first();
+          (SELECT COUNT(id) FROM queue WHERE driver_id = ? AND status = 'completed' AND date >= ? AND date <= ?) as total_completed_trips,
+          (SELECT COUNT(ur.id) FROM usage_records ur INNER JOIN queue q ON ur.queue_id = q.id WHERE q.driver_id = ? AND q.status = 'completed' AND q.date >= ? AND q.date <= ? AND ur.record_type IN ('departure','return')) as total_logs
+      `).bind(driverId, fiscalStart, fiscalEnd, driverId, fiscalStart, fiscalEnd).first();
 
       const totalCompleted = usageStatsRaw.total_completed_trips || 0;
       const totalLogs = usageStatsRaw.total_logs || 0;
@@ -126,10 +128,11 @@ export async function onRequest(context) {
         const driverId = path.split('/')[1];
         const url = new URL(request.url);
         const year = url.searchParams.get('year') || (new Date().getFullYear() + 543).toString();
-        // Determine date range for the academic year (May 1 to Apr 30)
+        // Determine date range for the fiscal year (Oct 1 to Sep 30)
+        // ปีงบประมาณ 2569 = 1 ต.ค. 2568 (2025) ถึง 30 ก.ย. 2569 (2026)
         const gregorianYear = parseInt(year) - 543;
-        const startDate = `${gregorianYear}-05-01`;
-        const endDate = `${gregorianYear + 1}-04-30`;
+        const startDate = `${gregorianYear - 1}-10-01`;
+        const endDate = `${gregorianYear}-09-30`;
 
         const queues = await db.prepare(`
             SELECT 
