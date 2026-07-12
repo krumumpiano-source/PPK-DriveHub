@@ -594,6 +594,8 @@ CREATE INDEX IF NOT EXISTS idx_tax_records_car_id ON tax_records(car_id);
 CREATE INDEX IF NOT EXISTS idx_insurance_records_car_id ON insurance_records(car_id);
 CREATE INDEX IF NOT EXISTS idx_check_log_car_id ON check_log(car_id);
 CREATE INDEX IF NOT EXISTS idx_usage_records_car_id ON usage_records(car_id);
+CREATE INDEX IF NOT EXISTS idx_usage_records_queue_id ON usage_records(queue_id);
+CREATE INDEX IF NOT EXISTS idx_usage_records_record_type ON usage_records(record_type);
 
 -- ============================================================
 -- GROUP 9: EVALUATIONS & WARNINGS (2 tables)
