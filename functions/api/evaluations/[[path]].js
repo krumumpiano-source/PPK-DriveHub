@@ -174,10 +174,8 @@ export async function onRequest(context) {
 
                 if (missedForThisTrip > 0) {
                     let displayMission = q.mission;
-                    if (q.mission === 'บันทึกผ่าน QR' && q.destination) {
-                        displayMission = `บันทึกผ่าน QR (${q.destination})`;
-                    } else if (q.mission === 'บันทึกผ่าน QR' && !q.destination) {
-                        displayMission = 'บันทึกผ่าน QR (ไม่ระบุสถานที่)';
+                    if (q.mission === 'บันทึกผ่าน QR') {
+                        displayMission = q.destination ? q.destination : 'ไม่ระบุสถานที่';
                     } else if (q.destination) {
                         displayMission = `${q.mission} (${q.destination})`;
                     }
