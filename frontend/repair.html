@@ -1,4 +1,4 @@
-﻿﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -198,6 +198,7 @@
       <div id="tab-workflow" class="tab-content active">
         <div class="actions-bar" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem">
           <button class="btn btn-primary" onclick="openReportModal()">➕ แจ้งซ่อม</button>
+          <button class="btn btn-secondary" onclick="printBlankForm()">🖨️ พิมพ์แบบฟอร์มเปล่า</button>
           <select id="wfFilterCar" onchange="loadWorkflow()" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem">
             <option value="">รถทั้งหมด</option>
           </select>
@@ -237,6 +238,11 @@
             <textarea id="rpt_issue" rows="3" required placeholder="อธิบายอาการเสียหรือปัญหาที่พบ"></textarea>
           </div>
           <div class="form-group">
+            <label>รูปภาพแนบ (บังคับ) *</label>
+            <input type="file" id="rpt_photo" accept="image/*" capture="environment" required>
+            <small style="color:var(--color-text-muted);display:block;margin-top:4px">ถ่ายรูปหน้าปัดไมล์ หรือ บริเวณที่ชำรุด</small>
+          </div>
+          <div class="form-group">
             <label>พนักงานขับรถที่แจ้ง</label>
             <select id="rpt_driver"><option value="">-- เลือก (ถ้ามี) --</option></select>
           </div>
@@ -247,6 +253,12 @@
           <div class="form-group">
             <label>หมายเหตุ</label>
             <textarea id="rpt_notes" rows="2" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)"></textarea>
+          </div>
+          <div class="form-group" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:var(--radius-md); padding:10px 12px; margin-bottom:1rem; display:flex; gap:10px; align-items:flex-start;">
+            <input type="checkbox" id="rpt_declaration" required style="margin-top:4px; transform:scale(1.2); cursor:pointer;">
+            <label for="rpt_declaration" style="font-size:0.85rem; color:var(--color-text); line-height:1.4; cursor:pointer; font-weight:normal;">
+              ข้าพเจ้าขอรับรองว่าข้อมูลการแจ้งซ่อมเป็นความจริง และจะนำรถเข้ารับการซ่อมบำรุง ณ ศูนย์บริการที่ทางโรงเรียนกำหนดเท่านั้น เพื่อรักษามาตรฐานความปลอดภัยและให้เป็นไปตามระเบียบ
+            </label>
           </div>
           <button type="submit" class="btn btn-primary" id="rptSubmitBtn" style="width:100%">📩 ส่งแจ้งซ่อม</button>
         </form>
@@ -592,7 +604,7 @@
     async function submitReport(e){
       e.preventDefault();
       var btn=document.getElementById('rptSubmitBtn');
-      btn.disabled=true; btn.textContent='กำลังส่ง...';
+      btn.disabled=true; btn.textContent='กำลังดึงพิกัด...';
       try{
         var data={
           car_id: document.getElementById('rpt_car_id').value,
@@ -601,6 +613,30 @@
           mileage_at_repair: parseInt(document.getElementById('rpt_mileage').value)||0,
           notes: document.getElementById('rpt_notes').value.trim()
         };
+
+        var photoInput = document.getElementById('rpt_photo');
+        if(photoInput && photoInput.files && photoInput.files.length > 0) {
+            btn.textContent='กำลังอัปโหลดรูป...';
+            var file = photoInput.files[0];
+            var val = validateFileUpload(file, 5, ['image/jpeg', 'image/png', 'image/jpg']);
+            if(!val.valid) { showAlert(val.message, 'error'); btn.disabled=false; btn.textContent='📩 ส่งแจ้งซ่อม'; return; }
+            var base64 = await fileToBase64(file);
+            data.documents = [{ name: file.name, type: file.type, data: base64 }];
+        }
+
+        try {
+            const pos = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
+            });
+            data.latitude = pos.coords.latitude;
+            data.longitude = pos.coords.longitude;
+        } catch(geoErr) {
+            showAlert('ไม่สามารถดึงตำแหน่งที่ตั้งได้ กรุณาเปิด GPS และอนุญาตการเข้าถึง', 'error');
+            btn.disabled=false; btn.textContent='📩 ส่งแจ้งซ่อม';
+            return;
+        }
+
+        btn.textContent='กำลังส่ง...';
         var r=await apiCall('createRepair',data);
         if(r.success){
           showAlert('ส่งแจ้งซ่อมเรียบร้อยแล้ว','success');
@@ -619,7 +655,8 @@
       switch(action){
         case 'approve':
           title='✅ อนุมัติแจ้งซ่อม';
-          fields='<p style="font-size:.9rem">ยืนยันอนุมัติการแจ้งซ่อมรายการนี้?</p>';
+          fields='<p style="font-size:.9rem; margin-bottom:10px;">ยืนยันอนุมัติการแจ้งซ่อมรายการนี้?</p>';
+          fields+='<div class="form-group"><label>กำหนดศูนย์บริการ/อู่ (ถ้ามี)</label><input type="text" id="act_garage" placeholder="พิมพ์ชื่ออู่ที่ต้องการให้ไปซ่อม"></div>';
           break;
         case 'reject':
           title='❌ ไม่อนุมัติแจ้งซ่อม';
@@ -669,6 +706,9 @@
         var path='/api/repair/log/'+currentRepairId+'/'+currentAction;
         var body={};
         switch(currentAction){
+          case 'approve':
+            body.garage_name=(document.getElementById('act_garage')||{}).value||'';
+            break;
           case 'reject':
             body.reason=(document.getElementById('act_reason')||{}).value||'';
             break;
@@ -804,7 +844,97 @@
         }
 
         body.innerHTML=html;
-      }catch(e){body.innerHTML='<p style="color:var(--color-danger)">เกิดข้อผิดพลาด</p>'}
+      }catch(e){console.error(e);body.innerHTML='<p style="color:var(--color-danger)">เกิดข้อผิดพลาด</p>'}
+    }
+
+    function printBlankForm() {
+        var printWin = window.open('', '_blank');
+        var html = `
+        <!DOCTYPE html>
+        <html lang="th">
+        <head>
+            <meta charset="UTF-8">
+            <title>แบบฟอร์มแจ้งซ่อมยานพาหนะ</title>
+            <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+            <style>
+                body { font-family: 'Sarabun', sans-serif; padding: 40px; line-height: 1.6; color: #000; }
+                .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #000; padding-bottom: 15px; }
+                .header h1 { margin: 0; font-size: 26px; }
+                .header p { margin: 5px 0 0 0; font-size: 18px; }
+                .row { display: flex; margin-bottom: 20px; font-size: 16px; }
+                .label { font-weight: 600; margin-right: 10px; }
+                .line { border-bottom: 1px dotted #666; flex-grow: 1; margin-left: 5px; }
+                .box { border: 1px solid #333; padding: 20px; min-height: 200px; margin-top: 10px; }
+                .signature-area { display: flex; justify-content: space-around; margin-top: 80px; }
+                .sign-box { text-align: center; width: 250px; font-size: 16px; }
+                .sign-line { border-bottom: 1px dotted #333; margin-bottom: 10px; height: 30px; }
+                @media print {
+                    @page { margin: 1cm; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>แบบฟอร์มแจ้งซ่อมยานพาหนะ</h1>
+                <p>งานยานพาหนะ โรงเรียนพะเยาพิทยาคม</p>
+            </div>
+            
+            <div style="text-align: right; margin-bottom: 30px; font-size: 16px;">
+                วันที่แจ้ง: ..............................................................
+            </div>
+
+            <div class="row">
+                <span class="label">ชื่อ-สกุล ผู้แจ้ง:</span> <div class="line"></div>
+                <span class="label" style="margin-left: 30px;">ตำแหน่ง:</span> <span style="margin-left:10px">พนักงานขับรถ</span>
+            </div>
+
+            <div class="row">
+                <span class="label">ทะเบียนรถ:</span> <div class="line" style="flex:0.4"></div>
+                <span class="label" style="margin-left: 30px;">ยี่ห้อ/รุ่น:</span> <div class="line"></div>
+            </div>
+
+            <div class="row">
+                <span class="label">เลขไมล์ปัจจุบัน:</span> <div class="line" style="flex:0.4"></div>
+                <span class="label" style="margin-left: 30px;">กิโลเมตร</span>
+            </div>
+
+            <div style="margin-top: 40px;">
+                <span class="label" style="font-size:18px;">อาการเสีย / ปัญหาที่พบ:</span>
+                <div class="box"></div>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <span class="label" style="font-size:18px;">หมายเหตุเพิ่มเติม:</span>
+                <div class="box" style="min-height: 80px;"></div>
+            </div>
+            
+            <div style="margin-top: 20px; font-size: 15px; background: #f8f9fa; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
+                <b>คำรับรอง:</b> ข้าพเจ้าขอรับรองว่าข้อมูลการแจ้งซ่อมเป็นความจริง และจะนำรถเข้ารับการซ่อมบำรุง ณ ศูนย์บริการที่ทางโรงเรียนกำหนดเท่านั้น เพื่อรักษามาตรฐานความปลอดภัยและให้เป็นไปตามระเบียบ
+            </div>
+
+            <div class="signature-area">
+                <div class="sign-box">
+                    <div class="sign-line"></div>
+                    <p>( ........................................................... )</p>
+                    <p>พนักงานขับรถ / ผู้แจ้ง</p>
+                </div>
+                <div class="sign-box">
+                    <div class="sign-line"></div>
+                    <p>( ........................................................... )</p>
+                    <p>หัวหน้างานยานพาหนะ / ผู้อนุมัติ</p>
+                </div>
+            </div>
+            
+            <script>
+                window.onload = function() { 
+                    setTimeout(function() { window.print(); }, 500); 
+                }
+            </script>
+        </body>
+        </html>
+        `;
+        printWin.document.write(html);
+        printWin.document.close();
     }
     function closeDetailModal(){document.getElementById('detailModal').classList.remove('show')}
   </script>

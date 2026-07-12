@@ -1,4 +1,4 @@
-﻿// Repair logs + scheduled repairs
+// Repair logs + scheduled repairs
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, writeAuditLog,
@@ -200,31 +200,27 @@ export async function onRequest(context) {
 
   // --- GET /api/repair/log ---
   if (path === '/api/repair/log' && method === 'GET') {
-    // Driver role: allow viewing own repair requests
-    if (user.role === 'driver') {
-      const rows = await dbAll(env.DB,
-        `SELECT rl.*, c.license_plate, c.brand, c.model,
-                uc.display_name AS created_by_name,
-                uu.display_name AS updated_by_name
-         FROM repair_log rl
-         LEFT JOIN cars c ON rl.car_id = c.id
-         LEFT JOIN users uc ON rl.created_by = uc.id
-         LEFT JOIN users uu ON rl.updated_by = uu.id
-         WHERE (rl.reporter_id = ? OR rl.requested_by_driver_id = ?) AND rl.status = 'completed'
-         ORDER BY COALESCE(rl.date_completed, rl.date_reported) DESC LIMIT 100`,
-        [user.id, user.driver_id || user.id]
-      );
-      return success(rows);
+    const isDriver = user.role === 'driver';
+    if (!isDriver) {
+      try { requirePermission(user, 'repair', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     }
-    try { requirePermission(user, 'repair', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+
     const carId = url.searchParams.get('car_id');
     const status = url.searchParams.get('status');
     const activeOnly = url.searchParams.get('active_only');
     const where = [];
     const params = [];
+
+    // Driver role: limit to own repair requests
+    if (isDriver) {
+      where.push('(rl.reporter_id = ? OR rl.requested_by_driver_id = ?)');
+      params.push(user.id, user.driver_id || user.id);
+    }
+
     if (carId) { where.push('rl.car_id = ?'); params.push(carId); }
     if (status) { where.push('rl.status = ?'); params.push(status); }
     if (activeOnly === '1') { where.push("rl.status != 'completed'"); }
+    
     const limit = activeOnly === '1' ? 100 : 1000;
     const rows = await dbAll(env.DB,
       `SELECT rl.*, c.license_plate, c.brand, c.model,
@@ -286,9 +282,10 @@ export async function onRequest(context) {
         requested_by_driver_id, created_by, created_at, updated_at,
         invoice_number, work_order_number, service_type,
         labour_cost, parts_cost, discount_amount, vat_amount, grand_total,
-        mileage_out, mechanic_name, taken_by, claim_number, insurance_company)
+        mileage_out, mechanic_name, taken_by, claim_number, insurance_company,
+        latitude, longitude)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, body.car_id, body.date_reported || ts.substr(0,10),
        body.date_started || null, body.date_completed || null,
        status,
@@ -304,7 +301,8 @@ export async function onRequest(context) {
        body.labour_cost || 0, body.parts_cost || 0,
        body.discount_amount || 0, body.vat_amount || 0, body.grand_total || 0,
        body.mileage_out || null, body.mechanic_name || null,
-       body.taken_by || null, body.claim_number || null, body.insurance_company || null]
+       body.taken_by || null, body.claim_number || null, body.insurance_company || null,
+       body.latitude || null, body.longitude || null]
     );
     // Save itemized parts if provided
     if (body.items_detail && Array.isArray(body.items_detail) && body.items_detail.length) {
@@ -409,19 +407,27 @@ export async function onRequest(context) {
   if (path.match(/^\/api\/repair\/log\/[^/]+\/approve$/) && method === 'PUT') {
     try { requirePermission(user, 'repair', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/').slice(-2, -1)[0];
+    const body = await parseBody(request);
     const row = await dbFirst(env.DB, 'SELECT * FROM repair_log WHERE id = ?', [id]);
     if (!row) return error('ไม่พบข้อมูลซ่อม', 404);
     if (row.status !== 'requested') return error(`ไม่สามารถอนุมัติได้ สถานะปัจจุบัน: ${row.status}`);
     const ts = now();
     await dbRun(env.DB,
-      `UPDATE repair_log SET status = 'approved', approved_by = ?, approved_at = ?, updated_by = ?, updated_at = ? WHERE id = ?`,
-      [user.id, ts, user.id, ts, id]
+      `UPDATE repair_log SET status = 'approved', approved_by = ?, approved_at = ?, updated_by = ?, updated_at = ?, garage_name = COALESCE(?, garage_name) WHERE id = ?`,
+      [user.id, ts, user.id, ts, body?.garage_name || null, id]
     );
     const car = await dbFirst(env.DB, 'SELECT license_plate, brand FROM cars WHERE id = ?', [row.car_id]);
     const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : row.car_id;
-    await writeAuditLog(env.DB, user.id, user.displayName, 'approve_repair', 'repair', id, { car: carLabel });
-    await createNotification(env.DB, row.created_by, 'repair', 'อนุมัติแจ้งซ่อม', `แจ้งซ่อม ${carLabel} ได้รับอนุมัติแล้ว`);
-    await sendTelegramMessage(env, `✅ <b>อนุมัติแจ้งซ่อม</b>\n🚗 ${carLabel}\n👨‍💼 อนุมัติโดย: ${user.displayName}`);
+    await writeAuditLog(env.DB, user.id, user.displayName, 'approve_repair', 'repair', id, { car: carLabel, garage_name: body?.garage_name });
+    
+    let notifyMsg = `แจ้งซ่อม ${carLabel} ได้รับอนุมัติแล้ว`;
+    if (body?.garage_name) notifyMsg += ` (กำหนดให้ซ่อมที่: ${body.garage_name})`;
+    await createNotification(env.DB, row.created_by, 'repair', 'อนุมัติแจ้งซ่อม', notifyMsg);
+    
+    let teleMsg = `✅ <b>อนุมัติแจ้งซ่อม</b>\n🚗 ${carLabel}`;
+    if (body?.garage_name) teleMsg += `\n🏪 กำหนดซ่อมที่: ${body.garage_name}`;
+    teleMsg += `\n👨‍💼 อนุมัติโดย: ${user.displayName}`;
+    await sendTelegramMessage(env, teleMsg);
     return success({ message: 'อนุมัติแจ้งซ่อมเรียบร้อย' });
   }
 

@@ -1,4 +1,4 @@
-﻿// ==============================================================
+// ==============================================================
 // PPK DriveHub — API Integration Tests
 // ทดสอบ API endpoint ทุกตัวว่า response ตรง spec หรือไม่
 // ==============================================================
@@ -224,6 +224,7 @@ test.describe.serial('2. Auth', () => {
       first_name: 'New',
       last_name: 'User',
       phone: '0899999999',
+      password: 'Password123!',
     });
     expect([200, 201]).toContain(r.status);
     expect(r.data.success).toBe(true);
@@ -1045,7 +1046,7 @@ test.describe.serial('18. Incidents', () => {
   test('PUT /api/incidents/:id — อัปเดตสถานะ', async () => {
     if (!createdIncidentId) { test.skip(); return; }
     const r = await put(`/api/incidents/${createdIncidentId}`, {
-      status: 'under_review',
+      status: 'investigating',
       damage_cost: 18000,
     }, adminToken);
     expect(r.status).toBe(200);
@@ -1134,7 +1135,7 @@ test.describe.serial('19. Vehicle Requests', () => {
     expect(item).toHaveProperty('destination');
   });
 
-  test('PUT /api/vehicle-requests/:id/approve — อนุมัติคำขอ', async () => {
+  test('PUT /api/vehicle-requests/:id/approve — ออนุมัติคำขอ', async () => {
     if (!createdVreqId || !vreqVehicleId || !vreqDriverId) { test.skip(); return; }
     const r = await put(`/api/vehicle-requests/${createdVreqId}/approve`, {
       assigned_car_id: vreqVehicleId,
@@ -1238,10 +1239,11 @@ test.describe.serial('22. Admin User Management', () => {
 
   test('POST /api/auth/register — ยื่นคำขอสมัคร', async () => {
     const r = await post('/api/auth/register', {
-      email: `mgmt_${Date.now()}@test.com`,
-      first_name: 'Managed',
+      email: `admin_${Date.now()}@test.com`,
+      first_name: 'Admin',
       last_name: 'User',
       phone: '0877777777',
+      password: 'Password123!',
     });
     expect([200, 201]).toContain(r.status);
     expect(r.data.success).toBe(true);

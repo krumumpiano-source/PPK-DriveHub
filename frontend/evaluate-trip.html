@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>ประเมินความพึงพอใจการใช้รถ - PPK DriveHub</title>
+    <script src="config.js"></script>
+    <script>window.API_BASE_URL=CONFIG.API_BASE_URL;window.currentPage='evaluate-trip';window.REQUIRE_AUTH=true;</script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="common.css">
+    <script src="js/api.js"></script><script src="common.js"></script>
+    <style>
+        .star-rating {
+            display: flex;
+            flex-direction: row-reverse;
+            justify-content: flex-end;
+        }
+        .star-rating input { display: none; }
+        .star-rating label {
+            color: #ccc;
+            font-size: 2rem;
+            padding: 0 5px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .star-rating input:checked ~ label,
+        .star-rating label:hover,
+        .star-rating label:hover ~ label {
+            color: #ffc107;
+        }
+        .evaluation-card { max-width: 600px; margin: 2rem auto; }
+        .back-btn{cursor:pointer;color:var(--color-primary);font-weight:500;display:inline-flex;align-items:center;gap:4px;margin-bottom:1rem;text-decoration:none}
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container py-4">
+        <a href="dashboard.html" class="back-btn"><i class="fa-solid fa-arrow-left"></i> กลับหน้าหลัก</a>
+
+        <div class="card shadow-sm evaluation-card">
+            <div class="card-header bg-primary text-white text-center py-3">
+                <h4 class="mb-0"><i class="fa-solid fa-clipboard-user"></i> แบบประเมินพนักงานขับรถ</h4>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted text-center mb-4">ข้อมูลของท่านจะถูกนำไปใช้ประเมินผลการปฏิบัติงานของพนักงานขับรถเพื่อพิจารณาต่อสัญญาประจำปี</p>
+
+                <form id="evaluationForm">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">เลือกพนักงานขับรถ <span class="text-danger">*</span></label>
+                        <select class="form-select form-select-lg" id="driver_id" required>
+                            <option value="">-- เลือกพนักงานขับรถที่ต้องการประเมิน --</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">1. ด้านการขับขี่ปลอดภัย (Safe Driving) <span class="text-danger">*</span></label>
+                        <div class="text-muted small mb-2">
+                            <ul class="mb-1 ps-3">
+                                <li>ขับรถนุ่มนวล ไม่เบรกกะทันหัน หรือขับหวาดเสียว</li>
+                                <li>เคารพกฎจราจร (ไม่ฝ่าไฟแดง ไม่ขับเร็วเกินกำหนด)</li>
+                                <li>การใช้ความเร็วรถเหมาะสม</li>
+                            </ul>
+                        </div>
+                        <div class="star-rating">
+                            <input type="radio" id="drive5" name="score_driving" value="5" required><label for="drive5"><i class="fa-solid fa-star"></i></label>
+                            <input type="radio" id="drive4" name="score_driving" value="4"><label for="drive4"><i class="fa-solid fa-star"></i></label>
+                            <input type="radio" id="drive3" name="score_driving" value="3"><label for="drive3"><i class="fa-solid fa-star"></i></label>
+                            <input type="radio" id="drive2" name="score_driving" value="2"><label for="drive2"><i class="fa-solid fa-star"></i></label>
+                            <input type="radio" id="drive1" name="score_driving" value="1"><label for="drive1"><i class="fa-solid fa-star"></i></label>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">2. ด้านการบริการและมารยาท (Service & Politeness) <span class="text-danger">*</span></label>
+                        <div class="text-muted small mb-2">
+                            <ul class="mb-1 ps-3">
+                                <li>กริยาวาจาสุภาพเรียบร้อย ให้เกียรติผู้โดยสาร</li>
+                                <li>แต่งกายสะอาดเรียบร้อยตามระเบียบ</li>
+                                <li>อำนวยความสะดวกในการขึ้น-ลงรถ และช่วยยกสัมภาระ</li>
+                            </ul>
+                        </div>
+                        <div class="star-rating">
+                            <input type="radio" id="serv5" name="score_service" value="5" required><label for="serv5"><i class="fa-solid fa-star"></i></label>
+                            <input type="radio" id="serv4" name="score_service" value="4"><label for="serv4"><i class="fa-solid fa-star"></i></label>
+                            <input type="radio" id="serv3" name="score_service" value="3"><label for="serv3"><i class="fa-solid fa-star"></i></label>
+                            <input type="radio" id="serv2" name="score_service" value="2"><label for="serv2"><i class="fa-solid fa-star"></i></label>
+                            <input type="radio" id="serv1" name="score_service" value="1"><label for="serv1"><i class="fa-solid fa-star"></i></label>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">3. ด้านความตรงต่อเวลา (Punctuality) <span class="text-danger">*</span></label>
+                        <div class="text-muted small mb-2">
+                            <ul class="mb-1 ps-3">
+                                <li>นำรถมารอรับ "ก่อนเวลา" นัดหมายเสมอ</li>
+                                <li>พาคณะเดินทางไปถึงจุดหมายปลายทางได้ทันเวลา</li>
+                                <li>จอดรอรับ-ส่งในจุดที่กำหนดไว้อย่างชัดเจนและปลอดภัย ไม่ให้คณะเดินทางต้องเดินหา</li>
+                            </ul>
+                        </div>
+                        <div class="star-rating">
+                            <input type="radio" id="time5" name="score_punctuality" value="5" required><label for="time5"><i class="fa-solid fa-star"></i></label>
+                            <input type="radio" id="time4" name="score_punctuality" value="4"><label for="time4"><i class="fa-solid fa-star"></i></label>
+                            <input type="radio" id="time3" name="score_punctuality" value="3"><label for="time3"><i class="fa-solid fa-star"></i></label>
+                            <input type="radio" id="time2" name="score_punctuality" value="2"><label for="time2"><i class="fa-solid fa-star"></i></label>
+                            <input type="radio" id="time1" name="score_punctuality" value="1"><label for="time1"><i class="fa-solid fa-star"></i></label>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">ข้อเสนอแนะเพิ่มเติม (ถ้ามี)</label>
+                        <textarea class="form-control" id="comments" rows="3" placeholder="ระบุคำชมเชย หรือข้อร้องเรียน (หากให้คะแนนต่ำกว่า 3 ดาว กรุณาระบุสาเหตุ)"></textarea>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg"><i class="fa-solid fa-paper-plane"></i> ส่งแบบประเมิน</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!checkAuth()) {
+                window.location.href = 'login.html';
+                return;
+            }
+            window.currentUser = getCurrentUser();
+            await loadDrivers();
+
+            // Check if queue_id and driver_id are passed in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const driverId = urlParams.get('driver_id');
+            if (driverId) {
+                const select = document.getElementById('driver_id');
+                // wait slightly to ensure options are loaded
+                setTimeout(() => {
+                    select.value = driverId;
+                }, 500);
+            }
+
+            document.getElementById('evaluationForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await submitEvaluation();
+            });
+        });
+
+        async function loadDrivers() {
+            try {
+                const res = await window.apiFetch('/api/drivers');
+                const drivers = res.data.filter(d => d.status === 'active');
+                const select = document.getElementById('driver_id');
+                
+                drivers.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d.id;
+                    opt.textContent = `${d.title || ''}${d.first_name} ${d.last_name}`;
+                    select.appendChild(opt);
+                });
+            } catch (err) {
+                console.error(err);
+                showAlert('ไม่สามารถโหลดรายชื่อคนขับได้', 'danger');
+            }
+        }
+
+        async function submitEvaluation() {
+            const driver_id = document.getElementById('driver_id').value;
+            const score_driving = parseInt(document.querySelector('input[name="score_driving"]:checked')?.value || 0);
+            const score_service = parseInt(document.querySelector('input[name="score_service"]:checked')?.value || 0);
+            const score_punctuality = parseInt(document.querySelector('input[name="score_punctuality"]:checked')?.value || 0);
+            const comments = document.getElementById('comments').value;
+
+            if (!score_driving || !score_service || !score_punctuality) {
+                Swal.fire('แจ้งเตือน', 'กรุณาให้คะแนนให้ครบทั้ง 3 ด้าน', 'warning');
+                return;
+            }
+
+            // Logic to force comments if score is low
+            if ((score_driving <= 2 || score_service <= 2 || score_punctuality <= 2) && comments.trim() === '') {
+                Swal.fire('แจ้งเตือน', 'ท่านให้คะแนนต่ำกว่าเกณฑ์ปกติ กรุณาระบุข้อเสนอแนะหรือสาเหตุเพื่อเป็นข้อมูลให้คณะกรรมการ', 'warning');
+                return;
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const queue_id = urlParams.get('queue_id');
+
+            try {
+                const btn = document.querySelector('button[type="submit"]');
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> กำลังส่งข้อมูล...';
+
+                await window.apiFetch('/api/evaluations', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        driver_id,
+                        queue_id,
+                        evaluation_type: 'passenger',
+                        score_driving,
+                        score_service,
+                        score_punctuality,
+                        comments
+                    })
+                });
+
+                Swal.fire({
+                    title: 'ขอบคุณครับ!',
+                    text: 'ระบบได้รับผลการประเมินของท่านเรียบร้อยแล้ว',
+                    icon: 'success',
+                    confirmButtonText: 'กลับหน้าหลัก'
+                }).then(() => {
+                    window.location.href = 'dashboard.html';
+                });
+            } catch (err) {
+                console.error(err);
+                Swal.fire('ข้อผิดพลาด', err.message, 'error');
+                const btn = document.querySelector('button[type="submit"]');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> ส่งแบบประเมิน';
+            }
+        }
+    </script>
+</body>
+</html>

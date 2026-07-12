@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>แบบฟอร์มประเมินพนักงานขับรถ - คณะกรรมการ</title>
+    <script src="config.js"></script>
+    <script>window.API_BASE_URL=CONFIG.API_BASE_URL;window.currentPage='print-committee-form';window.REQUIRE_AUTH=true;</script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="common.css">
+    <script src="js/api.js"></script><script src="common.js"></script>
+    <style>
+        body { background: #fff; font-size: 14px; color: #000; }
+        .print-container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        
+        .header-section { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+        .header-section h3 { font-weight: bold; margin-bottom: 5px; }
+        
+        .info-box { border: 1px solid #000; padding: 15px; margin-bottom: 20px; border-radius: 5px; background: #f9f9f9; }
+        .info-box h5 { margin-top: 0; font-weight: bold; border-bottom: 1px dashed #ccc; padding-bottom: 5px; }
+        
+        .rubric-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .rubric-table th, .rubric-table td { border: 1px solid #000; padding: 10px; }
+        .rubric-table th { background-color: #f0f0f0; text-align: center; font-weight: bold; }
+        
+        .criteria-list { margin: 0; padding-left: 20px; }
+        .criteria-list li { margin-bottom: 3px; }
+        
+        .score-box { width: 100px; text-align: center; vertical-align: bottom; font-weight: bold; }
+        .score-input-line { border-bottom: 1px dotted #000; display: inline-block; width: 50px; text-align: center; }
+
+        .signature-section { margin-top: 40px; text-align: right; }
+        .signature-line { display: inline-block; border-bottom: 1px solid #000; width: 250px; margin-bottom: 5px; }
+
+        .no-print { display: block; margin-bottom: 20px; text-align: center; padding: 15px; background: #e9ecef; border-radius: 5px; }
+        
+        @media print {
+            .no-print { display: none !important; }
+            body { padding: 0; margin: 0; }
+            .print-container { width: 100%; max-width: 100%; padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-container">
+        
+        <div class="no-print">
+            <h5><i class="fa-solid fa-print"></i> โหมดพิมพ์เอกสาร (Print Mode)</h5>
+            <p>กรุณากดปุ่มด้านล่าง หรือกด <code>Ctrl+P</code> เพื่อพิมพ์กระดาษแจกให้คณะกรรมการ</p>
+            <button class="btn btn-primary btn-lg" onclick="window.print()"><i class="fa-solid fa-print"></i> สั่งปริ้นลงกระดาษ A4</button>
+            <a href="driver-performance.html" class="btn btn-secondary btn-lg ms-2">กลับไปหน้า Dashboard</a>
+        </div>
+
+        <div class="header-section">
+            <h3>แบบประเมินผลการปฏิบัติงานพนักงานขับรถตู้ (ส่วนที่ 2: คณะกรรมการ)</h3>
+            <h4 id="displayDriverName">ชื่อ-สกุล: กำลังโหลด...</h4>
+            <p class="mb-0">ปีการศึกษา <span id="displayYear">----</span></p>
+        </div>
+
+        <p class="fw-bold mb-2 mt-4">คำชี้แจง: โปรดพิจารณาผลการปฏิบัติงานตามเกณฑ์ด้านล่าง แล้วกรอกคะแนนที่เหมาะสมลงในช่องว่าง</p>
+        
+        <table class="rubric-table">
+            <thead>
+                <tr>
+                    <th style="width: 75%;">หัวข้อการประเมินและเกณฑ์พิจารณา</th>
+                    <th style="width: 25%;">คะแนนที่ได้</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Topic 1 -->
+                <tr>
+                    <td>
+                        <strong>1. ด้านการดูแลรถและซ่อมบำรุง (คะแนนเต็ม 30)</strong><br>
+                        <em>(แนวทาง: ทำได้ดีให้ข้อละ 6 คะแนน / ลดหลั่นตามความเหมาะสม)</em>
+                        <ul class="criteria-list mt-2">
+                            <li>ล้างและทำความสะอาดรถทั้งภายนอกและภายในให้สะอาดอยู่เสมอ</li>
+                            <li>ตรวจเช็คสภาพเครื่องยนต์พื้นฐานรายวัน (น้ำ, น้ำมันเครื่อง, แบตเตอรี่, ลมยาง) ก่อนออกรถ</li>
+                            <li>นำรถเข้าตรวจเช็คระยะ และเปลี่ยนถ่ายน้ำมันเครื่องตรงตามกำหนดเวลา</li>
+                            <li>สังเกตความผิดปกติของรถ และรีบทำเรื่อง "แจ้งซ่อมบำรุง" ทันทีก่อนเกิดความเสียหายรุนแรง</li>
+                            <li>จอดรถในสถานที่ที่โรงเรียนกำหนดอย่างเป็นระเบียบ</li>
+                        </ul>
+                    </td>
+                    <td class="score-box">
+                        <span class="score-input-line"></span> / 30
+                    </td>
+                </tr>
+
+                <!-- Topic 2 -->
+                <tr>
+                    <td>
+                        <strong>2. ด้านระเบียบวินัยและการทำงาน (คะแนนเต็ม 40)</strong><br>
+                        <em>(แนวทาง: ทำได้ดีให้ข้อละ 8 คะแนน / ลดหลั่นตามความเหมาะสม)</em>
+                        <ul class="criteria-list mt-2">
+                            <li>มาปฏิบัติงานตรงเวลา และไม่ละทิ้งหน้าที่ในเวลาราชการ</li>
+                            <li>ปฏิบัติตามคำสั่งของโรงเรียนและผู้บังคับบัญชาอย่างเคร่งครัด</li>
+                            <li>สถิติการลากิจ ลาป่วย อยู่ในเกณฑ์ที่กำหนด และมีการแจ้งลาล่วงหน้าตามระเบียบ</li>
+                            <li>บันทึกข้อมูลการใช้รถ (ไมล์เข้า-ไมล์ออก) ในระบบแอปพลิเคชันอย่างสม่ำเสมอและเป็นปัจจุบัน</li>
+                            <li>ประจำอยู่ที่จุดพักหรือบริเวณที่กำหนดพร้อมปฏิบัติหน้าที่เสมอ ไม่ออกนอกสถานศึกษาในเวลาราชการโดยไม่ได้รับอนุญาต</li>
+                        </ul>
+                    </td>
+                    <td class="score-box">
+                        <span class="score-input-line"></span> / 40
+                    </td>
+                </tr>
+
+                <!-- Topic 3 -->
+                <tr>
+                    <td>
+                        <strong>3. ด้านการทุ่มเทและจิตอาสา (คะแนนเต็ม 30)</strong><br>
+                        <em>(แนวทาง: ทำได้ดีให้ข้อละ 6 คะแนน / ลดหลั่นตามความเหมาะสม)</em>
+                        <ul class="criteria-list mt-2">
+                            <li>อุทิศเวลาให้แก่ราชการ ยินดีปฏิบัติงานนอกเวลาราชการเมื่อมีเหตุจำเป็นเร่งด่วน</li>
+                            <li>เสนอตัวช่วยเหลืองานส่วนรวมของโรงเรียน (เช่น งานรับส่งเอกสาร, งานรับส่งพัสดุ) ในช่วงเวลาที่ไม่มีคิววิ่งรถ</li>
+                            <li>มีน้ำใจ เอื้อเฟื้อเผื่อแผ่ และสามารถทำงานร่วมกับเพื่อนร่วมงานและคณะครูได้เป็นอย่างดี</li>
+                            <li>ดูแลรักษาความสะอาดบริเวณลานจอดรถ หรือโรงจอดรถของโรงเรียนให้เป็นระเบียบเรียบร้อยอยู่เสมอ</li>
+                            <li>มีทัศนคติที่ดีต่อองค์กร ไม่สร้างความแตกแยก และช่วยรักษาภาพลักษณ์ที่ดีของโรงเรียน</li>
+                        </ul>
+                    </td>
+                    <td class="score-box">
+                        <span class="score-input-line"></span> / 30
+                    </td>
+                </tr>
+                
+                <!-- Total -->
+                <tr>
+                    <td class="text-end fw-bold">รวมคะแนนส่วนของคณะกรรมการ (นำไปคิดสัดส่วน 60% ในระบบ)</td>
+                    <td class="score-box bg-light">
+                        <span class="score-input-line"></span> / 100
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="mb-4">
+            <p class="fw-bold mb-1">ความเห็นเพิ่มเติมจากคณะกรรมการ:</p>
+            <div style="border-bottom: 1px dotted #000; height: 30px;"></div>
+            <div style="border-bottom: 1px dotted #000; height: 30px;"></div>
+        </div>
+
+        <div class="signature-section">
+            <p>ลงชื่อผู้ประเมิน</p>
+            <div class="signature-line"></div>
+            <p class="mt-2">(.......................................................................)</p>
+            <p>ตำแหน่ง คณะกรรมการประเมินผลการปฏิบัติงาน</p>
+            <p>วันที่ ........../........../................</p>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!checkAuth()) {
+                window.location.href = 'login.html';
+                return;
+            }
+            window.currentUser = getCurrentUser();
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const driverId = urlParams.get('driver_id');
+            const year = urlParams.get('year') || (new Date().getFullYear() + 543).toString();
+
+            if (!driverId) {
+                alert('ไม่พบข้อมูลคนขับรถ กรุณากลับไปที่หน้า Dashboard แล้วเข้าใหม่');
+                return;
+            }
+
+            try {
+                // Fetch driver details
+                const driversRes = await window.apiFetch('/api/drivers');
+                const driver = driversRes.data.find(d => d.id === driverId);
+                if(driver) {
+                    document.getElementById('displayDriverName').textContent = `ชื่อ-สกุล: ${driver.title || ''}${driver.first_name} ${driver.last_name}`;
+                    document.getElementById('displayYear').textContent = year;
+                }
+            } catch (err) {
+                console.error(err);
+                alert('เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + err.message);
+            }
+        });
+    </script>
+</body>
+</html>
