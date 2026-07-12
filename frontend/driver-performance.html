@@ -75,7 +75,8 @@
                                     <div class="p-3 border rounded bg-light h-100">
                                         <h6 class="text-muted">คะแนนจากผู้โดยสาร<br>(40 คะแนน)</h6>
                                         <h3 id="passengerScore" class="text-primary mt-2">--</h3>
-                                        <small class="text-muted" id="passengerTripCount">จาก 0 ทริป</small>
+                                        <small class="text-muted d-block mb-2" id="passengerTripCount">จาก 0 ทริป</small>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="copyRetroactiveSurveyLink()"><i class="fa-solid fa-link"></i> คัดลอกลิงก์ส่งให้ผู้โดยสารประเมินย้อนหลัง</button>
                                     </div>
                                 </div>
                                 <div class="col-12 col-md-4">
@@ -285,6 +286,16 @@
                 if (!currentDriverId) return;
                 const year = document.getElementById('academicYearFilter').value;
                 window.open(`print-passenger-survey.html?driverId=${currentDriverId}&year=${year}`, '_blank');
+            };
+
+            window.copyRetroactiveSurveyLink = function() {
+                if (!currentDriverId) return;
+                const link = `${window.location.origin}/qr-survey?driver_id=${currentDriverId}`;
+                navigator.clipboard.writeText(link).then(() => {
+                    Swal.fire('คัดลอกสำเร็จ', 'สามารถส่งลิงก์นี้ให้ผู้โดยสารทางไลน์หรือช่องทางอื่นๆ เพื่อประเมินย้อนหลังได้เลยครับ', 'success');
+                }).catch(err => {
+                    alert('คัดลอกไม่สำเร็จ กรุณาก๊อปปี้ลิงก์นี้: ' + link);
+                });
             };
             
             // Only admin/committee can access

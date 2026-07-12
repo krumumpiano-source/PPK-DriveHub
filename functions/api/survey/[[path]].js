@@ -11,23 +11,53 @@ export async function onRequest(context) {
   const path = url.pathname;
   const method = request.method;
 
-  // --- GET /api/survey/car-info --- PUBLIC (สำหรับ QR survey page)
-  if (path === '/api/survey/car-info' && method === 'GET') {
+  // --- GET /api/survey/info --- PUBLIC (สำหรับ QR survey page หรือส่งลิงก์ตรง)
+  if (path === '/api/survey/info' && method === 'GET') {
     const carId = url.searchParams.get('car_id');
-    if (!carId) return error('กรุณาระบุ car_id');
+    const driverId = url.searchParams.get('driver_id');
+    
+    if (driverId) {
+        // Fetch driver info and their most recent car
+        const driver = await dbFirst(env.DB, `SELECT id, name FROM drivers WHERE id = ?`, [driverId]);
+        if (!driver) return error('ไม่พบพนักงานขับรถ', 404);
+        
+        const recentQueue = await dbFirst(env.DB, `SELECT car_id FROM queue WHERE driver_id = ? ORDER BY date DESC, time_start DESC LIMIT 1`, [driverId]);
+        let car = null;
+        if (recentQueue) {
+            car = await dbFirst(env.DB, `SELECT id, license_plate, brand, model FROM cars WHERE id = ?`, [recentQueue.car_id]);
+        }
+        if (!car) {
+            car = await dbFirst(env.DB, `SELECT id, license_plate, brand, model FROM cars WHERE status = 'active' LIMIT 1`);
+        }
+        return success({ driver_id: driver.id, driver_name: driver.name, car_id: car?.id, ...car });
+    }
+
+    if (!carId) return error('กรุณาระบุ car_id หรือ driver_id');
     const car = await dbFirst(env.DB,
       `SELECT id, license_plate, brand, model FROM cars WHERE id = ? OR license_plate = ?`, [carId, carId]);
     if (!car) return error('ไม่พบรถ', 404);
     const latestQueue = await dbFirst(env.DB,
       `SELECT driver_id FROM queue WHERE car_id = ? AND status IN ('ongoing','completed','scheduled')
        ORDER BY date DESC, time_start DESC LIMIT 1`, [car.id]);
-    return success({ ...car, driver_id: latestQueue?.driver_id || null });
+       
+    let driverName = null;
+    if (latestQueue?.driver_id) {
+        const d = await dbFirst(env.DB, `SELECT name FROM drivers WHERE id = ?`, [latestQueue.driver_id]);
+        driverName = d?.name;
+    }
+    return success({ ...car, car_id: car.id, driver_id: latestQueue?.driver_id || null, driver_name: driverName });
   }
 
   // --- POST /api/survey/submit --- PUBLIC (ไม่ต้อง login)
   if (path === '/api/survey/submit' && method === 'POST') {
     const body = await parseBody(request);
-    if (!body?.car_id) return error('กรุณาระบุรถที่ต้องการประเมิน');
+    if (!body?.car_id && !body?.driver_id) return error('กรุณาระบุรถหรือพนักงานที่ต้องการประเมิน');
+    
+    // Ensure we have a car_id to satisfy DB constraints
+    if (!body.car_id) {
+        const fbCar = await dbFirst(env.DB, `SELECT id FROM cars WHERE status = 'active' LIMIT 1`);
+        body.car_id = fbCar?.id || 'NO_CAR_ID';
+    }
     // ค้นหาพนักงานขับรถจากคิวล่าสุดของรถคันนี้
     let driverId = body.driver_id || null;
     let queueId = body.queue_id || null;

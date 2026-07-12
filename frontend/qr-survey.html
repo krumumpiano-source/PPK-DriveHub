@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -89,26 +89,34 @@
       }
     });
 
-    // Get car_id from URL
+    // Get car_id and/or driver_id from URL
     (async function(){
       var params=new URLSearchParams(window.location.search);
       carId=params.get('car')||params.get('car_id')||params.get('vehicleId');
-      if(!carId){
-        document.getElementById('carInfo').textContent='ไม่พบรหัสรถ กรุณาสแกน QR Code ใหม่';
-        document.getElementById('errorSection').innerHTML='<div class="error-box">❌ ไม่พบรหัสรถ กรุณาสแกน QR Code อีกครั้ง</div>';
+      var forceDriverId=params.get('driver')||params.get('driver_id');
+      
+      if(!carId && !forceDriverId){
+        document.getElementById('carInfo').textContent='ไม่พบข้อมูล กรุณาสแกน QR Code ใหม่ หรือตรวจสอบลิงก์';
+        document.getElementById('errorSection').innerHTML='<div class="error-box">❌ ไม่พบข้อมูลรถหรือพนักงานขับรถ</div>';
         document.getElementById('errorSection').style.display='block';
         return;
       }
       try{
-        var r=await API.get('/api/survey/car-info?car_id='+encodeURIComponent(carId));
+        var query = forceDriverId ? ('driver_id=' + encodeURIComponent(forceDriverId)) : ('car_id=' + encodeURIComponent(carId));
+        var r=await API.get('/api/survey/info?' + query);
         if(r.success&&r.data){
-          document.getElementById('carInfo').textContent='🚗 '+(r.data.license_plate||'')+' '+(r.data.brand||'')+' '+(r.data.model||'');
-          driverId=r.data.driver_id||null;
+          carId = r.data.car_id || r.data.id || carId;
+          driverId = forceDriverId || r.data.driver_id || null;
+          var carText = '🚗 '+(r.data.license_plate||'')+' '+(r.data.brand||'')+' '+(r.data.model||'');
+          var driverText = r.data.driver_name ? ' 👨‍✈️ ' + r.data.driver_name : '';
+          document.getElementById('carInfo').textContent = carText + driverText;
         }else{
-          document.getElementById('carInfo').textContent='🚗 รหัสรถ: '+carId;
+          document.getElementById('carInfo').textContent='🚗 รหัสรถ: '+(carId||'ไม่ได้ระบุ') + (forceDriverId ? ' 👨‍✈️ รหัสพนักงาน: '+forceDriverId : '');
+          if(forceDriverId) driverId = forceDriverId;
         }
       }catch(e){
-        document.getElementById('carInfo').textContent='🚗 รหัสรถ: '+carId;
+        document.getElementById('carInfo').textContent='🚗 รหัสรถ: '+(carId||'ไม่ได้ระบุ') + (forceDriverId ? ' 👨‍✈️ รหัสพนักงาน: '+forceDriverId : '');
+        if(forceDriverId) driverId = forceDriverId;
       }
       document.getElementById('formSection').style.display='block';
     })();
