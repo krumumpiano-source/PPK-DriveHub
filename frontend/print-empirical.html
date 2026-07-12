@@ -164,7 +164,7 @@
             window.currentUser = getCurrentUser();
             
             const urlParams = new URLSearchParams(window.location.search);
-            const driverId = urlParams.get('driver_id');
+            const driverId = urlParams.get('driverId') || urlParams.get('driver_id');
             const year = urlParams.get('year') || (new Date().getFullYear() + 543).toString();
 
             if (!driverId) {
