@@ -316,7 +316,8 @@
         async function loadDrivers() {
             try {
                 const res = await API.get('/api/drivers');
-                const drivers = (res.data.drivers || res.data || []).filter(d => d.status === 'active');
+                const MAIN_DRIVERS = ['ชารี', 'ณัฐวุฒิ', 'สมชาย', 'สุรเชษฐ์'];
+                const drivers = (res.data.drivers || res.data || []).filter(d => d.status === 'active' && MAIN_DRIVERS.some(name => d.first_name?.includes(name)));
                 const list = document.getElementById('driverList');
                 list.innerHTML = '';
                 
