@@ -54,8 +54,9 @@ export async function onRequest(context) {
       const usageStatsRaw = await db.prepare(`
         SELECT 
           (SELECT COUNT(id) FROM queue WHERE driver_id = ? AND status = 'completed' AND date >= ? AND date <= ?) as total_completed_trips,
-          (SELECT COUNT(ur.id) FROM usage_records ur INNER JOIN queue q ON ur.queue_id = q.id WHERE q.driver_id = ? AND q.status = 'completed' AND q.date >= ? AND q.date <= ? AND ur.record_type IN ('departure','return')) as total_logs
-      `).bind(driverId, fiscalStart, fiscalEnd, driverId, fiscalStart, fiscalEnd).first();
+          (SELECT COUNT(ur.id) FROM usage_records ur INNER JOIN queue q ON ur.queue_id = q.id WHERE q.driver_id = ? AND q.status = 'completed' AND q.date >= ? AND q.date <= ? AND ur.record_type IN ('departure','return')) as total_logs,
+          (SELECT COUNT(id) FROM usage_records WHERE driver_id = ? AND record_type = 'refuel' AND (mileage IS NULL OR mileage = 0 OR mileage = '') AND substr(datetime, 1, 10) >= ? AND substr(datetime, 1, 10) <= ?) as missed_fuel_mileage
+      `).bind(driverId, fiscalStart, fiscalEnd, driverId, fiscalStart, fiscalEnd, driverId, fiscalStart, fiscalEnd).first();
 
       const totalCompleted = usageStatsRaw.total_completed_trips || 0;
       const totalLogs = usageStatsRaw.total_logs || 0;
@@ -65,7 +66,8 @@ export async function onRequest(context) {
       const usageStats = {
           total_completed_trips: totalCompleted,
           total_logs: totalLogs,
-          missed_logs: missedLogs
+          missed_logs: missedLogs,
+          missed_fuel_mileage: usageStatsRaw.missed_fuel_mileage || 0
       };
 
       // Calculate combined score

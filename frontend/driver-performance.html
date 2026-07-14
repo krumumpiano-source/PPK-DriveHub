@@ -107,7 +107,8 @@
                                             <div class="small">
                                                 <span><i class="fa-solid fa-car text-primary"></i> วิ่งงานเสร็จสิ้น (ปีนี้): <strong id="statCompletedTrips">0</strong> ทริป</span><br>
                                                 <span><i class="fa-solid fa-location-dot text-success"></i> บันทึกข้อมูลเข้า-ออก: <strong id="statUsageLogs">0</strong> ครั้ง</span><br>
-                                                <span class="text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation"></i> ลืมลงบันทึก: <strong id="statMissedLogs">0</strong> ครั้ง</span>
+                                                <span class="text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation"></i> ลืมลงบันทึก: <strong id="statMissedLogs">0</strong> ครั้ง</span><br>
+                                                <span class="text-warning text-dark fw-bold"><i class="fa-solid fa-gas-pump"></i> ลืมบันทึกเลขไมล์ตอนเติมน้ำมัน: <strong id="statMissedFuelLogs">0</strong> ครั้ง</span>
                                             </div>
                                         </div>
                                     </div>
@@ -390,10 +391,12 @@
                     document.getElementById('statCompletedTrips').textContent = data.usage_stats.total_completed_trips || 0;
                     document.getElementById('statUsageLogs').textContent = data.usage_stats.total_logs || 0;
                     document.getElementById('statMissedLogs').textContent = data.usage_stats.missed_logs || 0;
+                    if (document.getElementById('statMissedFuelLogs')) document.getElementById('statMissedFuelLogs').textContent = data.usage_stats.missed_fuel_mileage || 0;
                 } else {
                     document.getElementById('statCompletedTrips').textContent = '0';
                     document.getElementById('statUsageLogs').textContent = '0';
                     document.getElementById('statMissedLogs').textContent = '0';
+                    if (document.getElementById('statMissedFuelLogs')) document.getElementById('statMissedFuelLogs').textContent = '0';
                 }
 
                 const total = (data.passenger_weighted || 0) + (data.committee_weighted || 0);
