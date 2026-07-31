@@ -1,4 +1,4 @@
-﻿// Fuel logs + fuel requests + fuel types + bill reconciliation
+// Fuel logs + fuel requests + fuel types + bill reconciliation
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, extractParam, uploadToR2, writeAuditLog,
@@ -197,11 +197,8 @@ export async function onRequest(context) {
     await notifyAllAdmins(env.DB, 'fuel', 'เติมน้ำมัน',
       `บันทึกเติมน้ำมัน ${carLabel} — ${liters} ลิตร, ${body.amount || 0} บาท (${documentNumber})`);
 
-    let telegramMsg = `⛽ <b>เติมน้ำมัน</b> ${documentNumber}\n🚗 ${carLabel}\n🛢️ ${liters} ลิตร | ${body.amount || 0} บาท\n⛽ ${body.gas_station_name || body.station_name || '-'}\n📏 ${mileageBefore} → ${mileageAfter} กม.`;
-    if (anomalyFlag) {
-      telegramMsg += `\n⚠️ <b>ผิดปกติ:</b> ${anomalyReason}`;
-    }
-    await sendTelegramMessage(env, telegramMsg);
+    // Telegram notifications for fuel disabled per user request
+    // await sendTelegramMessage(env, telegramMsg);
 
     return success({ id, document_number: documentNumber, anomaly_flag: anomalyFlag, message: 'บันทึกข้อมูลเชื้อเพลิงเรียบร้อย' }, 201);
   }

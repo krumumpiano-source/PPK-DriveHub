@@ -327,8 +327,8 @@ export async function onRequest(context) {
     await writeAuditLog(env.DB, user.id, user.displayName, 'create_repair', 'repair', id, { car: carLabel });
     await notifyAllAdmins(env.DB, 'repair', 'แจ้งซ่อม',
       `${user.displayName} แจ้งซ่อม ${carLabel} — ${body.issue_description || body.description || '-'}`);
-    await sendTelegramMessage(env,
-      `🔧 <b>แจ้งซ่อมใหม่</b>\n🚗 ${carLabel}\n📝 ${body.issue_description || body.description || '-'}\n👨‍💼 โดย: ${user.displayName}`);
+    // await sendTelegramMessage(env,
+    //   `🔧 <b>แจ้งซ่อมใหม่</b>\n🚗 ${carLabel}\n📝 ${body.issue_description || body.description || '-'}\n👨‍💼 โดย: ${user.displayName}`);
 
     // Auto-sync maintenance schedule if completed
     if (status === 'completed') {
@@ -427,7 +427,7 @@ export async function onRequest(context) {
     let teleMsg = `✅ <b>อนุมัติแจ้งซ่อม</b>\n🚗 ${carLabel}`;
     if (body?.garage_name) teleMsg += `\n🏪 กำหนดซ่อมที่: ${body.garage_name}`;
     teleMsg += `\n👨‍💼 อนุมัติโดย: ${user.displayName}`;
-    await sendTelegramMessage(env, teleMsg);
+    // await sendTelegramMessage(env, teleMsg);
     return success({ message: 'อนุมัติแจ้งซ่อมเรียบร้อย' });
   }
 
@@ -448,7 +448,7 @@ export async function onRequest(context) {
     const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : row.car_id;
     await writeAuditLog(env.DB, user.id, user.displayName, 'reject_repair', 'repair', id, { car: carLabel, reason: body?.reason });
     await createNotification(env.DB, row.created_by, 'repair', 'ไม่อนุมัติแจ้งซ่อม', `แจ้งซ่อม ${carLabel} ไม่ได้รับอนุมัติ: ${body?.reason || '-'}`);
-    await sendTelegramMessage(env, `❌ <b>ไม่อนุมัติแจ้งซ่อม</b>\n🚗 ${carLabel}\n📝 เหตุผล: ${body?.reason || '-'}\n👨‍💼 โดย: ${user.displayName}`);
+    // await sendTelegramMessage(env, `❌ <b>ไม่อนุมัติแจ้งซ่อม</b>\n🚗 ${carLabel}\n📝 เหตุผล: ${body?.reason || '-'}\n👨‍💼 โดย: ${user.displayName}`);
     return success({ message: 'ปฏิเสธแจ้งซ่อมเรียบร้อย' });
   }
 
@@ -472,7 +472,7 @@ export async function onRequest(context) {
     const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : row.car_id;
     await writeAuditLog(env.DB, user.id, user.displayName, 'inspect_repair', 'repair', id, { car: carLabel });
     await notifyAllAdmins(env.DB, 'repair', 'ตรวจสภาพเสร็จ', `ตรวจสภาพ ${carLabel} เรียบร้อย — รอทำบันทึกข้อความ`);
-    await sendTelegramMessage(env, `🔍 <b>ตรวจสภาพเสร็จ</b>\n🚗 ${carLabel}\n📝 ${body?.inspection_notes || '-'}\n👨‍💼 โดย: ${user.displayName}`);
+    // await sendTelegramMessage(env, `🔍 <b>ตรวจสภาพเสร็จ</b>\n🚗 ${carLabel}\n📝 ${body?.inspection_notes || '-'}\n👨‍💼 โดย: ${user.displayName}`);
     return success({ message: 'บันทึกตรวจสภาพเรียบร้อย' });
   }
 
@@ -493,7 +493,7 @@ export async function onRequest(context) {
     const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : row.car_id;
     await writeAuditLog(env.DB, user.id, user.displayName, 'document_repair', 'repair', id, { car: carLabel });
     await notifyAllAdmins(env.DB, 'repair', 'บันทึกข้อความเสร็จ', `ทำบันทึกข้อความซ่อม ${carLabel} เรียบร้อย — รอดำเนินการซ่อม`);
-    await sendTelegramMessage(env, `📄 <b>บันทึกข้อความเสร็จ</b>\n🚗 ${carLabel}\n📝 ${body?.memo_notes || '-'}\n👨‍💼 โดย: ${user.displayName}`);
+    // await sendTelegramMessage(env, `📄 <b>บันทึกข้อความเสร็จ</b>\n🚗 ${carLabel}\n📝 ${body?.memo_notes || '-'}\n👨‍💼 โดย: ${user.displayName}`);
     return success({ message: 'ทำบันทึกข้อความเรียบร้อย' });
   }
 
@@ -517,7 +517,7 @@ export async function onRequest(context) {
     const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : row.car_id;
     await writeAuditLog(env.DB, user.id, user.displayName, 'start_repair', 'repair', id, { car: carLabel });
     await notifyAllAdmins(env.DB, 'repair', 'เริ่มซ่อม', `เริ่มดำเนินการซ่อม ${carLabel} แล้ว`);
-    await sendTelegramMessage(env, `🔨 <b>เริ่มซ่อม</b>\n🚗 ${carLabel}\n🏪 ${body?.garage_name || row.garage_name || '-'}\n💰 ${body?.cost || row.cost || 0} บาท\n👨‍💼 โดย: ${user.displayName}`);
+    // await sendTelegramMessage(env, `🔨 <b>เริ่มซ่อม</b>\n🚗 ${carLabel}\n🏪 ${body?.garage_name || row.garage_name || '-'}\n💰 ${body?.cost || row.cost || 0} บาท\n👨‍💼 โดย: ${user.displayName}`);
     return success({ message: 'เริ่มดำเนินการซ่อมเรียบร้อย' });
   }
 
@@ -583,7 +583,7 @@ export async function onRequest(context) {
       if (driverUser) await createNotification(env.DB, driverUser.id, 'repair', 'ซ่อมเสร็จ', `ซ่อม ${carLabel} เสร็จเรียบร้อยแล้ว`);
     }
     await notifyAllAdmins(env.DB, 'repair', 'ซ่อมเสร็จ', `ซ่อม ${carLabel} เสร็จเรียบร้อย ค่าใช้จ่ายรวม ${body?.cost || row.cost || 0} บาท`);
-    await sendTelegramMessage(env, `✅ <b>ซ่อมเสร็จ</b>\n🚗 ${carLabel}\n💰 ${body?.cost || row.cost || 0} บาท\n👨‍💼 โดย: ${user.displayName}`);
+    // await sendTelegramMessage(env, `✅ <b>ซ่อมเสร็จ</b>\n🚗 ${carLabel}\n💰 ${body?.cost || row.cost || 0} บาท\n👨‍💼 โดย: ${user.displayName}`);
 
     // Auto-sync maintenance schedule
     const completedRow = await dbFirst(env.DB, 'SELECT * FROM repair_log WHERE id = ?', [id]);

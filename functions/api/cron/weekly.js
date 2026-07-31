@@ -46,8 +46,8 @@ export async function onRequest(context) {
                     `🔧 ค่าซ่อมบำรุง: ฿${totalRepairCost.toLocaleString('th-TH')}\n\n` +
                     `📌 กรุณาตรวจสอบรายละเอียดเพิ่มเติมในระบบ`;
 
-    await sendTelegramMessage(env, message);
-    return new Response('Weekly report sent', { status: 200 });
+    // await sendTelegramMessage(env, message);
+    return new Response('Weekly report generated (Telegram disabled)', { status: 200 });
   } catch (error) {
     return new Response(`Cron failed: ${error.message}`, { status: 500 });
   }

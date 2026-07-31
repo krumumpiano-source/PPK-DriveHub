@@ -155,8 +155,8 @@ export async function onRequest(context) {
     await writeAuditLog(env.DB, user.id, user.displayName, 'create_queue', 'queue', id, { date: body.date, car: carLabel });
     await notifyAllAdmins(env.DB, 'queue', 'สร้างคิวใหม่',
       `${user.displayName} สร้างคิววันที่ ${body.date} | ${carLabel} | ${driverLabel} | ${mission}`);
-    await sendTelegramMessage(env,
-      `🚐 <b>คิวใหม่</b>\n📅 ${body.date} (${timeStart}-${timeEnd})\n🚗 ${carLabel}\n👤 ${driverLabel}\n📋 ${mission}\n👨‍💼 สร้างโดย: ${user.displayName}`);
+    // await sendTelegramMessage(env,
+    //   `🚐 <b>คิวใหม่</b>\n📅 ${body.date} (${timeStart}-${timeEnd})\n🚗 ${carLabel}\n👤 ${driverLabel}\n📋 ${mission}\n👨‍💼 สร้างโดย: ${user.displayName}`);
 
     if (driver && driver.line_id) {
       await sendLineMessage(env, driver.line_id, 
@@ -267,8 +267,8 @@ export async function onRequest(context) {
     if (q) {
       await notifyAllAdmins(env.DB, 'queue', 'ยกเลิกคิว',
         `${user.displayName} ยกเลิกคิววันที่ ${q.date} | ${q.license_plate || ''} | ${q.driver_name || ''}`);
-      await sendTelegramMessage(env,
-        `❌ <b>ยกเลิกคิว</b>\n📅 ${q.date} (${q.time_start})\n🚗 ${q.license_plate || ''}\n👤 ${q.driver_name || ''}\n💬 ${body.cancel_reason || body.reason || '-'}\n👨‍💼 โดย: ${user.displayName}`);
+      // await sendTelegramMessage(env,
+      //   `❌ <b>ยกเลิกคิว</b>\n📅 ${q.date} (${q.time_start})\n🚗 ${q.license_plate || ''}\n👤 ${q.driver_name || ''}\n💬 ${body.cancel_reason || body.reason || '-'}\n👨‍💼 โดย: ${user.displayName}`);
     }
     return success({ message: 'ยกเลิกคิวเรียบร้อย' });
   }

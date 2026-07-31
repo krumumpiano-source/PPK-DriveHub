@@ -113,8 +113,8 @@ export async function onRequest(context) {
     }
     const urgentLabel = body.is_urgent ? ' 🚨 ฉุกเฉิน' : '';
     const dateRangeStr = body.return_date && body.return_date !== body.date ? `${body.date} ถึง ${body.return_date}` : body.date;
-    await sendTelegramMessage(env,
-      `📋 <b>คำขอใช้รถใหม่${urgentLabel}</b>\n📅 ${dateRangeStr} (${body.time_start || '-'} - ${body.time_end || '-'})\n📍 ${body.destination}\n📝 ${body.purpose || '-'}\n👤 ${body.requester_name || user.display_name || ''}\n👥 ผู้ร่วมเดินทาง ${body.passengers || 1} คน`);
+    // await sendTelegramMessage(env,
+    //   `📋 <b>คำขอใช้รถใหม่${urgentLabel}</b>\n📅 ${dateRangeStr} (${body.time_start || '-'} - ${body.time_end || '-'})\n📍 ${body.destination}\n📝 ${body.purpose || '-'}\n👤 ${body.requester_name || user.display_name || ''}\n👥 ผู้ร่วมเดินทาง ${body.passengers || 1} คน`);
     return success({ id, message: 'สร้างคำขอใช้รถเรียบร้อย' }, 201);
   }
 
@@ -277,8 +277,8 @@ export async function onRequest(context) {
     }
     const closeQueueUrl = `https://ppk-drivehub.pages.dev/qr-usage-record.html?type=return&car_id=${body.assigned_car_id}&queue_id=${queueId}`;
 
-    await sendTelegramMessage(env,
-      `✅ <b>จัดรถและเสนออนุมัติเรียบร้อย</b>${isPooled}\n📅 ${row.date} (${timeStart}-${timeEnd})\n📍 ${row.destination}\n🚗 ${carLabel}\n👤 @${driverCheck.name.replace(/\s+/g,'')} (คนขับ)\n👨‍💼 จัดรถโดย: ${user.displayName}\n📋 ขอโดย: ${row.requester_name}${notesStr}\n\n▶️ <a href="${closeQueueUrl}">กดที่นี่เพื่อบันทึกปิดคิวและกรอกเลขไมล์</a>`);
+    // await sendTelegramMessage(env,
+    //   `✅ <b>จัดรถและเสนออนุมัติเรียบร้อย</b>${isPooled}\n📅 ${row.date} (${timeStart}-${timeEnd})\n📍 ${row.destination}\n🚗 ${carLabel}\n👤 @${driverCheck.name.replace(/\s+/g,'')} (คนขับ)\n👨‍💼 จัดรถโดย: ${user.displayName}\n📋 ขอโดย: ${row.requester_name}${notesStr}\n\n▶️ <a href="${closeQueueUrl}">กดที่นี่เพื่อบันทึกปิดคิวและกรอกเลขไมล์</a>`);
 
     if (driverCheck && driverCheck.line_id) {
       await sendLineMessage(env, driverCheck.line_id, 
@@ -309,8 +309,8 @@ export async function onRequest(context) {
     await writeAuditLog(env.DB, user.id, user.displayName, 'reject_vehicle_request', 'vehicle_request', id, { reason: body?.reason });
     await createNotification(env.DB, row.requester_id, 'vehicle_request', 'คำขอใช้รถไม่ได้รับอนุมัติ',
       `คำขอวันที่ ${row.date} ไป${row.destination} ไม่อนุมัติ: ${body?.reason || '-'}`);
-    await sendTelegramMessage(env,
-      `❌ <b>ไม่อนุมัติคำขอใช้รถ</b>\n📅 ${row.date}\n📍 ${row.destination}\n📝 เหตุผล: ${body?.reason || '-'}\n👨‍💼 โดย: ${user.displayName}`);
+    // await sendTelegramMessage(env,
+    //   `❌ <b>ไม่อนุมัติคำขอใช้รถ</b>\n📅 ${row.date}\n📍 ${row.destination}\n📝 เหตุผล: ${body?.reason || '-'}\n👨‍💼 โดย: ${user.displayName}`);
     return success({ message: 'ปฏิเสธคำขอเรียบร้อย' });
   }
 

@@ -75,8 +75,8 @@ export async function onRequest(context) {
 
     if (messages.length > 0) {
       const fullMessage = messages.join('\n');
-      await sendTelegramMessage(env, fullMessage);
-      return new Response('Cron executed and notifications sent.', { status: 200 });
+      // await sendTelegramMessage(env, fullMessage);
+      return new Response('Cron executed (Telegram notifications disabled).', { status: 200 });
     } else {
       return new Response('Cron executed. No notifications needed.', { status: 200 });
     }

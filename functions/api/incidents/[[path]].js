@@ -1,4 +1,4 @@
-﻿// Incident Logging — อุบัติเหตุ/เหตุการณ์ผิดปกติ
+// Incident Logging — อุบัติเหตุ/เหตุการณ์ผิดปกติ
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, writeAuditLog,
@@ -91,8 +91,8 @@ export async function onRequest(context) {
     await writeAuditLog(env.DB, user.id, user.displayName, 'create_incident', 'incident', id, { car: carLabel, type: body.incident_type });
     await notifyAllAdmins(env.DB, 'incident', 'บันทึกอุบัติเหตุ',
       `${typeLabels[body.incident_type] || body.incident_type} — ${carLabel} วันที่ ${body.incident_date}`);
-    await sendTelegramMessage(env,
-      `⚠️ <b>บันทึกอุบัติเหตุ</b>\n🚗 ${carLabel}\n📅 ${body.incident_date}\n📌 ${typeLabels[body.incident_type] || body.incident_type}\n📍 ${body.location || '-'}\n💰 ค่าเสียหาย ${body.damage_cost || 0} บาท\n👨‍💼 โดย: ${user.displayName}`);
+    // await sendTelegramMessage(env,
+    //   `⚠️ <b>บันทึกอุบัติเหตุ</b>\n🚗 ${carLabel}\n📅 ${body.incident_date}\n📌 ${typeLabels[body.incident_type] || body.incident_type}\n📍 ${body.location || '-'}\n💰 ค่าเสียหาย ${body.damage_cost || 0} บาท\n👨‍💼 โดย: ${user.displayName}`);
     return success({ id, message: 'บันทึกอุบัติเหตุเรียบร้อย' }, 201);
   }
 

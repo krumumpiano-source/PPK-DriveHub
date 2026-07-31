@@ -1,4 +1,4 @@
-﻿// Auto-Heal shared logic — ใช้ร่วมกันระหว่าง usage API และ gform-sync
+// Auto-Heal shared logic — ใช้ร่วมกันระหว่าง usage API และ gform-sync
 import { dbFirst, dbRun, generateUUID, now, notifyAllAdmins, sendTelegramMessage } from '../_helpers.js';
 
 const SCORE_DEDUCT_AUTO = 1;
@@ -127,7 +127,8 @@ export async function autoHeal(db, newRecord, env) {
         } else if (h.type === 'gap_record') {
           msg = `🔍 <b>พบการใช้รถที่ไม่มีบันทึก</b>\n🚗 รถ: ${carLabel}\n📏 ช่วงห่าง: ${h.gap_km} กม.\n📌 ระบบสร้าง gap record อัตโนมัติแล้ว — กรุณาตรวจสอบ`;
         }
-        if (msg) await sendTelegramMessage(env, msg);
+        // Telegram notifications for auto-heal (forgot to record) disabled per user request
+        // if (msg) await sendTelegramMessage(env, msg);
       }
     }
   }

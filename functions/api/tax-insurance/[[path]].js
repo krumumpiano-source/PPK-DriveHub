@@ -1,4 +1,4 @@
-﻿// Tax & insurance record tracking
+// Tax & insurance record tracking
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, extractParam, writeAuditLog, uploadToR2,
@@ -74,8 +74,8 @@ export async function onRequest(context) {
     if (body.expiry_date) {
       const daysLeft = Math.floor((new Date(body.expiry_date) - Date.now()) / 86400000);
       if (daysLeft <= 30) {
-        await sendTelegramMessage(env,
-          `📋 <b>ภาษีใกล้หมดอายุ</b>\n🚗 ${(await dbFirst(env.DB, 'SELECT license_plate FROM cars WHERE id = ?', [body.car_id]))?.license_plate || ''}\n📅 หมดอายุ: ${body.expiry_date} (เหลือ ${daysLeft} วัน)`);
+        // await sendTelegramMessage(env,
+        //   `📋 <b>ภาษีใกล้หมดอายุ</b>\n🚗 ${(await dbFirst(env.DB, 'SELECT license_plate FROM cars WHERE id = ?', [body.car_id]))?.license_plate || ''}\n📅 หมดอายุ: ${body.expiry_date} (เหลือ ${daysLeft} วัน)`);
       }
     }
     return success({ id, message: 'บันทึกข้อมูลภาษีรถเรียบร้อย' }, 201);
@@ -231,8 +231,8 @@ export async function onRequest(context) {
     await writeAuditLog(env.DB, user.id, user.displayName, 'create_inspection', 'inspection', id, { car: carLabel });
     const daysLeft = Math.floor((new Date(body.expiry_date) - Date.now()) / 86400000);
     if (daysLeft <= 30) {
-      await sendTelegramMessage(env,
-        `🔍 <b>ตรอ. ใกล้หมดอายุ</b>\n🚗 ${carLabel}\n📅 หมดอายุ: ${body.expiry_date} (เหลือ ${daysLeft} วัน)`);
+      // await sendTelegramMessage(env,
+      //   `🔍 <b>ตรอ. ใกล้หมดอายุ</b>\n🚗 ${carLabel}\n📅 หมดอายุ: ${body.expiry_date} (เหลือ ${daysLeft} วัน)`);
     }
     return success({ id, message: 'บันทึกข้อมูล ตรอ. เรียบร้อย' }, 201);
   }

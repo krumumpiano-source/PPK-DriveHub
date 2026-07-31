@@ -1,4 +1,4 @@
-﻿// Usage records — event-based (departure/return/refuel/inspection) + Auto-Heal
+// Usage records — event-based (departure/return/refuel/inspection) + Auto-Heal
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, extractParam, notifyAllAdmins, uploadToR2, createNotification, sendTelegramMessage
@@ -7,6 +7,103 @@ import { autoHeal } from '../../_lib/auto-heal.js';
 
 // Penalty points deducted per auto-heal event (auto_departure or auto_return)
 const SCORE_DEDUCT_AUTO = 1;
+
+async function notifyTelegramDriverUsage(env, recordData, user = null) {
+  try {
+    const { car_id, record_type, datetime, mileage, destination, purpose, notes, driver_id, driver_name_manual } = recordData;
+
+    // ส่งแจ้งเตือน Telegram เฉพาะ 'departure' (ออกเดินทาง) และ 'return' (กลับจากเดินทาง)
+    if (record_type !== 'departure' && record_type !== 'return') return;
+
+    let driverName = null;
+    let isDriver = false;
+
+    // 1. ตรวจสอบจาก driver_id
+    if (driver_id) {
+      const dRow = await dbFirst(env.DB,
+        `SELECT name, first_name, last_name FROM drivers WHERE id = ?`,
+        [driver_id]
+      );
+      if (dRow) {
+        driverName = dRow.name || `${dRow.first_name || ''} ${dRow.last_name || ''}`.trim();
+        isDriver = true;
+      }
+    }
+
+    // 2. ตรวจสอบจาก driver_name_manual
+    if (!isDriver && driver_name_manual && driver_name_manual.trim()) {
+      const trimmed = driver_name_manual.trim();
+      const dRow = await dbFirst(env.DB,
+        `SELECT id, name, first_name, last_name FROM drivers WHERE name = ? OR name LIKE ? LIMIT 1`,
+        [trimmed, `%${trimmed}%`]
+      );
+      if (dRow) {
+        driverName = dRow.name || `${dRow.first_name || ''} ${dRow.last_name || ''}`.trim();
+        isDriver = true;
+      } else {
+        driverName = trimmed;
+        isDriver = true;
+      }
+    }
+
+    // 3. ตรวจสอบจาก user ที่เข้าสู่ระบบ
+    if (!isDriver && user) {
+      if (user.driver_id) {
+        const dRow = await dbFirst(env.DB,
+          `SELECT name, first_name, last_name FROM drivers WHERE id = ?`,
+          [user.driver_id]
+        );
+        if (dRow) {
+          driverName = dRow.name || `${dRow.first_name || ''} ${dRow.last_name || ''}`.trim();
+          isDriver = true;
+        }
+      } else if (user.role === 'driver') {
+        driverName = user.displayName || user.username;
+        isDriver = true;
+      }
+    }
+
+    // ส่งเฉพาะกรณีที่เป็นพนักงานขับรถเท่านั้น
+    if (!isDriver || !driverName) return;
+
+    const car = await dbFirst(env.DB,
+      `SELECT license_plate, brand, model FROM cars WHERE id = ?`,
+      [car_id]
+    );
+
+    const carLabel = car
+      ? `${car.brand || ''} ${car.model || ''} (${car.license_plate || car_id})`.trim()
+      : car_id;
+
+    const formattedMileage = mileage ? Number(mileage).toLocaleString('th-TH') : '-';
+    const displayTime = datetime || now();
+
+    let msg = '';
+    if (record_type === 'departure') {
+      msg = `🚗 <b>บันทึกการใช้รถก่อนออกเดินทาง</b>\n` +
+            `🚘 รถ: ${carLabel}\n` +
+            `👤 พนักงานขับรถ: ${driverName}\n` +
+            `📏 เลขไมล์ออก: ${formattedMileage} กม.\n` +
+            (destination ? `📍 จุดหมาย: ${destination}\n` : '') +
+            (purpose ? `📝 วัตถุประสงค์: ${purpose}\n` : '') +
+            `⏰ เวลา: ${displayTime}`;
+    } else if (record_type === 'return') {
+      msg = `🏁 <b>บันทึกกลับจากการเดินทาง</b>\n` +
+            `🚘 รถ: ${carLabel}\n` +
+            `👤 พนักงานขับรถ: ${driverName}\n` +
+            `📏 เลขไมล์กลับ: ${formattedMileage} กม.\n` +
+            (destination ? `📍 สถานที่/จุดหมาย: ${destination}\n` : '') +
+            (notes ? `📝 หมายเหตุ: ${notes}\n` : '') +
+            `⏰ เวลา: ${displayTime}`;
+    }
+
+    if (msg) {
+      await sendTelegramMessage(env, msg);
+    }
+  } catch (err) {
+    console.error('Error sending usage Telegram notification:', err);
+  }
+}
 
 export async function onRequest(context) {
   try {
@@ -274,6 +371,8 @@ export async function onRequest(context) {
       }
     }
 
+    await notifyTelegramDriverUsage(env, { ...body, datetime: body.datetime || ts }, null);
+
     return success({ id, message: 'บันทึกการใช้งานเรียบร้อย', auto_healed: healed, queue_completed: queueCompleted, auto_queue_id: autoCreatedQueueId }, 201);
   }
 
@@ -419,6 +518,8 @@ export async function onRequest(context) {
     }
 
     const healed = await autoHeal(env.DB, { id, car_id: body.car_id, driver_id: body.driver_id || null, record_type: body.record_type, datetime: body.datetime || ts, mileage: body.mileage || null, queue_id: body.queue_id || null }, env);
+
+    await notifyTelegramDriverUsage(env, { ...body, datetime: body.datetime || ts }, user);
 
     return success({ id, message: 'บันทึกการใช้งานเรียบร้อย', auto_healed: healed }, 201);
   }

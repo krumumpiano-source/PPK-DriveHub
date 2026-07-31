@@ -106,8 +106,8 @@ export async function onRequest(context) {
     const displayForNotify = title ? `${title}${cleanName}` : cleanName;
     await notifyAllAdmins(env.DB, 'system', 'สมาชิกใหม่ลงทะเบียน',
       `${displayForNotify} (${email}) สมัครเข้าใช้งานสำเร็จ สิทธิ์เริ่มต้น: ผู้ขอใช้รถ`);
-    await sendTelegramMessage(env,
-      `👤 <b>สมาชิกใหม่</b>\n📛 ${displayForNotify}\n📧 ${email}\n🏢 ${department || '-'}\n📞 ${phone || '-'}\n📝 ${reason || '-'}\n✅ เข้าระบบได้ทันที (สิทธิ์: ผู้ขอใช้รถ)`);
+    // await sendTelegramMessage(env,
+    //   `👤 <b>สมาชิกใหม่</b>\n📛 ${displayForNotify}\n📧 ${email}\n🏢 ${department || '-'}\n📞 ${phone || '-'}\n📝 ${reason || '-'}\n✅ เข้าระบบได้ทันที (สิทธิ์: ผู้ขอใช้รถ)`);
 
     return success({ message: 'สมัครสมาชิกสำเร็จ เข้าสู่ระบบได้ทันทีด้วยอีเมลและรหัสผ่านที่ตั้งไว้' });
   }
