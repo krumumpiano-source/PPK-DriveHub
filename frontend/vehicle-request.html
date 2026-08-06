@@ -474,8 +474,8 @@
       w.print();
     }
 
-    var statusLabel = { pending: '🟡 รออนุมัติ', approved: '🟢 จัดคิวแล้ว (รอเซ็น)', rejected: '🔴 ไม่อนุมัติ', cancelled: '⚪ ยกเลิก' };
-    var statusClass = { pending: 'st-pending', approved: 'st-approved', rejected: 'st-rejected', cancelled: 'st-cancelled' };
+    var statusLabel = { pending_supervisor: '🟡 รอหัวหน้างานอนุมัติ', pending_executive: '🟡 รอผู้บริหารอนุมัติ', approved: '🟢 จัดคิวแล้ว', rejected: '🔴 ไม่อนุมัติ', cancelled: '⚪ ยกเลิก' };
+    var statusClass = { pending_supervisor: 'st-pending', pending_executive: 'st-pending', approved: 'st-approved', rejected: 'st-rejected', cancelled: 'st-cancelled' };
 
     function renderRequestCard(r, showActions) {
       var passengers = '';
@@ -501,14 +501,24 @@
       }
       h += '</div>';
       if (typeof renderAuditMeta === 'function') h += renderAuditMeta(r);
-      if (showActions && r.status === 'pending') {
+      if (showActions) {
         h += '<div style="margin-top:8px;display:flex;gap:6px">';
-        h += '<button class="btn btn-primary btn-sm" onclick="openApproveModal(\'' + r.id + '\')">✅ เสนออนุมัติและจัดคิว</button>';
-        h += '<button class="btn btn-danger btn-sm" onclick="quickReject(\'' + r.id + '\')">❌ ไม่อนุมัติ</button>';
+        if (r.status === 'pending_supervisor') {
+          h += '<button class="btn btn-primary btn-sm" onclick="approveSupervisor(\'' + r.id + '\')">✅ อนุมัติ (หัวหน้างาน)</button>';
+          h += '<button class="btn btn-danger btn-sm" onclick="quickReject(\'' + r.id + '\')">❌ ไม่อนุมัติ</button>';
+        } else if (r.status === 'pending_executive') {
+          h += '<button class="btn btn-primary btn-sm" onclick="openApproveModal(\'' + r.id + '\')">✅ จัดรถและอนุมัติ</button>';
+          h += '<button class="btn btn-danger btn-sm" onclick="quickReject(\'' + r.id + '\')">❌ ไม่อนุมัติ</button>';
+        }
         h += '</div>';
       }
-      if (!showActions && r.status === 'pending') {
+      if (!showActions && (r.status === 'pending_supervisor' || r.status === 'pending_executive')) {
         h += '<div style="margin-top:8px"><button class="btn btn-outline btn-sm" onclick="cancelRequest(\'' + r.id + '\')">🗑️ ยกเลิกคำขอ</button></div>';
+      }
+      if (r.status === 'approved') {
+        var carLabel = (r.license_plate || '-') + ' ' + (r.car_brand || '');
+        var lineText = `อนุมัติการขอใช้รถ\nผู้ขอ: ${r.requester_name}\nจำนวน: ${r.passengers || 1} คน\nสถานที่: ${r.destination}\nวันเวลา: ${r.date} (${r.time_start || '-'}-${r.time_end || '-'})\nรถ: ${carLabel.trim()}\nคนขับ: ${r.driver_name || '-'}`;
+        h += `<div style="margin-top:8px"><button class="btn btn-outline btn-sm" onclick="copyLineMessage(this, \`${lineText}\`)">📋 คัดลอกข้อความส่ง LINE</button></div>`;
       }
       h += '</div>';
       return h;
@@ -788,6 +798,31 @@
           }
         }
       } catch (err) { showAlert('เกิดข้อผิดพลาด: ' + err.message, 'danger'); }
+    }
+
+    async function approveSupervisor(id) {
+      if (!confirm('ยืนยันอนุมัติในฐานะหัวหน้างาน?')) return;
+      try {
+        var res = await API.put('/api/vehicle-requests/' + id + '/approve-supervisor');
+        if (res && res.success) {
+          showAlert('อนุมัติเรียบร้อย', 'success');
+          loadPendingRequests();
+        } else {
+          showAlert((res && res.error) || 'เกิดข้อผิดพลาด', 'danger');
+        }
+      } catch (err) {
+        showAlert('เกิดข้อผิดพลาด: ' + err.message, 'danger');
+      }
+    }
+
+    function copyLineMessage(btn, text) {
+      navigator.clipboard.writeText(text).then(() => {
+        var originalText = btn.innerHTML;
+        btn.innerHTML = '✅ คัดลอกแล้ว';
+        setTimeout(() => { btn.innerHTML = originalText; }, 2000);
+      }).catch(err => {
+        alert('คัดลอกไม่สำเร็จ กรุณาคัดลอกด้วยตนเอง:\n' + text);
+      });
     }
 
     function doReject() {

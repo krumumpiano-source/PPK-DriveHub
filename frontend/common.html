@@ -110,14 +110,24 @@
   function setActiveMenu() {
     try {
       var currentPage = window.currentPage || 'dashboard';
+      
+      // Handle legacy .nav-btn
       var navButtons = document.querySelectorAll('.nav-btn');
-      navButtons.forEach(function (btn) {
-        btn.classList.remove('active');
-      });
-
+      navButtons.forEach(function (btn) { btn.classList.remove('active'); });
       var activeButton = document.querySelector('.nav-btn[data-page="' + currentPage + '"]');
-      if (activeButton) {
-        activeButton.classList.add('active');
+      if (activeButton) activeButton.classList.add('active');
+
+      // Handle .sidebar-item
+      var sidebarItems = document.querySelectorAll('.sidebar-item');
+      sidebarItems.forEach(function (item) { item.classList.remove('active'); });
+      var activeSidebarItem = document.querySelector('.sidebar-item[data-page="' + currentPage + '"]');
+      if (activeSidebarItem) {
+        activeSidebarItem.classList.add('active');
+        // If it's inside a sidebar-group, expand the group
+        var parentGroup = activeSidebarItem.closest('.sidebar-group');
+        if (parentGroup) {
+          parentGroup.classList.add('active');
+        }
       }
     } catch (error) {
       console.error('Error setting active menu:', error);

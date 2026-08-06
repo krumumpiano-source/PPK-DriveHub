@@ -125,6 +125,25 @@ function _sidebarSection(title) {
     return '<div class="sidebar-section-title">' + title + '</div>';
 }
 
+function _sidebarGroupBegin(id, title, icon = '📁') {
+    return '<div class="sidebar-group" id="sg-' + id + '">' +
+           '<div class="sidebar-group-header" onclick="toggleSidebarGroup(\'' + id + '\')">' +
+           '<span class="si-icon">' + icon + '</span>' +
+           '<span class="si-label">' + title + '</span>' +
+           '<span class="si-chevron">▼</span>' +
+           '</div>' +
+           '<div class="sidebar-group-content" id="sg-content-' + id + '">';
+}
+
+function _sidebarGroupEnd() {
+    return '</div></div>';
+}
+
+window.toggleSidebarGroup = function(id) {
+    var group = document.getElementById('sg-' + id);
+    if (group) group.classList.toggle('active');
+};
+
 function renderNavigation() {
     var user = getCurrentUser();
     if (!user) return '';
@@ -151,37 +170,39 @@ function renderNavigation() {
 
     nav += '<nav class="sidebar-nav">';
 
-    // ── หน้าแรก (ไม่มีหมวด) ──
+    // ── หน้าแรกและขอใช้รถ ──
     nav += _sidebarItem('dashboard.html', 'dashboard', '🏠', 'หน้าแรก');
+    if (user.role !== 'driver') nav += _sidebarItem('vehicle-request.html?v=2', 'vehicle-request', '📝', 'ขอใช้รถ');
 
     // ── 1. คิวและการใช้รถ ──
     var hasQueue = hasModulePermission('queue', 'edit') || hasPermission(['admin']);
     var hasUsage = hasModulePermission('usage_log', 'view') || hasPermission(['admin']);
     var hasHistory = user.driver_id || user.role === 'driver' || hasPermission(['admin']);
-    if (true) {
-        nav += _sidebarSection('คิวและการใช้รถ');
-        // driver ไม่ต้องขอใช้รถ — แสดงเฉพาะ non-driver หรือ admin
-        if (user.role !== 'driver') nav += _sidebarItem('vehicle-request.html?v=2', 'vehicle-request', '📝', 'ขอใช้รถ');
+    var hasRepair = hasModulePermission('repair', 'view') || hasPermission(['admin']);
+    var isDriver = user.role === 'driver' || !!user.driver_id;
+    var canScanQR = hasUsage || hasRepair || user.role === 'driver' || hasPermission(['admin']);
+
+    if (hasQueue || hasUsage || hasHistory || canScanQR) {
+        nav += _sidebarGroupBegin('queue', 'คิวและการใช้รถ', '📅');
         if (hasQueue) nav += _sidebarItem('queue-manage.html', 'queue', '📅', 'จัดการคิวรถ');
         if (hasUsage) nav += _sidebarItem('usage-log.html', 'usage-log', '📝', 'บันทึกการใช้รถ');
         if (hasHistory) nav += _sidebarItem('driver-history.html', 'driver-history', '📋', 'คิวและประวัติส่วนตัว');
-        var canScanQR = hasUsage || hasRepair || user.role === 'driver' || hasPermission(['admin']);
         if (canScanQR) nav += _sidebarItem('qr-scan.html', 'qr-scan', '📱', 'สแกน QR Code');
+        nav += _sidebarGroupEnd();
     }
 
     // ── 2. ระบบน้ำมัน ──
     if (hasModulePermission('fuel', 'view') || hasPermission(['admin'])) {
-        nav += _sidebarSection('ระบบน้ำมัน');
+        nav += _sidebarGroupBegin('fuel', 'ระบบน้ำมัน', '⛽');
         nav += _sidebarItem('fuel-record.html', 'fuel-record', '⛽', 'บันทึกเติมน้ำมัน');
         nav += _sidebarItem('fuel-reconcile.html', 'fuel-reconcile', '📄', 'เปรียบเทียบบิลน้ำมัน');
         nav += _sidebarItem('fuel-ledger.html', 'fuel-ledger', '📒', 'ทะเบียนควบคุมน้ำมัน');
+        nav += _sidebarGroupEnd();
     }
 
     // ── 3. ระบบซ่อม ──
-    var hasRepair = hasModulePermission('repair', 'view') || hasPermission(['admin']);
-    var isDriver = user.role === 'driver' || !!user.driver_id;
     if (hasRepair || isDriver) {
-        nav += _sidebarSection('ระบบซ่อมและตรวจสภาพ');
+        nav += _sidebarGroupBegin('repair', 'ระบบซ่อมและตรวจสภาพ', '🔧');
         if (hasRepair) {
             nav += _sidebarItem('repair.html', 'repair', '🔧', 'งานซ่อม');
             nav += _sidebarItem('repair-history.html', 'repair-history', '📋', 'ประวัติซ่อม');
@@ -191,45 +212,46 @@ function renderNavigation() {
             nav += _sidebarItem('repair.html', 'repair', '🔧', 'แจ้งซ่อม');
         }
         nav += _sidebarItem('incident.html', 'incident', '🚨', 'รายงานเหตุการณ์');
+        nav += _sidebarGroupEnd();
     }
 
     // ── 4. รายงานและสถิติ ──
     if (hasModulePermission('reports', 'view') || hasPermission(['admin'])) {
-        nav += _sidebarSection('รายงานและสถิติ');
+        nav += _sidebarGroupBegin('reports', 'รายงานและสถิติ', '📊');
         nav += _sidebarItem('reports.html', 'reports', '📊', 'รายงานและสถิติ');
         nav += _sidebarItem('driver-performance.html', 'driver-performance', '🏆', 'ผลงานพนักงาน');
         nav += _sidebarItem('vehicle-timeline.html', 'vehicle-timeline', '🚗', 'ไทม์ไลน์รถ');
         nav += _sidebarItem('executive-dashboard.html', 'executive-dashboard', '📈', 'Dashboard ผู้บริหาร');
         nav += _sidebarItem('basic-info.html', 'basic-info', '📋', 'ข้อมูลรถและพนักงาน');
+        nav += _sidebarGroupEnd();
     }
 
     // ── 5. ตั้งค่าส่วนตัว ──
-    nav += _sidebarSection('ตั้งค่าส่วนตัว');
+    nav += _sidebarGroupBegin('profile', 'ตั้งค่าส่วนตัว', '👤');
     nav += _sidebarItem('profile.html', 'profile', '👤', 'โปรไฟล์ของฉัน');
     nav += _sidebarItem('notifications.html', 'notifications', '🔔', 'การแจ้งเตือน');
     nav += _sidebarItem('change-password.html', 'change-password', '🔑', 'เปลี่ยนรหัสผ่าน');
+    nav += _sidebarGroupEnd();
 
     // ── 6. ผู้ดูแลระบบ ──
     if (hasPermission(['admin', 'super_admin'])) {
-        nav += _sidebarSection('ผู้ดูแลระบบ');
-
-        // — ยานพาหนะ —
-        nav += '<div class="sidebar-sub-label">ยานพาหนะ</div>';
+        nav += _sidebarGroupBegin('admin', 'ผู้ดูแลระบบ', '🛡️');
+        
+        nav += '<div class="sidebar-sub-label" style="padding-left: 20px;">ยานพาหนะ</div>';
         nav += _sidebarItem('vehicles.html', 'vehicles', '🚙', 'จัดการข้อมูลรถ');
         nav += _sidebarItem('drivers.html', 'drivers', '👷', 'จัดการพนักงานขับรถ');
         nav += _sidebarItem('tax-insurance.html', 'tax-insurance', '📄', 'ภาษี/ประกัน/ตรอ.');
         nav += _sidebarItem('qr-manage.html', 'qr-manage', '📱', 'จัดการ QR Code');
 
-        // — ผู้ใช้งาน —
-        nav += '<div class="sidebar-sub-label">ผู้ใช้งาน</div>';
+        nav += '<div class="sidebar-sub-label" style="padding-left: 20px;">ผู้ใช้งาน</div>';
         nav += _sidebarItem('user-management.html', 'user-management', '👥', 'จัดการผู้ใช้');
 
-        // — ระบบ —
-        nav += '<div class="sidebar-sub-label">ระบบ</div>';
+        nav += '<div class="sidebar-sub-label" style="padding-left: 20px;">ระบบ</div>';
         nav += _sidebarItem('admin-settings.html', 'settings', '⚙️', 'ตั้งค่าระบบ');
         nav += _sidebarItem('mileage-correction.html', 'mileage-correction', '🔧', 'แก้ไขเลขไมล์');
         nav += _sidebarItem('audit-log.html', 'audit-log', '📜', 'บันทึกกิจกรรม');
         nav += _sidebarItem('backup-recovery.html', 'backup-recovery', '💾', 'สำรอง/กู้คืน');
+        nav += _sidebarGroupEnd();
 
         // ── ดูมุมมองตามบทบาท ──
         nav += '<div class="sidebar-divider"></div>';
@@ -243,9 +265,10 @@ function renderNavigation() {
     }
 
     // ── ช่วยเหลือ ──
-    nav += _sidebarSection('ช่วยเหลือ');
+    nav += _sidebarGroupBegin('help', 'ช่วยเหลือ', '❓');
     nav += _sidebarItem('user-guide.html', 'user-guide', '📖', 'วิธีใช้งาน');
     nav += _sidebarItem('glossary.html', 'glossary', '📚', 'อภิธานศัพท์');
+    nav += _sidebarGroupEnd();
 
     nav += '<div class="sidebar-divider"></div>';
     nav += '<a class="sidebar-item sidebar-item-logout" href="#" onclick="logout();return false;">' +
