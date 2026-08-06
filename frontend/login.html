@@ -280,6 +280,47 @@
     .login-footer p {
       margin: 0;
     }
+
+    .login-tabs {
+      display: flex;
+      border-bottom: 2px solid #e2e8f0;
+      margin-bottom: 20px;
+    }
+    
+    .login-tab {
+      flex: 1;
+      text-align: center;
+      padding: 12px 10px;
+      cursor: pointer;
+      font-weight: 600;
+      color: #94a3b8;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+      font-size: 0.95em;
+    }
+    
+    .login-tab:hover {
+      color: var(--color-primary);
+    }
+    
+    .login-tab.active {
+      color: var(--color-primary);
+      border-bottom-color: var(--color-primary);
+    }
+    
+    .login-panel {
+      display: none;
+    }
+    
+    .login-panel.active {
+      display: block;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -298,15 +339,44 @@
       <p>ระบบจัดการยานพาหนะ<br>โรงเรียนพะเยาพิทยาคม 2569</p>
     </div>
     <div class="login-body">
+      <div class="login-tabs">
+        <div class="login-tab active" onclick="switchLoginTab('requester')">บุคลากร/ผู้ขอใช้รถ</div>
+        <div class="login-tab" onclick="switchLoginTab('admin')">เจ้าหน้าที่/ผู้บริหาร</div>
+      </div>
+      
       <div id="alert-container"></div>
 
-      <form id="loginForm" onsubmit="handleLogin(event); return false;">
-        <div class="form-group">
-          <label for="username">ชื่อผู้ใช้ / รหัสประจำตัว</label>
-          <input type="text" id="username" name="username" required autocomplete="username" autofocus
-            placeholder="กรอกชื่อผู้ใช้หรืออีเมล">
-          <small style="color:#888;font-size:0.82em;">💡 ผู้สมัครใหม่: ใช้ <b>email ที่สมัครไว้</b> เป็นชื่อผู้ใช้</small>
-        </div>
+      <!-- Requester Form -->
+      <div id="panelRequester" class="login-panel active">
+        <form id="requesterForm" onsubmit="handleRequesterLogin(event); return false;">
+          <div class="form-group">
+            <label for="reqEmail">อีเมลโรงเรียน (@ppk.ac.th)</label>
+            <input type="email" id="reqEmail" name="reqEmail" required autocomplete="email" autofocus
+              placeholder="ตัวอย่าง: user@ppk.ac.th">
+          </div>
+
+          <div class="form-group">
+            <label for="reqPhone">เบอร์โทรศัพท์ (สำหรับติดต่อกลับ)</label>
+            <input type="tel" id="reqPhone" name="reqPhone" required autocomplete="tel"
+              placeholder="กรอกเบอร์โทรศัพท์">
+          </div>
+
+          <button type="submit" class="btn-login" id="loginReqBtn">
+            <span class="btn-icon">🚗</span>
+            <span>เข้าสู่ระบบเพื่อขอใช้รถ</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- Admin Form -->
+      <div id="panelAdmin" class="login-panel">
+        <form id="loginForm" onsubmit="handleLogin(event); return false;">
+          <div class="form-group">
+            <label for="username">ชื่อผู้ใช้ / รหัสประจำตัว</label>
+            <input type="text" id="username" name="username" required autocomplete="username"
+              placeholder="กรอกชื่อผู้ใช้หรืออีเมล">
+            <small style="color:#888;font-size:0.82em;">💡 ผู้สมัครใหม่: ใช้ <b>email ที่สมัครไว้</b> เป็นชื่อผู้ใช้</small>
+          </div>
 
         <div class="form-group">
           <label for="password">รหัสผ่าน</label>
@@ -333,6 +403,7 @@
           <span>เข้าสู่ระบบด้วย LINE</span>
         </button>
       </form>
+      </div>
 
       <div class="divider"><span>หรือ</span></div>
 
@@ -344,6 +415,69 @@
   </div>
 
   <script>
+    function switchLoginTab(tab) {
+      document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.login-panel').forEach(p => p.classList.remove('active'));
+      if (tab === 'requester') {
+        document.querySelectorAll('.login-tab')[0].classList.add('active');
+        document.getElementById('panelRequester').classList.add('active');
+      } else {
+        document.querySelectorAll('.login-tab')[1].classList.add('active');
+        document.getElementById('panelAdmin').classList.add('active');
+      }
+      document.getElementById('alert-container').innerHTML = '';
+    }
+
+    async function handleRequesterLogin(event) {
+      event.preventDefault();
+
+      var email = document.getElementById('reqEmail').value.trim();
+      var phone = document.getElementById('reqPhone').value.trim();
+      var loginReqBtn = document.getElementById('loginReqBtn');
+      var alertContainer = document.getElementById('alert-container');
+
+      if (!email || !phone) {
+        showAlert('กรุณากรอกอีเมลและเบอร์โทรศัพท์', 'error');
+        return;
+      }
+      if (!email.toLowerCase().endsWith('@ppk.ac.th')) {
+        showAlert('กรุณาใช้อีเมล @ppk.ac.th เท่านั้น', 'error');
+        return;
+      }
+
+      loginReqBtn.disabled = true;
+      loginReqBtn.innerHTML = '<span class="btn-icon">⏳</span><span>กำลังเข้าสู่ระบบ...</span>';
+      alertContainer.innerHTML = '';
+
+      try {
+        var result = await apiCall('auth/login-requester', { email: email, phone: phone }, 'POST');
+
+        if (result.success && result.data && result.data.token) {
+          API.setToken(result.data.token, true);
+          var userData = {
+            id: result.data.user_id,
+            username: result.data.username,
+            display_name: result.data.display_name,
+            role: result.data.role,
+            permissions: result.data.permissions || {},
+            must_change_password: result.data.must_change_password,
+            pdpa_accepted: result.data.pdpa_accepted
+          };
+          API.setUser(userData);
+          window.location.href = 'dashboard.html';
+        } else {
+          var msg = (result.message && /[\u0E00-\u0E7F]/.test(result.message)) ? result.message : 'เข้าสู่ระบบไม่สำเร็จ';
+          showAlert(msg, 'error');
+          loginReqBtn.disabled = false;
+          loginReqBtn.innerHTML = '<span class="btn-icon">🚗</span><span>เข้าสู่ระบบเพื่อขอใช้รถ</span>';
+        }
+      } catch (err) {
+        showAlert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: ' + err.message, 'error');
+        loginReqBtn.disabled = false;
+        loginReqBtn.innerHTML = '<span class="btn-icon">🚗</span><span>เข้าสู่ระบบเพื่อขอใช้รถ</span>';
+      }
+    }
+
     function togglePassword(inputId, btn) {
       var input = document.getElementById(inputId);
       if (input.type === 'password') {

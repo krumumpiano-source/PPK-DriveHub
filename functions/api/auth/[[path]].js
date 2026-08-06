@@ -52,6 +52,59 @@ export async function onRequest(context) {
     });
   }
 
+  if (path === '/api/auth/login-requester' && method === 'POST') {
+    const body = await parseBody(request);
+    if (!body?.email || !body?.phone) return error('กรุณากรอกอีเมลและเบอร์โทรศัพท์');
+    
+    const email = body.email.toLowerCase().trim();
+    if (!email.endsWith('@ppk.ac.th')) {
+      return error('ระบบสงวนสิทธิ์การใช้งานสำหรับอีเมล @ppk.ac.th เท่านั้น', 403);
+    }
+    
+    let user = await dbFirst(env.DB, 'SELECT * FROM users WHERE email = ?', [email]);
+    const ts = now();
+    
+    if (user) {
+      if (user.active !== 1) return error('บัญชีนี้ถูกระงับการใช้งาน', 403);
+      await dbRun(env.DB, 'UPDATE users SET phone = ?, last_login = ?, updated_at = ? WHERE id = ?', [body.phone, ts, ts, user.id]);
+    } else {
+      const userId = generateUUID();
+      const defaultPerms = JSON.stringify({});
+      // Generate a dummy password since password_hash is required, though they won't use it to login this way
+      const pwSalt = generateSalt();
+      const pwHash = await hashPassword(generateUUID(), pwSalt);
+      const username = email.split('@')[0];
+      
+      await dbRun(env.DB,
+        `INSERT INTO users (id, username, email, password_hash, salt, role, permissions, display_name, phone, active, pdpa_accepted, must_change_password, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, 'staff', ?, ?, ?, 1, 0, 0, ?, ?)`,
+        [userId, email, email, pwHash, pwSalt, defaultPerms, username, body.phone, ts, ts]
+      );
+      
+      user = await dbFirst(env.DB, 'SELECT * FROM users WHERE id = ?', [userId]);
+      await notifyAllAdmins(env.DB, 'system', 'ผู้ขอใช้รถล็อกอินครั้งแรก', `${username} (${email}) เข้าสู่ระบบด้วยอีเมลโรงเรียนสำเร็จ`);
+    }
+
+    const token = generateToken();
+    const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
+    await dbRun(env.DB,
+      'INSERT INTO sessions (id, user_id, token, expires_at, created_at) VALUES (?, ?, ?, ?, ?)',
+      [generateUUID(), user.id, token, expiresAt, ts]
+    );
+    await writeAuditLog(env.DB, user.id, user.username, 'login_requester', 'auth', user.id, null);
+
+    return success({
+      token,
+      user_id: user.id,
+      username: user.username,
+      display_name: user.display_name,
+      role: user.role,
+      permissions: JSON.parse(user.permissions || '{}'),
+      must_change_password: false,
+      pdpa_accepted: user.pdpa_accepted === 1
+    });
+  }
+
   if (path === '/api/auth/register' && method === 'POST') {
     const raw = await parseBody(request);
     const body = (raw && typeof raw === 'object' && raw.data && typeof raw.data === 'object') ? raw.data : raw;

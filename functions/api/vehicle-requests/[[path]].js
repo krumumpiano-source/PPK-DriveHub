@@ -102,7 +102,13 @@ export async function onRequest(context) {
        body.priority || 'general', body.is_urgent ? 1 : 0,
        body.notes || '', body.waypoints || null, body.dest_lat || null, body.dest_lng || null, body.estimated_km || null, ts, ts]
     );
-    await writeAuditLog(env.DB, user.id, user.displayName, 'create_vehicle_request', 'vehicle_request', id, { date: body.date, destination: body.destination });
+
+    // Update user's display_name if provided to remember it for next time
+    if (body.requester_name && body.requester_name !== user.display_name) {
+      await dbRun(env.DB, 'UPDATE users SET display_name = ? WHERE id = ?', [body.requester_name, user.id]);
+    }
+
+    await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'create_vehicle_request', 'vehicle_request', id, { date: body.date, destination: body.destination });
     // แจ้งคนจัดคิว + admin
     const queueManagers = await dbAll(env.DB,
       `SELECT id FROM users WHERE active = 1 AND (role IN ('admin','super_admin') OR permissions LIKE '%"queue"%')`
