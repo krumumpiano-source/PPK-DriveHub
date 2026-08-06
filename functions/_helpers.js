@@ -255,6 +255,19 @@ export async function checkPasswordReuse(db, userId, newPassword, limit = 5) {
   for (const h of history) {
     const match = await verifyPassword(newPassword, h.salt, h.password_hash);
     if (match) return true;
-  }
   return false;
+}
+
+export async function sendEmailViaGAS(env, to, subject, body) {
+  const webhookUrl = env.EMAIL_WEBHOOK_URL;
+  if (!webhookUrl) return;
+  try {
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, subject, body })
+    });
+  } catch {
+    // Email failures are non-critical
+  }
 }
