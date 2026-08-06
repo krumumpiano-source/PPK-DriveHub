@@ -17,14 +17,55 @@ export async function onRequest(context) {
     const body = await parseBody(request);
     if (!body?.username || !body?.password) return error('กรุณากรอก username และ password');
 
-    const user = await dbFirst(env.DB,
-      'SELECT * FROM users WHERE (username = ? OR email = ?) AND active = 1',
-      [body.username, body.username]
-    );
-    if (!user) return error('username/email หรือ password ไม่ถูกต้อง', 401);
+    const inputUsername = body.username.toLowerCase().trim();
+    const inputPassword = body.password.trim();
 
-    const valid = await verifyPassword(body.password, user.salt, user.password_hash);
-    if (!valid) return error('username/email หรือ password ไม่ถูกต้อง', 401);
+    let user = await dbFirst(env.DB,
+      'SELECT * FROM users WHERE (username = ? OR email = ?) AND active = 1',
+      [inputUsername, inputUsername]
+    );
+
+    let isPasswordlessLogin = false;
+
+    if (user) {
+      // User exists, try verifying password first
+      const valid = await verifyPassword(inputPassword, user.salt, user.password_hash);
+      
+      if (!valid) {
+        // Password didn't match. Check if it's a passwordless login attempt
+        // Criteria: email ends with @ppk.ac.th AND password is a phone number (9-10 digits)
+        if (inputUsername.endsWith('@ppk.ac.th') && /^0\d{8,9}$/.test(inputPassword)) {
+          isPasswordlessLogin = true;
+          // Update phone number
+          const ts = now();
+          await dbRun(env.DB, 'UPDATE users SET phone = ?, updated_at = ? WHERE id = ?', [inputPassword, ts, user.id]);
+        } else {
+          return error('username/email หรือ password ไม่ถูกต้อง', 401);
+        }
+      }
+    } else {
+      // User not found. Check if it's a new passwordless registration attempt
+      if (inputUsername.endsWith('@ppk.ac.th') && /^0\d{8,9}$/.test(inputPassword)) {
+        isPasswordlessLogin = true;
+        const ts = now();
+        const userId = generateUUID();
+        const defaultPerms = JSON.stringify({});
+        const pwSalt = generateSalt();
+        const pwHash = await hashPassword(generateUUID(), pwSalt); // Dummy password
+        const generatedUsername = inputUsername.split('@')[0];
+        
+        await dbRun(env.DB,
+          `INSERT INTO users (id, username, email, password_hash, salt, role, permissions, display_name, phone, active, pdpa_accepted, must_change_password, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, 'staff', ?, ?, ?, 1, 0, 0, ?, ?)`,
+          [userId, inputUsername, inputUsername, pwHash, pwSalt, defaultPerms, generatedUsername, inputPassword, ts, ts]
+        );
+        
+        user = await dbFirst(env.DB, 'SELECT * FROM users WHERE id = ?', [userId]);
+        await notifyAllAdmins(env.DB, 'system', 'ผู้ขอใช้รถล็อกอินครั้งแรก', `${generatedUsername} (${inputUsername}) เข้าสู่ระบบด้วยอีเมลโรงเรียนสำเร็จ`);
+      } else {
+        return error('username/email หรือ password ไม่ถูกต้อง', 401);
+      }
+    }
 
     // Create session (8 hours)
     const token = generateToken();
@@ -38,7 +79,8 @@ export async function onRequest(context) {
     await dbRun(env.DB, 'UPDATE users SET last_login = ?, updated_at = ? WHERE id = ?',
       [now(), now(), user.id]);
 
-    await writeAuditLog(env.DB, user.id, user.username, 'login', 'auth', user.id, null);
+    const auditAction = isPasswordlessLogin ? 'login_requester' : 'login';
+    await writeAuditLog(env.DB, user.id, user.username, auditAction, 'auth', user.id, null);
 
     return success({
       token,
@@ -48,59 +90,6 @@ export async function onRequest(context) {
       role: user.role,
       permissions: JSON.parse(user.permissions || '{}'),
       must_change_password: user.must_change_password === 1,
-      pdpa_accepted: user.pdpa_accepted === 1
-    });
-  }
-
-  if (path === '/api/auth/login-requester' && method === 'POST') {
-    const body = await parseBody(request);
-    if (!body?.email || !body?.phone) return error('กรุณากรอกอีเมลและเบอร์โทรศัพท์');
-    
-    const email = body.email.toLowerCase().trim();
-    if (!email.endsWith('@ppk.ac.th')) {
-      return error('ระบบสงวนสิทธิ์การใช้งานสำหรับอีเมล @ppk.ac.th เท่านั้น', 403);
-    }
-    
-    let user = await dbFirst(env.DB, 'SELECT * FROM users WHERE email = ?', [email]);
-    const ts = now();
-    
-    if (user) {
-      if (user.active !== 1) return error('บัญชีนี้ถูกระงับการใช้งาน', 403);
-      await dbRun(env.DB, 'UPDATE users SET phone = ?, last_login = ?, updated_at = ? WHERE id = ?', [body.phone, ts, ts, user.id]);
-    } else {
-      const userId = generateUUID();
-      const defaultPerms = JSON.stringify({});
-      // Generate a dummy password since password_hash is required, though they won't use it to login this way
-      const pwSalt = generateSalt();
-      const pwHash = await hashPassword(generateUUID(), pwSalt);
-      const username = email.split('@')[0];
-      
-      await dbRun(env.DB,
-        `INSERT INTO users (id, username, email, password_hash, salt, role, permissions, display_name, phone, active, pdpa_accepted, must_change_password, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, 'staff', ?, ?, ?, 1, 0, 0, ?, ?)`,
-        [userId, email, email, pwHash, pwSalt, defaultPerms, username, body.phone, ts, ts]
-      );
-      
-      user = await dbFirst(env.DB, 'SELECT * FROM users WHERE id = ?', [userId]);
-      await notifyAllAdmins(env.DB, 'system', 'ผู้ขอใช้รถล็อกอินครั้งแรก', `${username} (${email}) เข้าสู่ระบบด้วยอีเมลโรงเรียนสำเร็จ`);
-    }
-
-    const token = generateToken();
-    const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
-    await dbRun(env.DB,
-      'INSERT INTO sessions (id, user_id, token, expires_at, created_at) VALUES (?, ?, ?, ?, ?)',
-      [generateUUID(), user.id, token, expiresAt, ts]
-    );
-    await writeAuditLog(env.DB, user.id, user.username, 'login_requester', 'auth', user.id, null);
-
-    return success({
-      token,
-      user_id: user.id,
-      username: user.username,
-      display_name: user.display_name,
-      role: user.role,
-      permissions: JSON.parse(user.permissions || '{}'),
-      must_change_password: false,
       pdpa_accepted: user.pdpa_accepted === 1
     });
   }
