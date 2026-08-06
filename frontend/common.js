@@ -165,7 +165,8 @@ function renderNavigation() {
         if (hasQueue) nav += _sidebarItem('queue-manage.html', 'queue', '📅', 'จัดการคิวรถ');
         if (hasUsage) nav += _sidebarItem('usage-log.html', 'usage-log', '📝', 'บันทึกการใช้รถ');
         if (hasHistory) nav += _sidebarItem('driver-history.html', 'driver-history', '📋', 'คิวและประวัติส่วนตัว');
-        nav += _sidebarItem('qr-scan.html', 'qr-scan', '📱', 'สแกน QR Code');
+        var canScanQR = hasUsage || hasRepair || user.role === 'driver' || hasPermission(['admin']);
+        if (canScanQR) nav += _sidebarItem('qr-scan.html', 'qr-scan', '📱', 'สแกน QR Code');
     }
 
     // ── 2. ระบบน้ำมัน ──

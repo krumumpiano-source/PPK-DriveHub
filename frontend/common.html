@@ -1,4 +1,4 @@
-﻿<!-- OFFLINE-FIRST: Load mock data system for offline mode -->
+<!-- OFFLINE-FIRST: Load mock data system for offline mode -->
 <!-- Flatpickr Date/Time Picker - ภาษาไทย + 24 ชั่วโมง -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
@@ -536,9 +536,12 @@ if (dateObj < minDateObj) { return { valid: false, message: 'วันที่�
               }
 
               // สแกน QR แยก 3 งาน — ไม่รวมกัน (เข้าได้ทีละงาน)
-              nav += '<a class="nav-btn" href="qr-usage-record.html" data-page="qr-usage-record">📷 สแกน QR บันทึกใช้รถ</a>';
-              nav += '<a class="nav-btn" href="qr-fuel-record.html" data-page="qr-fuel-record">⛽ สแกน QR เติมน้ำมัน</a>';
-              nav += '<a class="nav-btn" href="qr-daily-check.html" data-page="qr-daily-check">🔧 สแกน QR ตรวจสภาพ+แจ้งซ่อม</a>';
+              var canScanQR = hasModulePermission('usage_log', 'view') || hasModulePermission('fuel', 'view') || hasModulePermission('repair', 'view') || user.role === 'driver' || hasPermission(['admin']);
+              if (canScanQR) {
+                nav += '<a class="nav-btn" href="qr-usage-record.html" data-page="qr-usage-record">📷 สแกน QR บันทึกใช้รถ</a>';
+                nav += '<a class="nav-btn" href="qr-fuel-record.html" data-page="qr-fuel-record">⛽ สแกน QR เติมน้ำมัน</a>';
+                nav += '<a class="nav-btn" href="qr-daily-check.html" data-page="qr-daily-check">🔧 สแกน QR ตรวจสภาพ+แจ้งซ่อม</a>';
+              }
 
               // Note: Driver history is now combined with queues in driver-history.html (shown above)
 

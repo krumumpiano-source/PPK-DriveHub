@@ -93,13 +93,13 @@ export async function onRequest(context) {
     const userId = generateUUID();
     const ts = now();
 
-    // Viewer permissions — view all modules, no edit
-    const viewerPerms = JSON.stringify({ queue: 'view', usage_log: 'view', vehicles: 'view', fuel: 'view', repair: 'view', drivers: 'view', reports: 'view' });
+    // Default permissions for new users (requesters) — no module access, only request vehicle & calendar
+    const defaultPerms = JSON.stringify({});
 
     await dbRun(env.DB,
       `INSERT INTO users (id, username, email, password_hash, salt, role, permissions, title, first_name, last_name, display_name, phone, active, pdpa_accepted, must_change_password, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, 'viewer', ?, ?, ?, ?, ?, ?, 1, 0, 0, ?, ?)`,
-      [userId, email, email, pwHash, pwSalt, viewerPerms,
+       VALUES (?, ?, ?, ?, ?, 'staff', ?, ?, ?, ?, ?, ?, 1, 0, 0, ?, ?)`,
+      [userId, email, email, pwHash, pwSalt, defaultPerms,
        title || null, fnFirst, fnLast, displayName, phone || null, ts, ts]
     );
 
