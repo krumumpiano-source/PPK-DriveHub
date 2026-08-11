@@ -121,6 +121,7 @@ const ACTION_MAP = {
   'reportFatigue':       (d) => API.post('/api/drivers/fatigue', d),
   'getDriverLeaves':     (d) => API.get('/api/drivers/leaves' + _q(d)),
   'requestDriverLeave':  (d) => API.post('/api/drivers/leaves', d),
+  'createDriverLeave':   (d) => API.post('/api/drivers/leaves', d),
   'deleteDriverLeave':   (d) => API.del(`/api/drivers/leaves/${d.leaveId}`),
 
   // Queue

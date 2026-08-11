@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -2441,7 +2441,7 @@
       if (!currentJustifyId) return;
       var text = document.getElementById('mJustification').value.trim();
       try {
-        var res = await apiCall('put', '/api/queue/' + currentJustifyId + '/justification', { justification: text });
+        var res = await API.put('/api/queue/' + currentJustifyId + '/justification', { justification: text });
         if (res && res.success) {
           showAlert('บันทึกคำชี้แจงเรียบร้อย', 'success');
           closeJustificationModal();

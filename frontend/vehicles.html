@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 
 <head>
@@ -875,7 +875,9 @@
       document.getElementById('notes').value = vehicle.notes || '';
 
       var rawImgs = vehicle.vehicle_images || '[]';
-      vehicleImages = typeof rawImgs === 'string' ? JSON.parse(rawImgs) : (Array.isArray(rawImgs) ? rawImgs : []);
+      try {
+        vehicleImages = typeof rawImgs === 'string' ? JSON.parse(rawImgs) : (Array.isArray(rawImgs) ? rawImgs : []);
+      } catch(e) { vehicleImages = []; }
       displayImages('vehicleImagesPreview', vehicleImages);
 
       document.getElementById('vehicleModal').classList.add('show');
