@@ -1,7 +1,6 @@
-﻿// sw.js — PPK DriveHub Service Worker
-// v9: Switched JS/CSS to network-first to prevent stale code on mobile (esp. iOS Safari/PWA)
-//     where users rarely hard-reload and were stuck with old apiCall/common.js after deploys.
-var CACHE_NAME='ppk-v9';
+// sw.js — PPK DriveHub Service Worker
+// v10: Fix syntax error in vehicle-request.html
+var CACHE_NAME='ppk-v10';
 // Only pre-cache truly static fallback assets. JS/CSS use network-first below.
 var STATIC_ASSETS=[
   '/manifest.json'
