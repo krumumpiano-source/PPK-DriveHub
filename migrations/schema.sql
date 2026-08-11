@@ -7,6 +7,8 @@
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS users (
+  line_user_id TEXT,
+  position TEXT,
   id TEXT PRIMARY KEY,
   username TEXT UNIQUE NOT NULL,
   email TEXT UNIQUE NOT NULL,
@@ -85,6 +87,8 @@ CREATE TABLE IF NOT EXISTS reset_password_requests (
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS cars (
+  updated_by TEXT,
+  qr_survey_code TEXT,
   id TEXT PRIMARY KEY,
   license_plate TEXT UNIQUE NOT NULL,
   brand TEXT,
@@ -176,6 +180,7 @@ CREATE INDEX IF NOT EXISTS idx_mvp_car ON maintenance_vehicle_profiles(car_id);
 CREATE INDEX IF NOT EXISTS idx_mvp_item ON maintenance_vehicle_profiles(item_key);
 
 CREATE TABLE IF NOT EXISTS check_log (
+  check_image TEXT,
   id TEXT PRIMARY KEY,
   car_id TEXT NOT NULL,
   inspector TEXT NOT NULL,                        -- ชื่อผู้ตรวจ
@@ -205,6 +210,7 @@ CREATE TABLE IF NOT EXISTS inspection_alerts (
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS drivers (
+  updated_by TEXT,
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   title TEXT DEFAULT '',
@@ -266,6 +272,17 @@ CREATE TABLE IF NOT EXISTS self_reported_fatigue (
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS queue (
+  return_date TEXT,
+  distance_justification TEXT,
+  estimated_fuel_cost REAL,
+  waypoints TEXT,
+  signed_director TEXT,
+  signed_deputy_director TEXT,
+  signed_vehicle_chief TEXT,
+  purpose_category TEXT,
+  travel_order_number TEXT,
+  updated_by TEXT,
+  backup_driver_id TEXT REFERENCES drivers(id),
   id TEXT PRIMARY KEY,
   date TEXT NOT NULL,
   time_start TEXT NOT NULL,
@@ -292,6 +309,20 @@ CREATE TABLE IF NOT EXISTS queue (
 );
 
 CREATE TABLE IF NOT EXISTS usage_records (
+  odometer_image TEXT,
+  passengers TEXT,
+  form_timestamp TEXT,
+  correction_note TEXT,
+  updated_at TEXT,
+  updated_by TEXT,
+  driver_name_manual TEXT,
+  destination TEXT,
+  purpose TEXT,
+  record_source TEXT DEFAULT 'manual',
+  auto_notes TEXT,
+  is_historical INTEGER NOT NULL DEFAULT 0,
+  requester_name TEXT,
+  data_quality TEXT NOT NULL DEFAULT 'normal',
   id TEXT PRIMARY KEY,
   car_id TEXT NOT NULL,
   driver_id TEXT,
@@ -321,6 +352,8 @@ CREATE TABLE IF NOT EXISTS queue_rules (
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS fuel_log (
+  signed_supply_chief TEXT,
+  updated_by TEXT,
   id TEXT PRIMARY KEY,
   date TEXT NOT NULL,
   time TEXT,
@@ -405,6 +438,7 @@ CREATE TABLE IF NOT EXISTS fuel_invoice_items (
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS repair_log (
+  updated_by TEXT,
   id TEXT PRIMARY KEY,
   car_id TEXT NOT NULL,
   date_reported TEXT NOT NULL,
@@ -490,6 +524,8 @@ CREATE TABLE IF NOT EXISTS scheduled_repairs (
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS tax_records (
+  updated_at TEXT,
+  updated_by TEXT,
   id TEXT PRIMARY KEY,
   car_id TEXT NOT NULL,
   tax_type TEXT NOT NULL DEFAULT 'annual_tax' CHECK(tax_type IN ('annual_tax','registration_renewal','other')),
@@ -504,6 +540,8 @@ CREATE TABLE IF NOT EXISTS tax_records (
 );
 
 CREATE TABLE IF NOT EXISTS insurance_records (
+  updated_at TEXT,
+  updated_by TEXT,
   id TEXT PRIMARY KEY,
   car_id TEXT NOT NULL,
   insurance_type TEXT NOT NULL DEFAULT 'compulsory' CHECK(insurance_type IN ('compulsory','voluntary','other')),
@@ -643,3 +681,209 @@ CREATE TABLE IF NOT EXISTS driver_warnings (
 );
 
 CREATE INDEX IF NOT EXISTS idx_driver_warnings_driver_id ON driver_warnings(driver_id);
+
+
+-- Added from 003-usage-quality-and-indexes.sql
+CREATE TABLE IF NOT EXISTS rate_limits (
+  key TEXT PRIMARY KEY,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  first_attempt_at TEXT NOT NULL,
+  blocked_until TEXT
+);
+
+-- Added from 005-system-overhaul.sql
+CREATE TABLE IF NOT EXISTS repair_log_new (
+  id TEXT PRIMARY KEY,
+  car_id TEXT NOT NULL,
+  date_reported TEXT NOT NULL,
+  date_started TEXT,
+  date_completed TEXT,
+  status TEXT NOT NULL DEFAULT 'requested' CHECK(status IN (
+    'requested','approved','rejected','inspected','documented','repairing','completed','cancelled'
+  )),
+  mileage_at_repair INTEGER,
+  reporter_id TEXT,
+  reporter_name TEXT,
+  garage_name TEXT,
+  repair_items TEXT DEFAULT '[]',
+  issue_description TEXT,
+  cost REAL,
+  documents TEXT DEFAULT '[]',
+  notes TEXT,
+  created_by TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT,
+  -- New columns for 7-step workflow
+  approved_by TEXT,
+  approved_at TEXT,
+  rejected_by TEXT,
+  rejected_at TEXT,
+  rejection_reason TEXT,
+  inspection_date TEXT,
+  inspection_notes TEXT,
+  quotation_documents TEXT DEFAULT '[]',
+  memo_documents TEXT DEFAULT '[]',
+  memo_notes TEXT,
+  receipt_documents TEXT DEFAULT '[]',
+  requested_by_driver_id TEXT REFERENCES drivers(id),
+  FOREIGN KEY (car_id) REFERENCES cars(id)
+);
+
+-- Added from 005-system-overhaul.sql
+CREATE TABLE IF NOT EXISTS vehicle_requests (
+  signature_image TEXT,
+  request_no TEXT,
+  return_date TEXT,
+  waypoints TEXT,
+  updated_by TEXT,
+  created_by TEXT,
+  id TEXT PRIMARY KEY,
+  requester_id TEXT NOT NULL,
+  requester_name TEXT NOT NULL,
+  requester_department TEXT,
+  date TEXT NOT NULL,
+  time_start TEXT,
+  time_end TEXT,
+  destination TEXT NOT NULL,
+  route TEXT,
+  purpose TEXT,
+  passengers INTEGER DEFAULT 1,
+  passenger_names TEXT DEFAULT '[]',
+  priority TEXT DEFAULT 'general' CHECK(priority IN ('urgent','teaching_support','general')),
+  is_urgent INTEGER DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected','cancelled')),
+  approved_by TEXT,
+  approved_at TEXT,
+  assigned_car_id TEXT,
+  assigned_driver_id TEXT,
+  assigned_queue_id TEXT,
+  rejection_reason TEXT,
+  notes TEXT,
+  pdf_generated_at TEXT,
+  dest_lat REAL,
+  dest_lng REAL,
+  estimated_km REAL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (requester_id) REFERENCES users(id),
+  FOREIGN KEY (approved_by) REFERENCES users(id),
+  FOREIGN KEY (assigned_car_id) REFERENCES cars(id),
+  FOREIGN KEY (assigned_driver_id) REFERENCES drivers(id),
+  FOREIGN KEY (assigned_queue_id) REFERENCES queue(id)
+);
+
+-- Added from 005-system-overhaul.sql
+CREATE TABLE IF NOT EXISTS survey_responses (
+  user_agent TEXT DEFAULT '',
+  ip_address TEXT DEFAULT '',
+  id TEXT PRIMARY KEY,
+  car_id TEXT NOT NULL,
+  queue_id TEXT,
+  driver_id TEXT,
+  politeness_score INTEGER CHECK(politeness_score BETWEEN 1 AND 5),
+  safety_score INTEGER CHECK(safety_score BETWEEN 1 AND 5),
+  punctuality_score INTEGER CHECK(punctuality_score BETWEEN 1 AND 5),
+  cleanliness_score INTEGER CHECK(cleanliness_score BETWEEN 1 AND 5),
+  appearance_score INTEGER CHECK(appearance_score BETWEEN 1 AND 5),
+  overall_score INTEGER CHECK(overall_score BETWEEN 1 AND 5),
+  comment TEXT,
+  respondent_name TEXT,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (car_id) REFERENCES cars(id),
+  FOREIGN KEY (queue_id) REFERENCES queue(id),
+  FOREIGN KEY (driver_id) REFERENCES drivers(id)
+);
+
+-- Added from 005-system-overhaul.sql
+CREATE TABLE IF NOT EXISTS incidents (
+  updated_by TEXT,
+  notes TEXT,
+  incident_time TEXT,
+  id TEXT PRIMARY KEY,
+  car_id TEXT NOT NULL,
+  driver_id TEXT,
+  incident_date TEXT NOT NULL,
+  incident_type TEXT NOT NULL CHECK(incident_type IN ('accident','traffic_violation','damage','other')),
+  description TEXT,
+  location TEXT,
+  damage_cost REAL DEFAULT 0,
+  photos TEXT DEFAULT '[]',
+  police_report_number TEXT,
+  insurance_claim TEXT,
+  status TEXT NOT NULL DEFAULT 'reported' CHECK(status IN ('reported','investigating','resolved','closed')),
+  resolved_by TEXT,
+  resolved_at TEXT,
+  resolution_notes TEXT,
+  created_by TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT,
+  FOREIGN KEY (car_id) REFERENCES cars(id),
+  FOREIGN KEY (driver_id) REFERENCES drivers(id),
+  FOREIGN KEY (created_by) REFERENCES users(id)
+);
+
+-- Added from 005-system-overhaul.sql
+CREATE TABLE IF NOT EXISTS inspection_records (
+  updated_at TEXT,
+  updated_by TEXT,
+  id TEXT PRIMARY KEY,
+  car_id TEXT NOT NULL,
+  inspection_date TEXT NOT NULL,
+  expiry_date TEXT NOT NULL,
+  inspection_center TEXT,
+  result TEXT CHECK(result IN ('passed','failed')),
+  cost REAL,
+  certificate_image TEXT,
+  notes TEXT,
+  created_by TEXT,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (car_id) REFERENCES cars(id)
+);
+
+-- Added from 005-system-overhaul.sql
+CREATE TABLE IF NOT EXISTS trip_evaluations (
+  id TEXT PRIMARY KEY,
+  queue_id TEXT NOT NULL,
+  evaluator_id TEXT NOT NULL,
+  driver_behavior_score INTEGER CHECK(driver_behavior_score BETWEEN 1 AND 5),
+  vehicle_condition_score INTEGER CHECK(vehicle_condition_score BETWEEN 1 AND 5),
+  punctuality_score INTEGER CHECK(punctuality_score BETWEEN 1 AND 5),
+  overall_score INTEGER CHECK(overall_score BETWEEN 1 AND 5),
+  problems TEXT,
+  suggestions TEXT,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (queue_id) REFERENCES queue(id),
+  FOREIGN KEY (evaluator_id) REFERENCES users(id)
+);
+
+-- Added from 033-google-form-sync.sql
+CREATE TABLE IF NOT EXISTS gform_sync_log (
+  rows_updated INTEGER NOT NULL DEFAULT 0,
+  id TEXT PRIMARY KEY,
+  started_at TEXT NOT NULL,
+  finished_at TEXT,
+  status TEXT NOT NULL DEFAULT 'running' CHECK(status IN ('running','success','partial','error')),
+  trigger_source TEXT NOT NULL DEFAULT 'cron',  -- cron | manual | github_actions
+  triggered_by TEXT,                             -- user email/id ถ้า manual
+  sheets_processed INTEGER NOT NULL DEFAULT 0,
+  rows_fetched INTEGER NOT NULL DEFAULT 0,
+  rows_inserted INTEGER NOT NULL DEFAULT 0,
+  rows_skipped INTEGER NOT NULL DEFAULT 0,       -- duplicates / existing
+  rows_failed INTEGER NOT NULL DEFAULT 0,
+  error_message TEXT,
+  details TEXT                                   -- JSON: per-sheet breakdown
+);
+
+-- Added from 034-passengers-and-fuel-budget.sql
+CREATE TABLE IF NOT EXISTS fuel_budget (
+  id TEXT PRIMARY KEY,
+  fiscal_year_be INTEGER NOT NULL,        -- พ.ศ. ปีงบประมาณ เช่น 2569
+  fuel_type TEXT,                         -- ประเภทน้ำมัน (null = รวมทุกประเภท)
+  allocated_liters REAL,                  -- วงเงินจัดสรร (ลิตร)
+  allocated_amount REAL NOT NULL DEFAULT 0, -- วงเงินจัดสรร (บาท)
+  notes TEXT,
+  created_by TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE(fiscal_year_be, fuel_type)
+);

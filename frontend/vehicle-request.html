@@ -750,7 +750,6 @@
         var workload = (d.week_queues !== undefined) ? ` (สัปดาห์นี้: ${d.week_queues}, วันนี้: ${d.today_queues})` : '';
         drvSel += '<option value="' + d.id + '">' + (d.name || '') + workload + '</option>';
       });
-      });
       document.getElementById('mAssignDriver').innerHTML = drvSel;
       document.getElementById('mNotes').value = '';
       document.getElementById('conflictWarning').style.display = 'none';

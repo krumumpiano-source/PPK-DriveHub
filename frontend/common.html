@@ -323,9 +323,8 @@ throw error;
 
 var result = await response.json();
 
-if (result.success === false) {
-var msg = (typeof getUserMessage !== 'undefined' ? getUserMessage(result.message) : null) || 'ดำเนินการไม่สำเร็จ
-กรุณาลองใหม่อีกครั้ง';
+      if (result.success === false) {
+        var msg = (typeof getUserMessage !== 'undefined' ? getUserMessage(result.message) : null) || 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
 var apiError = new Error(msg);
 apiError.error = result.error;
 throw apiError;
@@ -376,8 +375,7 @@ var colors = {
 
 alertDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; padding: 15px 20px; background: ' +
 (colors[type] || colors.info) +
-'; color: white; border-radius: var(--radius-md); box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 10000; max-width: 400px;
-font-size: 0.95em; ' +
+'; color: white; border-radius: var(--radius-md); box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 10000; max-width: 400px; font-size: 0.95em; ' +
 'opacity: 0; transform: translateX(100%); transition: all 0.3s ease;';
 
 alertDiv.textContent = message;
