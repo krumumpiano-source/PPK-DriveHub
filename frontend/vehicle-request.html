@@ -28,8 +28,12 @@
     .st-cancelled{background:#f3f4f6;color:#6b7280}
     .vr-detail{margin-top:.5rem;font-size:.88rem;color:var(--color-text-light)}
     .vr-detail p{margin-bottom:4px}
-    .vr-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
-    @media(max-width:640px){.vr-form-grid{grid-template-columns:1fr}.vr-tabs{overflow-x:auto}}
+    @media(max-width:640px){
+      .vr-form-grid{grid-template-columns:1fr}
+      .vr-tabs{overflow-x:auto; white-space:nowrap; -webkit-overflow-scrolling:touch; padding-bottom:4px}
+      .vr-tab{flex-shrink:0; padding:10px 14px; font-size:.88rem}
+      #map{height:280px}
+    }
     .passenger-row{display:flex;gap:8px;margin-bottom:6px;align-items:center}
     .passenger-row input{flex:1}
     .approve-section{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--radius-lg);padding:1rem;margin-top:1rem}
