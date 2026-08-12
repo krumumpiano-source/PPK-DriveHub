@@ -132,6 +132,17 @@
               </div>
 
               <div class="form-group" style="grid-column:1/-1">
+                <label>เวลาเดินทาง (มาตรฐานราชการ)</label>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  <button type="button" class="btn btn-outline btn-sm" onclick="setQuickTime('08:30', '16:30')">⏱️ 08:30 - 16:30 (เต็มวัน)</button>
+                  <button type="button" class="btn btn-outline btn-sm" onclick="setQuickTime('08:30', '12:00')">⏱️ 08:30 - 12:00 (เช้า)</button>
+                  <button type="button" class="btn btn-outline btn-sm" onclick="setQuickTime('13:00', '16:30')">⏱️ 13:00 - 16:30 (บ่าย)</button>
+                </div>
+              </div>
+
+              <div id="availabilityAlert" style="display:none;grid-column:1/-1;padding:10px 14px;border-radius:var(--radius-md);font-size:0.92rem;font-weight:500;"></div>
+
+              <div class="form-group" style="grid-column:1/-1">
                 <label>วัตถุประสงค์</label>
                 <textarea id="fPurpose" class="form-control" rows="2"></textarea>
               </div>
@@ -155,7 +166,7 @@
               </div>
             </div>
             <div style="display:flex;gap:8px;margin-top:1rem">
-              <button type="submit" class="btn btn-primary">📤 ส่งคำขอ</button>
+              <button type="submit" id="btnSubmitRequest" class="btn btn-primary">📤 ส่งคำขอใช้รถ</button>
               <button type="button" class="btn btn-outline" onclick="printRequest()">🖨️ พิมพ์แบบฟอร์ม</button>
             </div>
           </form>
@@ -480,12 +491,29 @@
     function renderRequestCard(r, showActions) {
       var passengers = '';
       try { var pn = JSON.parse(r.passenger_names || '[]'); passengers = pn.join(', '); } catch(e) {}
+      
+      var todayStr = new Date().toISOString().substr(0, 10);
+      var tripDate = new Date(r.date || todayStr);
+      var todayDate = new Date(todayStr);
+      var diffTime = tripDate.getTime() - todayDate.getTime();
+      var diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      var canCancel = diffDays >= 3;
+
       var h = '<div class="vr-card">';
       h += '<div class="vr-header"><div>';
       if (r.request_no) h += '<span style="color:var(--color-primary);font-weight:bold;margin-right:8px">' + r.request_no + '</span>';
       h += '<strong>' + (r.date || '-') + '</strong> &nbsp; <span class="vr-badge ' + (statusClass[r.status] || '') + '">' + (statusLabel[r.status] || r.status) + '</span>';
       if (r.is_urgent) h += ' <span class="vr-badge" style="background:#fef3c7;color:#92400e">🚨 ฉุกเฉิน</span>';
+      
+      if (r.status === 'pending_supervisor' || r.status === 'pending_executive') {
+        if (canCancel) {
+          h += ' <span class="vr-badge" style="background:#dcfce7;color:#15803d">🟢 ยกเลิกได้ (เหลืออีก ' + diffDays + ' วัน)</span>';
+        } else {
+          h += ' <span class="vr-badge" style="background:#fee2e2;color:#b91c1c">🔴 พ้นกำหนดกดยกเลิกเว็บ (เหลือ ' + Math.max(0, diffDays) + ' วัน)</span>';
+        }
+      }
       h += '</div></div>';
+
       h += '<div class="vr-detail">';
       h += '<p>📍 <strong>' + (r.destination || '-') + '</strong></p>';
       if (r.route) h += '<p>🛣️ ' + r.route + '</p>';
@@ -513,12 +541,22 @@
         h += '</div>';
       }
       if (!showActions && (r.status === 'pending_supervisor' || r.status === 'pending_executive')) {
-        h += '<div style="margin-top:8px"><button class="btn btn-outline btn-sm" onclick="cancelRequest(\'' + r.id + '\')">🗑️ ยกเลิกคำขอ</button></div>';
+        h += '<div style="margin-top:8px">';
+        if (canCancel) {
+          h += '<button class="btn btn-outline btn-sm" onclick="cancelRequest(\'' + r.id + '\')">🗑️ ยกเลิกคำขอ (ล่วงหน้า ' + diffDays + ' วัน)</button>';
+        } else {
+          h += '<button class="btn btn-outline btn-sm" style="opacity:0.65;cursor:not-allowed;" onclick="alert(\'การยกเลิกคำขอผ่านระบบต้องทำล่วงหน้าอย่างน้อย 3 วันก่อนวันเดินทาง หากมีความจำเป็นเร่งด่วนกรุณาติดต่อผู้จัดคิวโดยตรง\')">⚠️ พ้นกำหนดกดยกเลิก (ติดต่อผู้จัดคิว)</button>';
+        }
+        h += '</div>';
       }
       if (r.status === 'approved') {
         var carLabel = (r.license_plate || '-') + ' ' + (r.car_brand || '');
-        var lineText = `อนุมัติการขอใช้รถ\nผู้ขอ: ${r.requester_name}\nจำนวน: ${r.passengers || 1} คน\nสถานที่: ${r.destination}\nวันเวลา: ${r.date} (${r.time_start || '-'}-${r.time_end || '-'})\nรถ: ${carLabel.trim()}\nคนขับ: ${r.driver_name || '-'}`;
-        h += `<div style="margin-top:8px"><button class="btn btn-outline btn-sm" onclick="copyLineMessage(this, \`${lineText}\`)">📋 คัดลอกข้อความส่ง LINE</button></div>`;
+        var lineText = `🚐 [คิวงานรถราชการ - โรงเรียนพะเยาพิทยาคม]\n📌 เลขที่คำขอ: ${r.request_no || '-'}\n📅 วันที่: ${r.date} (${r.time_start || '-'}-${r.time_end || '-'})\n📍 ปลายทาง: ${r.destination}\n🚗 รถ: ${carLabel.trim()}\n👤 คนขับ: ${r.driver_name || '-'}\n🙋‍♂️ ผู้ขอ: ${r.requester_name}`;
+        var lineShareUrl = 'https://line.me/R/share?text=' + encodeURIComponent(lineText);
+        h += `<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">`;
+        h += `<button class="btn btn-outline btn-sm" onclick="copyLineMessage(this, \`${lineText}\`)">📋 คัดลอกข้อความส่ง LINE</button>`;
+        h += `<a href="${lineShareUrl}" target="_blank" class="btn btn-sm" style="background:#06C755;color:white;text-decoration:none;display:inline-flex;align-items:center;gap:4px">💬 เปิดแอป LINE</a>`;
+        h += `</div>`;
       }
       h += '</div>';
       return h;
@@ -769,6 +807,73 @@
 
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
+    function setQuickTime(start, end) {
+      document.getElementById('fTimeStart').value = start;
+      document.getElementById('fTimeEnd').value = end;
+      checkAvailabilityLive();
+    }
+
+    async function checkAvailabilityLive() {
+      var date = document.getElementById('fDate').value;
+      var returnDate = document.getElementById('fReturnDate').value || date;
+      var timeStart = document.getElementById('fTimeStart').value || '00:00';
+      var timeEnd = document.getElementById('fTimeEnd').value || '23:59';
+      var alertEl = document.getElementById('availabilityAlert');
+      var btn = document.getElementById('btnSubmitRequest');
+
+      if (!date) {
+        alertEl.style.display = 'none';
+        if (btn) btn.disabled = false;
+        return;
+      }
+
+      try {
+        var res = await API.get('/api/queue/suggest?date=' + encodeURIComponent(date) + '&time_start=' + encodeURIComponent(timeStart) + '&time_end=' + encodeURIComponent(timeEnd));
+        if (res && res.success) {
+          var carsAvailable = res.data.available_cars_count || 0;
+          var driversAvailable = res.data.available_drivers_count || 0;
+
+          if (carsAvailable === 0 || driversAvailable === 0) {
+            var reasons = [];
+            if (carsAvailable === 0) reasons.push('ไม่มีรถว่าง');
+            if (driversAvailable === 0) reasons.push('ไม่มีพนักงานขับรถว่าง');
+            alertEl.style.display = 'block';
+            alertEl.style.background = '#fee2e2';
+            alertEl.style.color = '#991b1b';
+            alertEl.style.border = '1px solid #fca5a5';
+            alertEl.innerHTML = '❌ <strong>ไม่สามารถขอใช้รถได้:</strong> เนื่องจาก' + reasons.join(' และ ') + ' ในช่วงเวลานี้ (รถว่าง ' + carsAvailable + ' คัน / คนขับว่าง ' + driversAvailable + ' คน)';
+            if (btn) btn.disabled = true;
+          } else {
+            alertEl.style.display = 'block';
+            alertEl.style.background = '#d1fae5';
+            alertEl.style.color = '#065f46';
+            alertEl.style.border = '1px solid #6ee7b7';
+            alertEl.innerHTML = '✅ <strong>พร้อมให้บริการ:</strong> มีรถว่าง ' + carsAvailable + ' คัน และพนักงานขับรถว่าง ' + driversAvailable + ' คน';
+            if (btn) btn.disabled = false;
+          }
+        }
+      } catch (err) {
+        console.error('Availability check error:', err);
+      }
+    }
+
+    async function cancelRequest(id) {
+      if (!confirm('ยืนยันยกเลิกคำขอนี้?')) return;
+      try {
+        var res = await apiCall('cancelVehicleRequest', { id: id });
+        if (res && res.success) {
+          showAlert('ยกเลิกคำขอเรียบร้อย', 'success');
+          if (res.data && res.data.lineMessage) {
+            var lineUrl = 'https://line.me/R/share?text=' + encodeURIComponent(res.data.lineMessage);
+            if (confirm('ยกเลิกสำเร็จ! คุณต้องการเปิดแอป LINE เพื่อส่งแจ้งเตือนการยกเลิกหรือไม่?')) {
+              window.open(lineUrl, '_blank');
+            }
+          }
+          loadMyRequests();
+        } else { showAlert((res && res.error) || 'เกิดข้อผิดพลาดในการยกเลิก', 'danger'); }
+      } catch (err) { showAlert('เกิดข้อผิดพลาด', 'danger'); }
+    }
+
     async function doApprove(forceQueue = false) {
       var carId = document.getElementById('mAssignCar').value;
       var driverId = document.getElementById('mAssignDriver').value;
@@ -784,9 +889,18 @@
           signature_base64: document.getElementById('fSignatureBase64').value || null
         });
         if (res && res.success) {
-          showAlert('เสนออนุมัติและจัดคิวเรียบร้อย', 'success');
           closeModal('approveModal');
           loadPendingRequests();
+
+          var lineMsg = res.data ? res.data.lineMessage : '';
+          if (lineMsg) {
+            var shareUrl = 'https://line.me/R/share?text=' + encodeURIComponent(lineMsg);
+            navigator.clipboard.writeText(lineMsg);
+            alert('✅ อนุมัติและจัดคิวเรียบร้อย!\n\n📋 ข้อความสรุปคิวถูกคัดลอกลง Clipboard แล้ว\nกด OK เพื่อเปิดแอป LINE สำหรับส่งให้คนขับได้ทันที');
+            window.open(shareUrl, '_blank');
+          } else {
+            showAlert('เสนออนุมัติและจัดคิวเรียบร้อย', 'success');
+          }
         } else {
           if (res && res.error && res.error.includes('ซ้อน')) {
             if (confirm(res.error + '\n\nคุณต้องการจัดคิวร่วมกัน (วิ่งรอบ) หรือไม่?')) {
@@ -1148,7 +1262,12 @@
       
       // Init date picker
       if (typeof flatpickr !== 'undefined') {
-        var returnPicker = flatpickr('#fReturnDate', { locale: 'th', dateFormat: 'Y-m-d', minDate: 'today' });
+        var returnPicker = flatpickr('#fReturnDate', { 
+          locale: 'th', 
+          dateFormat: 'Y-m-d', 
+          minDate: 'today',
+          onChange: function() { checkAvailabilityLive(); }
+        });
         flatpickr('#fDate', { 
           locale: 'th', 
           dateFormat: 'Y-m-d', 
@@ -1159,9 +1278,16 @@
             if (!returnInput && dateStr) {
               returnPicker.setDate(dateStr);
             }
+            checkAvailabilityLive();
           }
         });
       }
+
+      ['fTimeStart', 'fTimeEnd'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('change', checkAvailabilityLive);
+      });
+
       setTimeout(initMap, 500); // Initialize map after UI renders
     });
   </script>

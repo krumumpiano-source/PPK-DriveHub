@@ -1,0 +1,226 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: e2e\fuel.spec.mjs >> 6. GET /api/fuel/log — ประวัติการเติมน้ำมัน >> ดึงรายการทั้งหมด → success + array
+- Location: tests\e2e\fuel.spec.mjs:531:3
+
+# Error details
+
+```
+Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: true
+Received: false
+```
+
+# Test source
+
+```ts
+  434 |       liters: 30,
+  435 |       amount: 900,
+  436 |       expense_type: 'official_travel',
+  437 |       purpose: 'business',
+  438 |       gas_station_name: 'ปั๊มใกล้บ้าน',
+  439 |       receipt_image: MOCK_RECEIPT,
+  440 |       date: '2020-03-10',
+  441 |     }, ctx.adminToken);
+  442 |     expect(r?.success).toBe(true);
+  443 |     expect(r?.data?.id).toBeTruthy();
+  444 |     ctx.fuelDeleteId = r.data.id;
+  445 |   });
+  446 | 
+  447 |   test('อัปเดตไมล์รถอัตโนมัติหลังเติมน้ำมัน', async () => {
+  448 |     if (!ctx.fuelCar1Id || !ctx.adminToken) return;
+  449 |     const car = await apiGet(`/api/vehicles/${ctx.fuelCar1Id}`, ctx.adminToken);
+  450 |     // หลังจาก POST หลายครั้ง current_mileage ควร = mileage_after ล่าสุด
+  451 |     expect(car?.data?.current_mileage).toBeGreaterThanOrEqual(11500);
+  452 |   });
+  453 | });
+  454 | 
+  455 | // ══════════════════════════════════════════════════════════
+  456 | // 5. Anomaly Detection — ตรวจจับความผิดปกติ
+  457 | // ══════════════════════════════════════════════════════════
+  458 | test.describe('5. Anomaly Detection — ตรวจจับความผิดปกติ', () => {
+  459 |   test('อัตราสิ้นเปลืองต่ำผิดปกติ (< 2 กม./ล.) → anomaly_flag = 1', async () => {
+  460 |     if (!ctx.fuelCar3Id || !ctx.driverId) return;
+  461 |     // mileage เพิ่มขึ้นแค่ 10 กม. แต่เติม 50 ลิตร = 0.2 กม./ล. → ผิดปกติ
+  462 |     const r = await apiPost('/api/fuel/record', {
+  463 |       car_id: ctx.fuelCar3Id,
+  464 |       driver_id: ctx.driverId,
+  465 |       mileage_before: 30000,
+  466 |       mileage_after: 30010,
+  467 |       liters: 50,
+  468 |       amount: 1500,
+  469 |       purpose: 'business',
+  470 |       receipt_image: MOCK_RECEIPT,
+  471 |       date: '2020-04-01',
+  472 |       time: '09:00',
+  473 |     });
+  474 |     expect(r?.success).toBe(true);
+  475 |     expect(r?.data?.anomaly_flag).toBe(1);
+  476 |   });
+  477 | 
+  478 |   test('เติมน้ำมันปกติ → anomaly_flag = 0', async () => {
+  479 |     if (!ctx.fuelCar2Id || !ctx.driverId) return;
+  480 |     // (20300 → 20600) = 300 กม. / 35 ล. = 8.57 กม./ล. — ปกติ
+  481 |     const r = await apiPost('/api/fuel/record', {
+  482 |       car_id: ctx.fuelCar2Id,
+  483 |       driver_id: ctx.driverId,
+  484 |       mileage_before: 20300,
+  485 |       mileage_after: 20600,
+  486 |       liters: 35,
+  487 |       purpose: 'business',
+  488 |       receipt_image: MOCK_RECEIPT,
+  489 |       date: '2020-04-02',
+  490 |     });
+  491 |     expect(r?.success).toBe(true);
+  492 |     expect(r?.data?.anomaly_flag).toBe(0);
+  493 |   });
+  494 | 
+  495 |   test('เติมน้ำมัน 3 ครั้งในวันเดียว (รถเดิม) → anomaly_flag = 1 ครั้งสุดท้าย', async () => {
+  496 |     if (!ctx.fuelCar3Id || !ctx.driverId) return;
+  497 |     // ครั้งที่ 2 (เพื่อให้ถึง 3 ครั้งรวมกับครั้งแรก)
+  498 |     const r2 = await apiPost('/api/fuel/record', {
+  499 |       car_id: ctx.fuelCar3Id,
+  500 |       driver_id: ctx.driverId,
+  501 |       mileage_before: 30010,
+  502 |       mileage_after: 30020,
+  503 |       liters: 5,
+  504 |       purpose: 'business',
+  505 |       receipt_image: MOCK_RECEIPT,
+  506 |       date: '2020-04-01',  // วันเดียวกับครั้งแรก
+  507 |       time: '12:00',
+  508 |     });
+  509 |     // ครั้งที่ 3 — ต้องเป็น anomaly
+  510 |     const r3 = await apiPost('/api/fuel/record', {
+  511 |       car_id: ctx.fuelCar3Id,
+  512 |       driver_id: ctx.driverId,
+  513 |       mileage_before: 30020,
+  514 |       mileage_after: 30030,
+  515 |       liters: 5,
+  516 |       purpose: 'business',
+  517 |       receipt_image: MOCK_RECEIPT,
+  518 |       date: '2020-04-01',  // วันเดียวกัน
+  519 |       time: '15:00',
+  520 |     });
+  521 |     expect(r3?.success).toBe(true);
+  522 |     // ครั้งที่ 3 ในวันเดียว (รวมครั้งแรกแล้ว = 3 ครั้ง) → anomaly
+  523 |     expect(r3?.data?.anomaly_flag).toBe(1);
+  524 |   });
+  525 | });
+  526 | 
+  527 | // ══════════════════════════════════════════════════════════
+  528 | // 6. GET /api/fuel/log — ดูประวัติการเติมน้ำมัน (Auth)
+  529 | // ══════════════════════════════════════════════════════════
+  530 | test.describe('6. GET /api/fuel/log — ประวัติการเติมน้ำมัน', () => {
+  531 |   test('ดึงรายการทั้งหมด → success + array', async () => {
+  532 |     if (!ctx.adminToken) return;
+  533 |     const r = await apiGet('/api/fuel/log', ctx.adminToken);
+> 534 |     expect(r?.success).toBe(true);
+      |                        ^ Error: expect(received).toBe(expected) // Object.is equality
+  535 |     expect(Array.isArray(r?.data)).toBe(true);
+  536 |     expect(r?.data?.length).toBeGreaterThanOrEqual(1);
+  537 |   });
+  538 | 
+  539 |   test('กรอง car_id → เฉพาะรถที่ระบุ', async () => {
+  540 |     if (!ctx.fuelCar1Id || !ctx.adminToken) return;
+  541 |     const r = await apiGet(`/api/fuel/log?car_id=${ctx.fuelCar1Id}`, ctx.adminToken);
+  542 |     expect(r?.success).toBe(true);
+  543 |     const rows = r?.data || [];
+  544 |     expect(rows.length).toBeGreaterThanOrEqual(1);
+  545 |     rows.forEach(row => expect(row.car_id).toBe(ctx.fuelCar1Id));
+  546 |   });
+  547 | 
+  548 |   test('กรอง date_from/date_to → เฉพาะช่วงวันที่', async () => {
+  549 |     if (!ctx.adminToken) return;
+  550 |     const r = await apiGet('/api/fuel/log?date_from=2020-03-01&date_to=2020-03-31', ctx.adminToken);
+  551 |     expect(r?.success).toBe(true);
+  552 |     const rows = r?.data || [];
+  553 |     rows.forEach(row => {
+  554 |       expect(row.date >= '2020-03-01').toBe(true);
+  555 |       expect(row.date <= '2020-03-31').toBe(true);
+  556 |     });
+  557 |   });
+  558 | 
+  559 |   test('GET /api/fuel/log/:id → details ถูกต้อง', async () => {
+  560 |     if (!ctx.fuelLogId || !ctx.adminToken) return;
+  561 |     const r = await apiGet(`/api/fuel/log/${ctx.fuelLogId}`, ctx.adminToken);
+  562 |     expect(r?.success).toBe(true);
+  563 |     expect(r?.data?.id).toBe(ctx.fuelLogId);
+  564 |     expect(r?.data?.car_id).toBe(ctx.fuelCar1Id);
+  565 |     expect(r?.data?.driver_id).toBe(ctx.driverId);
+  566 |     expect(r?.data?.liters).toBe(40);
+  567 |     expect(r?.data?.document_number).toBe(ctx.docNumber);
+  568 |   });
+  569 | 
+  570 |   test('ไม่มี token → 401', async () => {
+  571 |     const r = await fetch(`${BASE}/api/fuel/log`).then(x => x.json()).catch(() => null);
+  572 |     expect(r?.success).toBe(false);
+  573 |   });
+  574 | });
+  575 | 
+  576 | // ══════════════════════════════════════════════════════════
+  577 | // 7. PUT /api/fuel/log/:id — แก้ไขบันทึกน้ำมัน (Auth)
+  578 | // ══════════════════════════════════════════════════════════
+  579 | test.describe('7. PUT /api/fuel/log/:id — แก้ไขบันทึก', () => {
+  580 |   test('อัปเดต gas_station_name และ notes → สำเร็จ', async () => {
+  581 |     if (!ctx.fuelLogId2 || !ctx.adminToken) return;
+  582 |     const r = await apiPut(`/api/fuel/log/${ctx.fuelLogId2}`, {
+  583 |       gas_station_name: 'ปั๊ม ESSO สาขาอัปเดต',
+  584 |       notes: 'แก้ไขชื่อปั๊มแล้ว',
+  585 |     }, ctx.adminToken);
+  586 |     expect(r?.success).toBe(true);
+  587 |   });
+  588 | 
+  589 |   test('ตรวจ GET หลัง PUT → ข้อมูลเปลี่ยนแล้ว', async () => {
+  590 |     if (!ctx.fuelLogId2 || !ctx.adminToken) return;
+  591 |     const r = await apiGet(`/api/fuel/log/${ctx.fuelLogId2}`, ctx.adminToken);
+  592 |     expect(r?.data?.gas_station_name).toBe('ปั๊ม ESSO สาขาอัปเดต');
+  593 |     expect(r?.data?.notes).toBe('แก้ไขชื่อปั๊มแล้ว');
+  594 |   });
+  595 | 
+  596 |   test('PUT ไม่มี token → 401', async () => {
+  597 |     if (!ctx.fuelLogId2) return;
+  598 |     const r = await apiPut(`/api/fuel/log/${ctx.fuelLogId2}`, { notes: 'แก้ไขโดยไม่มีสิทธิ์' });
+  599 |     expect(r?.success).toBe(false);
+  600 |   });
+  601 | });
+  602 | 
+  603 | // ══════════════════════════════════════════════════════════
+  604 | // 8. DELETE /api/fuel/log/:id — Soft Delete (Auth)
+  605 | // ══════════════════════════════════════════════════════════
+  606 | test.describe('8. DELETE /api/fuel/log/:id — Soft Delete', () => {
+  607 |   test('ลบรายการน้ำมัน (Soft Delete) → สำเร็จ', async () => {
+  608 |     if (!ctx.fuelDeleteId || !ctx.adminToken) return;
+  609 |     const r = await apiDelete(`/api/fuel/log/${ctx.fuelDeleteId}`, ctx.adminToken);
+  610 |     expect(r?.success).toBe(true);
+  611 |     expect(r?.data?.message).toMatch(/Soft Delete/);
+  612 |   });
+  613 | 
+  614 |   test('หลัง delete — GET /:id → ไม่พบ (soft deleted)', async () => {
+  615 |     if (!ctx.fuelDeleteId || !ctx.adminToken) return;
+  616 |     const r = await apiGet(`/api/fuel/log/${ctx.fuelDeleteId}`, ctx.adminToken);
+  617 |     expect(r?.success).toBe(false);
+  618 |   });
+  619 | 
+  620 |   test('DELETE ไม่มี token → 401', async () => {
+  621 |     const r = await apiDelete('/api/fuel/log/some-fake-id-xyz');
+  622 |     expect(r?.success).toBe(false);
+  623 |   });
+  624 | });
+  625 | 
+  626 | // ══════════════════════════════════════════════════════════
+  627 | // 9. GET /api/fuel/summary — สรุปการใช้น้ำมัน (Auth)
+  628 | // ══════════════════════════════════════════════════════════
+  629 | test.describe('9. GET /api/fuel/summary — สรุปการใช้น้ำมัน', () => {
+  630 |   test('ดึง summary ทั้งหมด → count > 0', async () => {
+  631 |     if (!ctx.adminToken) return;
+  632 |     const r = await apiGet('/api/fuel/summary', ctx.adminToken);
+  633 |     expect(r?.success).toBe(true);
+  634 |     expect(r?.data?.count).toBeGreaterThan(0);
+```

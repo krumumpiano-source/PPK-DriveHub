@@ -28,40 +28,30 @@ export async function onRequest(context) {
     let isPasswordlessLogin = false;
 
     if (user) {
-      // User exists, try verifying password first
+      // User exists, verify password
       const valid = await verifyPassword(inputPassword, user.salt, user.password_hash);
-      
       if (!valid) {
-        // Password didn't match. Check if it's a passwordless login attempt
-        // Criteria: email ends with @ppk.ac.th AND password is a phone number (9-10 digits)
-        if (inputUsername.endsWith('@ppk.ac.th') && /^0\d{8,9}$/.test(inputPassword)) {
-          isPasswordlessLogin = true;
-          // Update phone number
-          const ts = now();
-          await dbRun(env.DB, 'UPDATE users SET phone = ?, updated_at = ? WHERE id = ?', [inputPassword, ts, user.id]);
-        } else {
-          return error('username/email หรือ password ไม่ถูกต้อง', 401);
-        }
+        return error('username/email หรือ password ไม่ถูกต้อง', 401);
       }
     } else {
-      // User not found. Check if it's a new passwordless registration attempt
-      if (inputUsername.endsWith('@ppk.ac.th') && /^0\d{8,9}$/.test(inputPassword)) {
+      // User not found. Check if it's a new @ppk.ac.th registration & first login attempt
+      if (inputUsername.endsWith('@ppk.ac.th')) {
         isPasswordlessLogin = true;
         const ts = now();
         const userId = generateUUID();
         const defaultPerms = JSON.stringify({});
         const pwSalt = generateSalt();
-        const pwHash = await hashPassword(generateUUID(), pwSalt); // Dummy password
+        const pwHash = await hashPassword(inputPassword, pwSalt); // Save the input password on first login
         const generatedUsername = inputUsername.split('@')[0];
         
         await dbRun(env.DB,
-          `INSERT INTO users (id, username, email, password_hash, salt, role, permissions, display_name, phone, active, pdpa_accepted, must_change_password, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, 'staff', ?, ?, ?, 1, 0, 0, ?, ?)`,
-          [userId, inputUsername, inputUsername, pwHash, pwSalt, defaultPerms, generatedUsername, inputPassword, ts, ts]
+          `INSERT INTO users (id, username, email, password_hash, salt, role, permissions, display_name, active, pdpa_accepted, must_change_password, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, 'staff', ?, ?, 1, 0, 0, ?, ?)`,
+          [userId, inputUsername, inputUsername, pwHash, pwSalt, defaultPerms, generatedUsername, ts, ts]
         );
         
         user = await dbFirst(env.DB, 'SELECT * FROM users WHERE id = ?', [userId]);
-        await notifyAllAdmins(env.DB, 'system', 'ผู้ขอใช้รถล็อกอินครั้งแรก', `${generatedUsername} (${inputUsername}) เข้าสู่ระบบด้วยอีเมลโรงเรียนสำเร็จ`);
+        await notifyAllAdmins(env.DB, 'system', 'ผู้ขอใช้รถล็อกอินตั้งรหัสผ่านครั้งแรก', `${generatedUsername} (${inputUsername}) เข้าสู่ระบบและตั้งรหัสผ่านครั้งแรกสำเร็จ`);
       } else {
         return error('username/email หรือ password ไม่ถูกต้อง', 401);
       }

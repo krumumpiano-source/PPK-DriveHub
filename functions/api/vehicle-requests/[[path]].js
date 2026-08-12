@@ -72,18 +72,54 @@ export async function onRequest(context) {
     const body = await parseBody(request);
     if (!body?.date || !body?.destination) return error('กรุณาระบุวันที่และสถานที่ปลายทาง');
 
-    // 1. Check queue availability (cars)
-    const activeCarsCount = await dbFirst(env.DB, "SELECT COUNT(*) as count FROM cars WHERE status = 'active'");
-    let overlapQuery = `SELECT COUNT(DISTINCT car_id) as used_cars FROM queue WHERE date = ? AND status IN ('scheduled', 'ongoing')`;
-    let overlapParams = [body.date];
-    if (body.time_start && body.time_end) {
-      overlapQuery += ` AND (time_start < ? AND time_end > ?)`;
-      overlapParams.push(body.time_end, body.time_start);
+    const reqDate = body.date;
+    const reqReturnDate = body.return_date || reqDate;
+    const timeStart = body.time_start || '00:00';
+    const timeEnd = body.time_end || '23:59';
+
+    // 1. Check available cars count during the period
+    const activeCarsCount = await dbFirst(env.DB, "SELECT COUNT(*) as count FROM cars WHERE status NOT IN ('under_repair', 'retired', 'inactive')");
+    const usedCarsCount = await dbFirst(env.DB, `
+      SELECT COUNT(DISTINCT car_id) as used_cars 
+      FROM queue 
+      WHERE status NOT IN ('cancelled', 'completed')
+      AND date <= ? AND return_date >= ?
+      AND (time_start < ? AND time_end > ?)
+    `, [reqReturnDate, reqDate, timeEnd, timeStart]);
+
+    const totalCarsAvailable = (activeCarsCount ? activeCarsCount.count : 0) - (usedCarsCount ? usedCarsCount.used_cars : 0);
+
+    // 2. Check available drivers count during the period
+    const activeDriversCount = await dbFirst(env.DB, `
+      SELECT COUNT(*) as count FROM drivers 
+      WHERE status = 'active' 
+      AND (license_expiry IS NULL OR license_expiry >= ?)
+    `, [reqDate]);
+
+    const usedDriversCount = await dbFirst(env.DB, `
+      SELECT COUNT(DISTINCT driver_id) as used_drivers 
+      FROM queue 
+      WHERE status NOT IN ('cancelled', 'completed')
+      AND driver_id IS NOT NULL
+      AND date <= ? AND return_date >= ?
+      AND (time_start < ? AND time_end > ?)
+    `, [reqReturnDate, reqDate, timeEnd, timeStart]);
+
+    const leaveDriversCount = await dbFirst(env.DB, `
+      SELECT COUNT(DISTINCT driver_id) as leave_drivers
+      FROM leaves
+      WHERE status = 'approved' AND start_date <= ? AND end_date >= ?
+    `, [reqReturnDate, reqDate]);
+
+    const totalDriversAvailable = (activeDriversCount ? activeDriversCount.count : 0) - (usedDriversCount ? usedDriversCount.used_drivers : 0) - (leaveDriversCount ? leaveDriversCount.leave_drivers : 0);
+
+    if (totalCarsAvailable <= 0 || totalDriversAvailable <= 0) {
+      let reason = [];
+      if (totalCarsAvailable <= 0) reason.push('ไม่มีรถว่าง');
+      if (totalDriversAvailable <= 0) reason.push('ไม่มีพนักงานขับรถว่าง');
+      return error(`ไม่สามารถขอใช้รถได้ เนื่องจาก${reason.join(' และ ')}ในช่วงเวลานี้`, 400);
     }
-    const usedCarsCount = await dbFirst(env.DB, overlapQuery, overlapParams);
-    if (activeCarsCount && usedCarsCount && usedCarsCount.used_cars >= activeCarsCount.count) {
-      return error('ไม่สามารถขอใช้รถได้ เนื่องจากคิวรถเต็มในวันและเวลาดังกล่าว', 400);
-    }
+
     const id = generateUUID();
     const ts = now();
     const reqDateObj = body.date ? new Date(body.date) : new Date();
@@ -122,6 +158,7 @@ export async function onRequest(context) {
     }
 
     await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'create_vehicle_request', 'vehicle_request', id, { date: body.date, destination: body.destination });
+    
     // แจ้งคนจัดคิว + admin
     const queueManagers = await dbAll(env.DB,
       `SELECT id FROM users WHERE active = 1 AND (role IN ('admin','super_admin') OR permissions LIKE '%"queue"%')`
@@ -130,10 +167,6 @@ export async function onRequest(context) {
       await createNotification(env.DB, mgr.id, 'vehicle_request', 'คำขอใช้รถใหม่',
         `${body.requester_name || user.display_name || ''} ขอใช้รถวันที่ ${body.date}${body.return_date && body.return_date !== body.date ? ' ถึง ' + body.return_date : ''} ไป${body.destination}`);
     }
-    const urgentLabel = body.is_urgent ? ' 🚨 ฉุกเฉิน' : '';
-    const dateRangeStr = body.return_date && body.return_date !== body.date ? `${body.date} ถึง ${body.return_date}` : body.date;
-    // await sendTelegramMessage(env,
-    //   `📋 <b>คำขอใช้รถใหม่${urgentLabel}</b>\n📅 ${dateRangeStr} (${body.time_start || '-'} - ${body.time_end || '-'})\n📍 ${body.destination}\n📝 ${body.purpose || '-'}\n👤 ${body.requester_name || user.display_name || ''}\n👥 ผู้ร่วมเดินทาง ${body.passengers || 1} คน`);
     return success({ id, message: 'สร้างคำขอใช้รถเรียบร้อย' }, 201);
   }
 
@@ -164,26 +197,47 @@ export async function onRequest(context) {
     return success({ message: 'แก้ไขคำขอเรียบร้อย' });
   }
 
-  // --- DELETE /api/vehicle-requests/:id --- ยกเลิกคำขอ
+  // --- DELETE /api/vehicle-requests/:id --- ยกเลิกคำขอ (ต้องล่วงหน้าอย่างน้อย 3 วัน)
   if (path.match(/^\/api\/vehicle-requests\/[^/]+$/) && method === 'DELETE') {
     const id = path.split('/').pop();
     const row = await dbFirst(env.DB, 'SELECT * FROM vehicle_requests WHERE id = ?', [id]);
     if (!row) return error('ไม่พบคำขอใช้รถ', 404);
     if (row.requester_id !== user.id && user.role !== 'admin' && user.role !== 'super_admin' && user.role !== 'manager')
       return error('ไม่มีสิทธิ์ยกเลิกคำขอนี้', 403);
+
+    // Rule 5: Cancellation must be at least 3 days in advance for normal requesters
+    const isSpecialUser = (user.role === 'admin' || user.role === 'super_admin' || user.role === 'manager');
+    if (!isSpecialUser && row.requester_id === user.id) {
+      const todayStr = new Date().toISOString().substr(0, 10);
+      const tripDate = new Date(row.date);
+      const todayDate = new Date(todayStr);
+      const diffTime = tripDate.getTime() - todayDate.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays < 3) {
+        return error('สามารถยกเลิกคำขอใช้รถล่วงหน้าอย่างน้อย 3 วันทำการก่อนวันเดินทางเท่านั้น หากจำเป็นเร่งด่วนกรุณาติดต่อผู้จัดคิวโดยตรง', 400);
+      }
+    }
+
     const ts = now();
     await dbRun(env.DB,
       `UPDATE vehicle_requests SET status = 'cancelled', updated_by = ?, updated_at = ? WHERE id = ?`, [user.id, ts, id]);
-    await writeAuditLog(env.DB, user.id, user.displayName || user.username, 'cancel_vehicle_request', 'vehicle_request', id, null);
+    
+    // Also cancel assigned queue if already queued
+    if (row.assigned_queue_id) {
+      await dbRun(env.DB, `UPDATE queue SET status = 'cancelled', updated_at = ? WHERE id = ?`, [ts, row.assigned_queue_id]);
+    }
+
+    await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'cancel_vehicle_request', 'vehicle_request', id, null);
     
     // Get requester email
     const requester = await dbFirst(env.DB, 'SELECT email FROM users WHERE id = ?', [row.requester_id]);
     if (requester && requester.email) {
-      await sendEmailViaGAS(env, requester.email, 'ยกเลิกการขอใช้รถ', `คำขอใช้รถวันที่ ${row.date} ไปยัง ${row.destination} ได้ถูกยกเลิกแล้ว`);
+      await sendEmailViaGAS(env, requester.email, 'ยกเลิกการขอใช้รถ', `คำขอใช้รถเลขที่ ${row.request_no} วันที่ ${row.date} ไปยัง ${row.destination} ได้ถูกยกเลิกแล้ว`);
     }
 
     // Return line message template for frontend
-    const lineMessage = `แจ้งยกเลิกการใช้รถ\nวันที่: ${row.date}\nสถานที่: ${row.destination}\nผู้ขอ: ${row.requester_name}\nยกเลิกโดย: ${user.display_name || user.username}`;
+    const lineMessage = `🚫 [แจ้งยกเลิกการใช้รถราชการ]\n📌 เลขที่คำขอ: ${row.request_no}\n📅 วันที่เดินทาง: ${row.date}\n📍 ปลายทาง: ${row.destination}\n👤 ผู้ขอใช้: ${row.requester_name}\n❌ ยกเลิกโดย: ${user.display_name || user.username}`;
     return success({ message: 'ยกเลิกคำขอเรียบร้อย', lineMessage });
   }
 
@@ -337,13 +391,14 @@ export async function onRequest(context) {
 
     // Get requester email and send confirmation
     const requester = await dbFirst(env.DB, 'SELECT email FROM users WHERE id = ?', [row.requester_id]);
-    const lineMessage = `อนุมัติการขอใช้รถ\nผู้ขอ: ${row.requester_name}\nจำนวน: ${row.passengers || 1} คน\nสถานที่: ${row.destination}\nวันเวลา: ${row.date} (${timeStart}-${timeEnd})\nรถ: ${carLabel}\nคนขับ: ${driverCheck.name}`;
+    const confirmationUrl = `${url.origin}/vehicle-request.html?id=${id}`;
+    const lineMessage = `🚐 [คิวงานรถราชการ - โรงเรียนพะเยาพิทยาคม]\n📌 เลขที่คำขอ: ${row.request_no}\n📅 วันที่เดินทาง: ${row.date}${row.return_date && row.return_date !== row.date ? ' ถึง ' + row.return_date : ''} (${timeStart} - ${timeEnd} น.)\n📍 ปลายทาง: ${row.destination}\n📝 วัตถุประสงค์: ${row.purpose || '-'}\n🚗 รถที่มอบหมาย: ${carLabel}\n👤 พนักงานขับรถ: ${driverCheck.name}\n🙋‍♂️ ผู้ขอใช้รถ: ${row.requester_name} (${row.requester_department || '-'})\n👥 ผู้ร่วมเดินทาง: ${row.passengers || 1} คน\n🔗 รายละเอียด: ${confirmationUrl}`;
     
     if (requester && requester.email) {
       await sendEmailViaGAS(env, requester.email, 'อนุมัติการขอใช้รถ', lineMessage);
     }
 
-    return success({ id, queue_id: queueId, message: 'อนุมัติคำขอและสร้างคิวเรียบร้อย', lineMessage });
+    return success({ id, queue_id: queueId, message: 'อนุมัติคำขอและสร้างคิวเรียบร้อย', lineMessage, confirmation_url: confirmationUrl });
     } catch (e) {
       return error('Server Error: ' + e.message, 500);
     }

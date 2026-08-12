@@ -255,6 +255,7 @@ export async function checkPasswordReuse(db, userId, newPassword, limit = 5) {
   for (const h of history) {
     const match = await verifyPassword(newPassword, h.salt, h.password_hash);
     if (match) return true;
+  }
   return false;
 }
 
