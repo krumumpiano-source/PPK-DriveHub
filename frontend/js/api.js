@@ -137,6 +137,8 @@ const ACTION_MAP = {
   'getQueueTimeline':    (d) => API.get('/api/queue/timeline' + _q(d)),
   'getQueueRules':       ()  => API.get('/api/queue/rules'),
   'getQueueAvailability':(d) => API.get('/api/queue/availability' + _q(d)),
+  'suggestQueue':        (d) => API.get('/api/queue/suggest' + _q(d)),
+  'checkAvailability':   (d) => API.get('/api/queue/suggest' + _q(d)),
   'updateQueueRules':    (d) => API.put('/api/queue/rules', d),
 
   // Fuel

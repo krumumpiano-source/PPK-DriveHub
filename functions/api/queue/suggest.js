@@ -19,20 +19,21 @@ export async function onRequest(context) {
 
       // Find available cars (not under repair, no queue overlap)
       const cars = await dbAll(env.DB, `
-        SELECT id, license_plate, brand, current_mileage 
+        SELECT id, license_plate, brand, model, vehicle_type, current_mileage 
         FROM cars 
-        WHERE status NOT IN ('under_repair', 'retired') 
+        WHERE status NOT IN ('under_repair', 'retired', 'inactive') 
         AND id NOT IN (
           SELECT car_id FROM queue 
           WHERE date = ? AND status NOT IN ('cancelled', 'completed')
           AND time_start < ? AND time_end > ?
+          AND car_id IS NOT NULL
         )
         ORDER BY current_mileage ASC
       `, [date, timeEnd, timeStart]);
 
       // Find available drivers (active, no queue overlap)
       const drivers = await dbAll(env.DB, `
-        SELECT id, name, fatigue_flag, discipline_score 
+        SELECT id, name, phone, fatigue_flag, discipline_score 
         FROM drivers 
         WHERE status = 'active' 
         AND (license_expiry IS NULL OR license_expiry >= ?)
@@ -55,6 +56,8 @@ export async function onRequest(context) {
       return success({
         best_car: bestCar,
         best_driver: bestDriver,
+        available_cars: cars,
+        available_drivers: drivers,
         available_cars_count: cars.length,
         available_drivers_count: drivers.length
       });
