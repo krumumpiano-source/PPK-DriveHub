@@ -100,6 +100,9 @@ export function checkPermission(user, module, level) {
   if (!user) return false;
   if (user.role === 'admin' || user.role === 'super_admin') return true;
 
+  // Read-only 'view' access is granted to all authenticated users
+  if (level === 'view') return true;
+
   try {
     const perms = typeof user.permissions === 'string'
       ? JSON.parse(user.permissions)
