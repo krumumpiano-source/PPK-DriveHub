@@ -401,7 +401,7 @@
 
           <div id="dashboardContent" style="display: none;">
             <!-- Calendar -->
-            <div class="calendar-container">
+            <div class="calendar-container" id="calendarContainer">
               <div class="calendar-header">
                 <div class="calendar-nav">
                   <button class="calendar-nav-btn" onclick="changeMonth(-1)">‹ เดือนก่อน</button>
@@ -539,9 +539,15 @@
           } else if(role==='repair'){
             loadRepairDashboard();
           } else if(role==='staff' || role==='viewer' || role==='requester'){
+            if (document.getElementById('calendarContainer')) {
+              document.getElementById('calendarContainer').style.display = 'none';
+            }
             loadRequesterDashboard(user);
             loadDashboard();
           } else {
+            if (document.getElementById('calendarContainer')) {
+              document.getElementById('calendarContainer').style.display = 'block';
+            }
             // admin, super_admin, vehicle (queue) → full calendar
             loadDashboard();
             // อัตโนมัติ: สร้างคิวย้อนหลังสำหรับ usage_records ที่ไม่มี queue_id (silent)
