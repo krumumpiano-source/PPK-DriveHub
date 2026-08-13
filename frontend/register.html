@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 
 <head>
@@ -441,15 +441,31 @@
         var result = await apiCall('register', formData);
 
         if (result.success) {
+          var resData = result.data || result;
+          var token = result.token || resData.token;
+          if (token) {
+            API.setToken(token, true);
+            API.setUser({
+              id: resData.user_id || resData.id,
+              username: formData.email,
+              display_name: titleValue + formData.full_name,
+              role: resData.role || 'staff',
+              permissions: resData.permissions || {}
+            });
+          }
+
           document.getElementById('registerForm').style.display = 'none';
           alertContainer.innerHTML =
             '<div class="alert alert-success" style="text-align:center;padding:24px;">' +
-            '<div style="font-size:2em;margin-bottom:8px;">✅</div>' +
-            '<strong style="font-size:1.1em;">สมัครสมาชิกสำเร็จ</strong>' +
-            '<p style="margin:10px 0 0;เข้าสู่ระบบได้ทันทีด้วย email และรหัสผ่านที่ตั้งไว้</p>' +
-            '<p style="margin:4px 0 16px;font-size:0.9em;color:#2e7d32;">สิทธิ์เริ่มต้น: ผู้ขอใช้รถ (ดูข้อมูลได้ทุกเมนู)</p>' +
-            '<button onclick="window.location.href=\'login.html\'" style="padding:12px 28px;background:var(--gradient-primary);color:white;border:none;border-radius:var(--radius-md);font-size:1em;font-weight:600;cursor:pointer;font-family:inherit;">' +
-            '➡️ เข้าสู่ระบบเลย</button>' +
+            '<div style="font-size:2.5em;margin-bottom:8px;">✅</div>' +
+            '<strong style="font-size:1.2em;">สมัครสมาชิกสำเร็จ!</strong>' +
+            '<p style="margin:10px 0;color:#2e7d32;">เข้าสู่ระบบอัตโนมัติเรียบร้อย (สิทธิ์: ผู้ขอใช้รถ)</p>' +
+            '<div style="margin-top:20px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">' +
+            '<button onclick="window.location.href=\'dashboard.html\'" style="padding:12px 24px;background:var(--gradient-primary);color:white;border:none;border-radius:var(--radius-md);font-size:1em;font-weight:600;cursor:pointer;font-family:inherit;">' +
+            '🏠 ไปยังหน้าแรก (Dashboard)</button>' +
+            '<button onclick="window.location.href=\'vehicle-request.html?v=2\'" style="padding:12px 24px;background:#10b981;color:white;border:none;border-radius:var(--radius-md);font-size:1em;font-weight:600;cursor:pointer;font-family:inherit;">' +
+            '📝 ขอใช้รถทันที</button>' +
+            '</div>' +
             '</div>';
         } else {
           alertContainer.innerHTML = '<div class="alert alert-error">' + (result.error || result.message || 'สมัครไม่สำเร็จ') + '</div>';
