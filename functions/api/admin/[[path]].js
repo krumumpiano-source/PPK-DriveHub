@@ -1,4 +1,4 @@
-﻿// Admin: users, settings, requests
+// Admin: users, settings, requests
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, hashPassword, generateSalt, requireAdmin,
@@ -70,9 +70,15 @@ export async function onRequest(context) {
     const body = await parseBody(request);
 
     // Super admin protection: only super_admin can modify another super_admin
-    const targetUser = await dbFirst(env.DB, 'SELECT role FROM users WHERE id = ?', [id]);
+    const targetUser = await dbFirst(env.DB, 'SELECT id, email, username, role FROM users WHERE id = ?', [id]);
     if (targetUser?.role === 'super_admin' && user.role !== 'super_admin') {
       return error('ไม่สามารถแก้ไขผู้ดูแลสูงสุดได้', 403);
+    }
+
+    // Sole admin enforcement: Only krumum.piano@gmail.com can hold admin/super_admin role
+    const targetEmail = (targetUser?.email || targetUser?.username || '').toLowerCase();
+    if (body.role && ['admin', 'super_admin'].includes(body.role) && targetEmail !== 'krumum.piano@gmail.com') {
+      return error('สิทธิ์ผู้ดูแลระบบ (Admin) สงวนไว้สำหรับ krumum.piano@gmail.com เท่านั้น', 403);
     }
 
     const allowed = ['role', 'permissions', 'title', 'first_name', 'last_name', 'phone', 'email', 'active', 'driver_id'];
