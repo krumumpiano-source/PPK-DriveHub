@@ -417,45 +417,80 @@
             </div>
 
             <!-- Availability Section -->
-            <div class="availability-section" style="background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:1.5rem;margin-top:2rem">
-              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:1.2rem;border-bottom:1px solid var(--color-border);padding-bottom:1rem;">
+            <div class="availability-section" style="background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:1.5rem;margin-top:1.5rem;box-shadow:var(--shadow-md)">
+              
+              <!-- Widget Header -->
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:1.2rem;border-bottom:2px solid #f1f5f9;padding-bottom:1rem;">
                 <div>
-                  <h3 style="font-size:1.15rem;color:var(--color-text);margin:0;display:flex;align-items:center;gap:8px">
-                    <span>⚡ ตรวจสอบรถว่าง & พนักงานขับรถตามปฏิทิน</span>
+                  <h3 style="font-size:1.15rem;font-weight:700;color:var(--color-text);margin:0;display:flex;align-items:center;gap:8px">
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:#e0e7ff;color:#4f46e5;border-radius:50%;font-size:1rem">🔍</span>
+                    <span>ค้นหาและเช็ครถว่างตามวันเวลา</span>
                   </h3>
                   <p style="font-size:0.85rem;color:var(--color-text-muted);margin:4px 0 0 0">
-                    เลือกวันที่และช่วงเวลาเพื่อค้นหารถและพนักงานขับรถที่พร้อมให้บริการ
+                    เลือกวันที่และช่วงเวลาเดินทาง เพื่อตรวจสอบรายการรถและพนักงานขับรถที่พร้อมให้บริการ
                   </p>
                 </div>
-                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                  <input type="date" id="checkerDate" style="padding:8px 12px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:0.9rem" onchange="onAvailabilityDateChange()">
-                  <input type="time" id="checkerTimeStart" value="08:00" style="padding:8px 10px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:0.9rem" onchange="onAvailabilityDateChange()">
-                  <span style="font-size:0.9rem;color:var(--color-text-muted)">ถึง</span>
-                  <input type="time" id="checkerTimeEnd" value="17:00" style="padding:8px 10px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:0.9rem" onchange="onAvailabilityDateChange()">
-                  <button type="button" onclick="resetAvailabilityToToday()" style="padding:8px 14px;background:var(--color-primary-bg);color:var(--color-primary);border:1px solid var(--color-primary-light);border-radius:var(--radius-md);font-weight:600;cursor:pointer;font-family:inherit;font-size:0.88rem">
-                    📅 วันนี้ (Real-time)
-                  </button>
+
+                <!-- Quick Today Action -->
+                <button type="button" onclick="resetAvailabilityToToday()" style="display:inline-flex;align-items:center;gap:6px;padding:9px 18px;background:var(--gradient-primary);color:white;border:none;border-radius:var(--radius-md);font-weight:600;cursor:pointer;font-family:inherit;font-size:0.88rem;box-shadow:0 2px 8px rgba(99,102,241,0.25);transition:all 0.2s">
+                  📅 วันนี้ (Real-time)
+                </button>
+              </div>
+
+              <!-- Interactive Search & Filter Form Bar -->
+              <div style="background:#f8fafc;border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:1rem 1.2rem;margin-bottom:1.5rem">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;align-items:end">
+                  
+                  <!-- Date Field -->
+                  <div>
+                    <label for="checkerDate" style="display:block;font-size:0.85rem;font-weight:700;color:var(--color-text);margin-bottom:6px">
+                      📅 วันที่เดินทาง
+                    </label>
+                    <input type="date" id="checkerDate" style="width:100%;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:0.95rem;background:white;color:var(--color-text)" onchange="onAvailabilityDateChange()">
+                  </div>
+
+                  <!-- Time Start Field -->
+                  <div>
+                    <label for="checkerTimeStart" style="display:block;font-size:0.85rem;font-weight:700;color:var(--color-text);margin-bottom:6px">
+                      ⏰ เวลาเริ่มเดินทาง
+                    </label>
+                    <input type="time" id="checkerTimeStart" value="08:00" style="width:100%;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:0.95rem;background:white;color:var(--color-text)" onchange="onAvailabilityDateChange()">
+                  </div>
+
+                  <!-- Time End Field -->
+                  <div>
+                    <label for="checkerTimeEnd" style="display:block;font-size:0.85rem;font-weight:700;color:var(--color-text);margin-bottom:6px">
+                      🏁 ถึงเวลา (สิ้นสุด)
+                    </label>
+                    <input type="time" id="checkerTimeEnd" value="17:00" style="width:100%;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:0.95rem;background:white;color:var(--color-text)" onchange="onAvailabilityDateChange()">
+                  </div>
+
                 </div>
               </div>
 
+              <!-- Live Results Section -->
               <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem">
-                <div class="availability-card" style="background:#f8fafc;padding:1.2rem;border-radius:var(--radius-lg);border:1px solid var(--color-border)">
-                  <h3 style="font-size:1rem;margin-bottom:1rem;display:flex;align-items:center;gap:6px">
-                    <span>👤 พนักงานขับรถที่ว่าง</span>
+                
+                <!-- Drivers Available List -->
+                <div class="availability-card" style="background:#ffffff;padding:1.2rem;border-radius:var(--radius-lg);border:1px solid var(--color-border);box-shadow:var(--shadow-sm)">
+                  <h3 style="font-size:1.02rem;font-weight:700;margin-bottom:1rem;color:var(--color-text);display:flex;align-items:center;gap:6px">
+                    <span>👤 พนักงานขับรถที่พร้อมให้บริการ</span>
                   </h3>
                   <div class="availability-list" id="driversAvailableList">
                     <div class="empty-availability">กำลังโหลด...</div>
                   </div>
                 </div>
 
-                <div class="availability-card" style="background:#f8fafc;padding:1.2rem;border-radius:var(--radius-lg);border:1px solid var(--color-border)">
-                  <h3 style="font-size:1rem;margin-bottom:1rem;display:flex;align-items:center;gap:6px">
-                    <span>🚗 รถที่ว่าง</span>
+                <!-- Vehicles Available List -->
+                <div class="availability-card" style="background:#ffffff;padding:1.2rem;border-radius:var(--radius-lg);border:1px solid var(--color-border);box-shadow:var(--shadow-sm)">
+                  <h3 style="font-size:1.02rem;font-weight:700;margin-bottom:1rem;color:var(--color-text);display:flex;align-items:center;gap:6px">
+                    <span>🚗 รถที่พร้อมให้บริการ</span>
                   </h3>
                   <div class="availability-list" id="vehiclesAvailableList">
                     <div class="empty-availability">กำลังโหลด...</div>
                   </div>
                 </div>
+
               </div>
             </div>
           </div>
