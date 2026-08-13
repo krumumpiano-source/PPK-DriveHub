@@ -125,7 +125,8 @@ export async function onRequest(context) {
         impersonatorId: session.impersonator_id || null
       };
     } catch (e) {
-      return addCors(error('เกิดข้อผิดพลาดในการตรวจสอบ session', 500), request);
+      console.error('Session verification error:', e);
+      return addCors(error('เกิดข้อผิดพลาดในการตรวจสอบ session: ' + (e.message || String(e)), 500), request);
     }
   }
 
