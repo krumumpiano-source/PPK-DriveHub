@@ -33,14 +33,13 @@ export async function onRequest(context) {
     const rows = await dbAll(env.DB,
       `SELECT vr.*, c.license_plate, c.brand AS car_brand,
        d.name AS driver_name, u.display_name AS approved_by_name,
-       uc.display_name AS created_by_name,
-       uu.display_name AS updated_by_name
+       uc.display_name AS requester_display_name,
+       uc.display_name AS created_by_name
        FROM vehicle_requests vr
        LEFT JOIN cars c ON vr.assigned_car_id = c.id
        LEFT JOIN drivers d ON vr.assigned_driver_id = d.id
        LEFT JOIN users u ON vr.approved_by = u.id
-       LEFT JOIN users uc ON vr.created_by = uc.id
-       LEFT JOIN users uu ON vr.updated_by = uu.id
+       LEFT JOIN users uc ON vr.requester_id = uc.id
        ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
        ORDER BY vr.created_at DESC LIMIT 500`,
       params
@@ -54,14 +53,13 @@ export async function onRequest(context) {
     const row = await dbFirst(env.DB,
       `SELECT vr.*, c.license_plate, c.brand AS car_brand,
        d.name AS driver_name, u.display_name AS approved_by_name,
-       uc.display_name AS created_by_name,
-       uu.display_name AS updated_by_name
+       uc.display_name AS requester_display_name,
+       uc.display_name AS created_by_name
        FROM vehicle_requests vr
        LEFT JOIN cars c ON vr.assigned_car_id = c.id
        LEFT JOIN drivers d ON vr.assigned_driver_id = d.id
        LEFT JOIN users u ON vr.approved_by = u.id
-       LEFT JOIN users uc ON vr.created_by = uc.id
-       LEFT JOIN users uu ON vr.updated_by = uu.id
+       LEFT JOIN users uc ON vr.requester_id = uc.id
        WHERE vr.id = ?`, [id]);
     if (!row) return error('ไม่พบคำขอใช้รถ', 404);
     return success(row);
