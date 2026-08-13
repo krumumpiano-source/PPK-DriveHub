@@ -135,13 +135,70 @@ export async function onRequest(context) {
        title || null, fnFirst, fnLast, displayName, phone || null, ts, ts]
     );
 
+    // Generate session token for instant auto-login
+    const token = generateToken();
+    const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
+    await dbRun(env.DB,
+      'INSERT INTO sessions (id, user_id, token, expires_at, created_at) VALUES (?, ?, ?, ?, ?)',
+      [generateUUID(), userId, token, expiresAt, now()]
+    );
+
     const displayForNotify = title ? `${title}${cleanName}` : cleanName;
     await notifyAllAdmins(env.DB, 'system', 'สมาชิกใหม่ลงทะเบียน',
       `${displayForNotify} (${email}) สมัครเข้าใช้งานสำเร็จ สิทธิ์เริ่มต้น: ผู้ขอใช้รถ`);
-    // await sendTelegramMessage(env,
-    //   `👤 <b>สมาชิกใหม่</b>\n📛 ${displayForNotify}\n📧 ${email}\n🏢 ${department || '-'}\n📞 ${phone || '-'}\n📝 ${reason || '-'}\n✅ เข้าระบบได้ทันที (สิทธิ์: ผู้ขอใช้รถ)`);
 
-    return success({ message: 'สมัครสมาชิกสำเร็จ เข้าสู่ระบบได้ทันทีด้วยอีเมลและรหัสผ่านที่ตั้งไว้' });
+    return success({
+      message: 'สมัครสมาชิกและเข้าสู่ระบบสำเร็จ',
+      token,
+      user_id: userId,
+      username: email,
+      display_name: displayName,
+      role: 'staff',
+      permissions: {}
+    });
+  }
+
+  if (path === '/api/auth/check-identity' && method === 'POST') {
+    const body = await parseBody(request);
+    const rawIdentity = (body?.identity || body?.username || body?.email || '').toString().trim().toLowerCase();
+    if (!rawIdentity) {
+      return error('กรุณาระบุอีเมลหรือชื่อผู้ใช้งาน', 400);
+    }
+
+    const isSchoolEmail = rawIdentity.endsWith('@ppk.ac.th');
+
+    const user = await dbFirst(env.DB,
+      'SELECT id, username, email, display_name, first_name, last_name, role FROM users WHERE (LOWER(username) = ? OR LOWER(email) = ?) AND active = 1',
+      [rawIdentity, rawIdentity]
+    );
+
+    if (user) {
+      const name = user.display_name || (user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user.username);
+      return success({
+        exists: true,
+        is_school_email: isSchoolEmail,
+        user: {
+          username: user.username,
+          email: user.email || user.username,
+          display_name: name,
+          role: user.role
+        }
+      });
+    }
+
+    let suggestedName = '';
+    if (rawIdentity.includes('@')) {
+      const prefix = rawIdentity.split('@')[0];
+      const nameParts = prefix.split(/[._-]/);
+      suggestedName = nameParts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+    }
+
+    return success({
+      exists: false,
+      is_school_email: isSchoolEmail,
+      suggested_username: rawIdentity,
+      suggested_name: suggestedName
+    });
   }
 
   if (path === '/api/auth/logout' && method === 'POST') {

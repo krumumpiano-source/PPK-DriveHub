@@ -86,6 +86,7 @@ const API = (() => {
     post: (path, body) => request(path, { method: 'POST', body }),
     put:  (path, body) => request(path, { method: 'PUT', body }),
     del:  (path) => request(path, { method: 'DELETE' }),
+    checkIdentity: (identity) => request('/api/auth/check-identity', { method: 'POST', body: { identity } }),
   };
 })();
 

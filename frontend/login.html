@@ -4,11 +4,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>เข้าสู่ระบบ - PPK DriveHub</title>
+  <title>เข้าสู่ระบบ / สมัครใช้งาน - PPK DriveHub</title>
   <script src="config.js"></script>
   <script>window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'login';</script>
   <link rel="stylesheet" href="common.css">
-  <script src="js/api.js"></script><script src="common.js"></script>
+  <script src="js/api.js"></script><script src="common.js?v=20260813_2"></script>
   <style>
     * {
       margin: 0;
@@ -31,42 +31,51 @@
       background: white;
       border-radius: var(--radius-2xl);
       box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-      max-width: 440px;
+      max-width: 450px;
       width: 100%;
       overflow: hidden;
-      animation: slideUp 0.5s ease-out;
+      animation: slideUp 0.4s ease-out;
     }
 
     @keyframes slideUp {
-      from { opacity: 0; transform: translateY(30px); }
+      from { opacity: 0; transform: translateY(20px); }
       to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.98); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .step-panel {
+      animation: fadeIn 0.3s ease-out;
     }
 
     .login-header {
       background: var(--gradient-primary);
       color: white;
-      padding: 36px 30px 32px;
+      padding: 32px 28px 26px;
       text-align: center;
     }
 
     .login-header h1 {
-      font-size: 1.9em;
-      margin-bottom: 6px;
+      font-size: 1.85em;
+      margin-bottom: 4px;
       letter-spacing: -0.5px;
     }
 
     .login-header p {
-      font-size: 0.92em;
+      font-size: 0.9em;
       opacity: 0.92;
-      line-height: 1.5;
+      line-height: 1.4;
     }
 
     .login-body {
-      padding: 32px 30px 28px;
+      padding: 28px 26px 24px;
     }
 
     .form-group {
-      margin-bottom: 22px;
+      margin-bottom: 18px;
     }
 
     .form-group label {
@@ -74,7 +83,7 @@
       margin-bottom: 8px;
       color: var(--color-text);
       font-weight: 600;
-      font-size: 0.93em;
+      font-size: 0.92em;
     }
 
     .form-group input {
@@ -91,7 +100,7 @@
     .form-group input:focus {
       outline: none;
       border-color: var(--color-primary);
-      box-shadow: 0 0 0 3px rgba(66,133,244,0.15);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.18);
       background: #fff;
     }
 
@@ -123,100 +132,101 @@
       color: var(--color-primary);
     }
 
+    .user-preview-pill {
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+      border-radius: var(--radius-lg);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+      font-size: 0.9em;
+      color: #3730a3;
+    }
+
+    .user-preview-pill strong {
+      color: #1e1b4b;
+      display: block;
+      font-size: 0.98em;
+    }
+
+    .welcome-badge {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      color: #166534;
+      font-size: 0.88em;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     .login-links {
       display: flex;
-      justify-content: flex-end;
-      margin-bottom: 24px;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      font-size: 0.88em;
     }
 
     .login-links a {
       color: var(--color-primary);
       text-decoration: none;
-      font-size: 0.9em;
       font-weight: 500;
-      transition: color 0.2s;
     }
 
     .login-links a:hover {
-      color: var(--color-primary-dark, #1a56db);
       text-decoration: underline;
     }
 
-    .btn-login {
+    .btn-action {
       width: 100%;
-      padding: 15px 20px;
-      background: linear-gradient(135deg, #1e40af, #3b82f6);
+      padding: 14px 20px;
+      background: linear-gradient(135deg, #4f46e5, #6366f1);
       color: white;
       border: none;
       border-radius: 12px;
-      font-size: 1.1em;
+      font-size: 1.05em;
       font-weight: 700;
       cursor: pointer;
       transition: all 0.25s;
       font-family: inherit;
-      letter-spacing: 0.5px;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
-      box-shadow: 0 4px 14px rgba(30,64,175,0.35);
+      box-shadow: 0 4px 14px rgba(99,102,241,0.35);
     }
 
-    .btn-login:hover {
+    .btn-action:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 28px rgba(30,64,175,0.45);
-      background: linear-gradient(135deg, #1e3a8a, #2563eb);
+      box-shadow: 0 8px 24px rgba(99,102,241,0.45);
     }
 
-    .btn-login:active {
-      transform: translateY(0);
-    }
-
-    .btn-login:disabled {
+    .btn-action:disabled {
       opacity: 0.6;
       cursor: not-allowed;
       transform: none;
     }
 
-    .btn-login .btn-icon {
-      font-size: 1.3em;
+    .btn-success-action {
+      background: linear-gradient(135deg, #059669, #10b981);
+      box-shadow: 0 4px 14px rgba(16,185,129,0.35);
     }
 
-    .btn-register {
-      width: 100%;
-      padding: 14px 20px;
-      background: white;
-      color: #1e40af;
-      border: 2px solid #93c5fd;
-      border-radius: 12px;
-      font-size: 1.02em;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.25s;
-      font-family: inherit;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-
-    .btn-register:hover {
-      background: #eff6ff;
-      border-color: #3b82f6;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(59,130,246,0.2);
-    }
-
-    .btn-register .btn-icon {
-      font-size: 1.2em;
+    .btn-success-action:hover {
+      box-shadow: 0 8px 24px rgba(16,185,129,0.45);
     }
 
     .divider {
       display: flex;
       align-items: center;
-      margin: 20px 0;
+      margin: 18px 0;
       color: #94a3b8;
-      font-size: 0.85em;
+      font-size: 0.82em;
     }
 
     .divider::before,
@@ -227,14 +237,15 @@
     }
 
     .divider span {
-      padding: 0 14px;
+      padding: 0 12px;
     }
 
     .alert {
-      padding: 12px 15px;
+      padding: 11px 14px;
       border-radius: var(--radius-md);
-      margin-bottom: 20px;
-      font-size: 0.9em;
+      margin-bottom: 16px;
+      font-size: 0.88em;
+      line-height: 1.4;
     }
 
     .alert-error {
@@ -250,11 +261,11 @@
     }
 
     .login-logo {
-      width: 90px;
-      height: 90px;
-      margin: 0 auto 18px;
+      width: 76px;
+      height: 76px;
+      margin: 0 auto 14px;
       background: rgba(255,255,255,0.18);
-      border-radius: 22px;
+      border-radius: 20px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -263,22 +274,18 @@
     }
 
     .login-logo svg {
-      width: 52px;
-      height: 52px;
+      width: 44px;
+      height: 44px;
       fill: white;
     }
 
     .login-footer {
-      margin-top: 24px;
+      margin-top: 20px;
       text-align: center;
       color: rgba(255, 255, 255, 0.88);
-      font-size: 0.88em;
+      font-size: 0.85em;
       max-width: 440px;
-      line-height: 1.6;
-    }
-
-    .login-footer p {
-      margin: 0;
+      line-height: 1.5;
     }
   </style>
 
@@ -295,81 +302,300 @@
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.85 7h10.29l1.08 3.11H5.77L6.85 7zM19 17H5v-5h14v5z"/><circle cx="7.5" cy="14.5" r="1.5"/><circle cx="16.5" cy="14.5" r="1.5"/></svg>
       </div>
       <h1>PPK DriveHub</h1>
-      <p>ระบบจัดการยานพาหนะ<br>โรงเรียนพะเยาพิทยาคม 2569</p>
+      <p>ระบบจัดการยานพาหนะ<br>โรงเรียนพะเยาพิทยาคม</p>
     </div>
+
     <div class="login-body">
       <div id="alert-container"></div>
 
-      <form id="loginForm" onsubmit="handleLogin(event); return false;">
-        <div class="form-group">
-          <label for="username">ชื่อผู้ใช้ / รหัสประจำตัว</label>
-          <input type="text" id="username" name="username" required autocomplete="username" autofocus
-            placeholder="กรอกชื่อผู้ใช้หรืออีเมล">
-          <small style="color:#0056b3;font-size:0.85em;display:block;margin-top:5px;line-height:1.4;">
-            💡 <b>ครูและบุคลากร (ผู้ขอใช้รถ):</b> เข้าใช้งานด้วย <b>อีเมล @ppk.ac.th</b> หากเข้าใช้งานครั้งแรก รหัสผ่านที่ใส่จะถือเป็นการตั้งรหัสผ่านของคุณทันที
-          </small>
-        </div>
-
-        <div class="form-group">
-          <label for="password">รหัสผ่าน</label>
-          <div class="password-wrapper">
-            <input type="password" id="password" name="password" required autocomplete="current-password"
-              placeholder="กรอกรหัสผ่าน (เข้าครั้งแรก = ตั้งรหัสผ่าน)">
-            <button type="button" class="toggle-password" onclick="togglePassword('password', this)" title="แสดง/ซ่อนรหัสผ่าน">
-              👁️
-            </button>
+      <!-- STEP 1: IDENTITY INPUT -->
+      <div id="step-identity" class="step-panel">
+        <form onsubmit="handleCheckIdentity(event); return false;">
+          <div class="form-group">
+            <label for="identityInput">ใส่อีเมลโรงเรียน หรือ ชื่อผู้ใช้งาน</label>
+            <input type="text" id="identityInput" required autocomplete="username" autofocus
+              placeholder="เช่น somchai@ppk.ac.th หรือ admin">
+            <small style="color:#4f46e5;font-size:0.84em;display:block;margin-top:7px;line-height:1.4;">
+              💡 <b>ครูและบุคลากร:</b> ใส่อีเมล <b>@ppk.ac.th</b> เพื่อเข้าใช้งานหรือเปิดบัญชีใหม่ได้ทันที
+            </small>
           </div>
-        </div>
 
-        <div class="login-links">
-          <a href="forgot-password.html">ลืมรหัสผ่าน?</a>
-        </div>
+          <button type="submit" class="btn-action" id="nextBtn">
+            <span>ถัดไป</span>
+            <span class="btn-icon">➔</span>
+          </button>
+        </form>
 
-        <button type="submit" class="btn-login" id="loginBtn">
-          <span class="btn-icon">➡️</span>
-          <span>เข้าสู่ระบบ</span>
-        </button>
+        <div class="divider"><span>หรือเข้าใช้งานด้วยช่องทางอื่น</span></div>
 
-        <button type="button" class="btn-login" style="background:#00B900; margin-top: 10px;" onclick="window.location.href='/api/auth/line'">
+        <button type="button" class="btn-action" style="background:#00B900; box-shadow:0 4px 14px rgba(0,185,0,0.3);" onclick="window.location.href='/api/auth/line'">
           <span class="btn-icon">💬</span>
           <span>เข้าสู่ระบบด้วย LINE</span>
         </button>
-      </form>
+      </div>
 
-      <div class="divider"><span>หรือ</span></div>
+      <!-- STEP 2A: EXISTING USER LOGIN -->
+      <div id="step-login" class="step-panel" style="display:none;">
+        <div class="user-preview-pill">
+          <div>
+            <strong id="userDisplayName">สมชาย ใจดี</strong>
+            <span id="userDisplayEmail" style="font-size:0.86em;color:#6366f1;">somchai@ppk.ac.th</span>
+          </div>
+          <a href="#" onclick="resetStep();return false;" style="font-size:0.85em;color:#4338ca;font-weight:600;">เปลี่ยน</a>
+        </div>
 
-      <button type="button" class="btn-register" onclick="window.location.href='register.html'">
-        <span class="btn-icon">✍️</span>
-        <span>สมัครเข้าใช้งาน (สำหรับแอดมิน/คนขับรถ)</span>
-      </button>
+        <form onsubmit="handleLogin(event); return false;">
+          <div class="form-group">
+            <label for="loginPassword">รหัสผ่าน</label>
+            <div class="password-wrapper">
+              <input type="password" id="loginPassword" required autocomplete="current-password"
+                placeholder="กรอกรหัสผ่านของคุณ">
+              <button type="button" class="toggle-password" onclick="togglePassword('loginPassword', this)" title="แสดง/ซ่อนรหัสผ่าน">👁️</button>
+            </div>
+          </div>
+
+          <div class="login-links">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--color-text-muted);">
+              <input type="checkbox" id="remember-me" checked> จำฉันไว้ในระบบ
+            </label>
+            <a href="forgot-password.html">ลืมรหัสผ่าน?</a>
+          </div>
+
+          <button type="submit" class="btn-action" id="loginBtn">
+            <span class="btn-icon">🔓</span>
+            <span>เข้าสู่ระบบ</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- STEP 2B: FIRST-TIME USER ONBOARDING -->
+      <div id="step-onboard" class="step-panel" style="display:none;">
+        <div class="welcome-badge">
+          <span>✨</span>
+          <span><b>ยินดีต้อนรับบุคลากรใหม่!</b> กรอกข้อมูลสั้นๆ เพื่อเริ่มใช้งาน</span>
+        </div>
+
+        <form onsubmit="handleOnboard(event); return false;">
+          <div class="form-group">
+            <label for="onboardEmail">อีเมล / ชื่อผู้ใช้</label>
+            <input type="text" id="onboardEmail" readonly style="background:#f1f5f9;color:#475569;font-weight:600;">
+          </div>
+
+          <div class="form-group">
+            <label for="onboardFullName">ชื่อ - นามสกุล</label>
+            <input type="text" id="onboardFullName" required placeholder="เช่น นายสมชาย ใจดี">
+          </div>
+
+          <div class="form-group">
+            <label for="onboardPassword">ตั้งรหัสผ่านเข้าใช้งาน</label>
+            <div class="password-wrapper">
+              <input type="password" id="onboardPassword" required placeholder="รหัสผ่านอย่างน้อย 8 ตัวอักษร">
+              <button type="button" class="toggle-password" onclick="togglePassword('onboardPassword', this)" title="แสดง/ซ่อนรหัสผ่าน">👁️</button>
+            </div>
+          </div>
+
+          <div class="login-links" style="justify-content:flex-start;">
+            <a href="#" onclick="resetStep();return false;">⬅️ เปลี่ยนอีเมล / ชื่อผู้ใช้</a>
+          </div>
+
+          <button type="submit" class="btn-action btn-success-action" id="onboardBtn">
+            <span class="btn-icon">🚀</span>
+            <span>สมัครและเริ่มใช้งานทันที</span>
+          </button>
+        </form>
+      </div>
+
     </div>
   </div>
 
   <script>
+    var currentIdentityData = null;
+
+    function showAlert(msg, type) {
+      var alertContainer = document.getElementById('alert-container');
+      alertContainer.innerHTML = '<div class="alert alert-' + (type || 'error') + '">' + msg + '</div>';
+    }
+
+    function clearAlert() {
+      document.getElementById('alert-container').innerHTML = '';
+    }
+
     function togglePassword(inputId, btn) {
       var input = document.getElementById(inputId);
       if (input.type === 'password') {
         input.type = 'text';
         btn.textContent = '🙈';
-        btn.title = 'ซ่อนรหัสผ่าน';
       } else {
         input.type = 'password';
         btn.textContent = '👁️';
-        btn.title = 'แสดงรหัสผ่าน';
       }
     }
 
-    // handleLogin is specific to this page
+    function resetStep() {
+      clearAlert();
+      document.getElementById('step-identity').style.display = 'block';
+      document.getElementById('step-login').style.display = 'none';
+      document.getElementById('step-onboard').style.display = 'none';
+      document.getElementById('identityInput').focus();
+    }
 
-    // Auto-redirect to setup if no admin exists
-    (async function checkNeedsSetup() {
+    async function handleCheckIdentity(event) {
+      event.preventDefault();
+      clearAlert();
+      var inputVal = document.getElementById('identityInput').value.trim();
+      if (!inputVal) {
+        showAlert('กรุณาระบุอีเมลหรือชื่อผู้ใช้งาน', 'error');
+        return;
+      }
+
+      var nextBtn = document.getElementById('nextBtn');
+      nextBtn.disabled = true;
+      nextBtn.innerHTML = '<span>กำลังตรวจสอบ...</span>';
+
       try {
-        var result = await API.get('/api/setup');
-        if (result.success && result.data && result.data.needs_setup) {
-          window.location.href = 'admin-settings.html';
+        var res = await API.checkIdentity(inputVal);
+        nextBtn.disabled = false;
+        nextBtn.innerHTML = '<span>ถัดไป</span><span class="btn-icon">➔</span>';
+
+        if (res.success && res.data) {
+          currentIdentityData = res.data;
+          document.getElementById('step-identity').style.display = 'none';
+
+          if (res.data.exists) {
+            // STEP 2A: User exists -> Show Password Login
+            document.getElementById('userDisplayName').textContent = res.data.user.display_name || res.data.user.username;
+            document.getElementById('userDisplayEmail').textContent = res.data.user.email || res.data.user.username;
+            document.getElementById('step-login').style.display = 'block';
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('loginPassword').focus();
+          } else {
+            // STEP 2B: New User -> Show Onboarding
+            document.getElementById('onboardEmail').value = inputVal;
+            if (res.data.suggested_name) {
+              document.getElementById('onboardFullName').value = res.data.suggested_name;
+            } else {
+              document.getElementById('onboardFullName').value = '';
+            }
+            document.getElementById('step-onboard').style.display = 'block';
+            if (res.data.suggested_name) {
+              document.getElementById('onboardPassword').focus();
+            } else {
+              document.getElementById('onboardFullName').focus();
+            }
+          }
+        } else {
+          showAlert(res.message || 'ไม่สามารถตรวจสอบข้อมูลได้', 'error');
         }
-      } catch (e) { /* ignore */ }
-    })();
+      } catch (err) {
+        nextBtn.disabled = false;
+        nextBtn.innerHTML = '<span>ถัดไป</span><span class="btn-icon">➔</span>';
+        showAlert(err.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
+      }
+    }
+
+    async function handleLogin(event) {
+      event.preventDefault();
+      clearAlert();
+      var password = document.getElementById('loginPassword').value;
+      var loginBtn = document.getElementById('loginBtn');
+
+      if (!password) {
+        showAlert('กรุณากรอกรหัสผ่าน', 'error');
+        return;
+      }
+
+      var username = currentIdentityData && currentIdentityData.user ? currentIdentityData.user.username : document.getElementById('identityInput').value.trim();
+
+      loginBtn.disabled = true;
+      loginBtn.innerHTML = '<span>กำลังเข้าสู่ระบบ...</span>';
+
+      try {
+        var result = await API.post('/api/auth/login', { username: username, password: password });
+        if (result.success && result.data && result.data.token) {
+          var rememberMe = document.getElementById('remember-me').checked;
+          API.setToken(result.data.token, rememberMe);
+          API.setUser({
+            id: result.data.user_id,
+            username: result.data.username,
+            display_name: result.data.display_name,
+            role: result.data.role,
+            permissions: result.data.permissions || {},
+            must_change_password: result.data.must_change_password,
+            pdpa_accepted: result.data.pdpa_accepted
+          });
+
+          if (result.data.must_change_password) {
+            window.location.href = 'change-password.html';
+          } else {
+            window.location.href = 'dashboard.html';
+          }
+        } else {
+          showAlert(result.message || 'รหัสผ่านไม่ถูกต้อง', 'error');
+          loginBtn.disabled = false;
+          loginBtn.innerHTML = '<span class="btn-icon">🔓</span><span>เข้าสู่ระบบ</span>';
+        }
+      } catch (err) {
+        loginBtn.disabled = false;
+        loginBtn.innerHTML = '<span class="btn-icon">🔓</span><span>เข้าสู่ระบบ</span>';
+        showAlert(err.message || 'รหัสผ่านไม่ถูกต้อง', 'error');
+      }
+    }
+
+    async function handleOnboard(event) {
+      event.preventDefault();
+      clearAlert();
+      var email = document.getElementById('onboardEmail').value.trim();
+      var fullName = document.getElementById('onboardFullName').value.trim();
+      var password = document.getElementById('onboardPassword').value;
+      var onboardBtn = document.getElementById('onboardBtn');
+
+      if (!fullName) {
+        showAlert('กรุณากรอกชื่อ-นามสกุล', 'error');
+        return;
+      }
+      if (!password || password.length < 8) {
+        showAlert('รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร', 'error');
+        return;
+      }
+
+      onboardBtn.disabled = true;
+      onboardBtn.innerHTML = '<span>กำลังสร้างบัญชี...</span>';
+
+      try {
+        var res = await API.post('/api/auth/register', {
+          email: email,
+          full_name: fullName,
+          password: password
+        });
+
+        if (res.success && res.data && res.data.token) {
+          // AUTO-LOGIN SUCCESS!
+          API.setToken(res.data.token, true);
+          API.setUser({
+            id: res.data.user_id,
+            username: res.data.username,
+            display_name: res.data.display_name || fullName,
+            role: res.data.role || 'staff',
+            permissions: {}
+          });
+          window.location.href = 'dashboard.html';
+        } else if (res.success) {
+          showAlert('สมัครสมาชิกสำเร็จ! กำลังไปหน้าล็อกอิน...', 'success');
+          setTimeout(function() {
+            document.getElementById('identityInput').value = email;
+            handleCheckIdentity(new Event('submit'));
+          }, 1000);
+        } else {
+          showAlert(res.message || 'ไม่สามารถลงทะเบียนได้', 'error');
+          onboardBtn.disabled = false;
+          onboardBtn.innerHTML = '<span class="btn-icon">🚀</span><span>สมัครและเริ่มใช้งานทันที</span>';
+        }
+      } catch (err) {
+        onboardBtn.disabled = false;
+        onboardBtn.innerHTML = '<span class="btn-icon">🚀</span><span>สมัครและเริ่มใช้งานทันที</span>';
+        showAlert(err.message || 'เกิดข้อผิดพลาดในการสมัครใช้งาน', 'error');
+      }
+    }
 
     // Handle LINE login callback via URL params
     window.onload = function() {
@@ -397,67 +623,6 @@
         }
       }
     };
-
-    async function handleLogin(event) {
-      event.preventDefault();
-
-      var username = document.getElementById('username').value.trim();
-      var password = document.getElementById('password').value;
-      var loginBtn = document.getElementById('loginBtn');
-      var alertContainer = document.getElementById('alert-container');
-
-      if (!username || !password) {
-        showAlert('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน', 'error');
-        return;
-      }
-
-      // Disable button
-      loginBtn.disabled = true;
-      loginBtn.innerHTML = '<span class="btn-icon">⏳</span><span>กำลังเข้าสู่ระบบ...</span>';
-      alertContainer.innerHTML = '';
-
-      try {
-        var result = await apiCall('login', {
-          username: username,
-          password: password
-        });
-
-        if (result.success && result.data && result.data.token) {
-          // Save Bearer token + user via API helper
-          var rememberMe = document.getElementById('remember-me') ? document.getElementById('remember-me').checked : true;
-          API.setToken(result.data.token, rememberMe);
-          // Build user object from flat response
-          var userData = {
-            id: result.data.user_id,
-            username: result.data.username,
-            display_name: result.data.display_name,
-            role: result.data.role,
-            permissions: result.data.permissions || {},
-            must_change_password: result.data.must_change_password,
-            pdpa_accepted: result.data.pdpa_accepted
-          };
-          API.setUser(userData);
-
-          if (result.data.must_change_password) {
-            alert('กรุณาเปลี่ยนรหัสผ่านก่อนใช้งาน');
-            window.location.href = 'change-password.html';
-          } else {
-            window.location.href = 'dashboard.html';
-          }
-        } else {
-          var msg = (result.message && /[\u0E00-\u0E7F]/.test(result.message)) ? result.message : 'เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจสอบชื่อผู้ใช้และรหัสผ่าน';
-          showAlert(msg, 'error');
-          loginBtn.disabled = false;
-          loginBtn.innerHTML = '<span class="btn-icon">➡️</span><span>เข้าสู่ระบบ</span>';
-        }
-      } catch (error) {
-        var msg = error.message || 'ดำเนินการไม่สำเร็จ';
-        if (msg === 'AUTHENTICATION_REQUIRED') msg = 'กรุณาล็อกอินใหม่';
-        showAlert(msg, 'error');
-        loginBtn.disabled = false;
-        loginBtn.innerHTML = '<span class="btn-icon">➡️</span><span>เข้าสู่ระบบ</span>';
-      }
-    }
   </script>
 
   <footer class="login-footer">

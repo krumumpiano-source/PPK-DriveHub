@@ -1,6 +1,6 @@
 // sw.js — PPK DriveHub Service Worker
-// v11: Update role preview button to 'ผู้ขอใช้รถ'
-var CACHE_NAME='ppk-v11';
+// v12: Single Smart Box login & onboarding
+var CACHE_NAME='ppk-v12';
 // Only pre-cache truly static fallback assets. JS/CSS use network-first below.
 var STATIC_ASSETS=[
   '/manifest.json'
