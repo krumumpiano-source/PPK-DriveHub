@@ -136,6 +136,20 @@ export async function onRequest(context) {
     return success({ message: 'รีเซ็ตรหัสผ่านเรียบร้อย' });
   }
 
+  if (path.startsWith('/api/admin/users/') && method === 'DELETE') {
+    const id = extractParam(path, '/api/admin/users/');
+    const targetUser = await dbFirst(env.DB, 'SELECT role, email, username FROM users WHERE id = ?', [id]);
+    if (!targetUser) return error('ไม่พบผู้ใช้งานในระบบ', 404);
+    if (targetUser.role === 'super_admin') {
+      return error('ไม่สามารถลบผู้ดูแลสูงสุดได้', 403);
+    }
+    await dbRun(env.DB, 'DELETE FROM sessions WHERE user_id = ?', [id]);
+    await dbRun(env.DB, 'DELETE FROM notifications WHERE user_id = ?', [id]);
+    await dbRun(env.DB, 'DELETE FROM users WHERE id = ?', [id]);
+    await writeAuditLog(env.DB, user.id, user.displayName, 'delete_user', 'admin', id, { target_email: targetUser.email || targetUser.username });
+    return success({ message: 'ลบผู้ใช้งานออกจากระบบเรียบร้อย' });
+  }
+
 
   if (path === '/api/admin/requests' && method === 'GET') {
     const status = url.searchParams.get('status') || 'pending';
