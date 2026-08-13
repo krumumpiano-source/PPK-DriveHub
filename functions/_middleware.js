@@ -3,6 +3,7 @@ import { error, dbFirst, dbRun, dbAll } from './_helpers.js';
 const PUBLIC_PATHS = [
   '/api/auth/login',
   '/api/auth/register',
+  '/api/auth/check-identity',
   '/api/auth/forgot-password',
   '/api/auth/reset-password',
   '/api/setup',
