@@ -415,82 +415,71 @@
                 <!-- Calendar will be generated here -->
               </div>
             </div>
-
-            <!-- Availability Section -->
-            <div class="availability-section" style="background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:1.5rem;margin-top:1.5rem;box-shadow:var(--shadow-md)">
+            <!-- Availability Section: ตรวจสอบคิวว่าง -->
+            <div class="availability-section" style="background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-xl);overflow:hidden;margin-top:1.5rem;box-shadow:var(--shadow-md)">
               
-              <!-- Widget Header -->
-              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:1.2rem;border-bottom:2px solid #f1f5f9;padding-bottom:1rem;">
-                <div>
-                  <h3 style="font-size:1.15rem;font-weight:700;color:var(--color-text);margin:0;display:flex;align-items:center;gap:8px">
-                    <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:#e0e7ff;color:#4f46e5;border-radius:50%;font-size:1rem">🔍</span>
-                    <span>ค้นหาและเช็ครถว่างตามวันเวลา</span>
-                  </h3>
-                  <p style="font-size:0.85rem;color:var(--color-text-muted);margin:4px 0 0 0">
-                    เลือกวันที่และช่วงเวลาเดินทาง เพื่อตรวจสอบรายการรถและพนักงานขับรถที่พร้อมให้บริการ
-                  </p>
+              <!-- Hero Header Banner -->
+              <div style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);padding:1.5rem 1.75rem;color:white">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+                  <span style="font-size:2rem">🚗</span>
+                  <div>
+                    <h2 style="font-size:1.3rem;font-weight:800;margin:0;letter-spacing:-0.01em">ตรวจสอบคิวรถว่าง</h2>
+                    <p style="font-size:0.88rem;margin:2px 0 0 0;opacity:0.85">เลือกวันและเวลาที่ต้องการเดินทาง แล้วดูรถและพนักงานขับรถที่ว่างได้เลย</p>
+                  </div>
                 </div>
-
-                <!-- Quick Today Action -->
-                <button type="button" onclick="resetAvailabilityToToday()" style="display:inline-flex;align-items:center;gap:6px;padding:9px 18px;background:var(--gradient-primary);color:white;border:none;border-radius:var(--radius-md);font-weight:600;cursor:pointer;font-family:inherit;font-size:0.88rem;box-shadow:0 2px 8px rgba(99,102,241,0.25);transition:all 0.2s">
-                  📅 วันนี้ (Real-time)
-                </button>
               </div>
 
-              <!-- Interactive Search & Filter Form Bar -->
-              <div style="background:#f8fafc;border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:1rem 1.2rem;margin-bottom:1.5rem">
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;align-items:end">
-                  
-                  <!-- Date Field -->
-                  <div>
-                    <label for="checkerDate" style="display:block;font-size:0.85rem;font-weight:700;color:var(--color-text);margin-bottom:6px">
-                      📅 วันที่เดินทาง
-                    </label>
-                    <input type="date" id="checkerDate" style="width:100%;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:0.95rem;background:white;color:var(--color-text)" onchange="onAvailabilityDateChange()">
+              <!-- Picker Zone -->
+              <div style="padding:1.25rem 1.5rem;background:#f8fafc;border-bottom:1px solid var(--color-border)">
+                
+                <!-- Quick Date Buttons -->
+                <div style="margin-bottom:1rem">
+                  <p style="font-size:0.82rem;font-weight:700;color:var(--color-text-muted);margin:0 0 8px 0;text-transform:uppercase;letter-spacing:0.04em">เลือกวันที่</p>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button id="btnToday" onclick="setCheckerDay(0)" style="padding:9px 20px;border:2px solid #4f46e5;background:#4f46e5;color:white;border-radius:var(--radius-md);font-weight:700;cursor:pointer;font-family:inherit;font-size:0.9rem;transition:all 0.15s">📅 วันนี้</button>
+                    <button id="btnTomorrow" onclick="setCheckerDay(1)" style="padding:9px 20px;border:2px solid var(--color-border);background:white;color:var(--color-text);border-radius:var(--radius-md);font-weight:600;cursor:pointer;font-family:inherit;font-size:0.9rem;transition:all 0.15s">พรุ่งนี้</button>
+                    <button id="btnDayAfter" onclick="setCheckerDay(2)" style="padding:9px 20px;border:2px solid var(--color-border);background:white;color:var(--color-text);border-radius:var(--radius-md);font-weight:600;cursor:pointer;font-family:inherit;font-size:0.9rem;transition:all 0.15s">มะรืน</button>
+                    <input type="date" id="checkerDate" style="padding:8px 12px;border:2px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:0.9rem;background:white;color:var(--color-text);cursor:pointer" onchange="onDateInputChanged()" title="เลือกวันอื่น">
                   </div>
+                </div>
 
-                  <!-- Time Start Field -->
+                <!-- Departure Time -->
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
                   <div>
-                    <label for="checkerTimeStart" style="display:block;font-size:0.85rem;font-weight:700;color:var(--color-text);margin-bottom:6px">
-                      ⏰ เวลาเริ่มเดินทาง
-                    </label>
-                    <input type="time" id="checkerTimeStart" value="08:00" style="width:100%;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:0.95rem;background:white;color:var(--color-text)" onchange="onAvailabilityDateChange()">
+                    <label for="checkerTimeStart" style="display:block;font-size:0.82rem;font-weight:700;color:var(--color-text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em">⏰ เวลาออกเดินทาง</label>
+                    <input type="time" id="checkerTimeStart" value="08:00" style="padding:10px 16px;border:2px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:1.05rem;font-weight:700;background:white;color:var(--color-text)" onchange="onAvailabilityDateChange()">
                   </div>
-
-                  <!-- Time End Field -->
-                  <div>
-                    <label for="checkerTimeEnd" style="display:block;font-size:0.85rem;font-weight:700;color:var(--color-text);margin-bottom:6px">
-                      🏁 ถึงเวลา (สิ้นสุด)
-                    </label>
-                    <input type="time" id="checkerTimeEnd" value="17:00" style="width:100%;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:0.95rem;background:white;color:var(--color-text)" onchange="onAvailabilityDateChange()">
-                  </div>
-
+                  <!-- hidden end time: default to end of day -->
+                  <input type="hidden" id="checkerTimeEnd" value="23:59">
+                  <p style="font-size:0.82rem;color:var(--color-text-muted);margin:18px 0 0 0;max-width:260px">⚡ ระบบจะแสดงรถและคนขับที่ยังไม่มีคิวในวันนั้น</p>
                 </div>
               </div>
 
               <!-- Live Results Section -->
-              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem">
-                
-                <!-- Drivers Available List -->
-                <div class="availability-card" style="background:#ffffff;padding:1.2rem;border-radius:var(--radius-lg);border:1px solid var(--color-border);box-shadow:var(--shadow-sm)">
-                  <h3 style="font-size:1.02rem;font-weight:700;margin-bottom:1rem;color:var(--color-text);display:flex;align-items:center;gap:6px">
-                    <span>👤 พนักงานขับรถที่พร้อมให้บริการ</span>
-                  </h3>
-                  <div class="availability-list" id="driversAvailableList">
-                    <div class="empty-availability">กำลังโหลด...</div>
+              <div style="padding:1.25rem 1.5rem">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.25rem">
+                  
+                  <!-- Drivers Available List -->
+                  <div class="availability-card" style="background:#f0fdf4;padding:1.2rem;border-radius:var(--radius-lg);border:1.5px solid #bbf7d0">
+                    <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;color:#15803d;display:flex;align-items:center;gap:6px">
+                      <span>👤 พนักงานขับรถที่ว่าง</span>
+                    </h3>
+                    <div class="availability-list" id="driversAvailableList">
+                      <div class="empty-availability">กำลังโหลด...</div>
+                    </div>
                   </div>
-                </div>
 
-                <!-- Vehicles Available List -->
-                <div class="availability-card" style="background:#ffffff;padding:1.2rem;border-radius:var(--radius-lg);border:1px solid var(--color-border);box-shadow:var(--shadow-sm)">
-                  <h3 style="font-size:1.02rem;font-weight:700;margin-bottom:1rem;color:var(--color-text);display:flex;align-items:center;gap:6px">
-                    <span>🚗 รถที่พร้อมให้บริการ</span>
-                  </h3>
-                  <div class="availability-list" id="vehiclesAvailableList">
-                    <div class="empty-availability">กำลังโหลด...</div>
+                  <!-- Vehicles Available List -->
+                  <div class="availability-card" style="background:#eff6ff;padding:1.2rem;border-radius:var(--radius-lg);border:1.5px solid #bfdbfe">
+                    <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;color:#1d4ed8;display:flex;align-items:center;gap:6px">
+                      <span>🚗 รถที่ว่าง</span>
+                    </h3>
+                    <div class="availability-list" id="vehiclesAvailableList">
+                      <div class="empty-availability">กำลังโหลด...</div>
+                    </div>
                   </div>
-                </div>
 
+                </div>
               </div>
             </div>
           </div>
@@ -1088,14 +1077,14 @@
               });
               dayGform.forEach(function(r) {
                 var plate = r.license_plate || (r.car_id || '').substr(0, 8);
-                var driverName = r.driver_name || '-';
-                var destination = r.destination || r.purpose || 'บันทึกการใช้รถ';
-                html += '<div class="queue-item" style="border-left:3px solid var(--color-warning,#f59e0b)">';
-                html += '<div class="queue-plate">' + plate + '</div>';
-                html += '<div class="queue-driver">' + driverName + '</div>';
-                html += '<div class="queue-destination">' + destination + '</div>';
-                html += '</div>';
-              });
+}
+              var destination = r.destination || r.purpose || 'บันทึกการใช้รถ';
+              html += '<div class="queue-item" style="border-left:3px solid var(--color-warning,#f59e0b)">';
+              html += '<div class="queue-plate">' + plate + '</div>';
+              html += '<div class="queue-driver">' + driverName + '</div>';
+              html += '<div class="queue-destination">' + destination + '</div>';
+              html += '</div>';
+            });
 
               // carsOut ที่ออกวันนี้ (ยังไม่ถึง multi-day)
               carsOut.forEach(function(r) {
@@ -1160,27 +1149,70 @@
           loadDashboard();
         }
 
+        function setCheckerDay(offsetDays) {
+          var d = new Date();
+          d.setDate(d.getDate() + offsetDays);
+          var dateStr = formatDate(d);
+          var dateInput = document.getElementById('checkerDate');
+          if (dateInput) dateInput.value = dateStr;
+
+          var todayStr = formatDate(new Date());
+          var tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+          var tomorrowStr = formatDate(tomorrow);
+          var dayAfter = new Date(); dayAfter.setDate(dayAfter.getDate() + 2);
+          var dayAfterStr = formatDate(dayAfter);
+
+          var activeStyle = 'padding:9px 20px;border:2px solid #4f46e5;background:#4f46e5;color:white;border-radius:var(--radius-md);font-weight:700;cursor:pointer;font-family:inherit;font-size:0.9rem;transition:all 0.15s';
+          var inactiveStyle = 'padding:9px 20px;border:2px solid var(--color-border);background:white;color:var(--color-text);border-radius:var(--radius-md);font-weight:600;cursor:pointer;font-family:inherit;font-size:0.9rem;transition:all 0.15s';
+
+          var btnToday = document.getElementById('btnToday');
+          var btnTomorrow = document.getElementById('btnTomorrow');
+          var btnDayAfter = document.getElementById('btnDayAfter');
+          if (btnToday) btnToday.style.cssText = dateStr === todayStr ? activeStyle : inactiveStyle;
+          if (btnTomorrow) btnTomorrow.style.cssText = dateStr === tomorrowStr ? activeStyle : inactiveStyle;
+          if (btnDayAfter) btnDayAfter.style.cssText = dateStr === dayAfterStr ? activeStyle : inactiveStyle;
+
+          onAvailabilityDateChange();
+        }
+
+        function onDateInputChanged() {
+          var inactiveStyle = 'padding:9px 20px;border:2px solid var(--color-border);background:white;color:var(--color-text);border-radius:var(--radius-md);font-weight:600;cursor:pointer;font-family:inherit;font-size:0.9rem;transition:all 0.15s';
+          var dateInput = document.getElementById('checkerDate');
+          var todayStr = formatDate(new Date());
+          var tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+          var tomorrowStr = formatDate(tomorrow);
+          var dayAfter = new Date(); dayAfter.setDate(dayAfter.getDate() + 2);
+          var dayAfterStr = formatDate(dayAfter);
+          var activeStyle = 'padding:9px 20px;border:2px solid #4f46e5;background:#4f46e5;color:white;border-radius:var(--radius-md);font-weight:700;cursor:pointer;font-family:inherit;font-size:0.9rem;transition:all 0.15s';
+          var val = dateInput ? dateInput.value : '';
+          var btnToday = document.getElementById('btnToday');
+          var btnTomorrow = document.getElementById('btnTomorrow');
+          var btnDayAfter = document.getElementById('btnDayAfter');
+          if (btnToday) btnToday.style.cssText = val === todayStr ? activeStyle : inactiveStyle;
+          if (btnTomorrow) btnTomorrow.style.cssText = val === tomorrowStr ? activeStyle : inactiveStyle;
+          if (btnDayAfter) btnDayAfter.style.cssText = val === dayAfterStr ? activeStyle : inactiveStyle;
+          onAvailabilityDateChange();
+        }
+
         function initAvailabilityDatePicker() {
-          var input = document.getElementById('checkerDate');
-          if (input && !input.value) {
-            input.value = formatDate(new Date());
-          }
+          setCheckerDay(0);
         }
 
         async function onAvailabilityDateChange() {
           var dateInput = document.getElementById('checkerDate');
-          var timeStartInput = document.getElementById('checkerTimeStart');
-          var timeEndInput = document.getElementById('checkerTimeEnd');
           if (!dateInput) return;
 
           var dateVal = dateInput.value || formatDate(new Date());
-          var timeStartVal = timeStartInput ? timeStartInput.value : '08:00';
-          var timeEndVal = timeEndInput ? timeEndInput.value : '17:00';
 
           document.getElementById('driversAvailableList').innerHTML = '<div class="empty-availability" style="padding:15px;text-align:center;color:var(--color-text-muted);">⏳ กำลังตรวจสอบ...</div>';
           document.getElementById('vehiclesAvailableList').innerHTML = '<div class="empty-availability" style="padding:15px;text-align:center;color:var(--color-text-muted);">⏳ กำลังตรวจสอบ...</div>';
 
           try {
+            var timeStartInput = document.getElementById('checkerTimeStart');
+            var timeEndInput = document.getElementById('checkerTimeEnd');
+            var timeStartVal = timeStartInput ? timeStartInput.value : '08:00';
+            var timeEndVal = timeEndInput ? timeEndInput.value : '23:59';
+
             var res = await apiCall('checkAvailability', {
               date: dateVal,
               time_start: timeStartVal,
@@ -1201,7 +1233,7 @@
 
               displayAvailability(availCars, availDrivers, dateVal, timeStartVal, timeEndVal);
             } else {
-              displayAvailability([], [], dateVal, timeStartVal, timeEndVal);
+              displayAvailability([], [], dateVal, '08:00', '23:59');
             }
           } catch(err) {
             console.error('Error checking availability:', err);
