@@ -1,4 +1,4 @@
-import { dbAll, dbFirst, success, error, requirePermission } from '../../_helpers.js';
+import { dbAll, dbFirst, success, error } from '../../_helpers.js';
 
 export async function onRequest(context) {
   try {
@@ -9,7 +9,7 @@ export async function onRequest(context) {
     if (!user) return error('Unauthorized', 401);
 
     if (method === 'GET') {
-      try { requirePermission(user, 'queue', 'create'); } catch { return error('ไม่มีสิทธิ์', 403); }
+      // All authenticated users can check availability (needed for requester dashboard)
 
       const date = url.searchParams.get('date');
       const timeStart = url.searchParams.get('time_start') || '00:00';
