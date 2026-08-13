@@ -1,6 +1,6 @@
 // sw.js — PPK DriveHub Service Worker
-// v10: Fix syntax error in vehicle-request.html
-var CACHE_NAME='ppk-v10';
+// v11: Update role preview button to 'ผู้ขอใช้รถ'
+var CACHE_NAME='ppk-v11';
 // Only pre-cache truly static fallback assets. JS/CSS use network-first below.
 var STATIC_ASSETS=[
   '/manifest.json'
