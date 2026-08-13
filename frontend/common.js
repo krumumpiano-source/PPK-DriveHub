@@ -148,7 +148,7 @@ function renderNavigation() {
     var user = getCurrentUser();
     if (!user) return '';
 
-    var roleLabel = { super_admin: 'ผู้ดูแลสูงสุด', admin: 'ผู้ดูแลระบบ', manager: 'ผู้จัดการ', driver: 'พนักงานขับรถ', staff: 'เจ้าหน้าที่' };
+    var roleLabel = { super_admin: 'ผู้ดูแลสูงสุด', admin: 'ผู้ดูแลระบบ', manager: 'ผู้จัดการ', driver: 'พนักงานขับรถ', staff: 'เจ้าหน้าที่', requester: 'ผู้ขอใช้รถ' };
     var initials = (user.full_name || user.username || '?').charAt(0).toUpperCase();
 
     var nav = '';
@@ -260,7 +260,7 @@ function renderNavigation() {
         nav += '<button class="role-preview-btn" onclick="previewRole(\'admin\')"><span class="rp-icon">🛡️</span>ผู้ดูแลระบบ</button>';
         nav += '<button class="role-preview-btn" onclick="previewRole(\'manager\')"><span class="rp-icon">📋</span>ผู้จัดการ</button>';
         nav += '<button class="role-preview-btn" onclick="previewRole(\'driver\')"><span class="rp-icon">🚗</span>พนักงานขับรถ</button>';
-        nav += '<button class="role-preview-btn" onclick="previewRole(\'staff\')"><span class="rp-icon">👤</span>เจ้าหน้าที่</button>';
+        nav += '<button class="role-preview-btn" onclick="previewRole(\'requester\')"><span class="rp-icon">📝</span>ผู้ขอใช้รถ</button>';
         nav += '</div>';
     }
 
@@ -390,7 +390,7 @@ function renderImpersonationBanner() {
     var user = getCurrentUser();
     if (!user) return;
 
-    var roleLabel = { super_admin: 'ผู้ดูแลสูงสุด', admin: 'ผู้ดูแลระบบ', manager: 'ผู้จัดการ', driver: 'พนักงานขับรถ', staff: 'เจ้าหน้าที่' };
+    var roleLabel = { super_admin: 'ผู้ดูแลสูงสุด', admin: 'ผู้ดูแลระบบ', manager: 'ผู้จัดการ', driver: 'พนักงานขับรถ', staff: 'เจ้าหน้าที่', requester: 'ผู้ขอใช้รถ' };
     var name = user.full_name || user.display_name || user.username || '';
     var role = roleLabel[user.role] || user.role || '';
 
