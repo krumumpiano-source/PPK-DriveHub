@@ -129,10 +129,10 @@ export async function onRequest(context) {
     const defaultPerms = JSON.stringify({});
 
     await dbRun(env.DB,
-      `INSERT INTO users (id, username, email, password_hash, salt, role, permissions, title, first_name, last_name, display_name, phone, active, pdpa_accepted, must_change_password, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, 'staff', ?, ?, ?, ?, ?, ?, 1, 0, 0, ?, ?)`,
+      `INSERT INTO users (id, username, email, password_hash, salt, role, permissions, title, first_name, last_name, display_name, phone, position, active, pdpa_accepted, must_change_password, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, 'staff', ?, ?, ?, ?, ?, ?, ?, 1, 0, 0, ?, ?)`,
       [userId, email, email, pwHash, pwSalt, defaultPerms,
-       title || null, fnFirst, fnLast, displayName, phone || null, ts, ts]
+       title || null, fnFirst, fnLast, displayName, phone || null, department || null, ts, ts]
     );
 
     // Generate session token for instant auto-login
@@ -192,18 +192,22 @@ export async function onRequest(context) {
       });
     }
 
-    let suggestedName = '';
+    let suggestedFirstName = '';
+    let suggestedLastName = '';
     if (rawIdentity.includes('@')) {
       const prefix = rawIdentity.split('@')[0];
       const nameParts = prefix.split(/[._-]/);
-      suggestedName = nameParts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+      suggestedFirstName = nameParts[0] ? nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1) : '';
+      suggestedLastName = nameParts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
     }
 
     return success({
       exists: false,
       is_school_email: isSchoolEmail,
       suggested_username: rawIdentity,
-      suggested_name: suggestedName
+      suggested_first_name: suggestedFirstName,
+      suggested_last_name: suggestedLastName,
+      suggested_name: `${suggestedFirstName} ${suggestedLastName}`.trim()
     });
   }
 

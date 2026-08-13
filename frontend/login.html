@@ -86,18 +86,21 @@
       font-size: 0.92em;
     }
 
-    .form-group input {
+    .form-group input,
+    .form-group select {
       width: 100%;
       padding: 13px 16px;
       border: 2px solid #e2e8f0;
       border-radius: var(--radius-md);
-      font-size: 1em;
+      font-size: 0.95em;
       transition: all 0.25s;
       font-family: inherit;
       background: #f8fafc;
+      color: var(--color-text);
     }
 
-    .form-group input:focus {
+    .form-group input:focus,
+    .form-group select:focus {
       outline: none;
       border-color: var(--color-primary);
       box-shadow: 0 0 0 3px rgba(99,102,241,0.18);
@@ -372,7 +375,7 @@
       <div id="step-onboard" class="step-panel" style="display:none;">
         <div class="welcome-badge">
           <span>✨</span>
-          <span><b>ยินดีต้อนรับบุคลากรใหม่!</b> กรอกข้อมูลสั้นๆ เพื่อเริ่มใช้งาน</span>
+          <span><b>ยินดีต้อนรับบุคลากรใหม่!</b> กรอกข้อมูลเพื่อเปิดบัญชีเข้าใช้งาน</span>
         </div>
 
         <form onsubmit="handleOnboard(event); return false;">
@@ -381,11 +384,52 @@
             <input type="text" id="onboardEmail" readonly style="background:#f1f5f9;color:#475569;font-weight:600;">
           </div>
 
+          <!-- คำนำหน้า และ ชื่อ-นามสกุล -->
           <div class="form-group">
-            <label for="onboardFullName">ชื่อ - นามสกุล</label>
-            <input type="text" id="onboardFullName" required placeholder="เช่น นายสมชาย ใจดี">
+            <label>คำนำหน้า และ ชื่อ - นามสกุล</label>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <select id="onboardTitle" style="width:110px;flex-shrink:0;">
+                <option value="นาย">นาย</option>
+                <option value="นาง">นาง</option>
+                <option value="นางสาว">นางสาว</option>
+                <option value="ดร.">ดร.</option>
+                <option value="ครู">ครู</option>
+                <option value="อาจารย์">อาจารย์</option>
+                <option value="ว่าที่ ร.ต.">ว่าที่ ร.ต.</option>
+                <option value="">อื่นๆ</option>
+              </select>
+              <input type="text" id="onboardFirstName" required placeholder="ชื่อ" style="flex:1;">
+              <input type="text" id="onboardLastName" required placeholder="นามสกุล" style="flex:1;">
+            </div>
           </div>
 
+          <!-- กลุ่มสาระการเรียนรู้ / หน่วยงาน -->
+          <div class="form-group">
+            <label for="onboardDepartment">กลุ่มสาระการเรียนรู้ / หน่วยงาน</label>
+            <select id="onboardDepartment" required style="width:100%;">
+              <option value="">-- เลือกกลุ่มสาระการเรียนรู้ / หน่วยงาน --</option>
+              <option value="กลุ่มสาระการเรียนรู้วิทยาศาสตร์และเทคโนโลยี">กลุ่มสาระการเรียนรู้วิทยาศาสตร์และเทคโนโลยี</option>
+              <option value="กลุ่มสาระการเรียนรู้คณิตศาสตร์">กลุ่มสาระการเรียนรู้คณิตศาสตร์</option>
+              <option value="กลุ่มสาระการเรียนรู้ภาษาไทย">กลุ่มสาระการเรียนรู้ภาษาไทย</option>
+              <option value="กลุ่มสาระการเรียนรู้ภาษาต่างประเทศ">กลุ่มสาระการเรียนรู้ภาษาต่างประเทศ</option>
+              <option value="กลุ่มสาระการเรียนรู้สังคมศึกษา ศาสนา และวัฒนธรรม">กลุ่มสาระการเรียนรู้สังคมศึกษา ศาสนา และวัฒนธรรม</option>
+              <option value="กลุ่มสาระการเรียนรู้สุขศึกษาและพลศึกษา">กลุ่มสาระการเรียนรู้สุขศึกษาและพลศึกษา</option>
+              <option value="กลุ่มสาระการเรียนรู้ศิลปะ">กลุ่มสาระการเรียนรู้ศิลปะ</option>
+              <option value="กลุ่มสาระการเรียนรู้การงานอาชีพ">กลุ่มสาระการเรียนรู้การงานอาชีพ</option>
+              <option value="กิจกรรมพัฒนาผู้เรียน">กิจกรรมพัฒนาผู้เรียน</option>
+              <option value="งานยานพาหนะ / บริหารงานทั่วไป">งานยานพาหนะ / บริหารงานทั่วไป</option>
+              <option value="สำนักงานอำนวยการ / บุคลากรสนับสนุน">สำนักงานอำนวยการ / บุคลากรสนับสนุน</option>
+              <option value="อื่นๆ">อื่นๆ</option>
+            </select>
+          </div>
+
+          <!-- เบอร์โทรศัพท์ -->
+          <div class="form-group">
+            <label for="onboardPhone">เบอร์โทรศัพท์ติดต่อ</label>
+            <input type="tel" id="onboardPhone" required placeholder="เช่น 0812345678" pattern="[0-9]{9,10}" title="กรอกเบอร์โทรศัพท์ 9-10 หลัก">
+          </div>
+
+          <!-- รหัสผ่าน 2 ช่องเพื่อยืนยัน -->
           <div class="form-group">
             <label for="onboardPassword">ตั้งรหัสผ่านเข้าใช้งาน</label>
             <div class="password-wrapper">
@@ -394,11 +438,19 @@
             </div>
           </div>
 
-          <div class="login-links" style="justify-content:flex-start;">
+          <div class="form-group">
+            <label for="onboardConfirmPassword">ยืนยันรหัสผ่านอีกครั้ง</label>
+            <div class="password-wrapper">
+              <input type="password" id="onboardConfirmPassword" required placeholder="กรอกรหัสผ่านซ้ำอีกครั้ง">
+              <button type="button" class="toggle-password" onclick="togglePassword('onboardConfirmPassword', this)" title="แสดง/ซ่อนรหัสผ่าน">👁️</button>
+            </div>
+          </div>
+
+          <div class="login-links" style="justify-content:flex-start;margin-top:10px;">
             <a href="#" onclick="resetStep();return false;">⬅️ เปลี่ยนอีเมล / ชื่อผู้ใช้</a>
           </div>
 
-          <button type="submit" class="btn-action btn-success-action" id="onboardBtn">
+          <button type="submit" class="btn-action btn-success-action" id="onboardBtn" style="margin-top:10px;">
             <span class="btn-icon">🚀</span>
             <span>สมัครและเริ่มใช้งานทันที</span>
           </button>
@@ -471,16 +523,22 @@
           } else {
             // STEP 2B: New User -> Show Onboarding
             document.getElementById('onboardEmail').value = inputVal;
-            if (res.data.suggested_name) {
-              document.getElementById('onboardFullName').value = res.data.suggested_name;
+            if (res.data.suggested_first_name) {
+              document.getElementById('onboardFirstName').value = res.data.suggested_first_name;
+              document.getElementById('onboardLastName').value = res.data.suggested_last_name || '';
+            } else if (res.data.suggested_name) {
+              var parts = res.data.suggested_name.split(' ');
+              document.getElementById('onboardFirstName').value = parts[0] || '';
+              document.getElementById('onboardLastName').value = parts.slice(1).join(' ') || '';
             } else {
-              document.getElementById('onboardFullName').value = '';
+              document.getElementById('onboardFirstName').value = '';
+              document.getElementById('onboardLastName').value = '';
             }
             document.getElementById('step-onboard').style.display = 'block';
-            if (res.data.suggested_name) {
-              document.getElementById('onboardPassword').focus();
+            if (!document.getElementById('onboardFirstName').value) {
+              document.getElementById('onboardFirstName').focus();
             } else {
-              document.getElementById('onboardFullName').focus();
+              document.getElementById('onboardDepartment').focus();
             }
           }
         } else {
@@ -545,46 +603,66 @@
       event.preventDefault();
       clearAlert();
       var email = document.getElementById('onboardEmail').value.trim();
-      var fullName = document.getElementById('onboardFullName').value.trim();
+      var title = document.getElementById('onboardTitle').value.trim();
+      var firstName = document.getElementById('onboardFirstName').value.trim();
+      var lastName = document.getElementById('onboardLastName').value.trim();
+      var department = document.getElementById('onboardDepartment').value.trim();
+      var phone = document.getElementById('onboardPhone').value.trim();
       var password = document.getElementById('onboardPassword').value;
+      var confirmPassword = document.getElementById('onboardConfirmPassword').value;
       var onboardBtn = document.getElementById('onboardBtn');
 
-      if (!fullName) {
-        showAlert('กรุณากรอกชื่อ-นามสกุล', 'error');
+      if (!firstName || !lastName) {
+        showAlert('กรุณากรอกชื่อและนามสกุลให้ครบถ้วน', 'error');
+        return;
+      }
+      if (!department) {
+        showAlert('กรุณาเลือกกลุ่มสาระการเรียนรู้ / หน่วยงาน', 'error');
+        return;
+      }
+      if (!phone || phone.length < 9) {
+        showAlert('กรุณากรอกเบอร์โทรศัพท์ติดต่อที่ถูกต้อง (9-10 หลัก)', 'error');
         return;
       }
       if (!password || password.length < 8) {
         showAlert('รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร', 'error');
         return;
       }
+      if (password !== confirmPassword) {
+        showAlert('รหัสผ่านทั้งสองช่องไม่ตรงกัน กรุณาตรวจสอบอีกครั้ง', 'error');
+        return;
+      }
 
       onboardBtn.disabled = true;
-      onboardBtn.innerHTML = '<span>กำลังสร้างบัญชี...</span>';
+      onboardBtn.innerHTML = '<span>กำลังสร้างบัญชีและเข้าสู่ระบบ...</span>';
 
       try {
         var res = await API.post('/api/auth/register', {
           email: email,
-          full_name: fullName,
+          title: title,
+          first_name: firstName,
+          last_name: lastName,
+          department: department,
+          phone: phone,
           password: password
         });
 
         if (res.success && res.data && res.data.token) {
-          // AUTO-LOGIN SUCCESS!
+          // INSTANT AUTO-LOGIN SUCCESS!
           API.setToken(res.data.token, true);
           API.setUser({
             id: res.data.user_id,
             username: res.data.username,
-            display_name: res.data.display_name || fullName,
+            display_name: res.data.display_name || (title + firstName + ' ' + lastName),
             role: res.data.role || 'staff',
             permissions: {}
           });
           window.location.href = 'dashboard.html';
         } else if (res.success) {
-          showAlert('สมัครสมาชิกสำเร็จ! กำลังไปหน้าล็อกอิน...', 'success');
+          showAlert('สมัครสมาชิกสำเร็จ! กำลังนำคุณเข้าสู่ระบบ...', 'success');
           setTimeout(function() {
-            document.getElementById('identityInput').value = email;
-            handleCheckIdentity(new Event('submit'));
-          }, 1000);
+            window.location.href = 'dashboard.html';
+          }, 800);
         } else {
           showAlert(res.message || 'ไม่สามารถลงทะเบียนได้', 'error');
           onboardBtn.disabled = false;
