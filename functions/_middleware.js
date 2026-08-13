@@ -98,8 +98,10 @@ export async function onRequest(context) {
     const token = authHeader.slice(7);
     try {
       const session = await dbFirst(env.DB,
-        `SELECT s.*, u.role, u.display_name, u.first_name, u.last_name,
-                u.id AS user_id, u.active, u.permissions, u.must_change_password
+        `SELECT s.id AS session_id, s.token, s.user_id, s.expires_at,
+                s.is_impersonated, s.impersonator_id,
+                u.role, u.display_name, u.first_name, u.last_name,
+                u.active, u.permissions, u.must_change_password
          FROM sessions s
          JOIN users u ON s.user_id = u.id
          WHERE s.token = ? AND s.expires_at > ?`,
@@ -118,7 +120,7 @@ export async function onRequest(context) {
         id: session.user_id,
         role: session.role,
         displayName: session.display_name || `${session.first_name} ${session.last_name}`,
-        sessionId: session.id,
+        sessionId: session.session_id,
         permissions: session.permissions || '{}',
         mustChangePassword: session.must_change_password === 1,
         isImpersonated: session.is_impersonated === 1,
@@ -126,7 +128,7 @@ export async function onRequest(context) {
       };
     } catch (e) {
       console.error('Session verification error:', e);
-      return addCors(error('เกิดข้อผิดพลาดในการตรวจสอบ session: ' + (e.message || String(e)), 500), request);
+      return addCors(error('เกิดข้อผิดพลาดในการตรวจสอบ session', 500), request);
     }
   }
 
