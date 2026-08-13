@@ -167,12 +167,6 @@ export async function onRequest(context) {
 
     const isSchoolEmail = rawIdentity.endsWith('@ppk.ac.th');
 
-    // Ensure removed user pongsatorn.b@ppk.ac.th is deleted from database
-    if (rawIdentity.includes('pongsatorn.b')) {
-      await dbRun(env.DB, "DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE LOWER(email) = 'pongsatorn.b@ppk.ac.th' OR LOWER(username) = 'pongsatorn.b@ppk.ac.th' OR LOWER(username) = 'pongsatorn.b')");
-      await dbRun(env.DB, "DELETE FROM users WHERE LOWER(email) = 'pongsatorn.b@ppk.ac.th' OR LOWER(username) = 'pongsatorn.b@ppk.ac.th' OR LOWER(username) = 'pongsatorn.b'");
-    }
-
     const user = await dbFirst(env.DB,
       'SELECT id, username, email, display_name, first_name, last_name, role FROM users WHERE (LOWER(username) = ? OR LOWER(email) = ?) AND active = 1',
       [rawIdentity, rawIdentity]
