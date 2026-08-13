@@ -17,11 +17,12 @@ export async function onRequest(context) {
 
       if (!date) return error('กรุณาระบุวันที่');
 
-      // Find available cars (not under repair, no queue overlap)
+      // Find available cars (primary only, not under repair, no queue overlap)
       const cars = await dbAll(env.DB, `
         SELECT id, license_plate, brand, model, vehicle_type, current_mileage 
         FROM cars 
         WHERE status NOT IN ('under_repair', 'retired', 'inactive') 
+        AND (vehicle_category = 'primary' OR vehicle_category IS NULL OR vehicle_category = '')
         AND id NOT IN (
           SELECT car_id FROM queue 
           WHERE date = ? AND status NOT IN ('cancelled', 'completed')
@@ -31,11 +32,12 @@ export async function onRequest(context) {
         ORDER BY current_mileage ASC
       `, [date, timeEnd, timeStart]);
 
-      // Find available drivers (active, no queue overlap)
+      // Find available drivers (primary assignment only, active, no queue overlap)
       const drivers = await dbAll(env.DB, `
         SELECT id, name, phone, fatigue_flag, discipline_score 
         FROM drivers 
         WHERE status = 'active' 
+        AND (assignment_type = 'primary' OR assignment_type IS NULL OR assignment_type = '')
         AND (license_expiry IS NULL OR license_expiry >= ?)
         AND id NOT IN (
           SELECT driver_id FROM queue 
