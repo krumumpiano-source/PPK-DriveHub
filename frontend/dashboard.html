@@ -417,18 +417,44 @@
             </div>
 
             <!-- Availability Section -->
-            <div class="availability-section">
-              <div class="availability-card">
-                <h3>👤 พนักงานขับรถที่ว่าง</h3>
-                <div class="availability-list" id="driversAvailableList">
-                  <div class="empty-availability">กำลังโหลด...</div>
+            <div class="availability-section" style="background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:1.5rem;margin-top:2rem">
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:1.2rem;border-bottom:1px solid var(--color-border);padding-bottom:1rem;">
+                <div>
+                  <h3 style="font-size:1.15rem;color:var(--color-text);margin:0;display:flex;align-items:center;gap:8px">
+                    <span>⚡ ตรวจสอบรถว่าง & พนักงานขับรถตามปฏิทิน</span>
+                  </h3>
+                  <p style="font-size:0.85rem;color:var(--color-text-muted);margin:4px 0 0 0">
+                    เลือกวันที่และช่วงเวลาเพื่อค้นหารถและพนักงานขับรถที่พร้อมให้บริการ
+                  </p>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                  <input type="date" id="checkerDate" style="padding:8px 12px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:0.9rem" onchange="onAvailabilityDateChange()">
+                  <input type="time" id="checkerTimeStart" value="08:00" style="padding:8px 10px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:0.9rem" onchange="onAvailabilityDateChange()">
+                  <span style="font-size:0.9rem;color:var(--color-text-muted)">ถึง</span>
+                  <input type="time" id="checkerTimeEnd" value="17:00" style="padding:8px 10px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:0.9rem" onchange="onAvailabilityDateChange()">
+                  <button type="button" onclick="resetAvailabilityToToday()" style="padding:8px 14px;background:var(--color-primary-bg);color:var(--color-primary);border:1px solid var(--color-primary-light);border-radius:var(--radius-md);font-weight:600;cursor:pointer;font-family:inherit;font-size:0.88rem">
+                    📅 วันนี้ (Real-time)
+                  </button>
                 </div>
               </div>
 
-              <div class="availability-card">
-                <h3>🚗 รถที่ว่าง</h3>
-                <div class="availability-list" id="vehiclesAvailableList">
-                  <div class="empty-availability">กำลังโหลด...</div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem">
+                <div class="availability-card" style="background:#f8fafc;padding:1.2rem;border-radius:var(--radius-lg);border:1px solid var(--color-border)">
+                  <h3 style="font-size:1rem;margin-bottom:1rem;display:flex;align-items:center;gap:6px">
+                    <span>👤 พนักงานขับรถที่ว่าง</span>
+                  </h3>
+                  <div class="availability-list" id="driversAvailableList">
+                    <div class="empty-availability">กำลังโหลด...</div>
+                  </div>
+                </div>
+
+                <div class="availability-card" style="background:#f8fafc;padding:1.2rem;border-radius:var(--radius-lg);border:1px solid var(--color-border)">
+                  <h3 style="font-size:1rem;margin-bottom:1rem;display:flex;align-items:center;gap:6px">
+                    <span>🚗 รถที่ว่าง</span>
+                  </h3>
+                  <div class="availability-list" id="vehiclesAvailableList">
+                    <div class="empty-availability">กำลังโหลด...</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -812,6 +838,7 @@
             });
 
             // Always display calendar, even if no data
+            initAvailabilityDatePicker();
             renderCalendar();
 
             displayAvailability(availableVehicles, availableDrivers);
@@ -1092,19 +1119,115 @@
           loadDashboard();
         }
 
-        async function displayAvailability(availableVehicles, availableDrivers) {
+        function initAvailabilityDatePicker() {
+          var input = document.getElementById('checkerDate');
+          if (input && !input.value) {
+            input.value = formatDate(new Date());
+          }
+        }
+
+        async function onAvailabilityDateChange() {
+          var dateInput = document.getElementById('checkerDate');
+          var timeStartInput = document.getElementById('checkerTimeStart');
+          var timeEndInput = document.getElementById('checkerTimeEnd');
+          if (!dateInput) return;
+
+          var dateVal = dateInput.value || formatDate(new Date());
+          var timeStartVal = timeStartInput ? timeStartInput.value : '08:00';
+          var timeEndVal = timeEndInput ? timeEndInput.value : '17:00';
+
+          document.getElementById('driversAvailableList').innerHTML = '<div class="empty-availability" style="padding:15px;text-align:center;color:var(--color-text-muted);">⏳ กำลังตรวจสอบ...</div>';
+          document.getElementById('vehiclesAvailableList').innerHTML = '<div class="empty-availability" style="padding:15px;text-align:center;color:var(--color-text-muted);">⏳ กำลังตรวจสอบ...</div>';
+
+          try {
+            var res = await apiCall('checkAvailability', {
+              date: dateVal,
+              time_start: timeStartVal,
+              time_end: timeEndVal
+            });
+
+            if (res && res.success && res.data) {
+              var availCars = res.data.available_cars || [];
+              var availDrivers = res.data.available_drivers || [];
+
+              // If checking for today, also deduct carsOut (QR checkouts)
+              var todayStr = formatDate(new Date());
+              if (dateVal === todayStr && carsOut && carsOut.length > 0) {
+                var carsOutIds = {};
+                carsOut.forEach(function(co) { carsOutIds[co.car_id] = true; });
+                availCars = availCars.filter(function(c) { return !carsOutIds[c.id]; });
+              }
+
+              displayAvailability(availCars, availDrivers, dateVal, timeStartVal, timeEndVal);
+            } else {
+              displayAvailability([], [], dateVal, timeStartVal, timeEndVal);
+            }
+          } catch(err) {
+            console.error('Error checking availability:', err);
+            var todayStr = formatDate(new Date());
+            if (dateVal === todayStr) {
+              var busyCarIds = {};
+              var busyDriverIds = {};
+              queues.forEach(function (q) {
+                if (q.status === 'cancelled' || q.status === 'completed') return;
+                var qDate = q.date || q.departure_date;
+                if (qDate <= todayStr) {
+                  if (q.car_id) busyCarIds[q.car_id] = true;
+                  if (q.driver_id) busyDriverIds[q.driver_id] = true;
+                }
+              });
+              carsOut.forEach(function (r) {
+                busyCarIds[r.car_id] = true;
+                if (r.driver_id) busyDriverIds[r.driver_id] = true;
+              });
+              var localVehicles = vehicles.filter(function(v) { return v.status === 'active' && !busyCarIds[v.id]; });
+              var localDrivers = drivers.filter(function(d) { return d.status === 'active' && !busyDriverIds[d.id]; });
+              displayAvailability(localVehicles, localDrivers, dateVal, timeStartVal, timeEndVal);
+            } else {
+              displayAvailability([], [], dateVal, timeStartVal, timeEndVal);
+            }
+          }
+        }
+
+        function resetAvailabilityToToday() {
+          var dateInput = document.getElementById('checkerDate');
+          var timeStartInput = document.getElementById('checkerTimeStart');
+          var timeEndInput = document.getElementById('checkerTimeEnd');
+          if (dateInput) dateInput.value = formatDate(new Date());
+          if (timeStartInput) timeStartInput.value = '08:00';
+          if (timeEndInput) timeEndInput.value = '17:00';
+          onAvailabilityDateChange();
+        }
+
+        function requestSpecificVehicle(date, timeStart, timeEnd, carId) {
+          var url = 'vehicle-request.html?v=2';
+          if (date) url += '&date=' + encodeURIComponent(date);
+          if (timeStart) url += '&time_start=' + encodeURIComponent(timeStart);
+          if (timeEnd) url += '&time_end=' + encodeURIComponent(timeEnd);
+          if (carId) url += '&car_id=' + encodeURIComponent(carId);
+          window.location.href = url;
+        }
+
+        async function displayAvailability(availableVehicles, availableDrivers, queryDate, queryTimeStart, queryTimeEnd) {
+          queryDate = queryDate || (document.getElementById('checkerDate') ? document.getElementById('checkerDate').value : formatDate(new Date()));
+          queryTimeStart = queryTimeStart || '08:00';
+          queryTimeEnd = queryTimeEnd || '17:00';
+
           var driversHtml = '';
           if (availableDrivers && availableDrivers.length > 0) {
             availableDrivers.forEach(function (driver) {
-              driversHtml += '<div class="availability-item">';
-              driversHtml += '<strong>' + (driver.name || driver.full_name || '-') + '</strong>';
+              driversHtml += '<div class="availability-item" style="padding:10px 14px;background:white;border-radius:var(--radius-md);border-left:4px solid var(--color-success);margin-bottom:8px;box-shadow:var(--shadow-sm);display:flex;justify-content:space-between;align-items:center;">';
+              driversHtml += '<div>';
+              driversHtml += '<strong style="display:block;color:var(--color-text);font-size:0.95rem">👤 ' + (driver.name || driver.full_name || '-') + '</strong>';
               if (driver.phone) {
-                driversHtml += '<span>' + driver.phone + '</span>';
+                driversHtml += '<span style="font-size:0.82rem;color:var(--color-text-muted)">📞 ' + driver.phone + '</span>';
               }
+              driversHtml += '</div>';
+              driversHtml += '<span class="vr-badge" style="background:#d1fae5;color:#065f46;font-size:0.78rem">🟢 พร้อมขับ</span>';
               driversHtml += '</div>';
             });
           } else {
-            driversHtml = '<div class="empty-availability">ไม่มีพนักงานขับรถว่าง</div>';
+            driversHtml = '<div class="empty-availability" style="padding:20px;text-align:center;color:var(--color-text-muted);font-size:0.9rem">ไม่มีพนักงานขับรถว่างในช่วงเวลานี้</div>';
           }
           document.getElementById('driversAvailableList').innerHTML = driversHtml;
 
@@ -1121,23 +1244,27 @@
           var vehiclesHtml = '';
           if (availableVehicles && availableVehicles.length > 0) {
             availableVehicles.forEach(function (vehicle) {
-              vehiclesHtml += '<div class="availability-item">';
-              vehiclesHtml += '<strong>' + vehicle.license_plate + '</strong>';
-              vehiclesHtml += '<span>' + (vehicle.brand || '') + ' ' + (vehicle.model || '') + '</span>';
+              vehiclesHtml += '<div class="availability-item" style="padding:12px 14px;background:white;border-radius:var(--radius-md);border-left:4px solid var(--color-primary);margin-bottom:10px;box-shadow:var(--shadow-sm);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">';
+              vehiclesHtml += '<div>';
+              vehiclesHtml += '<strong style="display:block;color:var(--color-text);font-size:1rem">🚗 ' + (vehicle.license_plate || vehicle.plate || vehicle.id) + '</strong>';
+              vehiclesHtml += '<span style="font-size:0.85rem;color:var(--color-text-muted)">' + (vehicle.brand || '') + ' ' + (vehicle.model || '') + (vehicle.vehicle_type ? ' (' + vehicle.vehicle_type + ')' : '') + '</span>';
+              vehiclesHtml += '</div>';
+              vehiclesHtml += '<button type="button" onclick="requestSpecificVehicle(\'' + queryDate + '\', \'' + queryTimeStart + '\', \'' + queryTimeEnd + '\', \'' + vehicle.id + '\')" style="padding:6px 14px;background:var(--gradient-primary);color:white;border:none;border-radius:var(--radius-md);font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;">';
+              vehiclesHtml += '📝 ขอใช้รถคันนี้</button>';
               vehiclesHtml += '</div>';
             });
           } else {
-            vehiclesHtml = '<div class="empty-availability">ไม่มีรถว่าง</div>';
+            vehiclesHtml = '<div class="empty-availability" style="padding:20px;text-align:center;color:var(--color-text-muted);font-size:0.9rem">ไม่มีรถว่างในช่วงเวลานี้</div>';
           }
 
           if (scheduledRepairs.length > 0) {
-            vehiclesHtml += '<div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #ff9800;">';
-            vehiclesHtml += '<h4 style="color: var(--color-warning); margin-bottom: 10px; font-size: 1em;">🔧 รถที่กำลังซ่อม</h4>';
+            vehiclesHtml += '<div style="margin-top: 15px; padding-top: 15px; border-top: 2px dashed #ff9800;">';
+            vehiclesHtml += '<h4 style="color: var(--color-warning-dark,#d97706); margin-bottom: 10px; font-size: 0.9em; font-weight:700">🔧 รถที่กำลังซ่อม / แจ้งซ่อม</h4>';
             scheduledRepairs.forEach(function (sr) {
               var plate = sr.license_plate || (vehiclesMap[sr.car_id] && vehiclesMap[sr.car_id].license_plate) || sr.car_id;
-              vehiclesHtml += '<div class="availability-item" style="border-left-color: var(--color-warning); background: var(--color-bg-warning);">';
-              vehiclesHtml += '<strong>' + plate + '</strong>';
-              vehiclesHtml += '<span style="color: #e65100; font-size: 0.85em;">🔧 ' + (sr.description || sr.issue_description || 'กำลังซ่อม') + '</span>';
+              vehiclesHtml += '<div class="availability-item" style="padding:8px 12px;border-left:4px solid var(--color-warning); background: var(--color-bg-warning);border-radius:var(--radius-md);margin-bottom:6px;font-size:0.88rem;">';
+              vehiclesHtml += '<strong>🚗 ' + plate + '</strong> ';
+              vehiclesHtml += '<span style="color: #b45309; font-size: 0.82em;">🔧 ' + (sr.description || sr.issue_description || 'กำลังซ่อม') + '</span>';
               vehiclesHtml += '</div>';
             });
             vehiclesHtml += '</div>';
