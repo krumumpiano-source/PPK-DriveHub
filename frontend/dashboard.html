@@ -379,6 +379,72 @@
     }
     .avail-book-btn:hover { opacity: 0.9; transform: scale(1.03); }
 
+    /* Date Trigger — calendar picker button */
+    .avail-date-trigger {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: white;
+      border: 2px solid #4f46e5;
+      border-radius: var(--radius-lg);
+      padding: 14px 18px;
+      cursor: pointer;
+      max-width: 320px;
+      transition: box-shadow 0.2s, transform 0.15s, border-color 0.15s;
+      user-select: none;
+    }
+    .avail-date-trigger:hover {
+      box-shadow: 0 0 0 4px rgba(79,70,229,0.12);
+      transform: translateY(-1px);
+    }
+    .avail-date-trigger:active { transform: scale(0.98); }
+    .avail-date-trigger::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border: 2px solid rgba(79,70,229,0.3);
+      border-radius: calc(var(--radius-lg) + 4px);
+      animation: calPulse 2.2s ease-in-out infinite;
+      pointer-events: none;
+    }
+    @keyframes calPulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0; transform: scale(1.04); }
+    }
+    .avail-date-icon {
+      font-size: 1.8rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .avail-date-info {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      flex: 1;
+    }
+    .avail-date-display {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #4f46e5;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .avail-date-hint {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+      margin-top: 1px;
+    }
+    .avail-date-arrow {
+      font-size: 1.4rem;
+      color: #4f46e5;
+      font-weight: 700;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+
     .calendar-container {
     margin-bottom: 40px;
     }
@@ -788,12 +854,15 @@
               </div>
 
               <div class="avail-picker">
-                <p class="avail-picker-label">เลือกวันที่</p>
-                <div class="avail-day-btns">
-                  <button id="btnToday" class="avail-day-btn active" onclick="setCheckerDay(0)">📅 วันนี้</button>
-                  <button id="btnTomorrow" class="avail-day-btn" onclick="setCheckerDay(1)">พรุ่งนี้</button>
-                  <button id="btnDayAfter" class="avail-day-btn" onclick="setCheckerDay(2)">มะรืน</button>
-                  <input type="date" id="checkerDate" class="avail-day-btn" style="cursor:pointer" onchange="onDateInputChanged()" title="เลือกวันอื่น">
+                <p class="avail-picker-label">เลือกวันที่ต้องการตรวจสอบ</p>
+                <div class="avail-date-trigger" onclick="document.getElementById('checkerDate').showPicker()" title="คลิกเพื่อเปิดปฏิทิน">
+                  <div class="avail-date-icon">📅</div>
+                  <div class="avail-date-info">
+                    <span class="avail-date-display" id="checkerDateDisplay">วันนี้</span>
+                    <span class="avail-date-hint">แตะเพื่อเปิดปฏิทิน</span>
+                  </div>
+                  <div class="avail-date-arrow">›</div>
+                  <input type="date" id="checkerDate" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none" onchange="onDateInputChanged()">
                 </div>
                 <div class="avail-time-row">
                   <div class="avail-time-group">
@@ -1532,18 +1601,29 @@
           loadDashboard();
         }
 
-        function _syncDayBtns(selectedDate) {
+        function _updateDateDisplay(dateStr) {
+          var el = document.getElementById('checkerDateDisplay');
+          if (!el || !dateStr) return;
           var todayStr = formatDate(new Date());
           var tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
           var tomorrowStr = formatDate(tomorrow);
-          var dayAfter = new Date(); dayAfter.setDate(dayAfter.getDate() + 2);
-          var dayAfterStr = formatDate(dayAfter);
-          var btnToday = document.getElementById('btnToday');
-          var btnTomorrow = document.getElementById('btnTomorrow');
-          var btnDayAfter = document.getElementById('btnDayAfter');
-          if (btnToday) { btnToday.classList.toggle('active', selectedDate===todayStr); }
-          if (btnTomorrow) { btnTomorrow.classList.toggle('active', selectedDate===tomorrowStr); }
-          if (btnDayAfter) { btnDayAfter.classList.toggle('active', selectedDate===dayAfterStr); }
+          if (dateStr === todayStr) {
+            el.textContent = 'วันนี้ — ' + _thaiDateShort(dateStr);
+          } else if (dateStr === tomorrowStr) {
+            el.textContent = 'พรุ่งนี้ — ' + _thaiDateShort(dateStr);
+          } else {
+            el.textContent = _thaiDateShort(dateStr);
+          }
+        }
+
+        function _thaiDateShort(dateStr) {
+          if (!dateStr) return '';
+          var parts = dateStr.split('-');
+          var y = parseInt(parts[0]) + 543;
+          var m = parseInt(parts[1]) - 1;
+          var d = parseInt(parts[2]);
+          var mNames = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+          return d + ' ' + mNames[m] + ' ' + y;
         }
 
         function setCheckerDay(offsetDays) {
@@ -1552,14 +1632,14 @@
           var dateStr = formatDate(d);
           var dateInput = document.getElementById('checkerDate');
           if (dateInput) dateInput.value = dateStr;
-          _syncDayBtns(dateStr);
+          _updateDateDisplay(dateStr);
           onAvailabilityDateChange();
         }
 
         function onDateInputChanged() {
           var dateInput = document.getElementById('checkerDate');
           var val = dateInput ? dateInput.value : '';
-          _syncDayBtns(val);
+          _updateDateDisplay(val);
           onAvailabilityDateChange();
         }
 
