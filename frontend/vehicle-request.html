@@ -131,42 +131,10 @@
               </div>
               <div class="form-group">
                 <label>เวลาออกเดินทาง <span style="color:var(--color-danger)">*</span></label>
-                <select id="fTimeStart" class="form-control">
-                  <option value="05:00">05:00 น. (เช้ามืด)</option>
-                  <option value="05:30">05:30 น.</option>
-                  <option value="06:00">06:00 น.</option>
-                  <option value="06:30">06:30 น.</option>
-                  <option value="07:00">07:00 น.</option>
-                  <option value="07:30">07:30 น.</option>
-                  <option value="08:00">08:00 น.</option>
-                  <option value="08:30" selected>08:30 น. (เช้า - เริ่มเวลาราชการ)</option>
-                  <option value="09:00">09:00 น.</option>
-                  <option value="09:30">09:30 น.</option>
-                  <option value="10:00">10:00 น.</option>
-                  <option value="10:30">10:30 น.</option>
-                  <option value="11:00">11:00 น.</option>
-                  <option value="11:30">11:30 น.</option>
-                  <option value="12:00">12:00 น. (พักเที่ยง)</option>
-                  <option value="12:30">12:30 น.</option>
-                  <option value="13:00">13:00 น. (บ่าย)</option>
-                  <option value="13:30">13:30 น.</option>
-                  <option value="14:00">14:00 น.</option>
-                  <option value="14:30">14:30 น.</option>
-                  <option value="15:00">15:00 น.</option>
-                  <option value="15:30">15:30 น.</option>
-                  <option value="16:00">16:00 น.</option>
-                  <option value="16:30">16:30 น.</option>
-                  <option value="17:00">17:00 น. (เย็น)</option>
-                  <option value="17:30">17:30 น.</option>
-                  <option value="18:00">18:00 น.</option>
-                  <option value="18:30">18:30 น.</option>
-                  <option value="19:00">19:00 น. (ค่ำ)</option>
-                  <option value="19:30">19:30 น.</option>
-                  <option value="20:00">20:00 น.</option>
-                  <option value="20:30">20:30 น.</option>
-                  <option value="21:00">21:00 น.</option>
-                  <option value="22:00">22:00 น.</option>
-                </select>
+                <div style="position:relative">
+                  <input type="text" id="fTimeStart" class="form-control" placeholder="เลือกเวลา" value="08:30" style="background:#fff; cursor:pointer; padding-right:36px;" required>
+                  <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); pointer-events:none; font-size:1.1rem">⏰</span>
+                </div>
               </div>
 
               <div class="form-group">
@@ -175,45 +143,10 @@
               </div>
               <div class="form-group">
                 <label>เวลากลับถึงโรงเรียน <span style="color:var(--color-danger)">*</span></label>
-                <select id="fTimeEnd" class="form-control">
-                  <option value="06:00">06:00 น.</option>
-                  <option value="06:30">06:30 น.</option>
-                  <option value="07:00">07:00 น.</option>
-                  <option value="07:30">07:30 น.</option>
-                  <option value="08:00">08:00 น.</option>
-                  <option value="08:30">08:30 น.</option>
-                  <option value="09:00">09:00 น.</option>
-                  <option value="09:30">09:30 น.</option>
-                  <option value="10:00">10:00 น.</option>
-                  <option value="10:30">10:30 น.</option>
-                  <option value="11:00">11:00 น.</option>
-                  <option value="11:30">11:30 น.</option>
-                  <option value="12:00">12:00 น. (พักเที่ยง)</option>
-                  <option value="12:30">12:30 น.</option>
-                  <option value="13:00">13:00 น. (บ่าย)</option>
-                  <option value="13:30">13:30 น.</option>
-                  <option value="14:00">14:00 น.</option>
-                  <option value="14:30">14:30 น.</option>
-                  <option value="15:00">15:00 น.</option>
-                  <option value="15:30">15:30 น.</option>
-                  <option value="16:00">16:00 น.</option>
-                  <option value="16:30" selected>16:30 น. (เลิกงาน - สิ้นสุดเวลาราชการ)</option>
-                  <option value="17:00">17:00 น. (เย็น)</option>
-                  <option value="17:30">17:30 น.</option>
-                  <option value="18:00">18:00 น.</option>
-                  <option value="18:30">18:30 น.</option>
-                  <option value="19:00">19:00 น. (ค่ำ)</option>
-                  <option value="19:30">19:30 น.</option>
-                  <option value="20:00">20:00 น.</option>
-                  <option value="20:30">20:30 น.</option>
-                  <option value="21:00">21:00 น.</option>
-                  <option value="21:30">21:30 น.</option>
-                  <option value="22:00">22:00 น.</option>
-                  <option value="22:30">22:30 น.</option>
-                  <option value="23:00">23:00 น.</option>
-                  <option value="23:30">23:30 น.</option>
-                  <option value="23:59">23:59 น. (ดึกมาก)</option>
-                </select>
+                <div style="position:relative">
+                  <input type="text" id="fTimeEnd" class="form-control" placeholder="เลือกเวลา" value="16:30" style="background:#fff; cursor:pointer; padding-right:36px;" required>
+                  <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); pointer-events:none; font-size:1.1rem">⏰</span>
+                </div>
               </div>
               <div class="form-group" style="grid-column:1/-1">
                 <label>สถานที่ปลายทาง <span style="color:var(--color-danger)">*</span></label>
@@ -1400,12 +1333,27 @@
             checkAvailabilityLive();
           }
         });
-      }
 
-      ['fTimeStart', 'fTimeEnd'].forEach(function(id) {
-        var el = document.getElementById(id);
-        if (el) el.addEventListener('change', checkAvailabilityLive);
-      });
+        flatpickr('#fTimeStart', {
+          enableTime: true,
+          noCalendar: true,
+          dateFormat: 'H:i',
+          time_24hr: true,
+          defaultDate: '08:30',
+          minuteIncrement: 5,
+          onChange: function() { checkAvailabilityLive(); }
+        });
+
+        flatpickr('#fTimeEnd', {
+          enableTime: true,
+          noCalendar: true,
+          dateFormat: 'H:i',
+          time_24hr: true,
+          defaultDate: '16:30',
+          minuteIncrement: 5,
+          onChange: function() { checkAvailabilityLive(); }
+        });
+      }
 
       setTimeout(initMap, 500); // Initialize map after UI renders
     });
