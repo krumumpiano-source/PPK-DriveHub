@@ -32,13 +32,39 @@
       .vr-form-grid{grid-template-columns:1fr}
       .vr-tabs{overflow-x:auto; white-space:nowrap; -webkit-overflow-scrolling:touch; padding-bottom:4px}
       .vr-tab{flex-shrink:0; padding:10px 14px; font-size:.88rem}
-      #map{height:280px}
+      #mapWrapper.collapsed #map{display:none}
+      #mapWrapper.collapsed .map-toggle-btn{border-radius:var(--radius-md)}
+      #mapWrapper{margin-bottom:8px}
+      /* ปุ่มส่งเต็มความกว้างบน mobile */
+      .vr-submit-row{flex-direction:column!important}
+      .vr-submit-row .btn{width:100%;justify-content:center}
+      /* เพิ่มชื่อ - tap target ใหญ่ขึ้น */
+      #btnAddPassenger{padding:10px 18px!important;font-size:.9rem!important}
     }
     .passenger-row{display:flex;gap:8px;margin-bottom:6px;align-items:center}
     .passenger-row input{flex:1}
     .approve-section{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--radius-lg);padding:1rem;margin-top:1rem}
     .school-icon{font-size:24px; text-align:center; line-height:24px; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))}
-    #map { height: 380px; border-radius: var(--radius-md); border: 2px solid var(--color-border); z-index: 1; }
+    #map { height: 340px; border-radius: 0 0 var(--radius-md) var(--radius-md); border: 2px solid var(--color-border); border-top:none; z-index: 1; }
+    /* Map toggle button */
+    .map-toggle-btn {
+      display: flex; align-items: center; justify-content: space-between;
+      width: 100%; padding: 10px 14px; cursor: pointer;
+      background: #f0f4ff; border: 2px solid var(--color-border);
+      border-radius: var(--radius-md) var(--radius-md) 0 0;
+      font-size: .88rem; font-weight: 600; color: var(--color-primary);
+      user-select: none; transition: background .15s;
+    }
+    .map-toggle-btn:hover{background:#e0e8ff}
+    .map-toggle-icon{transition:transform .25s; font-style:normal; font-size:1rem}
+    #mapWrapper.collapsed .map-toggle-btn{
+      border-radius:var(--radius-md); border-bottom:2px solid var(--color-border);
+    }
+    #mapWrapper.collapsed .map-toggle-icon{transform:rotate(-90deg)}
+    /* Prevent map from hijacking page scroll */
+    .map-touch-shield {
+      position:relative;
+    }
     .autocomplete-items {
       position: absolute; border: 1px solid #d4d4d4; border-bottom: none; border-top: none;
       z-index: 99; top: 100%; left: 0; right: 0; background-color: #fff;
@@ -124,10 +150,18 @@
                 </div>
                 <div id="destListContainer" style="margin-bottom:8px;"></div>
                 <input type="hidden" id="fDestination">
-                
-                <div id="map"></div>
+
+                <!-- Map with collapse toggle for mobile -->
+                <div id="mapWrapper" class="map-touch-shield">
+                  <button type="button" class="map-toggle-btn" onclick="toggleMap()" id="mapToggleBtn">
+                    <span>🗺️ แผนที่ — คลิกปักหมุดปลายทาง</span>
+                    <i class="map-toggle-icon">▼</i>
+                  </button>
+                  <div id="map"></div>
+                </div>
+
                 <div style="margin-top:8px; font-size:0.85rem; color:var(--color-text-light);">
-                  <span id="mapStatus">คลิกบนแผนที่เพื่อเพิ่มจุดแวะพัก/ปลายทาง (ลากเพื่อย้าย ดับเบิ้ลคลิกเพื่อลบหมุด)</span>
+                  <span id="mapStatus">💡 คลิกบนแผนที่เพื่อเพิ่มจุดแวะพัก/ปลายทาง (ดับเบิ้ลคลิกเพื่อลบหมุด)</span>
                   <input type="hidden" id="fWaypoints">
                   <input type="hidden" id="fDestLat">
                   <input type="hidden" id="fDestLng">
@@ -162,16 +196,16 @@
               <div class="form-group" style="grid-column:1/-1">
                 <label>รายชื่อผู้ร่วมเดินทาง</label>
                 <div id="passengerList"></div>
-                <button type="button" class="btn btn-sm" onclick="addPassengerRow()" style="margin-top:4px;font-size:.82rem">➕ เพิ่มชื่อ</button>
+                <button type="button" id="btnAddPassenger" class="btn btn-sm" onclick="addPassengerRow()" style="margin-top:4px;font-size:.82rem;padding:8px 16px">➕ เพิ่มชื่อ</button>
               </div>
               <div class="form-group" style="grid-column:1/-1">
                 <label>หมายเหตุ</label>
                 <textarea id="fNotes" class="form-control" rows="2"></textarea>
               </div>
             </div>
-            <div style="display:flex;gap:8px;margin-top:1rem">
-              <button type="submit" id="btnSubmitRequest" class="btn btn-primary">📤 ส่งคำขอใช้รถ</button>
-              <button type="button" class="btn btn-outline" onclick="printRequest()">🖨️ พิมพ์แบบฟอร์ม</button>
+            <div style="display:flex;gap:8px;margin-top:1rem" class="vr-submit-row">
+              <button type="submit" id="btnSubmitRequest" class="btn btn-primary" style="flex:1">📤 ส่งคำขอใช้รถ</button>
+              <button type="button" class="btn btn-outline" onclick="printRequest()" style="flex:1">🖨️ พิมพ์แบบฟอร์ม</button>
             </div>
           </form>
         </div>
@@ -1064,8 +1098,31 @@
     var map, markers = [], routeLine;
     var SCHOOL_LAT = 19.1652, SCHOOL_LNG = 99.9048;
 
+    function toggleMap() {
+      var wrapper = document.getElementById('mapWrapper');
+      if (!wrapper) return;
+      wrapper.classList.toggle('collapsed');
+      var isCollapsed = wrapper.classList.contains('collapsed');
+      var icon = wrapper.querySelector('.map-toggle-icon');
+      if (icon) {
+        icon.style.transform = isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+      }
+      if (!isCollapsed && map) {
+        setTimeout(function() { map.invalidateSize(); }, 150);
+      }
+    }
+
     function initMap() {
       if (typeof L === 'undefined') return;
+      // Auto-collapse map on small screens to save scroll space
+      if (window.innerWidth <= 640) {
+        var wrapper = document.getElementById('mapWrapper');
+        if (wrapper) {
+          wrapper.classList.add('collapsed');
+          var icon = wrapper.querySelector('.map-toggle-icon');
+          if (icon) icon.style.transform = 'rotate(-90deg)';
+        }
+      }
       map = L.map('map').setView([SCHOOL_LAT, SCHOOL_LNG], 13);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
