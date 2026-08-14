@@ -22,6 +22,363 @@
     padding: 40px;
     }
 
+    /* ── Requester Dashboard Redesign ─────────────────────── */
+    .req-hero {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 60%, #a855f7 100%);
+      border-radius: var(--radius-xl);
+      padding: 1.75rem 2rem;
+      color: white;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .req-hero::before {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 160px; height: 160px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 50%;
+    }
+    .req-hero::after {
+      content: '';
+      position: absolute;
+      bottom: -60px; right: 60px;
+      width: 200px; height: 200px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 50%;
+    }
+    .req-hero-text h2 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      margin: 0 0 4px 0;
+      letter-spacing: -0.02em;
+    }
+    .req-hero-text p {
+      font-size: 0.88rem;
+      margin: 0;
+      opacity: 0.85;
+    }
+    .req-hero-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: white;
+      color: #4f46e5;
+      font-weight: 800;
+      font-size: 0.95rem;
+      padding: 12px 24px;
+      border-radius: var(--radius-full);
+      text-decoration: none;
+      white-space: nowrap;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+      transition: transform 0.15s var(--ease), box-shadow 0.15s;
+      position: relative;
+      z-index: 1;
+    }
+    .req-hero-cta:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    }
+
+    /* KPI Cards */
+    .req-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 1.5rem;
+    }
+    .req-kpi-card {
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: 1.25rem 1rem;
+      text-align: center;
+      border: 1.5px solid var(--color-border);
+      cursor: pointer;
+      transition: transform 0.15s var(--ease), box-shadow 0.15s, border-color 0.15s;
+      text-decoration: none;
+      display: block;
+    }
+    .req-kpi-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--color-primary-light);
+    }
+    .req-kpi-val {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .req-kpi-label {
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+      font-weight: 500;
+    }
+    .req-kpi-card.kpi-all   .req-kpi-val { color: #4f46e5; }
+    .req-kpi-card.kpi-wait  .req-kpi-val { color: #d97706; }
+    .req-kpi-card.kpi-done  .req-kpi-val { color: #059669; }
+    .req-kpi-card.kpi-all   { border-top: 3px solid #4f46e5; }
+    .req-kpi-card.kpi-wait  { border-top: 3px solid #d97706; }
+    .req-kpi-card.kpi-done  { border-top: 3px solid #059669; }
+
+    /* Request List */
+    .req-list-card {
+      background: white;
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin-bottom: 1.25rem;
+      box-shadow: var(--shadow-sm);
+    }
+    .req-list-header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .req-list-header h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin: 0;
+    }
+    .req-list-see-all {
+      font-size: 0.82rem;
+      color: var(--color-primary);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .req-list-see-all:hover { text-decoration: underline; }
+    .req-item {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 1.25rem;
+      border-bottom: 1px solid var(--color-border-light);
+      transition: background 0.12s;
+      cursor: pointer;
+    }
+    .req-item:last-child { border-bottom: none; }
+    .req-item:hover { background: var(--color-bg-light); }
+    .req-item-icon {
+      width: 36px; height: 36px;
+      border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .req-item-body { min-width: 0; }
+    .req-item-dest {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--color-text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .req-item-date {
+      font-size: 0.78rem;
+      color: var(--color-text-muted);
+      margin-top: 2px;
+    }
+    .req-status-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      white-space: nowrap;
+    }
+    .badge-pending  { background: #fef3c7; color: #92400e; }
+    .badge-approved { background: #d1fae5; color: #065f46; }
+    .badge-rejected { background: #fee2e2; color: #991b1b; }
+    .badge-cancelled { background: #f1f5f9; color: #64748b; }
+    .req-empty {
+      padding: 2rem;
+      text-align: center;
+      color: var(--color-text-muted);
+    }
+    .req-empty-icon { font-size: 2.5rem; margin-bottom: 8px; }
+    .req-empty p { font-size: 0.9rem; }
+
+    /* Availability Checker */
+    .avail-section {
+      background: white;
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .avail-header {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      padding: 1.25rem 1.5rem;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .avail-header-icon {
+      width: 44px; height: 44px;
+      background: rgba(255,255,255,0.2);
+      border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+    .avail-header h2 {
+      font-size: 1.1rem; font-weight: 800; margin: 0 0 2px;
+    }
+    .avail-header p {
+      font-size: 0.82rem; margin: 0; opacity: 0.85;
+    }
+    .avail-picker {
+      padding: 1.25rem 1.5rem;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .avail-picker-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin: 0 0 8px;
+    }
+    .avail-day-btns {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    .avail-day-btn {
+      padding: 9px 20px;
+      border: 2px solid var(--color-border);
+      background: white;
+      color: var(--color-text);
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.88rem;
+      transition: all 0.15s;
+    }
+    .avail-day-btn.active {
+      background: #4f46e5;
+      border-color: #4f46e5;
+      color: white;
+      font-weight: 700;
+    }
+    .avail-day-btn:hover:not(.active) {
+      border-color: #4f46e5;
+      color: #4f46e5;
+    }
+    .avail-time-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .avail-time-group { display: flex; flex-direction: column; }
+    .avail-time-input {
+      padding: 10px 14px;
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      background: white;
+      color: var(--color-text);
+      transition: border-color 0.15s;
+    }
+    .avail-time-input:focus {
+      outline: none;
+      border-color: #4f46e5;
+      box-shadow: var(--shadow-focus);
+    }
+    .avail-hint {
+      font-size: 0.78rem;
+      color: var(--color-text-muted);
+      margin: 10px 0 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .avail-results {
+      padding: 1.25rem 1.5rem;
+    }
+    .avail-results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+    }
+    .avail-col-header {
+      font-size: 0.88rem;
+      font-weight: 700;
+      margin: 0 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .avail-col-driver { color: #15803d; }
+    .avail-col-vehicle { color: #1d4ed8; }
+    .avail-driver-item {
+      background: white;
+      border: 1.5px solid #bbf7d0;
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      transition: box-shadow 0.15s;
+    }
+    .avail-driver-item:hover { box-shadow: var(--shadow-sm); }
+    .avail-driver-name { font-weight: 600; font-size: 0.9rem; }
+    .avail-driver-phone { font-size: 0.78rem; color: var(--color-text-muted); margin-top: 2px; }
+    .avail-ready-badge {
+      background: #d1fae5;
+      color: #065f46;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: var(--radius-full);
+    }
+    .avail-vehicle-item {
+      background: white;
+      border: 1.5px solid #bfdbfe;
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      gap: 8px;
+      flex-wrap: wrap;
+      transition: box-shadow 0.15s;
+    }
+    .avail-vehicle-item:hover { box-shadow: var(--shadow-sm); }
+    .avail-vehicle-plate { font-weight: 700; font-size: 0.95rem; }
+    .avail-vehicle-model { font-size: 0.78rem; color: var(--color-text-muted); margin-top: 2px; }
+    .avail-book-btn {
+      padding: 6px 14px;
+      background: var(--gradient-primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      white-space: nowrap;
+      transition: opacity 0.15s, transform 0.15s;
+    }
+    .avail-book-btn:hover { opacity: 0.9; transform: scale(1.03); }
+
     .calendar-container {
     margin-bottom: 40px;
     }
@@ -332,6 +689,13 @@
     .calendar-nav {
     flex-wrap: wrap;
     }
+    .req-kpi-grid { grid-template-columns: repeat(3, 1fr); }
+    .req-hero { flex-direction: column; align-items: flex-start; }
+    .req-hero-cta { align-self: stretch; justify-content: center; }
+    }
+    @media (max-width: 480px) {
+    .req-kpi-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .req-kpi-val { font-size: 1.6rem; }
     }
   </style>
 
@@ -387,20 +751,78 @@
             </div>
           </div>
 
-          <!-- Requester Dashboard (staff/viewer) -->
+          <!-- Requester Dashboard (staff/viewer/requester) -->
           <div id="requesterDashboard" style="display:none">
-            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:1.5rem" id="requesterKpi"></div>
-            <div style="background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:1.2rem;margin-bottom:1rem">
-              <h3 style="margin-bottom:1rem;font-size:1.1rem">📋 คำขอใช้รถของฉัน</h3>
+
+            <!-- Hero Welcome Banner -->
+            <div class="req-hero">
+              <div class="req-hero-text">
+                <h2 id="reqWelcomeTitle">👋 สวัสดี!</h2>
+                <p>ระบบจองและขอใช้ยานพาหนะ PPK DriveHub</p>
+              </div>
+              <a href="vehicle-request.html?v=2" class="req-hero-cta">
+                📝 ขอใช้รถ
+              </a>
+            </div>
+
+            <!-- KPI Cards (clickable) -->
+            <div class="req-kpi-grid" id="requesterKpi"></div>
+
+            <!-- My Requests List -->
+            <div class="req-list-card">
+              <div class="req-list-header">
+                <h3>📋 คำขอใช้รถของฉัน</h3>
+                <a href="vehicle-request.html?v=2" class="req-list-see-all">ดูทั้งหมด →</a>
+              </div>
               <div id="requesterList"></div>
             </div>
-            <div style="text-align:center;margin-top:1rem">
-              <a href="vehicle-request.html?v=2" style="display:inline-block;background:var(--color-primary);color:#fff;padding:16px 40px;border-radius:var(--radius-lg);font-size:1.1rem;text-decoration:none;font-weight:700">📝 ขอใช้รถ</a>
+
+            <!-- Availability Checker -->
+            <div class="avail-section">
+              <div class="avail-header">
+                <div class="avail-header-icon">🔍</div>
+                <div>
+                  <h2>ตรวจสอบรถและคนขับว่าง</h2>
+                  <p>เลือกวันและเวลาที่ต้องการเดินทาง</p>
+                </div>
+              </div>
+
+              <div class="avail-picker">
+                <p class="avail-picker-label">เลือกวันที่</p>
+                <div class="avail-day-btns">
+                  <button id="btnToday" class="avail-day-btn active" onclick="setCheckerDay(0)">📅 วันนี้</button>
+                  <button id="btnTomorrow" class="avail-day-btn" onclick="setCheckerDay(1)">พรุ่งนี้</button>
+                  <button id="btnDayAfter" class="avail-day-btn" onclick="setCheckerDay(2)">มะรืน</button>
+                  <input type="date" id="checkerDate" class="avail-day-btn" style="cursor:pointer" onchange="onDateInputChanged()" title="เลือกวันอื่น">
+                </div>
+                <div class="avail-time-row">
+                  <div class="avail-time-group">
+                    <label for="checkerTimeStart" class="avail-picker-label">⏰ เวลาออกเดินทาง</label>
+                    <input type="time" id="checkerTimeStart" value="08:00" class="avail-time-input" onchange="onAvailabilityDateChange()">
+                  </div>
+                  <input type="hidden" id="checkerTimeEnd" value="23:59">
+                  <p class="avail-hint">⚡ แสดงรถและคนขับที่ยังไม่มีคิวในวันนั้น</p>
+                </div>
+              </div>
+
+              <div class="avail-results">
+                <div class="avail-results-grid">
+                  <div>
+                    <p class="avail-col-header avail-col-driver">👤 พนักงานขับรถที่ว่าง</p>
+                    <div id="driversAvailableList"><div class="req-empty"><p>กำลังโหลด...</p></div></div>
+                  </div>
+                  <div>
+                    <p class="avail-col-header avail-col-vehicle">🚗 รถที่ว่าง</p>
+                    <div id="vehiclesAvailableList"><div class="req-empty"><p>กำลังโหลด...</p></div></div>
+                  </div>
+                </div>
+              </div>
             </div>
+
           </div>
 
           <div id="dashboardContent" style="display: none;">
-            <!-- Calendar -->
+            <!-- Calendar (admin/super_admin only) -->
             <div class="calendar-container" id="calendarContainer">
               <div class="calendar-header">
                 <div class="calendar-nav">
@@ -410,77 +832,7 @@
                 </div>
                 <div class="calendar-month-year" id="monthYear"></div>
               </div>
-
-              <div class="calendar-grid" id="calendarGrid">
-                <!-- Calendar will be generated here -->
-              </div>
-            </div>
-            <!-- Availability Section: ตรวจสอบคิวว่าง -->
-            <div class="availability-section" style="background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-xl);overflow:hidden;margin-top:1.5rem;box-shadow:var(--shadow-md)">
-              
-              <!-- Hero Header Banner -->
-              <div style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);padding:1.5rem 1.75rem;color:white">
-                <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
-                  <span style="font-size:2rem">🚗</span>
-                  <div>
-                    <h2 style="font-size:1.3rem;font-weight:800;margin:0;letter-spacing:-0.01em">ตรวจสอบคิวรถว่าง</h2>
-                    <p style="font-size:0.88rem;margin:2px 0 0 0;opacity:0.85">เลือกวันและเวลาที่ต้องการเดินทาง แล้วดูรถและพนักงานขับรถที่ว่างได้เลย</p>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Picker Zone -->
-              <div style="padding:1.25rem 1.5rem;background:#f8fafc;border-bottom:1px solid var(--color-border)">
-                
-                <!-- Quick Date Buttons -->
-                <div style="margin-bottom:1rem">
-                  <p style="font-size:0.82rem;font-weight:700;color:var(--color-text-muted);margin:0 0 8px 0;text-transform:uppercase;letter-spacing:0.04em">เลือกวันที่</p>
-                  <div style="display:flex;gap:8px;flex-wrap:wrap">
-                    <button id="btnToday" onclick="setCheckerDay(0)" style="padding:9px 20px;border:2px solid #4f46e5;background:#4f46e5;color:white;border-radius:var(--radius-md);font-weight:700;cursor:pointer;font-family:inherit;font-size:0.9rem;transition:all 0.15s">📅 วันนี้</button>
-                    <button id="btnTomorrow" onclick="setCheckerDay(1)" style="padding:9px 20px;border:2px solid var(--color-border);background:white;color:var(--color-text);border-radius:var(--radius-md);font-weight:600;cursor:pointer;font-family:inherit;font-size:0.9rem;transition:all 0.15s">พรุ่งนี้</button>
-                    <button id="btnDayAfter" onclick="setCheckerDay(2)" style="padding:9px 20px;border:2px solid var(--color-border);background:white;color:var(--color-text);border-radius:var(--radius-md);font-weight:600;cursor:pointer;font-family:inherit;font-size:0.9rem;transition:all 0.15s">มะรืน</button>
-                    <input type="date" id="checkerDate" style="padding:8px 12px;border:2px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:0.9rem;background:white;color:var(--color-text);cursor:pointer" onchange="onDateInputChanged()" title="เลือกวันอื่น">
-                  </div>
-                </div>
-
-                <!-- Departure Time -->
-                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-                  <div>
-                    <label for="checkerTimeStart" style="display:block;font-size:0.82rem;font-weight:700;color:var(--color-text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em">⏰ เวลาออกเดินทาง</label>
-                    <input type="time" id="checkerTimeStart" value="08:00" style="padding:10px 16px;border:2px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:1.05rem;font-weight:700;background:white;color:var(--color-text)" onchange="onAvailabilityDateChange()">
-                  </div>
-                  <!-- hidden end time: default to end of day -->
-                  <input type="hidden" id="checkerTimeEnd" value="23:59">
-                  <p style="font-size:0.82rem;color:var(--color-text-muted);margin:18px 0 0 0;max-width:260px">⚡ ระบบจะแสดงรถและคนขับที่ยังไม่มีคิวในวันนั้น</p>
-                </div>
-              </div>
-
-              <!-- Live Results Section -->
-              <div style="padding:1.25rem 1.5rem">
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.25rem">
-                  
-                  <!-- Drivers Available List -->
-                  <div class="availability-card" style="background:#f0fdf4;padding:1.2rem;border-radius:var(--radius-lg);border:1.5px solid #bbf7d0">
-                    <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;color:#15803d;display:flex;align-items:center;gap:6px">
-                      <span>👤 พนักงานขับรถที่ว่าง</span>
-                    </h3>
-                    <div class="availability-list" id="driversAvailableList">
-                      <div class="empty-availability">กำลังโหลด...</div>
-                    </div>
-                  </div>
-
-                  <!-- Vehicles Available List -->
-                  <div class="availability-card" style="background:#eff6ff;padding:1.2rem;border-radius:var(--radius-lg);border:1.5px solid #bfdbfe">
-                    <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;color:#1d4ed8;display:flex;align-items:center;gap:6px">
-                      <span>🚗 รถที่ว่าง</span>
-                    </h3>
-                    <div class="availability-list" id="vehiclesAvailableList">
-                      <div class="empty-availability">กำลังโหลด...</div>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
+              <div class="calendar-grid" id="calendarGrid"></div>
             </div>
           </div>
         </div>
@@ -563,11 +915,8 @@
           } else if(role==='repair'){
             loadRepairDashboard();
           } else if(role==='staff' || role==='viewer' || role==='requester'){
-            if (document.getElementById('calendarContainer')) {
-              document.getElementById('calendarContainer').style.display = 'none';
-            }
+            // Requester-only dashboard — do NOT load the admin calendar
             loadRequesterDashboard(user);
-            loadDashboard();
           } else {
             if (document.getElementById('calendarContainer')) {
               document.getElementById('calendarContainer').style.display = 'block';
@@ -698,6 +1047,15 @@
         async function loadRequesterDashboard(user){
           if (!user) return;
           document.getElementById('loading').style.display='block';
+
+          // Set welcome name
+          var nameEl = document.getElementById('reqWelcomeTitle');
+          if (nameEl) {
+            var displayName = user.name || user.full_name || user.username || '';
+            var firstName = displayName.split(' ')[0];
+            nameEl.textContent = '👋 สวัสดี, ' + (firstName || 'คุณ') + '!';
+          }
+
           try{
             var res=await apiCall('getVehicleRequests',{requester_id:user.id});
             var list=(res&&res.success&&Array.isArray(res.data))?res.data:[];
@@ -705,27 +1063,48 @@
               return r.status==='pending' || r.status==='pending_supervisor' || r.status==='pending_executive';
             }).length;
             var approved=list.filter(function(r){return r.status==='approved'}).length;
-            var kpiH=_kpi(list.length,'คำขอทั้งหมด','');
-            kpiH+=_kpi(pending,'รออนุมัติ','');
-            kpiH+=_kpi(approved,'อนุมัติแล้ว','');
+
+            // KPI Cards — clickable
+            var kpiH = '';
+            kpiH += '<a href="vehicle-request.html?v=2" class="req-kpi-card kpi-all">';
+            kpiH += '<div class="req-kpi-val">'+list.length+'</div>';
+            kpiH += '<div class="req-kpi-label">คำขอทั้งหมด</div></a>';
+            kpiH += '<a href="vehicle-request.html?v=2&status=pending" class="req-kpi-card kpi-wait">';
+            kpiH += '<div class="req-kpi-val">'+pending+'</div>';
+            kpiH += '<div class="req-kpi-label">รออนุมัติ</div></a>';
+            kpiH += '<a href="vehicle-request.html?v=2&status=approved" class="req-kpi-card kpi-done">';
+            kpiH += '<div class="req-kpi-val">'+approved+'</div>';
+            kpiH += '<div class="req-kpi-label">อนุมัติแล้ว</div></a>';
             document.getElementById('requesterKpi').innerHTML=kpiH;
 
             if(list.length===0){
-              document.getElementById('requesterList').innerHTML='<p style="color:var(--color-text-muted);text-align:center;padding:20px">ยังไม่มีคำขอใช้รถ</p>';
+              document.getElementById('requesterList').innerHTML=[
+                '<div class="req-empty">',
+                  '<div class="req-empty-icon">📋</div>',
+                  '<p>ยังไม่มีคำขอใช้รถ<br><small>กดปุ่ม "ขอใช้รถ" เพื่อเริ่มต้น</small></p>',
+                '</div>'
+              ].join('');
             }else{
+              var stConfig={
+                pending:         {label:'รออนุมัติ',      cls:'badge-pending',  icon:'🚙', iconBg:'#fef3c7'},
+                pending_supervisor:{label:'รอหัวหน้า',   cls:'badge-pending',  icon:'📋', iconBg:'#fef3c7'},
+                pending_executive: {label:'รอผู้บริหาร', cls:'badge-pending',  icon:'📋', iconBg:'#fef3c7'},
+                approved:        {label:'อนุมัติแล้ว',   cls:'badge-approved', icon:'✅', iconBg:'#d1fae5'},
+                rejected:        {label:'ไม่อนุมัติ',    cls:'badge-rejected', icon:'❌', iconBg:'#fee2e2'},
+                cancelled:       {label:'ยกเลิก',        cls:'badge-cancelled',icon:'⚪', iconBg:'#f1f5f9'}
+              };
               var h='';list.slice(0,10).forEach(function(r){
-                var stMap={
-                  pending:'🟡 รออนุมัติ',
-                  pending_supervisor:'🟡 รอหัวหน้าอนุมัติ',
-                  pending_executive:'🟡 รอผู้บริหารอนุมัติ',
-                  approved:'🟢 อนุมัติแล้ว',
-                  rejected:'🔴 ไม่อนุมัติ',
-                  cancelled:'⚪ ยกเลิก'
-                };
-                h+='<div style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--color-border);font-size:.9rem">';
-                h+='<span>📅 '+(r.date||'-')+'</span>';
-                h+='<span>📍 '+(r.destination||'-')+'</span>';
-                h+='<span>'+(stMap[r.status]||r.status)+'</span>';
+                var cfg=stConfig[r.status]||{label:r.status,cls:'badge-pending',icon:'📋',iconBg:'#f1f5f9'};
+                var dest=(r.destination||r.mission||'ไม่ระบุปลายทาง');
+                var dateStr=r.date||r.departure_date||'-';
+                var timeStr=(r.time_start||r.departure_time)?(' · '+(r.time_start||r.departure_time).substring(0,5)+'น.'):'';
+                h+='<div class="req-item" onclick="window.location=\'vehicle-request.html?v=2\'">';
+                h+='<div class="req-item-icon" style="background:'+cfg.iconBg+'">'+cfg.icon+'</div>';
+                h+='<div class="req-item-body">';
+                h+='<div class="req-item-dest">'+dest+'</div>';
+                h+='<div class="req-item-date">📅 '+dateStr+timeStr+(r.license_plate?' · 🚗 '+r.license_plate:'')+'</div>';
+                h+='</div>';
+                h+='<span class="req-status-badge '+cfg.cls+'">'+cfg.label+'</span>';
                 h+='</div>';
               });
               document.getElementById('requesterList').innerHTML=h;
@@ -733,12 +1112,16 @@
             document.getElementById('requesterDashboard').style.display='block';
           }catch(e){
             console.error('loadRequesterDashboard error:', e);
+            document.getElementById('requesterKpi').innerHTML='';
             if (document.getElementById('requesterList')) {
-              document.getElementById('requesterList').innerHTML='<p style="color:var(--color-text-muted);text-align:center;padding:20px">ยังไม่มีประวัติคำขอ</p>';
+              document.getElementById('requesterList').innerHTML='<div class="req-empty"><p>ยังไม่มีประวัติคำขอ</p></div>';
             }
             document.getElementById('requesterDashboard').style.display='block';
           }
-          finally{document.getElementById('loading').style.display='none'}
+          finally{
+            document.getElementById('loading').style.display='none';
+            initAvailabilityDatePicker();
+          }
         }
 
         async function loadDashboard() {
@@ -1149,48 +1532,34 @@
           loadDashboard();
         }
 
+        function _syncDayBtns(selectedDate) {
+          var todayStr = formatDate(new Date());
+          var tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+          var tomorrowStr = formatDate(tomorrow);
+          var dayAfter = new Date(); dayAfter.setDate(dayAfter.getDate() + 2);
+          var dayAfterStr = formatDate(dayAfter);
+          var btnToday = document.getElementById('btnToday');
+          var btnTomorrow = document.getElementById('btnTomorrow');
+          var btnDayAfter = document.getElementById('btnDayAfter');
+          if (btnToday) { btnToday.classList.toggle('active', selectedDate===todayStr); }
+          if (btnTomorrow) { btnTomorrow.classList.toggle('active', selectedDate===tomorrowStr); }
+          if (btnDayAfter) { btnDayAfter.classList.toggle('active', selectedDate===dayAfterStr); }
+        }
+
         function setCheckerDay(offsetDays) {
           var d = new Date();
           d.setDate(d.getDate() + offsetDays);
           var dateStr = formatDate(d);
           var dateInput = document.getElementById('checkerDate');
           if (dateInput) dateInput.value = dateStr;
-
-          var todayStr = formatDate(new Date());
-          var tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
-          var tomorrowStr = formatDate(tomorrow);
-          var dayAfter = new Date(); dayAfter.setDate(dayAfter.getDate() + 2);
-          var dayAfterStr = formatDate(dayAfter);
-
-          var activeStyle = 'padding:9px 20px;border:2px solid #4f46e5;background:#4f46e5;color:white;border-radius:var(--radius-md);font-weight:700;cursor:pointer;font-family:inherit;font-size:0.9rem;transition:all 0.15s';
-          var inactiveStyle = 'padding:9px 20px;border:2px solid var(--color-border);background:white;color:var(--color-text);border-radius:var(--radius-md);font-weight:600;cursor:pointer;font-family:inherit;font-size:0.9rem;transition:all 0.15s';
-
-          var btnToday = document.getElementById('btnToday');
-          var btnTomorrow = document.getElementById('btnTomorrow');
-          var btnDayAfter = document.getElementById('btnDayAfter');
-          if (btnToday) btnToday.style.cssText = dateStr === todayStr ? activeStyle : inactiveStyle;
-          if (btnTomorrow) btnTomorrow.style.cssText = dateStr === tomorrowStr ? activeStyle : inactiveStyle;
-          if (btnDayAfter) btnDayAfter.style.cssText = dateStr === dayAfterStr ? activeStyle : inactiveStyle;
-
+          _syncDayBtns(dateStr);
           onAvailabilityDateChange();
         }
 
         function onDateInputChanged() {
-          var inactiveStyle = 'padding:9px 20px;border:2px solid var(--color-border);background:white;color:var(--color-text);border-radius:var(--radius-md);font-weight:600;cursor:pointer;font-family:inherit;font-size:0.9rem;transition:all 0.15s';
           var dateInput = document.getElementById('checkerDate');
-          var todayStr = formatDate(new Date());
-          var tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
-          var tomorrowStr = formatDate(tomorrow);
-          var dayAfter = new Date(); dayAfter.setDate(dayAfter.getDate() + 2);
-          var dayAfterStr = formatDate(dayAfter);
-          var activeStyle = 'padding:9px 20px;border:2px solid #4f46e5;background:#4f46e5;color:white;border-radius:var(--radius-md);font-weight:700;cursor:pointer;font-family:inherit;font-size:0.9rem;transition:all 0.15s';
           var val = dateInput ? dateInput.value : '';
-          var btnToday = document.getElementById('btnToday');
-          var btnTomorrow = document.getElementById('btnTomorrow');
-          var btnDayAfter = document.getElementById('btnDayAfter');
-          if (btnToday) btnToday.style.cssText = val === todayStr ? activeStyle : inactiveStyle;
-          if (btnTomorrow) btnTomorrow.style.cssText = val === tomorrowStr ? activeStyle : inactiveStyle;
-          if (btnDayAfter) btnDayAfter.style.cssText = val === dayAfterStr ? activeStyle : inactiveStyle;
+          _syncDayBtns(val);
           onAvailabilityDateChange();
         }
 
@@ -1289,18 +1658,18 @@
           var driversHtml = '';
           if (availableDrivers && availableDrivers.length > 0) {
             availableDrivers.forEach(function (driver) {
-              driversHtml += '<div class="availability-item" style="padding:10px 14px;background:white;border-radius:var(--radius-md);border-left:4px solid var(--color-success);margin-bottom:8px;box-shadow:var(--shadow-sm);display:flex;justify-content:space-between;align-items:center;">';
+              driversHtml += '<div class="avail-driver-item">';
               driversHtml += '<div>';
-              driversHtml += '<strong style="display:block;color:var(--color-text);font-size:0.95rem">👤 ' + (driver.name || driver.full_name || '-') + '</strong>';
+              driversHtml += '<div class="avail-driver-name">👤 ' + (driver.name || driver.full_name || '-') + '</div>';
               if (driver.phone) {
-                driversHtml += '<span style="font-size:0.82rem;color:var(--color-text-muted)">📞 ' + driver.phone + '</span>';
+                driversHtml += '<div class="avail-driver-phone">📞 ' + driver.phone + '</div>';
               }
               driversHtml += '</div>';
-              driversHtml += '<span class="vr-badge" style="background:#d1fae5;color:#065f46;font-size:0.78rem">🟢 พร้อมขับ</span>';
+              driversHtml += '<span class="avail-ready-badge">🟢 พร้อมขับ</span>';
               driversHtml += '</div>';
             });
           } else {
-            driversHtml = '<div class="empty-availability" style="padding:20px;text-align:center;color:var(--color-text-muted);font-size:0.9rem">ไม่มีพนักงานขับรถว่างในช่วงเวลานี้</div>';
+            driversHtml = '<div class="req-empty"><div class="req-empty-icon">😔</div><p>ไม่มีพนักงานขับรถว่าง<br>ในช่วงเวลานี้</p></div>';
           }
           document.getElementById('driversAvailableList').innerHTML = driversHtml;
 
@@ -1317,17 +1686,16 @@
           var vehiclesHtml = '';
           if (availableVehicles && availableVehicles.length > 0) {
             availableVehicles.forEach(function (vehicle) {
-              vehiclesHtml += '<div class="availability-item" style="padding:12px 14px;background:white;border-radius:var(--radius-md);border-left:4px solid var(--color-primary);margin-bottom:10px;box-shadow:var(--shadow-sm);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">';
+              vehiclesHtml += '<div class="avail-vehicle-item">';
               vehiclesHtml += '<div>';
-              vehiclesHtml += '<strong style="display:block;color:var(--color-text);font-size:1rem">🚗 ' + (vehicle.license_plate || vehicle.plate || vehicle.id) + '</strong>';
-              vehiclesHtml += '<span style="font-size:0.85rem;color:var(--color-text-muted)">' + (vehicle.brand || '') + ' ' + (vehicle.model || '') + (vehicle.vehicle_type ? ' (' + vehicle.vehicle_type + ')' : '') + '</span>';
+              vehiclesHtml += '<div class="avail-vehicle-plate">🚗 ' + (vehicle.license_plate || vehicle.plate || vehicle.id) + '</div>';
+              vehiclesHtml += '<div class="avail-vehicle-model">' + (vehicle.brand || '') + ' ' + (vehicle.model || '') + (vehicle.vehicle_type ? ' · ' + vehicle.vehicle_type : '') + '</div>';
               vehiclesHtml += '</div>';
-              vehiclesHtml += '<button type="button" onclick="requestSpecificVehicle(\'' + queryDate + '\', \'' + queryTimeStart + '\', \'' + queryTimeEnd + '\', \'' + vehicle.id + '\')" style="padding:6px 14px;background:var(--gradient-primary);color:white;border:none;border-radius:var(--radius-md);font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;">';
-              vehiclesHtml += '📝 ขอใช้รถคันนี้</button>';
+              vehiclesHtml += '<button type="button" class="avail-book-btn" onclick="requestSpecificVehicle(\'' + queryDate + '\', \'' + queryTimeStart + '\', \'' + queryTimeEnd + '\', \'' + vehicle.id + '\')">📝 ขอใช้</button>';
               vehiclesHtml += '</div>';
             });
           } else {
-            vehiclesHtml = '<div class="empty-availability" style="padding:20px;text-align:center;color:var(--color-text-muted);font-size:0.9rem">ไม่มีรถว่างในช่วงเวลานี้</div>';
+            vehiclesHtml = '<div class="req-empty"><div class="req-empty-icon">🚗</div><p>ไม่มีรถว่าง<br>ในช่วงเวลานี้</p></div>';
           }
 
           if (scheduledRepairs.length > 0) {
