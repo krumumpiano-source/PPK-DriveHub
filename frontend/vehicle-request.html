@@ -27,9 +27,16 @@
     .st-rejected{background:#fee2e2;color:#991b1b}
     .st-cancelled{background:#f3f4f6;color:#6b7280}
     .vr-detail{margin-top:.5rem;font-size:.88rem;color:var(--color-text-light)}
-    .vr-detail p{margin-bottom:4px}
+    .vr-form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px 16px;
+    }
     @media(max-width:640px){
-      .vr-form-grid{grid-template-columns:1fr}
+      .vr-form-grid{
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px 12px;
+      }
       .vr-tabs{overflow-x:auto; white-space:nowrap; -webkit-overflow-scrolling:touch; padding-bottom:4px}
       .vr-tab{flex-shrink:0; padding:10px 14px; font-size:.88rem}
       #mapWrapper.collapsed #map{display:none}
