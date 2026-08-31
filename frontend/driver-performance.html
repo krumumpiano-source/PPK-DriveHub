@@ -389,6 +389,24 @@
             await loadComparativeMatrix(year);
         }
 
+        function getDriverDisplayName(d) {
+            const name = typeof d === 'string' ? d : `${d.title || ''}${d.first_name || d.name || ''} ${d.last_name || ''}`.trim();
+            if (name.includes('ชารี')) return 'นายชารี ศรีพรม (น้อย)';
+            if (name.includes('ณัฐวุฒิ')) return 'นายณัฐวุฒิ ใหญ่วงศ์ (เดียร์)';
+            if (name.includes('สมชาย')) return 'นายสมชาย พรมศร (ท้อป)';
+            if (name.includes('สุรเชษฐ์')) return 'นายสุรเชษฐ์ บุริวงศ์ (ปู)';
+            return name;
+        }
+
+        function getDriverNickname(d) {
+            const name = typeof d === 'string' ? d : `${d.title || ''}${d.first_name || d.name || ''} ${d.last_name || ''}`.trim();
+            if (name.includes('ชารี')) return 'น้อย';
+            if (name.includes('ณัฐวุฒิ')) return 'เดียร์';
+            if (name.includes('สมชาย')) return 'ท้อป';
+            if (name.includes('สุรเชษฐ์')) return 'ปู';
+            return '';
+        }
+
         async function loadDriversList() {
             const list = document.getElementById('driverList');
             list.innerHTML = '<div class="text-center p-4"><div class="spinner-border spinner-border-sm text-primary"></div></div>';
@@ -401,6 +419,8 @@
                 
                 list.innerHTML = '';
                 allDrivers.forEach(d => {
+                    const displayName = getDriverDisplayName(d);
+                    const nick = getDriverNickname(d);
                     const a = document.createElement('a');
                     a.href = '#';
                     a.className = 'list-group-item list-group-item-action driver-list-item d-flex align-items-center py-3';
@@ -410,8 +430,8 @@
                             <i class="fa-solid fa-user-tie"></i>
                         </div>
                         <div class="flex-grow-1">
-                            <div class="fw-bold text-dark">${d.title || ''}${d.first_name || d.name} ${d.last_name || ''}</div>
-                            <small class="text-muted"><i class="fa-solid fa-van-shuttle"></i> รถประจำโรงเรียน</small>
+                            <div class="fw-bold text-dark">${displayName}</div>
+                            <small class="text-muted"><i class="fa-solid fa-id-badge text-primary"></i> พนักงานขับรถ (${nick})</small>
                         </div>
                         <i class="fa-solid fa-chevron-right text-muted small"></i>
                     `;
@@ -495,12 +515,14 @@
             rows.forEach((r, idx) => {
                 const tr = document.createElement('tr');
                 const gradeBadgeClass = r.totalScore >= 80 ? 'bg-success' : r.totalScore >= 70 ? 'bg-primary' : r.totalScore >= 60 ? 'bg-warning text-dark' : 'bg-danger';
+                const displayName = getDriverDisplayName(r.driver);
+                const nick = getDriverNickname(r.driver);
                 tr.innerHTML = `
                     <td class="text-start fw-bold">
                         <span class="badge bg-secondary me-1">#${idx+1}</span>
-                        ${r.driver.title || ''}${r.driver.first_name || r.driver.name} ${r.driver.last_name || ''}
+                        ${displayName}
                     </td>
-                    <td><span class="badge bg-light text-dark border"><i class="fa-solid fa-van-shuttle"></i> รถประจำ</span></td>
+                    <td><span class="badge bg-light text-primary border"><i class="fa-solid fa-id-badge me-1"></i> (${nick})</span></td>
                     <td class="fw-bold">${r.trips.toLocaleString()}</td>
                     <td>${r.km.toLocaleString()}</td>
                     <td class="${r.missed > 0 ? 'text-danger fw-bold' : 'text-success'}">${r.missed.toLocaleString()}</td>
@@ -524,10 +546,12 @@
             rows.forEach((r, idx) => {
                 const tr = document.createElement('tr');
                 const gradeBadgeClass = r.totalScore >= 80 ? 'badge bg-success' : r.totalScore >= 70 ? 'badge bg-primary' : r.totalScore >= 60 ? 'badge bg-warning text-dark' : 'badge bg-danger';
+                const displayName = getDriverDisplayName(r.driver);
+                const nick = getDriverNickname(r.driver);
                 tr.innerHTML = `
                     <td>${idx+1}</td>
-                    <td class="text-start fw-bold">${r.driver.title || ''}${r.driver.first_name || r.driver.name} ${r.driver.last_name || ''}</td>
-                    <td>รถตู้ส่วนกลาง</td>
+                    <td class="text-start fw-bold">${displayName}</td>
+                    <td><span class="badge bg-light text-dark border">(${nick})</span></td>
                     <td>${r.trips}</td>
                     <td class="${r.missed > 0 ? 'text-danger fw-bold' : ''}">${r.missed}</td>
                     <td>${r.passengerScore.toFixed(2)}</td>
@@ -547,8 +571,10 @@
 
             const driver = allDrivers.find(d => d.id === driverId);
             if (driver) {
-                document.getElementById('selectedDriverName').textContent = `${driver.title || ''}${driver.first_name || driver.name} ${driver.last_name || ''}`;
-                document.getElementById('selectedDriverPlate').textContent = `พนักงานขับรถประจำโรงเรียนพะเยาพิทยาคม`;
+                const displayName = getDriverDisplayName(driver);
+                const nick = getDriverNickname(driver);
+                document.getElementById('selectedDriverName').textContent = displayName;
+                document.getElementById('selectedDriverPlate').textContent = `พนักงานขับรถ (${nick})`;
             }
 
             document.getElementById('noDriverSelected').classList.add('d-none');

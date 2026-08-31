@@ -112,6 +112,15 @@
             }
         });
 
+        function getDriverDisplayName(d) {
+            const name = typeof d === 'string' ? d : `${d.title || ''}${d.first_name || d.name || ''} ${d.last_name || ''}`.trim();
+            if (name.includes('ชารี')) return 'นายชารี ศรีพรม (น้อย)';
+            if (name.includes('ณัฐวุฒิ')) return 'นายณัฐวุฒิ ใหญ่วงศ์ (เดียร์)';
+            if (name.includes('สมชาย')) return 'นายสมชาย พรมศร (ท้อป)';
+            if (name.includes('สุรเชษฐ์')) return 'นายสุรเชษฐ์ บุริวงศ์ (ปู)';
+            return name;
+        }
+
         async function buildDriverDossierHtml(driver, year, addPageBreakBefore) {
             let evalData = {};
             let empData = {};
@@ -130,6 +139,7 @@
             const passengerTrips = evalData.passenger_stats?.total_trips || 0;
             const totalTrips = evalData.usage_stats?.total_completed_trips || 0;
             const missedLogs = evalData.usage_stats?.missed_logs || 0;
+            const formattedDriverName = getDriverDisplayName(driver);
 
             const missedList = empData.missed_details || [];
             let missedRows = '';
@@ -154,7 +164,7 @@
                     <div class="header-section">
                         <h4>แบบประเมินผลการปฏิบัติงานพนักงานขับรถ (ส่วนที่ 2: คณะกรรมการ)</h4>
                         <h5>โรงเรียนพะเยาพิทยาคม ประจำปีการศึกษา ${year}</h5>
-                        <p class="mb-0 fw-bold">ชื่อ-สกุล พนักงานขับรถ: ${driver.title || ''}${driver.first_name || driver.name || ''} ${driver.last_name || ''}</p>
+                        <p class="mb-0 fw-bold">ชื่อ-สกุล พนักงานขับรถ: ${formattedDriverName}</p>
                     </div>
 
                     <p class="fw-bold mb-2">คำชี้แจง: โปรดพิจารณาผลการปฏิบัติงานตามเกณฑ์ด้านล่าง แล้วกรอกคะแนนที่เหมาะสมลงในช่องว่าง</p>
