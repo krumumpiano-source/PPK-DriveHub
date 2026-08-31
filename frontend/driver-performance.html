@@ -138,9 +138,9 @@
                                 </div>
                                 <div class="col-12 col-md-4">
                                     <div class="p-3 border rounded bg-light stat-card h-100">
-                                        <small class="text-muted fw-bold d-block">2. เฉลี่ยคณะกรรมการ 5 ท่าน</small>
+                                        <small class="text-muted fw-bold d-block">2. คะแนนจากคณะกรรมการ</small>
                                         <h3 id="committeeScore" class="text-info fw-bold mt-2 mb-0">--</h3>
-                                        <small class="text-muted d-block mt-1" id="committeeCount">เต็ม 60 คะแนน (ประเมินแล้ว 0/5)</small>
+                                        <small class="text-muted d-block mt-1" id="committeeCount">เต็ม 60 คะแนน (ยังไม่มีกรรมการประเมิน)</small>
                                     </div>
                                 </div>
                                 <div class="col-12 col-md-4">
@@ -192,7 +192,7 @@
                             <!-- Committee Evaluation Form & Quick Matrix -->
                             <div class="card border mb-4" id="committeeEvalSection">
                                 <div class="card-header bg-light py-3 d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-0 fw-bold text-success"><i class="fa-solid fa-clipboard-check me-2"></i> กรอกคะแนนประเมินของคณะกรรมการ (กรรมการ 1/5)</h6>
+                                    <h6 class="mb-0 fw-bold text-success"><i class="fa-solid fa-clipboard-check me-2"></i> บันทึกผลการประเมินของคณะกรรมการ</h6>
                                     <span class="badge bg-success">สัดส่วน 60 คะแนน</span>
                                 </div>
                                 <div class="card-body p-4">
@@ -609,10 +609,10 @@
                 const hasEval = (pTrips > 0) || (cCount > 0) || ((data.passenger_weighted || 0) + (data.committee_weighted || 0) > 0);
 
                 document.getElementById('passengerScore').textContent = hasEval && data.passenger_weighted ? data.passenger_weighted.toFixed(2) : '--';
-                document.getElementById('passengerTripCount').textContent = `เต็ม 40 คะแนน (จาก ${pTrips} ทริป)`;
+                document.getElementById('passengerTripCount').textContent = pTrips > 0 ? `เต็ม 40 คะแนน (จากผู้ประเมิน ${pTrips} ครั้ง)` : 'เต็ม 40 คะแนน (ยังไม่มีผู้ประเมิน)';
 
                 document.getElementById('committeeScore').textContent = hasEval && data.committee_weighted ? data.committee_weighted.toFixed(2) : '--';
-                document.getElementById('committeeCount').textContent = `เต็ม 60 คะแนน (ประเมินแล้ว ${cCount}/5 ท่าน)`;
+                document.getElementById('committeeCount').textContent = cCount > 0 ? `เต็ม 60 คะแนน (ประเมินแล้ว ${cCount} ท่าน)` : 'เต็ม 60 คะแนน (ยังไม่มีกรรมการประเมิน)';
 
                 const total = (data.passenger_weighted || 0) + (data.committee_weighted || 0);
                 document.getElementById('totalScore').textContent = hasEval && total > 0 ? total.toFixed(2) : '--';
