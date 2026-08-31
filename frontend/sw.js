@@ -1,6 +1,6 @@
 // sw.js — PPK DriveHub Service Worker
-// v14: Evaluation Hub System
-var CACHE_NAME='ppk-v14';
+// v15: Official Executive Summary and Evaluation Hub System
+var CACHE_NAME='ppk-v15';
 // Only pre-cache truly static fallback assets. JS/CSS use network-first below.
 var STATIC_ASSETS=[
   '/manifest.json'

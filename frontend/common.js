@@ -219,8 +219,8 @@ function renderNavigation() {
     nav += _sidebarGroupBegin('evaluation', 'ระบบประเมิน', '⭐');
     nav += _sidebarItem('evaluation-guide.html', 'evaluation-guide', '📖', 'เกณฑ์และคำอธิบาย');
     nav += _sidebarItem('evaluate-trip.html', 'evaluate-trip', '📝', 'ประเมินโดยผู้ใช้บริการ');
-    nav += _sidebarItem('driver-performance.html', 'driver-performance', '⚖️', 'ประเมินโดยกรรมการ');
-    nav += _sidebarItem('driver-performance.html', 'driver-performance', '📊', 'สรุปผลและสถิติ');
+    nav += _sidebarItem('driver-performance.html', 'driver-performance', '⚖️', 'ประเมินโดยกรรมการ/สถิติ');
+    nav += _sidebarItem('print-executive-summary.html', 'print-executive-summary', '📑', 'สรุปผลประเมินเสนอ ผอ.');
     nav += _sidebarGroupEnd();
 
     // ── 5. รายงานและสถิติ ──
@@ -228,6 +228,7 @@ function renderNavigation() {
         nav += _sidebarGroupBegin('reports', 'รายงานและสถิติ', '📊');
         nav += _sidebarItem('reports.html', 'reports', '📊', 'รายงานและสถิติ');
         nav += _sidebarItem('driver-performance.html', 'driver-performance', '🏆', 'ผลงานพนักงาน');
+        nav += _sidebarItem('print-executive-summary.html', 'print-executive-summary', '📑', 'สรุปประเมิน (ผอ.)');
         nav += _sidebarItem('vehicle-timeline.html', 'vehicle-timeline', '🚗', 'ไทม์ไลน์รถ');
         nav += _sidebarItem('executive-dashboard.html', 'executive-dashboard', '📈', 'Dashboard ผู้บริหาร');
         nav += _sidebarItem('basic-info.html', 'basic-info', '📋', 'ข้อมูลรถและพนักงาน');
