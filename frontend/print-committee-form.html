@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ชุดเอกสารประเมินผลการปฏิบัติงานพนักงานขับรถ - PPK DriveHub</title>
+    <title>แบบประเมินผลการปฏิบัติหน้าที่พนักงานขับรถยนต์ - PPK DriveHub</title>
     <script src="config.js"></script>
     <script>window.API_BASE_URL=CONFIG.API_BASE_URL;window.currentPage='print-committee-form';window.REQUIRE_AUTH=true;</script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -15,9 +15,9 @@
         body { background: #f8fafc; font-size: 13px; color: #000; font-family: 'Sarabun', 'Segoe UI', Tahoma, sans-serif; }
         .print-container { max-width: 900px; margin: 0 auto; padding: 25px; background: #fff; box-shadow: 0 0 15px rgba(0,0,0,0.05); }
         
-        .header-section { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-        .header-section h4 { font-weight: bold; margin-bottom: 4px; }
-        .header-section h5 { font-weight: bold; margin-bottom: 4px; }
+        .header-section { text-align: center; margin-bottom: 18px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+        .header-section h4 { font-weight: bold; margin-bottom: 4px; font-size: 17px; }
+        .header-section h5 { font-weight: bold; margin-bottom: 4px; font-size: 15px; }
         
         .rubric-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
         .rubric-table th, .rubric-table td { border: 1px solid #000; padding: 6px 10px; }
@@ -47,8 +47,8 @@
     <div class="print-container">
         
         <div class="no-print">
-            <h5 class="fw-bold"><i class="fa-solid fa-print text-primary"></i> โหมดพิมพ์ชุดเอกสารประเมินพนักงาน (All-in-One Dossier)</h5>
-            <p class="text-muted small mb-3">เอกสารชุดนี้ประกอบด้วย <strong>หน้า 1: ใบให้คะแนนและลงนามกรรมการ 5 ท่าน</strong> และ <strong>หน้า 2: สถิติเชิงประจักษ์ + ตารางลืมบันทึกไมล์ + ลายเซ็นรับทราบผลของคนขับ</strong></p>
+            <h5 class="fw-bold"><i class="fa-solid fa-print text-primary"></i> ชุดเอกสารประเมินผลการปฏิบัติหน้าที่พนักงานขับรถยนต์ (เอกสารทางการ)</h5>
+            <p class="text-muted small mb-3">เอกสารชุดนี้ประกอบด้วย <strong>หน้า 1: แบบประเมินผลและลงนามของคณะกรรมการ</strong> และ <strong>หน้า 2: ข้อมูลสถิติเชิงประจักษ์ + ตรวจสอบความถูกต้องของเลขไมล์ + การลงนามรับทราบผล</strong></p>
             <div class="d-flex justify-content-center gap-2">
                 <button class="btn btn-primary btn-lg px-4" onclick="window.print()"><i class="fa-solid fa-print me-2"></i> สั่งพิมพ์ A4 / บันทึก PDF</button>
                 <a href="driver-performance.html" class="btn btn-secondary btn-lg">กลับหน้าหลัก</a>
@@ -56,10 +56,9 @@
         </div>
 
         <div id="dossierContent">
-            <!-- Populated by JavaScript -->
             <div class="text-center py-5">
                 <div class="spinner-border text-primary"></div>
-                <p class="mt-2 text-muted">กำลังเตรียมชุดเอกสารประเมิน...</p>
+                <p class="mt-2 text-muted">กำลังจัดเตรียมชุดเอกสารประเมินผล...</p>
             </div>
         </div>
 
@@ -93,7 +92,7 @@
                 }
 
                 if (driversToRender.length === 0) {
-                    document.getElementById('dossierContent').innerHTML = '<div class="alert alert-danger text-center">ไม่พบข้อมูลพนักงานขับรถ</div>';
+                    document.getElementById('dossierContent').innerHTML = '<div class="alert alert-danger text-center">ไม่พบข้อมูลพนักงานขับรถยนต์</div>';
                     return;
                 }
 
@@ -146,7 +145,7 @@
                     `;
                 });
             } else {
-                missedRows = '<tr><td colspan="4" class="text-center text-success py-2"><i class="fa-solid fa-circle-check"></i> ไม่พบประวัติการลืมบันทึกไมล์ (ปฏิบัติตามระเบียบครบถ้วน 100%)</td></tr>';
+                missedRows = '<tr><td colspan="4" class="text-center text-success py-2"><i class="fa-solid fa-circle-check"></i> ไม่พบประวัติการละเลยการบันทึกข้อมูลการใช้ยานพาหนะ (ครบถ้วน 100%)</td></tr>';
             }
 
             const anomalousList = empData.anomalous_details || [];
@@ -163,50 +162,50 @@
                     `;
                 });
             } else {
-                anomalousRows = '<tr><td colspan="4" class="text-center text-success py-2"><i class="fa-solid fa-circle-check"></i> ไม่พบประวัติการบันทึกเลขไมล์ผิดปกติ/มั่ว (ถูกต้องตามมาตรฐาน 100%)</td></tr>';
+                anomalousRows = '<tr><td colspan="4" class="text-center text-success py-2"><i class="fa-solid fa-circle-check"></i> ไม่พบประวัติการบันทึกเลขไมล์ขัดแย้งกับความเป็นจริง (ถูกต้องตามมาตรฐาน 100%)</td></tr>';
             }
 
             return `
                 <div class="${addPageBreakBefore ? 'page-break' : ''}">
-                    <!-- PAGE 1: COMMITTEE SCORING FORM -->
+                    <!-- หน้าที่ 1: แบบประเมินผลการปฏิบัติหน้าที่ของคณะกรรมการ -->
                     <div class="header-section">
-                        <h4>แบบประเมินผลการปฏิบัติงานพนักงานขับรถ (ส่วนที่ 2: คณะกรรมการ)</h4>
+                        <h4>แบบประเมินผลการปฏิบัติหน้าที่พนักงานขับรถยนต์ (ส่วนที่ 2: คณะกรรมการ)</h4>
                         <h5>โรงเรียนพะเยาพิทยาคม ประจำปีการศึกษา ${year}</h5>
-                        <p class="mb-0 fw-bold">ชื่อ-สกุล พนักงานขับรถ: ${driver.title || ''}${driver.first_name || driver.name || ''} ${driver.last_name || ''}</p>
+                        <p class="mb-0 fw-bold">ชื่อ-สกุล พนักงานขับรถยนต์: ${driver.title || ''}${driver.first_name || driver.name || ''} ${driver.last_name || ''}</p>
                     </div>
 
-                    <p class="fw-bold mb-2">คำชี้แจง: โปรดพิจารณาผลการปฏิบัติงานตามเกณฑ์ด้านล่าง แล้วกรอกคะแนนที่เหมาะสมลงในช่องว่าง</p>
+                    <p class="fw-bold mb-2">คำชี้แจง: โปรดพิจารณาและประเมินผลการปฏิบัติหน้าที่ตามมาตรฐานตัวชี้วัด โดยกรอกคะแนนที่เหมาะสมลงในช่องว่าง</p>
                     
                     <table class="rubric-table">
                         <thead>
                             <tr>
-                                <th style="width: 75%;">หัวข้อการประเมินและเกณฑ์พิจารณา (เต็ม 100 คะแนน)</th>
+                                <th style="width: 75%;">หัวข้อการประเมินและเกณฑ์พิจารณา (คะแนนเต็ม 100 คะแนน)</th>
                                 <th style="width: 25%;">คะแนนที่ได้</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <!-- Topic 1 -->
+                            <!-- หมวดที่ 1 -->
                             <tr class="table-light">
-                                <td colspan="2"><strong>1. ด้านการดูแลรถและซ่อมบำรุง (คะแนนเต็ม 30)</strong></td>
+                                <td colspan="2"><strong>1. ด้านการดูแลรักษาและบำรุงรักษายานพาหนะ (คะแนนเต็ม 30 คะแนน)</strong></td>
                             </tr>
                             <tr>
-                                <td class="ps-3">• ล้างและทำความสะอาดรถทั้งภายนอกและภายในให้สะอาดอยู่เสมอ (6 คะแนน)</td>
+                                <td class="ps-3">• ทำความสะอาดและดูแลสุขอนามัยภายในและภายนอกยานพาหนะอย่างสม่ำเสมอ (6 คะแนน)</td>
                                 <td class="score-box"><span class="score-input-line"></span> / 6</td>
                             </tr>
                             <tr>
-                                <td class="ps-3">• ตรวจเช็คสภาพเครื่องยนต์พื้นฐานรายวัน (น้ำ, น้ำมันเครื่อง, ลมยาง) ก่อนออกรถ (6 คะแนน)</td>
+                                <td class="ps-3">• ตรวจสอบความพร้อมของระบบเครื่องยนต์ ของเหลว และอุปกรณ์ความปลอดภัยพื้นฐานก่อนปฏิบัติหน้าที่ (6 คะแนน)</td>
                                 <td class="score-box"><span class="score-input-line"></span> / 6</td>
                             </tr>
                             <tr>
-                                <td class="ps-3">• นำรถเข้าตรวจเช็คระยะ และเปลี่ยนถ่ายน้ำมันเครื่องตรงตามกำหนดเวลา (6 คะแนน)</td>
+                                <td class="ps-3">• นำยานพาหนะเข้ารับการตรวจเช็คระยะ เปลี่ยนถ่ายของเหลว และบำรุงรักษาตามรอบระยะเวลาที่กำหนด (6 คะแนน)</td>
                                 <td class="score-box"><span class="score-input-line"></span> / 6</td>
                             </tr>
                             <tr>
-                                <td class="ps-3">• สังเกตความผิดปกติของรถ และรีบทำเรื่องแจ้งซ่อมบำรุงทันทีก่อนเกิดความเสียหาย (6 คะแนน)</td>
+                                <td class="ps-3">• สังเกตและรายงานความผิดปกติของยานพาหนะ พร้อมดำเนินการแจ้งซ่อมบำรุงตามขั้นตอนราชการทันที (6 คะแนน)</td>
                                 <td class="score-box"><span class="score-input-line"></span> / 6</td>
                             </tr>
                             <tr>
-                                <td class="ps-3">• จอดรถในสถานที่ที่โรงเรียนกำหนดอย่างเป็นระเบียบ (6 คะแนน)</td>
+                                <td class="ps-3">• จัดเก็บและจอดพักยานพาหนะในสถานที่ที่สถานศึกษากำหนดอย่างเป็นระเบียบเรียบร้อย (6 คะแนน)</td>
                                 <td class="score-box"><span class="score-input-line"></span> / 6</td>
                             </tr>
                             <tr>
@@ -214,28 +213,28 @@
                                 <td class="score-box fw-bold"><span class="score-input-line"></span> / 30</td>
                             </tr>
 
-                            <!-- Topic 2 -->
+                            <!-- หมวดที่ 2 -->
                             <tr class="table-light">
-                                <td colspan="2"><strong>2. ด้านระเบียบวินัยและการทำงาน (คะแนนเต็ม 40)</strong></td>
+                                <td colspan="2"><strong>2. ด้านวินัย จรรยาบรรณ และการปฏิบัติหน้าที่ (คะแนนเต็ม 40 คะแนน)</strong></td>
                             </tr>
                             <tr>
-                                <td class="ps-3">• มาปฏิบัติงานตรงเวลา และไม่ละทิ้งหน้าที่ในเวลาราชการ (8 คะแนน)</td>
+                                <td class="ps-3">• ปฏิบัติหน้าที่ตรงต่อเวลา ไม่ออกนอกสถานศึกษาหรือละทิ้งหน้าที่ในเวลาราชการโดยไม่ได้รับอนุญาต (8 คะแนน)</td>
                                 <td class="score-box"><span class="score-input-line"></span> / 8</td>
                             </tr>
                             <tr>
-                                <td class="ps-3">• ปฏิบัติตามคำสั่งของโรงเรียนและผู้บังคับบัญชาอย่างเคร่งครัด (8 คะแนน)</td>
+                                <td class="ps-3">• ปฏิบัติตามคำสั่งของผู้บังคับบัญชาและระเบียบของสถานศึกษาอย่างเคร่งครัด (8 คะแนน)</td>
                                 <td class="score-box"><span class="score-input-line"></span> / 8</td>
                             </tr>
                             <tr>
-                                <td class="ps-3">• สถิติการลากิจ ลาป่วย อยู่ในเกณฑ์ที่กำหนด และมีการแจ้งลาล่วงหน้าตามระเบียบ (8 คะแนน)</td>
+                                <td class="ps-3">• สถิติการลา (ลากิจ/ลาป่วย) อยู่ในเกณฑ์ที่ระเบียบกำหนด และดำเนินการขออนุญาตลาถูกต้องตามระเบียบสารบรรณ (8 คะแนน)</td>
                                 <td class="score-box"><span class="score-input-line"></span> / 8</td>
                             </tr>
                             <tr>
-                                <td class="ps-3 fw-bold">• บันทึกข้อมูลการใช้รถ (ไมล์เข้า-ออก) ถูกต้อง ไม่บันทึกมั่ว และเป็นปัจจุบัน (8 คะแนน)</td>
+                                <td class="ps-3 fw-bold">• บันทึกข้อมูลการใช้ยานพาหนะ (เลขไมล์เข้า-ออก) ถูกต้องครบถ้วน ตรงตามความเป็นจริง และเป็นปัจจุบัน (8 คะแนน)</td>
                                 <td class="score-box"><span class="score-input-line"></span> / 8</td>
                             </tr>
                             <tr>
-                                <td class="ps-3">• ประจำอยู่ที่จุดพักพร้อมปฏิบัติหน้าที่ ไม่ออกนอกสถานศึกษาโดยไม่ได้รับอนุญาต (8 คะแนน)</td>
+                                <td class="ps-3">• มีความพร้อมในการปฏิบัติหน้าที่ ณ จุดนัดหมาย และดูแลความปลอดภัยของผู้โดยสารตลอดการเดินทาง (8 คะแนน)</td>
                                 <td class="score-box"><span class="score-input-line"></span> / 8</td>
                             </tr>
                             <tr>
@@ -243,28 +242,28 @@
                                 <td class="score-box fw-bold"><span class="score-input-line"></span> / 40</td>
                             </tr>
 
-                            <!-- Topic 3 -->
+                            <!-- หมวดที่ 3 -->
                             <tr class="table-light">
-                                <td colspan="2"><strong>3. ด้านการทุ่มเทและจิตอาสา (คะแนนเต็ม 30)</strong></td>
+                                <td colspan="2"><strong>3. ด้านจิตบริการ การอุทิศเวลา และความร่วมมือในองค์กร (คะแนนเต็ม 30 คะแนน)</strong></td>
                             </tr>
                             <tr>
-                                <td class="ps-3">• อุทิศเวลาให้แก่ราชการ ยินดีปฏิบัติงานนอกเวลาราชการเมื่อมีเหตุจำเป็นเร่งด่วน (6 คะแนน)</td>
+                                <td class="ps-3">• อุทิศเวลาและพร้อมปฏิบัติหน้าที่นอกเวลาราชการหรือภารกิจเร่งด่วนของสถานศึกษา (6 คะแนน)</td>
                                 <td class="score-box"><span class="score-input-line"></span> / 6</td>
                             </tr>
                             <tr>
-                                <td class="ps-3">• เสนอตัวช่วยเหลืองานส่วนรวมของโรงเรียน (งานรับส่งเอกสาร/พัสดุ) ในช่วงไม่มีคิววิ่งรถ (6 คะแนน)</td>
+                                <td class="ps-3">• ให้ความร่วมมือและช่วยเหลือภารกิจส่วนรวมของสถานศึกษาในช่วงเวลาที่ไม่มีภารกิจการใช้รถ (6 คะแนน)</td>
                                 <td class="score-box"><span class="score-input-line"></span> / 6</td>
                             </tr>
                             <tr>
-                                <td class="ps-3">• มีน้ำใจ เอื้อเฟื้อเผื่อแผ่ และสามารถทำงานร่วมกับคณะครูได้เป็นอย่างดี (6 คะแนน)</td>
+                                <td class="ps-3">• มีมนุษยสัมพันธ์ สุภาพเรียบร้อย และทำงานร่วมกับคณะครู บุคลากร และนักเรียนได้เป็นอย่างดี (6 คะแนน)</td>
                                 <td class="score-box"><span class="score-input-line"></span> / 6</td>
                             </tr>
                             <tr>
-                                <td class="ps-3">• ดูแลรักษาความสะอาดบริเวณลานจอดรถของโรงเรียนให้เรียบร้อย (6 คะแนน)</td>
+                                <td class="ps-3">• ดูแลรักษาความสะอาดและสุขอนามัยบริเวณโรงจอดรถและพื้นที่ปฏิบัติงาน (6 คะแนน)</td>
                                 <td class="score-box"><span class="score-input-line"></span> / 6</td>
                             </tr>
                             <tr>
-                                <td class="ps-3">• มีทัศนคติที่ดีต่อองค์กร ไม่สร้างความแตกแยก และช่วยรักษาภาพลักษณ์ที่ดี (6 คะแนน)</td>
+                                <td class="ps-3">• มีทัศนคติที่ดีต่อสถานศึกษา ปฏิบัติตนตามจรรยาบรรณ และรักษาภาพลักษณ์อันดีขององค์กร (6 คะแนน)</td>
                                 <td class="score-box"><span class="score-input-line"></span> / 6</td>
                             </tr>
                             <tr>
@@ -272,9 +271,9 @@
                                 <td class="score-box fw-bold"><span class="score-input-line"></span> / 30</td>
                             </tr>
 
-                            <!-- Total -->
+                            <!-- รวมคะแนน -->
                             <tr style="background-color: #f1f5f9;">
-                                <td class="text-end fw-bold fs-6">รวมคะแนนกรรมการ (คิดสัดส่วน 60 คะแนนสุทธิในระบบ)</td>
+                                <td class="text-end fw-bold fs-6">รวมคะแนนของคณะกรรมการ (นำไปคิดสัดส่วน 60 คะแนนสุทธิในระบบ)</td>
                                 <td class="score-box fs-6 fw-bold"><span class="score-input-line"></span> / 100</td>
                             </tr>
                         </tbody>
@@ -285,56 +284,56 @@
                             <p class="mb-1">ลงชื่อกรรมการผู้ประเมิน</p>
                             <div class="signature-line"></div>
                             <p class="mb-0 small">(.......................................................................)</p>
-                            <p class="small text-muted">ตำแหน่ง คณะกรรมการประเมินผลการปฏิบัติงาน</p>
+                            <p class="small text-muted">ตำแหน่ง คณะกรรมการประเมินผลการปฏิบัติหน้าที่</p>
                         </div>
                         <div class="signature-box">
                             <p class="mb-1">ลงชื่อประธานกรรมการ</p>
                             <div class="signature-line"></div>
                             <p class="mb-0 small">(.......................................................................)</p>
-                            <p class="small text-muted">ตำแหน่ง ประธานคณะกรรมการประเมินฯ</p>
+                            <p class="small text-muted">ตำแหน่ง ประธานคณะกรรมการประเมินผลการปฏิบัติหน้าที่</p>
                         </div>
                     </div>
 
-                    <!-- PAGE 2: EMPIRICAL EVIDENCE & AUDIT DRILLDOWN -->
+                    <!-- หน้าที่ 2: ข้อมูลสถิติเชิงประจักษ์ประกอบการพิจารณาผลการปฏิบัติหน้าที่ -->
                     <div class="page-break">
                         <div class="header-section">
-                            <h4>ข้อมูลสถิติเชิงประจักษ์ประกอบการประเมิน (Empirical Evidence)</h4>
-                            <h5>เอกสารแนบประกอบการพิจารณาผลการปฏิบัติงาน: ${driver.title || ''}${driver.first_name || driver.name || ''} ${driver.last_name || ''}</h5>
+                            <h4>ข้อมูลสถิติเชิงประจักษ์ประกอบการประเมินผล (Empirical Evidence)</h4>
+                            <h5>เอกสารแนบประกอบการพิจารณาผลการปฏิบัติหน้าที่: ${driver.title || ''}${driver.first_name || driver.name || ''} ${driver.last_name || ''}</h5>
                             <p class="mb-0 small text-muted">ข้อมูลสถิติดึงจากระบบฐานข้อมูลกลาง PPK DriveHub ณ วันที่ ${new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                         </div>
 
-                        <!-- 1. Passenger Score Summary -->
-                        <h6 class="fw-bold mb-2"><i class="fa-solid fa-star text-warning"></i> 1. สรุปคะแนนความพึงพอใจจากผู้รับบริการ (ผู้โดยสาร):</h6>
+                        <!-- 1. สรุปคะแนนผู้โดยสาร -->
+                        <h6 class="fw-bold mb-2"><i class="fa-solid fa-star text-warning"></i> 1. สรุปผลการประเมินความพึงพอใจจากผู้รับบริการ (ผู้โดยสาร):</h6>
                         <table class="rubric-table mb-3">
                             <tr>
-                                <td style="width: 35%; background: #f8fafc; font-weight: bold;">คะแนนเฉลี่ยจากผู้โดยสาร:</td>
+                                <td style="width: 35%; background: #f8fafc; font-weight: bold;">คะแนนเฉลี่ยจากผู้รับบริการ:</td>
                                 <td class="fw-bold text-primary">${passengerScore} / เต็ม 40 คะแนน</td>
-                                <td style="width: 25%; background: #f8fafc; font-weight: bold;">จำนวนครั้งที่ประเมิน:</td>
+                                <td style="width: 25%; background: #f8fafc; font-weight: bold;">จำนวนครั้งที่ได้รับการประเมิน:</td>
                                 <td>${passengerTrips} ครั้ง</td>
                             </tr>
                         </table>
 
-                        <!-- 2. Trip and Mileage Compliance -->
-                        <h6 class="fw-bold mb-2"><i class="fa-solid fa-car text-primary"></i> 2. สถิติการปฏิบัติงานและการบันทึกข้อมูลการใช้รถ:</h6>
+                        <!-- 2. สถิติการวิ่งงานและการบันทึกข้อมูล -->
+                        <h6 class="fw-bold mb-2"><i class="fa-solid fa-car text-primary"></i> 2. สรุปสถิติการปฏิบัติหน้าที่และการบันทึกข้อมูลการใช้ยานพาหนะ:</h6>
                         <table class="rubric-table mb-3">
                             <tr>
-                                <td style="width: 20%; background: #f8fafc; font-weight: bold;">วิ่งงานสำเร็จ:</td>
+                                <td style="width: 20%; background: #f8fafc; font-weight: bold;">ปฏิบัติภารกิจสำเร็จ:</td>
                                 <td class="text-center fw-bold">${totalTrips} คิว</td>
-                                <td style="width: 20%; background: #f8fafc; font-weight: bold;">ลืมบันทึกไมล์:</td>
+                                <td style="width: 20%; background: #f8fafc; font-weight: bold;">ไม่บันทึกข้อมูลการใช้รถ:</td>
                                 <td class="text-center fw-bold ${missedLogs > 0 ? 'text-danger' : 'text-success'}">${missedLogs} ครั้ง</td>
-                                <td style="width: 20%; background: #f8fafc; font-weight: bold;">ไมล์ผิดปกติ/มั่ว:</td>
+                                <td style="width: 20%; background: #f8fafc; font-weight: bold;">บันทึกเลขไมล์ขัดแย้ง (ถอยหลัง):</td>
                                 <td class="text-center fw-bold ${anomalousLogs > 0 ? 'text-danger' : 'text-success'}">${anomalousLogs} ครั้ง</td>
                             </tr>
                         </table>
 
-                        <!-- 3. Detailed Anomalous Mileage Drilldown -->
-                        <h6 class="fw-bold mb-2"><i class="fa-solid fa-triangle-exclamation text-danger"></i> 3. รายการบันทึกเลขไมล์ผิดปกติ/มั่ว (ไมล์ถอยหลัง หรือ ไมล์ 0 กม.):</h6>
+                        <!-- 3. รายการเลขไมล์ขัดแย้ง -->
+                        <h6 class="fw-bold mb-2"><i class="fa-solid fa-triangle-exclamation text-danger"></i> 3. รายการบันทึกเลขไมล์ขัดแย้งกับความเป็นจริง (เลขไมล์ขากลับน้อยกว่าขาออก):</h6>
                         <table class="rubric-table mb-3" style="font-size: 11px;">
                             <thead>
                                 <tr style="background:#fee2e2;">
                                     <th style="width: 18%;">วันที่</th>
-                                    <th style="width: 15%;">ทะเบียนรถ</th>
-                                    <th>ภารกิจ / สถานที่</th>
+                                    <th style="width: 15%;">ทะเบียนยานพาหนะ</th>
+                                    <th>ภารกิจราชการ / สถานที่</th>
                                     <th style="width: 38%;">ลักษณะความผิดปกติที่ตรวจพบ</th>
                                 </tr>
                             </thead>
@@ -343,15 +342,15 @@
                             </tbody>
                         </table>
 
-                        <!-- 4. Detailed Missed Mileage Drilldown -->
-                        <h6 class="fw-bold mb-2"><i class="fa-solid fa-magnifying-glass text-secondary"></i> 4. รายละเอียดและประวัติการลืมบันทึกไมล์ (Missed Logs Audit Trail):</h6>
+                        <!-- 4. รายการละเลยการบันทึกข้อมูล -->
+                        <h6 class="fw-bold mb-2"><i class="fa-solid fa-magnifying-glass text-secondary"></i> 4. รายการประวัติการไม่บันทึกข้อมูลการใช้ยานพาหนะ (Audit Trail):</h6>
                         <table class="rubric-table mb-4" style="font-size: 11px;">
                             <thead>
                                 <tr>
                                     <th style="width: 18%;">วันที่</th>
-                                    <th style="width: 15%;">ทะเบียนรถ</th>
-                                    <th>ภารกิจ / สถานที่</th>
-                                    <th style="width: 28%;">ส่วนที่ไม่ได้บันทึก</th>
+                                    <th style="width: 15%;">ทะเบียนยานพาหนะ</th>
+                                    <th>ภารกิจราชการ / สถานที่</th>
+                                    <th style="width: 28%;">รายการที่ไม่ได้ดำเนินการบันทึก</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -359,15 +358,15 @@
                             </tbody>
                         </table>
 
-                        <!-- 5. Driver Acknowledgment -->
+                        <!-- 5. การลงนามรับทราบผล -->
                         <div class="p-3 border rounded bg-light mt-4">
-                            <h6 class="fw-bold mb-2"><i class="fa-solid fa-signature text-secondary"></i> การลงนามรับทราบผลการประเมินของพนักงานขับรถ:</h6>
-                            <p class="small mb-3">ข้าพเจ้าได้รับทราบผลคะแนนการประเมินและข้อมูลสถิติเชิงประจักษ์ข้างต้นเรียบร้อยแล้ว</p>
+                            <h6 class="fw-bold mb-2"><i class="fa-solid fa-signature text-secondary"></i> 5. การลงนามรับทราบผลการประเมินการปฏิบัติหน้าที่:</h6>
+                            <p class="small mb-3">ข้าพเจ้าได้รับทราบผลการประเมินการปฏิบัติหน้าที่และข้อมูลสถิติเชิงประจักษ์ข้างต้นเรียบร้อยแล้ว จึงลงลายมือชื่อไว้เป็นหลักฐาน</p>
                             <div class="row align-items-end text-center">
                                 <div class="col-6">
                                     <div class="signature-line" style="width: 200px;"></div>
                                     <p class="small mb-0">ลงชื่อ (${driver.title || ''}${driver.first_name || driver.name || ''} ${driver.last_name || ''})</p>
-                                    <p class="small text-muted mb-0">พนักงานขับรถผู้รับการประเมิน</p>
+                                    <p class="small text-muted mb-0">พนักงานขับรถยนต์ผู้รับการประเมิน</p>
                                 </div>
                                 <div class="col-6">
                                     <p class="small mb-0">วันที่ .......... / .......... / ..............</p>

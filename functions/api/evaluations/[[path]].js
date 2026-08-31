@@ -82,7 +82,7 @@ export async function onRequest(context) {
           const dep = trip.dep_mileage;
           const ret = trip.ret_mileage;
           if (dep !== null && ret !== null && dep !== undefined && ret !== undefined) {
-            if (ret < dep || (ret === dep && dep > 0)) {
+            if (ret < dep) {
               anomalousCount++;
             }
           }
@@ -232,16 +232,14 @@ export async function onRequest(context) {
                     });
                 }
 
-                // Check Anomalous Mileage (Retrograde or Zero Distance)
+                // Check Anomalous Mileage (Retrograde / Negative Mileage only)
                 const dep = q.dep_mileage;
                 const ret = q.ret_mileage;
                 let anomalyReasons = [];
 
                 if (dep !== null && ret !== null && dep !== undefined && ret !== undefined) {
                     if (ret < dep) {
-                        anomalyReasons.push(`ไมล์ถอยหลัง (ขาออก: ${dep.toLocaleString()} / ขากลับ: ${ret.toLocaleString()})`);
-                    } else if (ret === dep && dep > 0) {
-                        anomalyReasons.push(`ไมล์เท่าเดิมเป๊ะ 0 กม. (ขาออก: ${dep.toLocaleString()} / ขากลับ: ${ret.toLocaleString()})`);
+                        anomalyReasons.push(`เลขไมล์ขากลับน้อยกว่าขาออก (ขาออก: ${dep.toLocaleString()} กม. / ขากลับ: ${ret.toLocaleString()} กม.)`);
                     }
                 }
 
