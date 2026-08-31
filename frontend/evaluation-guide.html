@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>คู่มือและเกณฑ์การประเมินพนักงานขับรถ - PPK DriveHub</title>
+    <script src="config.js"></script>
+    <script>window.API_BASE_URL=CONFIG.API_BASE_URL;window.currentPage='evaluation-guide';window.REQUIRE_AUTH=false;</script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="common.css">
+    <script src="js/api.js"></script>
+    <script src="common.js"></script>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            --card-gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --card-gradient-2: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        .hero-banner {
+            background: var(--primary-gradient);
+            color: #fff;
+            padding: 2.5rem 1.5rem;
+            border-radius: 1rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 25px rgba(30, 60, 114, 0.2);
+        }
+        .guide-card {
+            border: none;
+            border-radius: 1rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 1.5rem;
+        }
+        .guide-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        .score-badge-circle {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #fff;
+            margin: 0 auto 1rem;
+        }
+        .table-rubric th { background-color: #f1f5f9; font-weight: 600; }
+        .back-btn { cursor:pointer; color:var(--color-primary); font-weight:500; display:inline-flex; align-items:center; gap:6px; margin-bottom:1rem; text-decoration:none; }
+        .back-btn:hover { text-decoration: underline; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container py-4" style="max-width: 1000px;">
+        <a href="dashboard.html" class="back-btn"><i class="fa-solid fa-arrow-left"></i> กลับสู่หน้าหลัก</a>
+
+        <!-- Hero Header -->
+        <div class="hero-banner text-center text-md-start d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
+            <div>
+                <span class="badge bg-warning text-dark px-3 py-2 rounded-pill mb-2 fw-bold"><i class="fa-solid fa-award"></i> ระเบียบและมาตรฐานการปฏิบัติงาน</span>
+                <h2 class="fw-bold mb-2">คู่มือและเกณฑ์การประเมินพนักงานขับรถ</h2>
+                <p class="mb-0 opacity-90">ระบบประเมินผลการปฏิบัติงานรอบปีงบประมาณและพิจารณาต่อสัญญาจ้าง (PPK DriveHub)</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="evaluate-trip.html" class="btn btn-light fw-bold px-3 py-2"><i class="fa-solid fa-pen-to-square text-primary"></i> ไปหน้าประเมิน</a>
+            </div>
+        </div>
+
+        <!-- 100-Point Overview Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <div class="card guide-card h-100 p-4 border-start border-4 border-primary">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="score-badge-circle" style="background: var(--card-gradient-1);">40%</div>
+                        <div>
+                            <h4 class="fw-bold text-primary mb-1">ส่วนที่ 1: ผู้รับบริการประเมิน</h4>
+                            <p class="text-muted mb-0">ประเมินความพึงพอใจโดยคณะครู บุคลากร และผู้โดยสารจริงตลอดทั้งปี (คิดเป็น 40 คะแนนเต็ม)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card guide-card h-100 p-4 border-start border-4 border-success">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="score-badge-circle" style="background: var(--card-gradient-2);">60%</div>
+                        <div>
+                            <h4 class="fw-bold text-success mb-1">ส่วนที่ 2: คณะกรรมการประเมิน</h4>
+                            <p class="text-muted mb-0">ประเมินโดยคณะกรรมการ 5 ท่าน ตามเกณฑ์ระเบียบวินัย การดูแลรถ และจิตอาสา (คิดเป็น 60 คะแนนเต็ม)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Section 1 -->
+        <div class="card guide-card mb-4">
+            <div class="card-header bg-white py-3 border-bottom d-flex align-items-center gap-2">
+                <i class="fa-solid fa-users text-primary fs-5"></i>
+                <h5 class="mb-0 fw-bold">ส่วนที่ 1: เกณฑ์การประเมินโดยผู้ขอใช้รถ / ผู้โดยสาร (40 คะแนน)</h5>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted">ผู้โดยสารจะให้คะแนนเป็นระดับ <strong>1 ถึง 5 ดาว ⭐</strong> ใน 3 ด้านหลัก:</p>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded-3 h-100 border">
+                            <h6 class="fw-bold text-primary"><i class="fa-solid fa-shield-halved"></i> 1. ด้านขับขี่ปลอดภัย</h6>
+                            <ul class="small text-muted mb-0 ps-3">
+                                <li>ขับขี่นุ่มนวล ไม่เบรกกระชาก</li>
+                                <li>ปฏิบัติตามกฎจราจรเคร่งครัด</li>
+                                <li>ใช้ความเร็วเหมาะสม ปลอดภัย</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded-3 h-100 border">
+                            <h6 class="fw-bold text-success"><i class="fa-solid fa-hand-holding-heart"></i> 2. ด้านบริการและมารยาท</h6>
+                            <ul class="small text-muted mb-0 ps-3">
+                                <li>กริยาวาจาสุภาพ ให้เกียรติ</li>
+                                <li>แต่งกายสะอาดเรียบร้อย</li>
+                                <li>ช่วยยกสัมภาระ อำนวยความสะดวก</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded-3 h-100 border">
+                            <h6 class="fw-bold text-warning text-dark"><i class="fa-solid fa-clock"></i> 3. ด้านความตรงต่อเวลา</h6>
+                            <ul class="small text-muted mb-0 ps-3">
+                                <li>มารอรับก่อนเวลานัดหมายเสมอ</li>
+                                <li>ส่งถึงจุดหมายปลายทางทันเวลา</li>
+                                <li>จอดรอรับ-ส่งตรงจุดที่นัดหมาย</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-primary d-flex align-items-center gap-3">
+                    <i class="fa-solid fa-calculator fs-3"></i>
+                    <div>
+                        <strong>สูตรการคำนวณคะแนนส่วนผู้โดยสารเข้าสู่ฐาน 40 คะแนน:</strong>
+                        <div class="small mt-1 font-monospace bg-white p-2 rounded border">
+                            คะแนนส่วนที่ 1 = ( คะแนนดาวเฉลี่ยที่ได้รับ / 5 ) × 40 &nbsp;&nbsp;[หรือคิดเป็น: คะแนนดาวเฉลี่ย × 8]
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Section 2 -->
+        <div class="card guide-card mb-4">
+            <div class="card-header bg-white py-3 border-bottom d-flex align-items-center gap-2">
+                <i class="fa-solid fa-gavel text-success fs-5"></i>
+                <h5 class="mb-0 fw-bold">ส่วนที่ 2: เกณฑ์การประเมินโดยคณะกรรมการ 5 ท่าน (60 คะแนน)</h5>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted">คณะกรรมการทั้ง 5 ท่านจะให้คะแนนเต็ม 100 คะแนนใน 3 หมวด แล้วระบบจะนำคะแนนเฉลี่ยแปลงเป็นสัดส่วน 60 คะแนนสุทธิ:</p>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-rubric align-middle mb-3">
+                        <thead>
+                            <tr class="text-center">
+                                <th style="width: 25%;">หมวดการประเมิน</th>
+                                <th style="width: 15%;">คะแนนเต็ม</th>
+                                <th>เกณฑ์การพิจารณาเชิงประจักษ์ (Empirical Criteria)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="fw-bold text-primary">1. การดูแลรถและซ่อมบำรุง</td>
+                                <td class="text-center fw-bold fs-5">30</td>
+                                <td class="small">
+                                    • ล้างและทำความสะอาดรถทั้งภายนอกและภายในเป็นประจำ (6 คะแนน)<br>
+                                    • ตรวจสภาพเครื่องยนต์พื้นฐานรายวัน (น้ำ, น้ำมันเครื่อง, ลมยาง, แบตเตอรี่) ก่อนออกรถ (6 คะแนน)<br>
+                                    • นำรถเข้าตรวจเช็คระยะและเปลี่ยนถ่ายน้ำมันเครื่องตรงเวลา (6 คะแนน)<br>
+                                    • สังเกตความผิดปกติและรีบแจ้งซ่อมก่อนเสียหายรุนแรง (6 คะแนน)<br>
+                                    • จอดรถในโรงจอดที่โรงเรียนกำหนดอย่างเป็นระเบียบ (6 คะแนน)
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold text-success">2. ระเบียบวินัยและการทำงาน</td>
+                                <td class="text-center fw-bold fs-5">40</td>
+                                <td class="small">
+                                    • มาปฏิบัติงานตรงเวลา ไม่ละทิ้งหน้าที่ในเวลาราชการ (8 คะแนน)<br>
+                                    • ปฏิบัติตามคำสั่งของโรงเรียนและผู้บังคับบัญชาอย่างเคร่งครัด (8 คะแนน)<br>
+                                    • สถิติการลาอยู่ในเกณฑ์และแจ้งลาล่วงหน้าตามระเบียบ (8 คะแนน)<br>
+                                    <strong class="text-danger">• บันทึกข้อมูลการใช้รถ (ไมล์เข้า-ออก) ในระบบแอปพลิเคชันอย่างสม่ำเสมอและเป็นปัจจุบัน (8 คะแนน)</strong><br>
+                                    • ประจำอยู่ที่จุดพักพร้อมปฏิบัติหน้าที่ ไม่ออกนอกสถานศึกษาโดยไม่ได้รับอนุญาต (8 คะแนน)
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold text-info">3. การทุ่มเทและจิตอาสา</td>
+                                <td class="text-center fw-bold fs-5">30</td>
+                                <td class="small">
+                                    • อุทิศเวลาให้แก่ราชการ ยินดีปฏิบัติงานนอกเวลาราชการเมื่อมีเหตุจำเป็น (6 คะแนน)<br>
+                                    • เสนอตัวช่วยเหลืองานส่วนรวม (รับส่งเอกสาร/พัสดุ) ในช่วงไม่มีคิววิ่งรถ (6 คะแนน)<br>
+                                    • มีน้ำใจ เอื้อเฟื้อเผื่อแผ่ และทำงานร่วมกับคณะครูได้เป็นอย่างดี (6 คะแนน)<br>
+                                    • ดูแลรักษาความสะอาดบริเวณลานจอดรถของโรงเรียน (6 คะแนน)<br>
+                                    • มีทัศนคติที่ดีต่อองค์กร รักษาภาพลักษณ์ที่ดีของโรงเรียน (6 คะแนน)
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-light fw-bold text-center">
+                                <td>รวมคะแนนกรรมการ</td>
+                                <td class="fs-5 text-success">100</td>
+                                <td class="text-end small">ระบบนำค่าเฉลี่ยกรรมการ 5 ท่าน แปลงเป็นคะแนนสุทธิ 60 คะแนน</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grade Cutoffs -->
+        <div class="card guide-card mb-4">
+            <div class="card-header bg-white py-3 border-bottom d-flex align-items-center gap-2">
+                <i class="fa-solid fa-chart-simple text-warning fs-5"></i>
+                <h5 class="mb-0 fw-bold">เกณฑ์การตัดระดับผลการประเมิน (Grade Standards)</h5>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted">เมื่อนำ <strong>คะแนนส่วนที่ 1 (40) + ส่วนที่ 2 (60)</strong> รวมกันเป็นคะแนนสุทธิ 100 คะแนนเต็ม:</p>
+                <div class="row g-2 text-center font-monospace">
+                    <div class="col-6 col-md">
+                        <div class="p-3 bg-success bg-opacity-10 border border-success rounded-3">
+                            <span class="badge bg-success mb-1">90 - 100</span>
+                            <div class="fw-bold text-success">ดีเด่น</div>
+                            <small class="text-muted">Excellent</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md">
+                        <div class="p-3 bg-primary bg-opacity-10 border border-primary rounded-3">
+                            <span class="badge bg-primary mb-1">80 - 89</span>
+                            <div class="fw-bold text-primary">ดีมาก</div>
+                            <small class="text-muted">Very Good</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md">
+                        <div class="p-3 bg-info bg-opacity-10 border border-info rounded-3">
+                            <span class="badge bg-info text-dark mb-1">70 - 79</span>
+                            <div class="fw-bold text-dark">ดี</div>
+                            <small class="text-muted">Good</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md">
+                        <div class="p-3 bg-warning bg-opacity-10 border border-warning rounded-3">
+                            <span class="badge bg-warning text-dark mb-1">60 - 69</span>
+                            <div class="fw-bold text-warning text-dark">พอใช้</div>
+                            <small class="text-muted">Fair</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md">
+                        <div class="p-3 bg-danger bg-opacity-10 border border-danger rounded-3">
+                            <span class="badge bg-danger mb-1">&lt; 60</span>
+                            <div class="fw-bold text-danger">ต้องปรับปรุง</div>
+                            <small class="text-muted">เข้าสู่แผน PIP</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PIP Workflow -->
+        <div class="card guide-card">
+            <div class="card-header bg-white py-3 border-bottom d-flex align-items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation text-danger fs-5"></i>
+                <h5 class="mb-0 fw-bold">ขั้นตอนแผนพัฒนาการปฏิบัติงานและการประเมินซ้ำ (PIP 30 วัน)</h5>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted mb-3">กรณีพนักงานขับรถมีผลคะแนนต่ำกว่าเกณฑ์ หรือมีพฤติกรรมละเลยระเบียบรถราชการ (เช่น ไม่บันทึกเลขไมล์สะสม):</p>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="border p-3 rounded-3 h-100 bg-light">
+                            <div class="fw-bold text-danger mb-1">1. ออกหนังสือเตือน (Warning)</div>
+                            <small class="text-muted">คณะกรรมการออกหนังสือแจ้งเตือนเป็นลายลักษณ์อักษร พร้อมแนบหลักฐานตารางเจาะลึกวันที่กระทำผิด</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border p-3 rounded-3 h-100 bg-light">
+                            <div class="fw-bold text-warning text-dark mb-1">2. ช่วงประเมินซ้ำ (PIP 30 วัน)</div>
+                            <small class="text-muted">กำหนดระยะเวลาติดตามพฤติกรรมอย่างใกล้ชิด 30 วัน โดยระบบจะเริ่มคำนวณสถิติเฉพาะช่วง 30 วันนี้</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border p-3 rounded-3 h-100 bg-light">
+                            <div class="fw-bold text-success mb-1">3. สรุปผลเสนอผู้บริหาร</div>
+                            <small class="text-muted">หากผ่านเกณฑ์ประเมินซ้ำจะได้รับการพิจารณาต่อสัญญาจ้างตามปกติ หากไม่ผ่านจะดำเนินการตามระเบียบต่อไป</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

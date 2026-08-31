@@ -14,10 +14,20 @@ export async function onRequest(context) {
   // --- GET /api/survey/drivers --- PUBLIC (สำหรับดึงรายชื่อคนขับให้ผู้โดยสารเลือกเอง)
   if (path === '/api/survey/drivers' && method === 'GET') {
       const drivers = await dbAll(env.DB, `
-        SELECT id, name FROM drivers 
-        WHERE status = 'active' 
-        AND (name LIKE '%ชารี%' OR name LIKE '%ณัฐวุฒิ%' OR name LIKE '%สมชาย%' OR name LIKE '%สุรเชษฐ์%')
-        ORDER BY name ASC
+        SELECT d.id, d.name, d.status,
+          COALESCE(c.license_plate, '') as license_plate,
+          COALESCE(c.brand, '') as brand,
+          COALESCE(c.model, '') as model
+        FROM drivers d
+        LEFT JOIN (
+          SELECT q.driver_id, q.car_id, c2.license_plate, c2.brand, c2.model
+          FROM queue q
+          JOIN cars c2 ON q.car_id = c2.id
+          WHERE q.status IN ('completed', 'ongoing', 'scheduled')
+          GROUP BY q.driver_id
+        ) c ON d.id = c.driver_id
+        WHERE d.status = 'active'
+        ORDER BY d.name ASC
       `);
       return success(drivers);
   }

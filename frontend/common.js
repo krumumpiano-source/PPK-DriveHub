@@ -215,7 +215,17 @@ function renderNavigation() {
         nav += _sidebarGroupEnd();
     }
 
-    // ── 4. รายงานและสถิติ ──
+    // ── 4. ระบบประเมิน ──
+    nav += _sidebarGroupBegin('evaluation', 'ระบบประเมิน', '⭐');
+    nav += _sidebarItem('evaluation-guide.html', 'evaluation-guide', '📖', 'เกณฑ์และคำอธิบาย');
+    nav += _sidebarItem('evaluate-trip.html', 'evaluate-trip', '📝', 'ประเมินโดยผู้ใช้บริการ');
+    if (hasPermission(['admin', 'super_admin', 'manager', 'committee']) || hasModulePermission('reports', 'view')) {
+        nav += _sidebarItem('driver-performance.html#committee', 'committee-eval', '⚖️', 'ประเมินโดยกรรมการ');
+        nav += _sidebarItem('driver-performance.html', 'driver-performance', '📊', 'สรุปผลและสถิติ');
+    }
+    nav += _sidebarGroupEnd();
+
+    // ── 5. รายงานและสถิติ ──
     if (hasModulePermission('reports', 'view') || hasPermission(['admin'])) {
         nav += _sidebarGroupBegin('reports', 'รายงานและสถิติ', '📊');
         nav += _sidebarItem('reports.html', 'reports', '📊', 'รายงานและสถิติ');
@@ -226,7 +236,7 @@ function renderNavigation() {
         nav += _sidebarGroupEnd();
     }
 
-    // ── 5. ตั้งค่าส่วนตัว ──
+    // ── 6. ตั้งค่าส่วนตัว ──
     nav += _sidebarGroupBegin('profile', 'ตั้งค่าส่วนตัว', '👤');
     nav += _sidebarItem('profile.html', 'profile', '👤', 'โปรไฟล์ของฉัน');
     nav += _sidebarItem('notifications.html', 'notifications', '🔔', 'การแจ้งเตือน');

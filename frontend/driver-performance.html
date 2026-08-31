@@ -3,47 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ระบบประเมินและออกหนังสือเตือน - PPK DriveHub</title>
+    <title>ระบบประเมินผลงานและสถิติพนักงานขับรถ - PPK DriveHub</title>
     <script src="config.js"></script>
     <script>window.API_BASE_URL=CONFIG.API_BASE_URL;window.currentPage='driver-performance';window.REQUIRE_AUTH=true;</script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="common.css">
-    <script src="js/api.js"></script><script src="js/export-utils.js"></script><script src="common.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/export-utils.js"></script>
+    <script src="common.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        .back-btn{cursor:pointer;color:var(--color-primary);font-weight:500;display:inline-flex;align-items:center;gap:4px;margin-bottom:1rem;text-decoration:none}
-        .back-btn:hover{text-decoration:underline}
-        /* Mobile overrides */
-        @media (max-width: 768px) {
-            .mobile-hide { display: none !important; }
-            .card-body { padding: 1rem; }
-        }
+        .back-btn { cursor:pointer; color:var(--color-primary); font-weight:500; display:inline-flex; align-items:center; gap:6px; margin-bottom:1rem; text-decoration:none; }
+        .back-btn:hover { text-decoration: underline; }
+        .stat-card { border-radius: 0.75rem; transition: transform 0.15s; }
+        .stat-card:hover { transform: translateY(-2px); }
+        .table-comparative th { background-color: #f1f5f9; font-weight: 600; text-align: center; }
+        .driver-list-item { cursor: pointer; transition: all 0.15s; }
+        .driver-list-item:hover { background-color: #f8fafc; }
+        .driver-list-item.active { background-color: #e0e7ff !important; border-left: 4px solid #4f46e5 !important; color: #1e1b4b !important; }
+        .driver-avatar-sm { width: 42px; height: 42px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #475569; }
     </style>
 </head>
 <body class="bg-light">
     <div class="container py-4">
-        <a href="dashboard.html" class="back-btn"><i class="fa-solid fa-arrow-left"></i> กลับไปหน้าแรก</a>
+        <a href="dashboard.html" class="back-btn"><i class="fa-solid fa-arrow-left"></i> กลับสู่หน้าหลัก</a>
         
+        <!-- Header -->
         <div class="row mb-4 align-items-center">
-            <div class="col-12 col-md-8">
-                <h2><i class="fa-solid fa-star text-warning"></i> ระบบประเมินคณะกรรมการและใบเตือน</h2>
-                <p class="text-muted">สำหรับหัวหน้างานและคณะกรรมการทั้ง 5 ท่าน</p>
+            <div class="col-12 col-md-7">
+                <h2 class="fw-bold mb-1"><i class="fa-solid fa-award text-warning me-2"></i> สรุปผลงานและสถิติประเมินพนักงานขับรถ</h2>
+                <p class="text-muted mb-0">ระบบประเมินผลงานรอบปีงบประมาณ คณะกรรมการ 5 ท่าน และข้อมูลสถิติเชิงประจักษ์</p>
             </div>
-            <div class="col-12 col-md-4 text-md-end">
-                <select id="academicYearFilter" class="form-select d-inline-block w-100 w-md-auto">
-                    <!-- Options populated dynamically -->
+            <div class="col-12 col-md-5 text-md-end mt-3 mt-md-0 d-flex flex-wrap gap-2 justify-content-md-end">
+                <select id="academicYearFilter" class="form-select w-auto d-inline-block shadow-sm" onchange="loadAllData()">
+                    <!-- Populated dynamically -->
                 </select>
+                <button class="btn btn-outline-primary shadow-sm" onclick="openExecutiveReport()">
+                    <i class="fa-solid fa-file-signature"></i> รายงานสรุป 1 หน้า A4 (ผอ.)
+                </button>
+                <button class="btn btn-primary shadow-sm" onclick="openBatchPrintDossiers()">
+                    <i class="fa-solid fa-print"></i> พิมพ์ชุดประเมิน 4 คน
+                </button>
             </div>
         </div>
 
         <div id="alertContainer"></div>
 
+        <!-- 1. Comparative 4-Driver Matrix Card -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold text-dark"><i class="fa-solid fa-chart-column text-primary me-2"></i> ตารางเปรียบเทียบผลงานและสถิติพนักงานขับรถทั้ง 4 ท่าน</h5>
+                <span class="badge bg-primary px-3 py-2 rounded-pill">ปีงบประมาณ <span id="displayCompYear">----</span></span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered table-comparative align-middle mb-0 text-center" id="comparativeTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 20%;">พนักงานขับรถ</th>
+                                <th>รถประจำตัว</th>
+                                <th>คิวงานสำเร็จ</th>
+                                <th>ระยะทาง (กม.)</th>
+                                <th><span class="text-danger">ลืมบันทึกไมล์</span></th>
+                                <th>อัตราความเรียบร้อย (%)</th>
+                                <th>ผู้โดยสาร (40)</th>
+                                <th>กรรมการ (60)</th>
+                                <th style="background-color: #e0e7ff;">คะแนนสุทธิ (100)</th>
+                                <th>เกรด</th>
+                            </tr>
+                        </thead>
+                        <tbody id="comparativeTableBody">
+                            <tr><td colspan="10" class="py-4 text-center text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div> กำลังคำนวณข้อมูลสถิติเปรียบเทียบ...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Detailed Driver Evaluation Section -->
         <div class="row">
-            <!-- Driver List -->
+            <!-- Driver List Column -->
             <div class="col-md-4 mb-4">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="card-title mb-0">รายชื่อพนักงานขับรถ</h5>
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-dark text-white py-3">
+                        <h6 class="card-title mb-0 fw-bold"><i class="fa-solid fa-users me-2"></i> รายชื่อพนักงานขับรถ (คลิกดูรายละเอียด)</h6>
                     </div>
                     <div class="card-body p-0">
                         <div class="list-group list-group-flush" id="driverList">
@@ -55,151 +99,135 @@
                 </div>
             </div>
 
-            <!-- Evaluation Dashboard -->
+            <!-- Driver Detail Column -->
             <div class="col-md-8 mb-4">
                 <div id="evaluationDashboard" class="d-none">
-                    <div class="card shadow-sm mb-4">
-                        <div class="card-header bg-dark text-white d-flex flex-wrap justify-content-between align-items-center gap-2">
-                            <h5 class="card-title mb-0" id="selectedDriverName">เลือกพนักงานขับรถ</h5>
-                            <div>
-                                <button class="btn btn-sm btn-info text-white me-2 mb-2" onclick="openPrintForm()"><i class="fa-solid fa-file-pdf"></i> ใบประเมิน (คณะกรรมการ)</button>
-                                <button class="btn btn-sm btn-primary me-2 mb-2" onclick="openPrintEmpirical()"><i class="fa-solid fa-chart-line"></i> สถิติประกอบ (อ้างอิง)</button>
-                                <button class="btn btn-sm btn-warning mb-2" onclick="openPrintPassengerSurvey()"><i class="fa-solid fa-users"></i> แบบประเมินผู้โดยสาร</button>
+                    <div class="card shadow-sm border-0 mb-4">
+                        <div class="card-header bg-white py-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="driver-avatar-sm" id="detailAvatar"><i class="fa-solid fa-user-tie"></i></div>
+                                <div>
+                                    <h5 class="card-title mb-0 fw-bold text-dark" id="selectedDriverName">ชื่อคนขับ</h5>
+                                    <small class="text-muted" id="selectedDriverPlate">รถประจำ: นข-1234</small>
+                                </div>
+                            </div>
+                            <div class="d-flex flex-wrap gap-1">
+                                <button class="btn btn-sm btn-info text-white" onclick="openPrintForm()"><i class="fa-solid fa-file-pdf"></i> ชุดประเมิน+สถิติ (รายบุคคล)</button>
+                                <button class="btn btn-sm btn-warning text-dark" onclick="openPrintPassengerSurvey()"><i class="fa-solid fa-users"></i> รายงานผู้โดยสาร (Audit Trail)</button>
                             </div>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body p-4">
                             
-                            <!-- Summary Scores -->
+                            <!-- Summary Scores Cards -->
                             <div class="row text-center mb-4 g-3">
                                 <div class="col-12 col-md-4">
-                                    <div class="p-3 border rounded bg-light h-100">
-                                        <h6 class="text-muted">คะแนนจากผู้โดยสาร<br>(40 คะแนน)</h6>
-                                        <h3 id="passengerScore" class="text-primary mt-2">--</h3>
-                                        <small class="text-muted d-block mb-2" id="passengerTripCount">จาก 0 ทริป</small>
-                                        <button class="btn btn-sm btn-outline-primary" onclick="copyRetroactiveSurveyLink()"><i class="fa-solid fa-link"></i> คัดลอกลิงก์ส่งให้ผู้โดยสารประเมินย้อนหลัง</button>
+                                    <div class="p-3 border rounded bg-light stat-card h-100">
+                                        <small class="text-muted fw-bold d-block">1. คะแนนจากผู้โดยสาร</small>
+                                        <h3 id="passengerScore" class="text-primary fw-bold mt-2 mb-0">--</h3>
+                                        <small class="text-muted d-block mt-1" id="passengerTripCount">เต็ม 40 คะแนน (จาก 0 ทริป)</small>
+                                        <button class="btn btn-xs btn-outline-primary mt-2" onclick="copyRetroactiveSurveyLink()"><i class="fa-solid fa-link"></i> คัดลอกลิงก์ประเมิน</button>
                                     </div>
                                 </div>
                                 <div class="col-12 col-md-4">
-                                    <div class="p-3 border rounded bg-light h-100">
-                                        <h6 class="text-muted">เฉลี่ยคณะกรรมการ<br>(60 คะแนน)</h6>
-                                        <h3 id="committeeScore" class="text-info mt-2">--</h3>
-                                        <small class="text-muted" id="committeeCount">ประเมินแล้ว 0/5 ท่าน</small>
+                                    <div class="p-3 border rounded bg-light stat-card h-100">
+                                        <small class="text-muted fw-bold d-block">2. เฉลี่ยคณะกรรมการ 5 ท่าน</small>
+                                        <h3 id="committeeScore" class="text-info fw-bold mt-2 mb-0">--</h3>
+                                        <small class="text-muted d-block mt-1" id="committeeCount">เต็ม 60 คะแนน (ประเมินแล้ว 0/5)</small>
                                     </div>
                                 </div>
                                 <div class="col-12 col-md-4">
-                                    <div class="p-3 border rounded bg-success text-white h-100 d-flex flex-column justify-content-center">
-                                        <h6>คะแนนรวมสุทธิ<br>(เต็ม 100 คะแนน)</h6>
-                                        <h2 id="totalScore" class="fw-bold m-0">--</h2>
-                                        <div class="mt-2"><span class="badge bg-light text-dark fs-6" id="finalGrade">--</span></div>
+                                    <div class="p-3 border rounded bg-primary bg-opacity-10 border-primary stat-card h-100 d-flex flex-column justify-content-center">
+                                        <small class="text-primary fw-bold d-block">คะแนนรวมสุทธิ (เต็ม 100)</small>
+                                        <h2 id="totalScore" class="fw-bold text-primary my-1">--</h2>
+                                        <div><span class="badge bg-primary fs-6 px-3 py-1" id="finalGrade">--</span></div>
                                     </div>
                                 </div>
                             </div>
 
-                            <hr>
-
-                            <!-- Data-Driven Stats for Committee -->
-                            <div class="row mb-4">
-                                <div class="col-12">
-                                    <div class="alert alert-info d-flex align-items-center mb-0">
-                                        <i class="fa-solid fa-chart-line fa-2x me-3"></i>
-                                        <div>
-                                            <h6 class="alert-heading mb-1 fw-bold">ข้อมูลอ้างอิงสำหรับการประเมิน (Empirical Data)</h6>
-                                            <div class="small">
-                                                <span><i class="fa-solid fa-car text-primary"></i> วิ่งงานเสร็จสิ้น (ปีนี้): <strong id="statCompletedTrips">0</strong> ทริป</span><br>
-                                                <span><i class="fa-solid fa-location-dot text-success"></i> บันทึกข้อมูลเข้า-ออก: <strong id="statUsageLogs">0</strong> ครั้ง</span><br>
-                                                <span class="text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation"></i> ลืมลงบันทึก: <strong id="statMissedLogs">0</strong> ครั้ง</span><br>
-                                                <span class="text-warning text-dark fw-bold"><i class="fa-solid fa-gas-pump"></i> ลืมบันทึกเลขไมล์ตอนเติมน้ำมัน: <strong id="statMissedFuelLogs">0</strong> ครั้ง</span>
-                                            </div>
+                            <!-- Empirical Statistics Box -->
+                            <div class="alert alert-light border shadow-sm p-3 mb-4">
+                                <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-chart-line text-primary me-2"></i> ข้อมูลสถิติเชิงประจักษ์ (Empirical Evidence) ประจำปี:</h6>
+                                <div class="row g-2 small">
+                                    <div class="col-6 col-md-3">
+                                        <div class="p-2 border rounded bg-white">
+                                            <span class="text-muted d-block">วิ่งงานเสร็จสิ้น</span>
+                                            <strong class="fs-6 text-dark" id="statCompletedTrips">0</strong> คิว
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="p-2 border rounded bg-white">
+                                            <span class="text-muted d-block">บันทึกข้อมูลเข้า-ออก</span>
+                                            <strong class="fs-6 text-success" id="statUsageLogs">0</strong> ครั้ง
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="p-2 border rounded bg-white">
+                                            <span class="text-muted d-block">ลืมบันทึกไมล์</span>
+                                            <strong class="fs-6 text-danger" id="statMissedLogs">0</strong> ครั้ง
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="p-2 border rounded bg-white">
+                                            <span class="text-muted d-block">ลืมไมล์เติมน้ำมัน</span>
+                                            <strong class="fs-6 text-warning text-dark" id="statMissedFuelLogs">0</strong> ครั้ง
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Committee Evaluation Form -->
-                            <div class="row mb-4" id="committeeEvalSection">
-                                <div class="col-12">
-                                    <h5><i class="fa-solid fa-clipboard-check text-success"></i> ให้คะแนนส่วนของท่าน (กรรมการ 1/5)</h5>
-                                    <p class="text-muted small">ระบบจะนำคะแนนรวมของท่าน (เต็ม 100) ไปหาค่าเฉลี่ยรวมกับกรรมการท่านอื่นเพื่อแปลงเป็นคะแนนสุทธิ 60 คะแนน</p>
-                                    <form id="committeeEvalForm" class="row g-4">
-                                        <div class="col-12">
-                                            <label class="form-label fw-bold mb-1">1. การดูแลรถ/ซ่อมบำรุง (คะแนนเต็ม 30) <span class="text-danger">*</span></label>
-                                            <div class="text-muted small mb-2 border-start border-3 border-primary ps-2 bg-light p-2 rounded">
-                                                <ul class="mb-0 ps-3">
-                                                    <li>ล้างและทำความสะอาดรถทั้งภายนอกและภายในให้สะอาดอยู่เสมอ</li>
-                                                    <li>ตรวจเช็คสภาพเครื่องยนต์พื้นฐานรายวัน (น้ำ, น้ำมันเครื่อง, แบตเตอรี่, ลมยาง) ก่อนออกรถ</li>
-                                                    <li>นำรถเข้าตรวจเช็คระยะ และเปลี่ยนถ่ายน้ำมันเครื่องตรงตามกำหนดเวลา</li>
-                                                    <li>สังเกตความผิดปกติของรถ และรีบทำเรื่อง "แจ้งซ่อมบำรุง" ทันทีก่อนที่จะเกิดความเสียหายรุนแรง</li>
-                                                    <li>จอดรถในสถานที่ที่โรงเรียนกำหนดอย่างเป็นระเบียบ</li>
-                                                </ul>
-                                            </div>
-                                            <input type="number" class="form-control w-25" id="score_maintenance" min="0" max="30" placeholder="เต็ม 30 (ข้อละ 6)" required>
+                            <!-- Committee Evaluation Form & Quick Matrix -->
+                            <div class="card border mb-4" id="committeeEvalSection">
+                                <div class="card-header bg-light py-3 d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0 fw-bold text-success"><i class="fa-solid fa-clipboard-check me-2"></i> กรอกคะแนนประเมินของคณะกรรมการ (กรรมการ 1/5)</h6>
+                                    <span class="badge bg-success">สัดส่วน 60 คะแนน</span>
+                                </div>
+                                <div class="card-body p-4">
+                                    <form id="committeeEvalForm" class="row g-3">
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-bold">1. ดูแลรถ/ซ่อมบำรุง (เต็ม 30) <span class="text-danger">*</span></label>
+                                            <input type="number" class="form-control form-control-lg text-center fw-bold" id="score_maintenance" min="0" max="30" placeholder="0 - 30" required>
+                                            <small class="text-muted">ล้างรถ, เช็คน้ำมันเครื่อง, ตรวจระยะ</small>
                                         </div>
-
-                                        <div class="col-12">
-                                            <label class="form-label fw-bold mb-1">2. ระเบียบวินัยและการทำงาน (คะแนนเต็ม 40) <span class="text-danger">*</span></label>
-                                            <div class="text-muted small mb-2 border-start border-3 border-success ps-2 bg-light p-2 rounded">
-                                                <ul class="mb-0 ps-3">
-                                                    <li>มาปฏิบัติงานตรงเวลา และไม่ละทิ้งหน้าที่ในเวลาราชการ</li>
-                                                    <li>ปฏิบัติตามคำสั่งของโรงเรียนและผู้บังคับบัญชาอย่างเคร่งครัด</li>
-                                                    <li>สถิติการลากิจ ลาป่วย อยู่ในเกณฑ์ที่กำหนด และมีการแจ้งลาล่วงหน้าตามระเบียบ</li>
-                                                    <li>บันทึกข้อมูลการใช้รถ (ไมล์เข้า-ไมล์ออก) ในระบบแอปพลิเคชันอย่างสม่ำเสมอและเป็นปัจจุบัน</li>
-                                                    <li>ประจำอยู่ที่จุดพักหรือบริเวณที่กำหนดพร้อมปฏิบัติหน้าที่เสมอ ไม่ออกนอกสถานศึกษาในเวลาราชการโดยไม่ได้รับอนุญาต</li>
-                                                </ul>
-                                            </div>
-                                            <input type="number" class="form-control w-25" id="score_discipline" min="0" max="40" placeholder="เต็ม 40 (ข้อละ 8)" required>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-bold">2. ระเบียบวินัย (เต็ม 40) <span class="text-danger">*</span></label>
+                                            <input type="number" class="form-control form-control-lg text-center fw-bold" id="score_discipline" min="0" max="40" placeholder="0 - 40" required>
+                                            <small class="text-muted">ตรงเวลา, บันทึกไมล์เข้า-ออกสม่ำเสมอ</small>
                                         </div>
-
-                                        <div class="col-12">
-                                            <label class="form-label fw-bold mb-1">3. การทุ่มเทและจิตอาสา (คะแนนเต็ม 30) <span class="text-danger">*</span></label>
-                                            <div class="text-muted small mb-2 border-start border-3 border-info ps-2 bg-light p-2 rounded">
-                                                <ul class="mb-0 ps-3">
-                                                    <li>อุทิศเวลาให้แก่ราชการ ยินดีปฏิบัติงานนอกเวลาราชการเมื่อมีเหตุจำเป็นเร่งด่วน</li>
-                                                    <li>เสนอตัวช่วยเหลืองานส่วนรวมของโรงเรียน (เช่น งานรับส่งเอกสารราชการ, งานรับส่งพัสดุ) ในช่วงเวลาที่ไม่มีคิววิ่งรถ</li>
-                                                    <li>มีน้ำใจ เอื้อเฟื้อเผื่อแผ่ และสามารถทำงานร่วมกับเพื่อนร่วมงานและคณะครูได้เป็นอย่างดี</li>
-                                                    <li>ดูแลรักษาความสะอาดบริเวณลานจอดรถ หรือโรงจอดรถของโรงเรียนให้เป็นระเบียบเรียบร้อยอยู่เสมอ</li>
-                                                    <li>มีทัศนคติที่ดีต่อองค์กร ไม่สร้างความแตกแยก และช่วยรักษาภาพลักษณ์ที่ดีของโรงเรียน</li>
-                                                </ul>
-                                            </div>
-                                            <input type="number" class="form-control w-25" id="score_contribution" min="0" max="30" placeholder="เต็ม 30 (ข้อละ 6)" required>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-bold">3. จิตอาสา/ทุ่มเท (เต็ม 30) <span class="text-danger">*</span></label>
+                                            <input type="number" class="form-control form-control-lg text-center fw-bold" id="score_contribution" min="0" max="30" placeholder="0 - 30" required>
+                                            <small class="text-muted">ช่วยงานส่วนรวม, มีน้ำใจกับคณะครู</small>
                                         </div>
-
-                                        <div class="col-12">
+                                        <div class="col-12 mt-3">
                                             <label class="form-label fw-bold">ข้อเสนอแนะเพิ่มเติม</label>
-                                            <textarea class="form-control" id="committee_comments" rows="2"></textarea>
+                                            <textarea class="form-control" id="committee_comments" rows="2" placeholder="ระบุความคิดเห็นของคณะกรรมการ..."></textarea>
                                         </div>
-                                        <div class="col-12">
-                                            <button type="submit" class="btn btn-primary btn-lg"><i class="fa-solid fa-save"></i> บันทึกคะแนนของท่าน</button>
+                                        <div class="col-12 text-end">
+                                            <button type="submit" class="btn btn-success px-4 py-2 fw-bold"><i class="fa-solid fa-save me-2"></i> บันทึกคะแนนกรรมการ</button>
                                         </div>
                                     </form>
                                 </div>
                             </div>
 
-                            <hr>
-
-                            <!-- Warning Section -->
-                            <div class="row">
-                                <div class="col-12">
-                                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-                                        <h5 class="m-0"><i class="fa-solid fa-triangle-exclamation text-danger"></i> ประวัติเตือน / ผิดสัญญา (TOR)</h5>
-                                        <button class="btn btn-sm btn-danger" onclick="openWarningModal()"><i class="fa-solid fa-plus"></i> ออกใบเตือน/PIP</button>
-                                    </div>
-                                    <div class="table-responsive">
-                                        <table class="table table-bordered table-striped text-center align-middle" id="warningTable" style="min-width: 600px;">
-                                            <thead class="table-light">
-                                                <tr>
-                                                    <th>วันที่ออก</th>
-                                                    <th>ประเภท</th>
-                                                    <th class="text-start">สาเหตุ</th>
-                                                    <th>ช่วงประเมินซ้ำ (PIP)</th>
-                                                    <th>การรับทราบ</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr><td colspan="5" class="text-center">กำลังโหลด...</td></tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
+                            <!-- Warnings and TOR section -->
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold mb-0 text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i> ประวัติการแจ้งเตือน / ผิดสัญญา (TOR) & แผน PIP</h6>
+                                <button class="btn btn-sm btn-outline-danger" onclick="openWarningModal()"><i class="fa-solid fa-plus"></i> ออกใบเตือน/PIP</button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped text-center align-middle" id="warningTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>วันที่ออก</th>
+                                            <th>ประเภท</th>
+                                            <th class="text-start">สาเหตุ</th>
+                                            <th>ช่วงประเมินซ้ำ (PIP)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td colspan="4" class="text-center text-muted py-3">กำลังโหลดข้อมูล...</td></tr>
+                                    </tbody>
+                                </table>
                             </div>
 
                         </div>
@@ -208,8 +236,8 @@
                 
                 <div id="noDriverSelected" class="text-center p-5 bg-white border rounded shadow-sm">
                     <i class="fa-solid fa-users-viewfinder fa-4x text-muted mb-3"></i>
-                    <h4>เลือกพนักงานขับรถจากเมนูด้านซ้าย</h4>
-                    <p class="text-muted">เพื่อดูผลคะแนนประเมินประจำปีและออกหนังสือเตือน (เฉพาะกรรมการ)</p>
+                    <h4>กรุณาเลือกพนักงานขับรถจากเมนูด้านซ้าย</h4>
+                    <p class="text-muted">เพื่อดูผลคะแนนประเมินประจำปี สถิติเชิงประจักษ์ และจัดการคะแนนของคณะกรรมการ</p>
                 </div>
             </div>
         </div>
@@ -226,7 +254,7 @@
                 <div class="modal-body">
                     <form id="warningForm">
                         <div class="mb-3">
-                            <label class="form-label">ประเภทเอกสาร <span class="text-danger">*</span></label>
+                            <label class="form-label fw-bold">ประเภทเอกสาร <span class="text-danger">*</span></label>
                             <select class="form-select" id="warning_type" required>
                                 <option value="verbal_record">บันทึกการตักเตือนด้วยวาจา (Verbal Record)</option>
                                 <option value="written_warning" selected>หนังสือเตือนเป็นลายลักษณ์อักษร (Written Warning)</option>
@@ -234,8 +262,8 @@
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">สาเหตุ/ข้อบกพร่อง <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="warning_reason" rows="3" required placeholder="ระบุเหตุการณ์, พฤติกรรม, หรือผลประเมินที่ตกเกณฑ์ เพื่อเป็นหลักฐาน..."></textarea>
+                            <label class="form-label fw-bold">สาเหตุ/ข้อบกพร่อง <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="warning_reason" rows="3" required placeholder="ระบุเหตุการณ์, พฤติกรรมละเลยการบันทึกไมล์ หรือผลประเมินที่ตกเกณฑ์..."></textarea>
                         </div>
                         <div class="row mb-3">
                             <div class="col-6">
@@ -246,23 +274,81 @@
                                 <label class="form-label">สิ้นสุดการประเมินซ้ำ</label>
                                 <input type="date" class="form-control" id="pip_end_date">
                             </div>
-                            <div class="form-text text-danger col-12">* แนะนำให้ระยะเวลาประเมินซ้ำอย่างน้อย 30 วัน</div>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="button" class="btn btn-danger" id="btnSaveWarning">ส่งให้คนขับรับทราบ</button>
+                    <button type="button" class="btn btn-danger" id="btnSaveWarning" onclick="saveWarning()">บันทึกและส่งแจ้งเตือน</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Executive 1-Page Summary Modal -->
+    <div class="modal fade" id="executiveReportModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title"><i class="fa-solid fa-file-signature text-warning me-2"></i> รายงานสรุปผลการประเมินพนักงานขับรถสำหรับผู้บริหาร (Executive Summary)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4" id="executiveReportPrintArea">
+                    <div class="text-center mb-4 border-bottom pb-3">
+                        <h4 class="fw-bold mb-1">รายงานสรุปผลการประเมินการปฏิบัติงานพนักงานขับรถตู้ ประจำปีการศึกษา <span id="execYearTitle">----</span></h4>
+                        <p class="mb-0 text-muted">โรงเรียนพะเยาพิทยาคม สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาพะเยา</p>
+                    </div>
+
+                    <p class="small text-muted mb-2">มติคณะกรรมการประเมินผลการปฏิบัติงานตามเกณฑ์มาตรฐาน สัดส่วนผู้โดยสาร (40 คะแนน) และคณะกรรมการ (60 คะแนน):</p>
+                    
+                    <div class="table-responsive mb-4">
+                        <table class="table table-bordered text-center align-middle" style="font-size: 13px;" id="execSummaryTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 5%;">ที่</th>
+                                    <th style="width: 25%;" class="text-start">ชื่อ-สกุล พนักงานขับรถ</th>
+                                    <th>รถประจำตัว</th>
+                                    <th>คิวงาน (เที่ยว)</th>
+                                    <th>ลืมไมล์ (ครั้ง)</th>
+                                    <th>คะแนนผู้โดยสาร (40)</th>
+                                    <th>คะแนนกรรมการ (60)</th>
+                                    <th class="fw-bold" style="background:#e0e7ff;">คะแนนสุทธิ (100)</th>
+                                    <th>ผลการประเมิน</th>
+                                </tr>
+                            </thead>
+                            <tbody id="execSummaryTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="row text-center mt-5">
+                        <div class="col-6">
+                            <div style="border-bottom: 1px solid #000; width: 220px; margin: 0 auto 5px;"></div>
+                            <p class="small mb-0">(.......................................................................)</p>
+                            <p class="small text-muted">ประธานคณะกรรมการประเมินผลการปฏิบัติงาน</p>
+                        </div>
+                        <div class="col-6">
+                            <div style="border-bottom: 1px solid #000; width: 220px; margin: 0 auto 5px;"></div>
+                            <p class="small mb-0">(.......................................................................)</p>
+                            <p class="small text-muted">ผู้อำนวยการโรงเรียนพะเยาพิทยาคม</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+                    <button type="button" class="btn btn-primary" onclick="printExecutiveReport()"><i class="fa-solid fa-print me-2"></i> สั่งพิมพ์ A4</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentDriverId = null;
+        let allDrivers = [];
+        let comparativeStats = [];
         let warningModal = null;
+        let execModal = null;
 
         document.addEventListener('DOMContentLoaded', async () => {
             if (!checkAuth()) {
@@ -270,279 +356,387 @@
                 return;
             }
             window.currentUser = getCurrentUser();
-            
-            window.openPrintForm = function() {
-                if (!currentDriverId) return;
-                const year = document.getElementById('academicYearFilter').value;
-                window.open(`print-committee-form.html?driver_id=${currentDriverId}&year=${year}`, '_blank');
-            };
 
-            window.openPrintEmpirical = function() {
-                if (!currentDriverId) return;
-                const year = document.getElementById('academicYearFilter').value;
-                window.open(`print-empirical.html?driverId=${currentDriverId}&year=${year}`, '_blank');
-            };
-
-            window.openPrintPassengerSurvey = function() {
-                if (!currentDriverId) return;
-                const year = document.getElementById('academicYearFilter').value;
-                window.open(`print-passenger-survey.html?driverId=${currentDriverId}&year=${year}`, '_blank');
-            };
-
-            window.copyRetroactiveSurveyLink = function() {
-                if (!currentDriverId) return;
-                const link = `${window.location.origin}/qr-survey?driver_id=${currentDriverId}`;
-                navigator.clipboard.writeText(link).then(() => {
-                    Swal.fire('คัดลอกสำเร็จ', 'สามารถส่งลิงก์นี้ให้ผู้โดยสารทางไลน์หรือช่องทางอื่นๆ เพื่อประเมินย้อนหลังได้เลยครับ', 'success');
-                }).catch(err => {
-                    alert('คัดลอกไม่สำเร็จ กรุณาก๊อปปี้ลิงก์นี้: ' + link);
-                });
-            };
-            
-            // Only admin/committee can access
-            if (!['admin', 'super_admin', 'manager', 'committee'].includes(window.currentUser.role)) {
-                Swal.fire('ปฏิเสธการเข้าถึง', 'สงวนสิทธิ์เฉพาะคณะกรรมการประเมินหรือผู้ดูแลระบบเท่านั้น', 'error').then(() => {
-                    window.location.href = '/dashboard.html';
-                });
-                return;
-            }
+            // Populate Year dropdown
+            const currentYear = new Date().getFullYear() + 543;
+            const yearSelect = document.getElementById('academicYearFilter');
+            yearSelect.innerHTML = `
+                <option value="${currentYear}" selected>ปีการศึกษา ${currentYear}</option>
+                <option value="${currentYear - 1}">ปีการศึกษา ${currentYear - 1}</option>
+                <option value="${currentYear - 2}">ปีการศึกษา ${currentYear - 2}</option>
+            `;
 
             warningModal = new bootstrap.Modal(document.getElementById('issueWarningModal'));
-            
-            // Populate Academic Years
-            const yearSelect = document.getElementById('academicYearFilter');
-            const currentYear = new Date().getFullYear() + 543;
-            for(let i=0; i<3; i++) {
-                const y = currentYear - i;
-                yearSelect.innerHTML += `<option value="${y}">ปีงบประมาณ ${y}</option>`;
+            execModal = new bootstrap.Modal(document.getElementById('executiveReportModal'));
+
+            // Check URL hash for direct committee scroll
+            if (window.location.hash === '#committee') {
+                setTimeout(() => {
+                    const el = document.getElementById('committeeEvalSection');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }, 500);
             }
-            yearSelect.addEventListener('change', () => {
-                if (currentDriverId) loadDriverDashboard(currentDriverId);
-            });
 
-            await loadDrivers();
-
-            document.getElementById('committeeEvalForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await submitCommitteeEval();
-            });
-
-            document.getElementById('btnSaveWarning').addEventListener('click', async () => {
-                await submitWarning();
-            });
+            await loadAllData();
         });
 
-        async function loadDrivers() {
+        async function loadAllData() {
+            const year = document.getElementById('academicYearFilter').value;
+            document.getElementById('displayCompYear').textContent = year;
+            document.getElementById('execYearTitle').textContent = year;
+
+            await loadDriversList();
+            await loadComparativeMatrix(year);
+        }
+
+        async function loadDriversList() {
+            const list = document.getElementById('driverList');
+            list.innerHTML = '<div class="text-center p-4"><div class="spinner-border spinner-border-sm text-primary"></div></div>';
+
             try {
                 const res = await API.get('/api/drivers');
-                const MAIN_DRIVERS = ['ชารี', 'ณัฐวุฒิ', 'สมชาย', 'สุรเชษฐ์'];
-                const drivers = (res.data.drivers || res.data || []).filter(d => d.status === 'active' && MAIN_DRIVERS.some(name => d.first_name?.includes(name)));
-                const list = document.getElementById('driverList');
-                list.innerHTML = '';
+                allDrivers = (res.data?.drivers || res.data || []).filter(d => d.status === 'active');
                 
-                drivers.forEach(d => {
+                list.innerHTML = '';
+                allDrivers.forEach(d => {
                     const a = document.createElement('a');
                     a.href = '#';
-                    a.className = 'list-group-item list-group-item-action d-flex align-items-center py-3';
+                    a.className = 'list-group-item list-group-item-action driver-list-item d-flex align-items-center py-3';
+                    a.id = `driver-item-${d.id}`;
                     a.innerHTML = `
-                        <div class="me-3">
-                            <i class="fa-solid fa-circle-user fa-2x text-secondary"></i>
+                        <div class="driver-avatar-sm me-3">
+                            <i class="fa-solid fa-user-tie"></i>
                         </div>
-                        <div>
-                            <div class="fw-bold">${d.title || ''}${d.first_name} ${d.last_name}</div>
-                            <small class="text-muted">คนขับรถประจำโรงเรียน</small>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold text-dark">${d.title || ''}${d.first_name || d.name} ${d.last_name || ''}</div>
+                            <small class="text-muted"><i class="fa-solid fa-van-shuttle"></i> รถประจำโรงเรียน</small>
                         </div>
+                        <i class="fa-solid fa-chevron-right text-muted small"></i>
                     `;
                     a.addEventListener('click', (e) => {
                         e.preventDefault();
-                        document.querySelectorAll('#driverList .list-group-item').forEach(el => el.classList.remove('active', 'bg-primary', 'text-white'));
-                        a.classList.add('active', 'bg-primary', 'text-white');
-                        currentDriverId = d.id;
-                        document.getElementById('selectedDriverName').textContent = `${d.title || ''}${d.first_name} ${d.last_name}`;
-                        loadDriverDashboard(d.id);
+                        selectDriver(d.id);
                     });
                     list.appendChild(a);
                 });
+
+                // Auto-select first driver if not selected
+                if (!currentDriverId && allDrivers.length > 0) {
+                    selectDriver(allDrivers[0].id);
+                }
             } catch (err) {
                 console.error(err);
-                showAlert('ไม่สามารถโหลดรายชื่อคนขับได้', 'danger');
+                list.innerHTML = '<div class="p-3 text-center text-danger">ไม่สามารถโหลดรายชื่อพนักงานได้</div>';
             }
         }
 
-        async function loadDriverDashboard(driverId) {
-            document.getElementById('noDriverSelected').classList.add('d-none');
-            document.getElementById('evaluationDashboard').classList.remove('d-none');
-            const year = document.getElementById('academicYearFilter').value;
+        async function loadComparativeMatrix(year) {
+            const tbody = document.getElementById('comparativeTableBody');
+            tbody.innerHTML = '<tr><td colspan="10" class="py-4 text-center text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div> กำลังคำนวณข้อมูลสถิติเปรียบเทียบ...</td></tr>';
 
             try {
-                // Load scores
-                const res = await API.get(`/api/evaluations/driver/${driverId}?year=${year}`);
-                const data = res.data;
+                const matrixRows = [];
+                for (const d of allDrivers) {
+                    try {
+                        const [evalRes, empRes] = await Promise.all([
+                            API.get(`/api/evaluations/driver/${d.id}?year=${year}`),
+                            API.get(`/api/evaluations/empirical/${d.id}?year=${year}`)
+                        ]);
+                        const e = evalRes.data || {};
+                        const m = empRes.data || {};
 
-                // Update UI
-                document.getElementById('passengerScore').textContent = data.passenger_weighted ? data.passenger_weighted.toFixed(2) : '0.00';
-                document.getElementById('passengerTripCount').textContent = `จาก ${data.passenger_stats.total_trips || 0} ทริป`;
-                
-                document.getElementById('committeeScore').textContent = data.committee_weighted ? data.committee_weighted.toFixed(2) : '0.00';
-                document.getElementById('committeeCount').textContent = `ประเมินแล้ว ${data.committee_stats.committee_count || 0}/5 ท่าน`;
+                        const pWeighted = e.passenger_weighted || 0;
+                        const cWeighted = e.committee_weighted || 0;
+                        const totalScore = pWeighted + cWeighted;
+                        const trips = e.usage_stats?.total_completed_trips || 0;
+                        const missed = e.usage_stats?.missed_logs || 0;
+                        const expected = trips * 2;
+                        const complianceRate = expected > 0 ? (((expected - missed) / expected) * 100) : 100;
 
-                // Update Stats
-                if (data.usage_stats) {
-                    document.getElementById('statCompletedTrips').textContent = data.usage_stats.total_completed_trips || 0;
-                    document.getElementById('statUsageLogs').textContent = data.usage_stats.total_logs || 0;
-                    document.getElementById('statMissedLogs').textContent = data.usage_stats.missed_logs || 0;
-                    if (document.getElementById('statMissedFuelLogs')) document.getElementById('statMissedFuelLogs').textContent = data.usage_stats.missed_fuel_mileage || 0;
-                } else {
-                    document.getElementById('statCompletedTrips').textContent = '0';
-                    document.getElementById('statUsageLogs').textContent = '0';
-                    document.getElementById('statMissedLogs').textContent = '0';
-                    if (document.getElementById('statMissedFuelLogs')) document.getElementById('statMissedFuelLogs').textContent = '0';
+                        matrixRows.push({
+                            driver: d,
+                            trips: trips,
+                            km: m.comparative?.driver_km || 0,
+                            missed: missed,
+                            complianceRate: Math.max(0, complianceRate),
+                            passengerScore: pWeighted,
+                            committeeScore: cWeighted,
+                            totalScore: totalScore,
+                            grade: e.grade || 'พอใช้'
+                        });
+                    } catch (err) {
+                        console.warn(err);
+                    }
                 }
 
+                comparativeStats = matrixRows;
+                renderComparativeTable(matrixRows);
+                renderExecutiveTable(matrixRows);
+
+            } catch (err) {
+                console.error(err);
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center text-danger py-3">เกิดข้อผิดพลาดในการโหลดตารางเปรียบเทียบ</td></tr>';
+            }
+        }
+
+        function renderComparativeTable(rows) {
+            const tbody = document.getElementById('comparativeTableBody');
+            if (rows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-3">ไม่พบข้อมูล</td></tr>';
+                return;
+            }
+
+            // Sort by totalScore descending
+            rows.sort((a, b) => b.totalScore - a.totalScore);
+
+            tbody.innerHTML = '';
+            rows.forEach((r, idx) => {
+                const tr = document.createElement('tr');
+                const gradeBadgeClass = r.totalScore >= 80 ? 'bg-success' : r.totalScore >= 70 ? 'bg-primary' : r.totalScore >= 60 ? 'bg-warning text-dark' : 'bg-danger';
+                tr.innerHTML = `
+                    <td class="text-start fw-bold">
+                        <span class="badge bg-secondary me-1">#${idx+1}</span>
+                        ${r.driver.title || ''}${r.driver.first_name || r.driver.name} ${r.driver.last_name || ''}
+                    </td>
+                    <td><span class="badge bg-light text-dark border"><i class="fa-solid fa-van-shuttle"></i> รถประจำ</span></td>
+                    <td class="fw-bold">${r.trips.toLocaleString()}</td>
+                    <td>${r.km.toLocaleString()}</td>
+                    <td class="${r.missed > 0 ? 'text-danger fw-bold' : 'text-success'}">${r.missed.toLocaleString()}</td>
+                    <td>
+                        <div class="d-flex align-items-center justify-content-center gap-1">
+                            <span class="small fw-bold">${r.complianceRate.toFixed(1)}%</span>
+                        </div>
+                    </td>
+                    <td class="text-primary fw-bold">${r.passengerScore.toFixed(2)}</td>
+                    <td class="text-info fw-bold">${r.committeeScore.toFixed(2)}</td>
+                    <td class="fw-bold fs-6" style="background-color: #f1f5f9;">${r.totalScore.toFixed(2)}</td>
+                    <td><span class="badge ${gradeBadgeClass}">${r.grade}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderExecutiveTable(rows) {
+            const tbody = document.getElementById('execSummaryTableBody');
+            tbody.innerHTML = '';
+            rows.forEach((r, idx) => {
+                const tr = document.createElement('tr');
+                const gradeBadgeClass = r.totalScore >= 80 ? 'badge bg-success' : r.totalScore >= 70 ? 'badge bg-primary' : r.totalScore >= 60 ? 'badge bg-warning text-dark' : 'badge bg-danger';
+                tr.innerHTML = `
+                    <td>${idx+1}</td>
+                    <td class="text-start fw-bold">${r.driver.title || ''}${r.driver.first_name || r.driver.name} ${r.driver.last_name || ''}</td>
+                    <td>รถตู้ส่วนกลาง</td>
+                    <td>${r.trips}</td>
+                    <td class="${r.missed > 0 ? 'text-danger fw-bold' : ''}">${r.missed}</td>
+                    <td>${r.passengerScore.toFixed(2)}</td>
+                    <td>${r.committeeScore.toFixed(2)}</td>
+                    <td class="fw-bold fs-6">${r.totalScore.toFixed(2)}</td>
+                    <td><span class="${gradeBadgeClass}">${r.grade}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function selectDriver(driverId) {
+            currentDriverId = driverId;
+            document.querySelectorAll('.driver-list-item').forEach(el => el.classList.remove('active'));
+            const activeItem = document.getElementById(`driver-item-${driverId}`);
+            if (activeItem) activeItem.classList.add('active');
+
+            const driver = allDrivers.find(d => d.id === driverId);
+            if (driver) {
+                document.getElementById('selectedDriverName').textContent = `${driver.title || ''}${driver.first_name || driver.name} ${driver.last_name || ''}`;
+                document.getElementById('selectedDriverPlate').textContent = `พนักงานขับรถประจำโรงเรียนพะเยาพิทยาคม`;
+            }
+
+            document.getElementById('noDriverSelected').classList.add('d-none');
+            document.getElementById('evaluationDashboard').classList.remove('d-none');
+
+            await loadDriverScores(driverId);
+            await loadWarnings(driverId);
+        }
+
+        async function loadDriverScores(driverId) {
+            const year = document.getElementById('academicYearFilter').value;
+            try {
+                const res = await API.get(`/api/evaluations/driver/${driverId}?year=${year}`);
+                const data = res.data || {};
+
+                document.getElementById('passengerScore').textContent = data.passenger_weighted ? data.passenger_weighted.toFixed(2) : '0.00';
+                document.getElementById('passengerTripCount').textContent = `เต็ม 40 คะแนน (จาก ${data.passenger_stats?.total_trips || 0} ทริป)`;
+
+                document.getElementById('committeeScore').textContent = data.committee_weighted ? data.committee_weighted.toFixed(2) : '0.00';
+                document.getElementById('committeeCount').textContent = `เต็ม 60 คะแนน (ประเมินแล้ว ${data.committee_stats?.committee_count || 0}/5 ท่าน)`;
+
                 const total = (data.passenger_weighted || 0) + (data.committee_weighted || 0);
-                const finalEl = document.getElementById('totalScore');
-                finalEl.textContent = total.toFixed(2);
+                document.getElementById('totalScore').textContent = total.toFixed(2);
                 
                 const gradeBadge = document.getElementById('finalGrade');
-                gradeBadge.textContent = data.grade;
-                
-                // Set color based on government standard
-                gradeBadge.className = 'badge fs-6 mt-1 ';
+                gradeBadge.textContent = data.grade || 'พอใช้';
+                gradeBadge.className = 'badge fs-6 px-3 py-1 ';
                 if(total >= 80) gradeBadge.classList.add('bg-success');
                 else if(total >= 70) gradeBadge.classList.add('bg-primary');
                 else if(total >= 60) gradeBadge.classList.add('bg-warning', 'text-dark');
                 else gradeBadge.classList.add('bg-danger');
 
-                // Load warnings
-                await loadWarnings(driverId, year);
-
+                // Stats
+                if (data.usage_stats) {
+                    document.getElementById('statCompletedTrips').textContent = data.usage_stats.total_completed_trips || 0;
+                    document.getElementById('statUsageLogs').textContent = data.usage_stats.total_logs || 0;
+                    document.getElementById('statMissedLogs').textContent = data.usage_stats.missed_logs || 0;
+                    document.getElementById('statMissedFuelLogs').textContent = data.usage_stats.missed_fuel_mileage || 0;
+                }
             } catch (err) {
                 console.error(err);
-                showAlert('ไม่สามารถโหลดข้อมูลการประเมินได้', 'danger');
             }
         }
 
-        async function loadWarnings(driverId, year) {
+        async function loadWarnings(driverId) {
+            const year = document.getElementById('academicYearFilter').value;
+            const tbody = document.querySelector('#warningTable tbody');
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-2"><div class="spinner-border spinner-border-sm text-primary"></div></td></tr>';
+
             try {
                 const res = await API.get(`/api/warnings/driver/${driverId}?year=${year}`);
-                const tbody = document.querySelector('#warningTable tbody');
                 tbody.innerHTML = '';
-                
-                if (res.data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">ไม่มีประวัติการเตือนในปีการศึกษานี้</td></tr>';
+                const list = res.data || [];
+                if (list.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-success py-3"><i class="fa-solid fa-circle-check me-1"></i> ไม่มีประวัติการแจ้งเตือนหรือผิดสัญญา (ดีเยี่ยม)</td></tr>';
                     return;
                 }
 
-                res.data.forEach(w => {
-                    const ackStatus = w.acknowledged_by_driver 
-                        ? `<span class="badge bg-success"><i class="fa-solid fa-check"></i> รับทราบแล้ว<br><small>${formatDateTime(w.acknowledged_at)}</small></span>`
-                        : `<span class="badge bg-warning text-dark"><i class="fa-regular fa-clock"></i> รอคนขับกดยอมรับ</span>`;
-                        
-                    let typeBadge = '';
-                    if(w.warning_type === 'verbal_record') typeBadge = '<span class="badge bg-secondary">ตักเตือนด้วยวาจา</span>';
-                    else if(w.warning_type === 'written_warning') typeBadge = '<span class="badge bg-danger">หนังสือเตือน</span>';
-                    else typeBadge = '<span class="badge bg-dark">ผิดสัญญา/TOR</span>';
-
-                    const pip = w.pip_start_date ? `<small>${formatDate(w.pip_start_date)} -<br>${formatDate(w.pip_end_date)}</small>` : '-';
-
-                    tbody.innerHTML += `
-                        <tr>
-                            <td><small>${formatDate(w.created_at)}</small></td>
-                            <td>${typeBadge}</td>
-                            <td class="text-start"><small>${w.reason}</small></td>
-                            <td>${pip}</td>
-                            <td>${ackStatus}</td>
-                        </tr>
+                list.forEach(w => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${w.date_issued || '-'}</td>
+                        <td><span class="badge bg-danger">${w.warning_type}</span></td>
+                        <td class="text-start">${w.reason || '-'}</td>
+                        <td>${w.pip_start_date ? `${w.pip_start_date} ถึง ${w.pip_end_date}` : '-'}</td>
                     `;
+                    tbody.appendChild(tr);
                 });
             } catch (err) {
                 console.error(err);
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">ไม่สามารถโหลดประวัติใบเตือนได้</td></tr>';
             }
         }
 
-        async function submitCommitteeEval() {
+        // Handle Committee Score Submit
+        document.getElementById('committeeEvalForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
             if (!currentDriverId) return;
+
             const year = document.getElementById('academicYearFilter').value;
-            const body = {
+            const payload = {
                 driver_id: currentDriverId,
                 evaluation_type: 'committee',
-                academic_year: year,
-                score_maintenance: parseInt(document.getElementById('score_maintenance').value),
-                score_discipline: parseInt(document.getElementById('score_discipline').value),
-                score_contribution: parseInt(document.getElementById('score_contribution').value),
-                comments: document.getElementById('committee_comments').value
+                score_maintenance: parseFloat(document.getElementById('score_maintenance').value),
+                score_discipline: parseFloat(document.getElementById('score_discipline').value),
+                score_contribution: parseFloat(document.getElementById('score_contribution').value),
+                comments: document.getElementById('committee_comments').value.trim(),
+                academic_year: year
             };
 
             try {
-                const btn = document.querySelector('#committeeEvalForm button[type="submit"]');
-                btn.disabled = true;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> บันทึก...';
-
-                await API.post('/api/evaluations', body);
-                
-                Swal.fire('สำเร็จ', 'บันทึกคะแนนของกรรมการ (ส่วนที่ 60%) เรียบร้อยแล้ว', 'success');
-                document.getElementById('committeeEvalForm').reset();
-                loadDriverDashboard(currentDriverId);
+                const res = await API.post('/api/evaluations', payload);
+                if (res.success) {
+                    Swal.fire('บันทึกสำเร็จ', 'ระบบได้บันทึกคะแนนของท่านและคำนวณคะแนนเฉลี่ยเรียบร้อยแล้ว', 'success');
+                    document.getElementById('committeeEvalForm').reset();
+                    await loadDriverScores(currentDriverId);
+                    await loadComparativeMatrix(year);
+                } else {
+                    Swal.fire('เกิดข้อผิดพลาด', res.error || 'ไม่สามารถบันทึกคะแนนได้', 'error');
+                }
             } catch (err) {
                 console.error(err);
-                Swal.fire('ข้อผิดพลาด', err.message || 'เกิดข้อผิดพลาด', 'error');
-            } finally {
-                const btn = document.querySelector('#committeeEvalForm button[type="submit"]');
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-save"></i> บันทึกคะแนนของท่าน';
+                Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
             }
+        });
+
+        function openPrintForm() {
+            if (!currentDriverId) return;
+            const year = document.getElementById('academicYearFilter').value;
+            window.open(`print-committee-form.html?driverId=${currentDriverId}&year=${year}`, '_blank');
+        }
+
+        function openBatchPrintDossiers() {
+            const year = document.getElementById('academicYearFilter').value;
+            window.open(`print-committee-form.html?batch=1&year=${year}`, '_blank');
+        }
+
+        function openPrintPassengerSurvey() {
+            if (!currentDriverId) return;
+            const year = document.getElementById('academicYearFilter').value;
+            window.open(`print-passenger-survey.html?driverId=${currentDriverId}&year=${year}`, '_blank');
+        }
+
+        function openExecutiveReport() {
+            execModal.show();
+        }
+
+        function printExecutiveReport() {
+            const printContent = document.getElementById('executiveReportPrintArea').innerHTML;
+            const win = window.open('', '_blank');
+            win.document.write(`
+                <html>
+                <head>
+                    <title>รายงานสรุปผลการประเมินพนักงานขับรถ - PPK DriveHub</title>
+                    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+                    <style>
+                        body { padding: 20px; font-family: 'Sarabun', sans-serif; font-size: 13px; }
+                        @page { size: A4 portrait; margin: 1cm; }
+                    </style>
+                </head>
+                <body onload="window.print();window.close();">
+                    ${printContent}
+                </body>
+                </html>
+            `);
+            win.document.close();
+        }
+
+        function copyRetroactiveSurveyLink() {
+            if (!currentDriverId) return;
+            const link = `${window.location.origin}/evaluate-trip.html?driver_id=${currentDriverId}`;
+            navigator.clipboard.writeText(link).then(() => {
+                Swal.fire('คัดลอกสำเร็จ', 'สามารถส่งลิงก์นี้ให้ผู้โดยสารเพื่อประเมินพนักงานท่านนี้ได้เลยครับ', 'success');
+            });
         }
 
         function openWarningModal() {
-            if (!currentDriverId) return;
             document.getElementById('warningForm').reset();
-            const today = new Date();
-            document.getElementById('pip_start_date').value = today.toISOString().split('T')[0];
-            
-            today.setDate(today.getDate() + 30);
-            document.getElementById('pip_end_date').value = today.toISOString().split('T')[0];
-            
             warningModal.show();
         }
 
-
-        async function submitWarning() {
+        async function saveWarning() {
             if (!currentDriverId) return;
             const year = document.getElementById('academicYearFilter').value;
-            const type = document.getElementById('warning_type').value;
-            const reason = document.getElementById('warning_reason').value;
-            const start = document.getElementById('pip_start_date').value;
-            const end = document.getElementById('pip_end_date').value;
+            const payload = {
+                driver_id: currentDriverId,
+                warning_type: document.getElementById('warning_type').value,
+                reason: document.getElementById('warning_reason').value.trim(),
+                pip_start_date: document.getElementById('pip_start_date').value || null,
+                pip_end_date: document.getElementById('pip_end_date').value || null,
+                academic_year: year
+            };
 
-            if (!reason) {
-                Swal.fire('แจ้งเตือน', 'กรุณาระบุสาเหตุ/ข้อบกพร่องที่ออกใบเตือน เพื่อใช้เป็นหลักฐาน', 'warning');
+            if (!payload.reason) {
+                Swal.fire('กรุณาระบุสาเหตุ', 'โปรดระบุสาเหตุหรือข้อบกพร่องในหนังสือเตือน', 'warning');
                 return;
             }
 
             try {
-                const btn = document.getElementById('btnSaveWarning');
-                btn.disabled = true;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> ส่ง...';
-
-                await API.post('/api/warnings', {
-                    driver_id: currentDriverId,
-                    warning_type: type,
-                    reason: reason,
-                    pip_start_date: start,
-                    pip_end_date: end,
-                    academic_year: year
-                });
-                
-                warningModal.hide();
-                Swal.fire('สำเร็จ', 'ออกหนังสือเตือนเรียบร้อยแล้ว ระบบกำลังรอคนขับกดยอมรับทราบในแอป', 'success');
-                loadDriverDashboard(currentDriverId);
+                const res = await API.post('/api/warnings', payload);
+                if (res.success) {
+                    warningModal.hide();
+                    Swal.fire('ออกใบเตือนสำเร็จ', 'ระบบได้บันทึกประวัติการแจ้งเตือนเรียบร้อยแล้ว', 'success');
+                    await loadWarnings(currentDriverId);
+                } else {
+                    Swal.fire('เกิดข้อผิดพลาด', res.error || 'ไม่สามารถออกใบเตือนได้', 'error');
+                }
             } catch (err) {
                 console.error(err);
-                Swal.fire('ข้อผิดพลาด', err.message, 'error');
-            } finally {
-                const btn = document.getElementById('btnSaveWarning');
-                btn.disabled = false;
-                btn.innerHTML = 'ส่งให้คนขับรับทราบ';
+                Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
             }
         }
     </script>

@@ -3,219 +3,404 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ประเมินความพึงพอใจการใช้รถ - PPK DriveHub</title>
+    <title>แบบประเมินความพึงพอใจพนักงานขับรถ - PPK DriveHub</title>
     <script src="config.js"></script>
-    <script>window.API_BASE_URL=CONFIG.API_BASE_URL;window.currentPage='evaluate-trip';window.REQUIRE_AUTH=true;</script>
+    <script>window.API_BASE_URL=CONFIG.API_BASE_URL;window.currentPage='evaluate-trip';window.REQUIRE_AUTH=false;</script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="common.css">
-    <script src="js/api.js"></script><script src="common.js"></script>
+    <script src="js/api.js"></script>
+    <script src="common.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
+        :root {
+            --primary-grad: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            --header-grad: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        body { background-color: #f8fafc; color: #1e293b; }
+        .hero-header {
+            background: var(--header-grad);
+            color: #fff;
+            padding: 2rem 1.5rem;
+            border-radius: 1rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.25);
+        }
+        .driver-card {
+            background: #fff;
+            border: 2px solid #e2e8f0;
+            border-radius: 1rem;
+            padding: 1.25rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            position: relative;
+            height: 100%;
+        }
+        .driver-card:hover {
+            transform: translateY(-4px);
+            border-color: #667eea;
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.15);
+        }
+        .driver-card.selected {
+            border-color: #4f46e5;
+            background-color: #eef2ff;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3);
+        }
+        .driver-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 0.75rem;
+            font-size: 2.2rem;
+            color: #64748b;
+            border: 3px solid #fff;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        }
+        .driver-card.selected .driver-avatar {
+            border-color: #4f46e5;
+            color: #4f46e5;
+            background: #e0e7ff;
+        }
+        .eval-badge-done {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #10b981;
+            color: #fff;
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
         .star-rating {
             display: flex;
             flex-direction: row-reverse;
-            justify-content: flex-end;
+            justify-content: center;
+            gap: 8px;
         }
         .star-rating input { display: none; }
         .star-rating label {
-            color: #ccc;
-            font-size: 2rem;
-            padding: 0 5px;
+            color: #cbd5e1;
+            font-size: 2.3rem;
             cursor: pointer;
-            transition: color 0.2s;
+            transition: color 0.15s ease-in-out, transform 0.15s ease-in-out;
         }
+        .star-rating label:hover { transform: scale(1.15); }
         .star-rating input:checked ~ label,
         .star-rating label:hover,
         .star-rating label:hover ~ label {
-            color: #ffc107;
+            color: #fbbf24;
         }
-        .evaluation-card { max-width: 600px; margin: 2rem auto; }
-        .back-btn{cursor:pointer;color:var(--color-primary);font-weight:500;display:inline-flex;align-items:center;gap:4px;margin-bottom:1rem;text-decoration:none}
+        .eval-section {
+            background: #fff;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            margin-bottom: 1.25rem;
+        }
+        .back-btn { cursor:pointer; color:var(--color-primary); font-weight:500; display:inline-flex; align-items:center; gap:6px; margin-bottom:1rem; text-decoration:none; }
     </style>
 </head>
-<body class="bg-light">
-    <div class="container py-4">
-        <a href="dashboard.html" class="back-btn"><i class="fa-solid fa-arrow-left"></i> กลับหน้าหลัก</a>
+<body>
+    <div class="container py-4" style="max-width: 900px;">
+        <a href="dashboard.html" class="back-btn"><i class="fa-solid fa-arrow-left"></i> กลับสู่หน้าหลัก</a>
 
-        <div class="card shadow-sm evaluation-card">
-            <div class="card-header bg-primary text-white text-center py-3">
-                <h4 class="mb-0"><i class="fa-solid fa-clipboard-user"></i> แบบประเมินพนักงานขับรถ</h4>
+        <!-- Header -->
+        <div class="hero-header text-center text-md-start d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
+            <div>
+                <span class="badge bg-light text-dark px-3 py-1 rounded-pill mb-2 fw-bold"><i class="fa-solid fa-shield-heart text-danger"></i> แบบประเมินผู้ใช้บริการ</span>
+                <h3 class="fw-bold mb-1">ประเมินความพึงพอใจพนักงานขับรถ</h3>
+                <p class="mb-0 small opacity-90">ข้อมูลของท่านจะถูกนำไปใช้ประเมินผลการปฏิบัติงานเพื่อพัฒนาการบริการและพิจารณาต่อสัญญาประจำปี</p>
             </div>
-            <div class="card-body p-4">
-                <p class="text-muted text-center mb-4">ข้อมูลของท่านจะถูกนำไปใช้ประเมินผลการปฏิบัติงานของพนักงานขับรถเพื่อพิจารณาต่อสัญญาประจำปี</p>
-
-                <form id="evaluationForm">
-                    <div class="mb-4">
-                        <label class="form-label fw-bold">เลือกพนักงานขับรถ <span class="text-danger">*</span></label>
-                        <select class="form-select form-select-lg" id="driver_id" required>
-                            <option value="">-- เลือกพนักงานขับรถที่ต้องการประเมิน --</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="form-label fw-bold">1. ด้านการขับขี่ปลอดภัย (Safe Driving) <span class="text-danger">*</span></label>
-                        <div class="text-muted small mb-2">
-                            <ul class="mb-1 ps-3">
-                                <li>ขับรถนุ่มนวล ไม่เบรกกะทันหัน หรือขับหวาดเสียว</li>
-                                <li>เคารพกฎจราจร (ไม่ฝ่าไฟแดง ไม่ขับเร็วเกินกำหนด)</li>
-                                <li>การใช้ความเร็วรถเหมาะสม</li>
-                            </ul>
-                        </div>
-                        <div class="star-rating">
-                            <input type="radio" id="drive5" name="score_driving" value="5" required><label for="drive5"><i class="fa-solid fa-star"></i></label>
-                            <input type="radio" id="drive4" name="score_driving" value="4"><label for="drive4"><i class="fa-solid fa-star"></i></label>
-                            <input type="radio" id="drive3" name="score_driving" value="3"><label for="drive3"><i class="fa-solid fa-star"></i></label>
-                            <input type="radio" id="drive2" name="score_driving" value="2"><label for="drive2"><i class="fa-solid fa-star"></i></label>
-                            <input type="radio" id="drive1" name="score_driving" value="1"><label for="drive1"><i class="fa-solid fa-star"></i></label>
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="form-label fw-bold">2. ด้านการบริการและมารยาท (Service & Politeness) <span class="text-danger">*</span></label>
-                        <div class="text-muted small mb-2">
-                            <ul class="mb-1 ps-3">
-                                <li>กริยาวาจาสุภาพเรียบร้อย ให้เกียรติผู้โดยสาร</li>
-                                <li>แต่งกายสะอาดเรียบร้อยตามระเบียบ</li>
-                                <li>อำนวยความสะดวกในการขึ้น-ลงรถ และช่วยยกสัมภาระ</li>
-                            </ul>
-                        </div>
-                        <div class="star-rating">
-                            <input type="radio" id="serv5" name="score_service" value="5" required><label for="serv5"><i class="fa-solid fa-star"></i></label>
-                            <input type="radio" id="serv4" name="score_service" value="4"><label for="serv4"><i class="fa-solid fa-star"></i></label>
-                            <input type="radio" id="serv3" name="score_service" value="3"><label for="serv3"><i class="fa-solid fa-star"></i></label>
-                            <input type="radio" id="serv2" name="score_service" value="2"><label for="serv2"><i class="fa-solid fa-star"></i></label>
-                            <input type="radio" id="serv1" name="score_service" value="1"><label for="serv1"><i class="fa-solid fa-star"></i></label>
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="form-label fw-bold">3. ด้านความตรงต่อเวลา (Punctuality) <span class="text-danger">*</span></label>
-                        <div class="text-muted small mb-2">
-                            <ul class="mb-1 ps-3">
-                                <li>นำรถมารอรับ "ก่อนเวลา" นัดหมายเสมอ</li>
-                                <li>พาคณะเดินทางไปถึงจุดหมายปลายทางได้ทันเวลา</li>
-                                <li>จอดรอรับ-ส่งในจุดที่กำหนดไว้อย่างชัดเจนและปลอดภัย ไม่ให้คณะเดินทางต้องเดินหา</li>
-                            </ul>
-                        </div>
-                        <div class="star-rating">
-                            <input type="radio" id="time5" name="score_punctuality" value="5" required><label for="time5"><i class="fa-solid fa-star"></i></label>
-                            <input type="radio" id="time4" name="score_punctuality" value="4"><label for="time4"><i class="fa-solid fa-star"></i></label>
-                            <input type="radio" id="time3" name="score_punctuality" value="3"><label for="time3"><i class="fa-solid fa-star"></i></label>
-                            <input type="radio" id="time2" name="score_punctuality" value="2"><label for="time2"><i class="fa-solid fa-star"></i></label>
-                            <input type="radio" id="time1" name="score_punctuality" value="1"><label for="time1"><i class="fa-solid fa-star"></i></label>
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="form-label fw-bold">ข้อเสนอแนะเพิ่มเติม (ถ้ามี)</label>
-                        <textarea class="form-control" id="comments" rows="3" placeholder="ระบุคำชมเชย หรือข้อร้องเรียน (หากให้คะแนนต่ำกว่า 3 ดาว กรุณาระบุสาเหตุ)"></textarea>
-                    </div>
-
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary btn-lg"><i class="fa-solid fa-paper-plane"></i> ส่งแบบประเมิน</button>
-                    </div>
-                </form>
+            <div>
+                <button class="btn btn-warning fw-bold text-dark px-3 py-2 shadow-sm" onclick="copyShareableLink()">
+                    <i class="fa-solid fa-share-nodes"></i> คัดลอกลิงก์ส่งให้ผู้อื่น
+                </button>
             </div>
         </div>
+
+        <!-- Step 1: Driver Selection Cards -->
+        <div class="mb-4">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h5 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-id-card text-primary me-2"></i> 1. เลือกพนักงานขับรถที่ท่านต้องการประเมิน</h5>
+                <span class="text-muted small">คลิกเลือกที่การ์ดคนขับ</span>
+            </div>
+
+            <div class="row g-3" id="driverCardsContainer">
+                <div class="col-12 text-center py-4">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="text-muted mt-2">กำลังโหลดรายชื่อพนักงานขับรถ...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Evaluation Form -->
+        <div id="evaluationFormContainer" class="d-none">
+            <div class="alert alert-info border-0 shadow-sm d-flex align-items-center gap-3 mb-4">
+                <i class="fa-solid fa-circle-user fa-2x text-primary"></i>
+                <div>
+                    <div class="fw-bold" id="selectedDriverTitle">ท่านกำลังประเมิน: นายสมชาย ใจดี</div>
+                    <small class="text-muted" id="selectedDriverSubtitle">รถประจำตัว: นข-1234 พะเยา</small>
+                </div>
+            </div>
+
+            <form id="passengerSurveyForm" onsubmit="handleSurveySubmit(event)">
+                <input type="hidden" id="selectedDriverId">
+                <input type="hidden" id="selectedCarId">
+
+                <!-- Criteria 1 -->
+                <div class="eval-section">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <h6 class="fw-bold text-primary mb-1"><i class="fa-solid fa-shield-halved"></i> 1. ด้านการขับขี่ปลอดภัย (Safe Driving) <span class="text-danger">*</span></h6>
+                            <div class="text-muted small ps-3">
+                                • ขับรถนุ่มนวล ไม่เบรกกะทันหัน หรือขับขี่หวาดเสียว<br>
+                                • เคารพกฎจราจรเคร่งครัด (ไม่ขับเร็วเกินกำหนด, ไม่ฝ่าไฟแดง)<br>
+                                • การใช้ความเร็วเหมาะสมกับสภาพเส้นทาง
+                            </div>
+                        </div>
+                    </div>
+                    <div class="star-rating my-2">
+                        <input type="radio" id="safe5" name="safety_score" value="5" required><label for="safe5" title="ดีมาก (5)"><i class="fa-solid fa-star"></i></label>
+                        <input type="radio" id="safe4" name="safety_score" value="4"><label for="safe4" title="ดี (4)"><i class="fa-solid fa-star"></i></label>
+                        <input type="radio" id="safe3" name="safety_score" value="3"><label for="safe3" title="ปานกลาง (3)"><i class="fa-solid fa-star"></i></label>
+                        <input type="radio" id="safe2" name="safety_score" value="2"><label for="safe2" title="พอใช้ (2)"><i class="fa-solid fa-star"></i></label>
+                        <input type="radio" id="safe1" name="safety_score" value="1"><label for="safe1" title="ต้องปรับปรุง (1)"><i class="fa-solid fa-star"></i></label>
+                    </div>
+                </div>
+
+                <!-- Criteria 2 -->
+                <div class="eval-section">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <h6 class="fw-bold text-success mb-1"><i class="fa-solid fa-hand-holding-heart"></i> 2. ด้านการบริการและมารยาท (Service & Politeness) <span class="text-danger">*</span></h6>
+                            <div class="text-muted small ps-3">
+                                • กริยาวาจาสุภาพเรียบร้อย ให้เกียรติผู้โดยสาร<br>
+                                • แต่งกายสะอาดเรียบร้อยตามระเบียบโรงเรียน<br>
+                                • อำนวยความสะดวกในการขึ้น-ลงรถ และช่วยยกสัมภาระ
+                            </div>
+                        </div>
+                    </div>
+                    <div class="star-rating my-2">
+                        <input type="radio" id="serv5" name="politeness_score" value="5" required><label for="serv5" title="ดีมาก (5)"><i class="fa-solid fa-star"></i></label>
+                        <input type="radio" id="serv4" name="politeness_score" value="4"><label for="serv4" title="ดี (4)"><i class="fa-solid fa-star"></i></label>
+                        <input type="radio" id="serv3" name="politeness_score" value="3"><label for="serv3" title="ปานกลาง (3)"><i class="fa-solid fa-star"></i></label>
+                        <input type="radio" id="serv2" name="politeness_score" value="2"><label for="serv2" title="พอใช้ (2)"><i class="fa-solid fa-star"></i></label>
+                        <input type="radio" id="serv1" name="politeness_score" value="1"><label for="serv1" title="ต้องปรับปรุง (1)"><i class="fa-solid fa-star"></i></label>
+                    </div>
+                </div>
+
+                <!-- Criteria 3 -->
+                <div class="eval-section">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <h6 class="fw-bold text-warning text-dark mb-1"><i class="fa-solid fa-clock"></i> 3. ด้านความตรงต่อเวลา (Punctuality) <span class="text-danger">*</span></h6>
+                            <div class="text-muted small ps-3">
+                                • นำรถมารอรับ "ก่อนเวลา" นัดหมายเสมอ<br>
+                                • พาคณะเดินทางไปถึงจุดหมายปลายทางได้ทันเวลา<br>
+                                • จอดรอรับ-ส่งในจุดที่นัดหมายชัดเจน ไม่ให้คณะเดินทางต้องเดินหา
+                            </div>
+                        </div>
+                    </div>
+                    <div class="star-rating my-2">
+                        <input type="radio" id="time5" name="punctuality_score" value="5" required><label for="time5" title="ดีมาก (5)"><i class="fa-solid fa-star"></i></label>
+                        <input type="radio" id="time4" name="punctuality_score" value="4"><label for="time4" title="ดี (4)"><i class="fa-solid fa-star"></i></label>
+                        <input type="radio" id="time3" name="punctuality_score" value="3"><label for="time3" title="ปานกลาง (3)"><i class="fa-solid fa-star"></i></label>
+                        <input type="radio" id="time2" name="punctuality_score" value="2"><label for="time2" title="พอใช้ (2)"><i class="fa-solid fa-star"></i></label>
+                        <input type="radio" id="time1" name="punctuality_score" value="1"><label for="time1" title="ต้องปรับปรุง (1)"><i class="fa-solid fa-star"></i></label>
+                    </div>
+                </div>
+
+                <!-- Optional / Feedback Section -->
+                <div class="eval-section">
+                    <label class="form-label fw-bold"><i class="fa-solid fa-comment-dots text-secondary"></i> ข้อเสนอแนะ / คำชมเชยเพิ่มเติม</label>
+                    <textarea class="form-control" id="surveyComment" rows="3" placeholder="ระบุคำชมเชย หรือข้อเสนอแนะเพื่อการปรับปรุงการให้บริการ (หากให้คะแนนต่ำกว่า 3 ดาว กรุณาระบุสาเหตุ)..."></textarea>
+                    <div class="form-text text-muted mt-1"><i class="fa-solid fa-lock"></i> ข้อมูลของท่านจะถูกจัดเก็บเป็นความลับเพื่อประโยชน์ในการพัฒนาคุณภาพงานบริการ</div>
+                </div>
+
+                <div class="d-grid gap-2 mb-5">
+                    <button type="submit" id="btnSubmitSurvey" class="btn btn-primary btn-lg py-3 fw-bold shadow">
+                        <i class="fa-solid fa-paper-plane me-2"></i> ส่งผลการประเมิน
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Helper message when no driver selected -->
+        <div id="noDriverPrompt" class="text-center p-5 bg-white border rounded-3 shadow-sm">
+            <i class="fa-solid fa-hand-pointer fa-3x text-primary opacity-50 mb-3"></i>
+            <h5>กรุณาคลิกเลือกพนักงานขับรถด้านบน</h5>
+            <p class="text-muted mb-0">ระบบจะแสดงแบบประเมิน 3 ด้านให้ท่านลงคะแนนดาวทันที</p>
+        </div>
+
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        let allDrivers = [];
+        let evaluatedDrivers = JSON.parse(localStorage.getItem('ppk_evaluated_drivers') || '{}');
+
         document.addEventListener('DOMContentLoaded', async () => {
-            if (!checkAuth()) {
-                window.location.href = 'login.html';
-                return;
-            }
-            window.currentUser = getCurrentUser();
-            await loadDrivers();
+            await loadDriverCards();
 
-            // Check if queue_id and driver_id are passed in URL
+            // Auto-select driver from URL param if present
             const urlParams = new URLSearchParams(window.location.search);
-            const driverId = urlParams.get('driver_id');
+            const driverId = urlParams.get('driver_id') || urlParams.get('driverId');
             if (driverId) {
-                const select = document.getElementById('driver_id');
-                // wait slightly to ensure options are loaded
-                setTimeout(() => {
-                    select.value = driverId;
-                }, 500);
+                setTimeout(() => selectDriver(driverId), 300);
             }
-
-            document.getElementById('evaluationForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await submitEvaluation();
-            });
         });
 
-        async function loadDrivers() {
+        async function loadDriverCards() {
+            const container = document.getElementById('driverCardsContainer');
             try {
-                const res = await API.get('/api/drivers');
-                const drivers = (res.data.drivers || res.data || []).filter(d => d.status === 'active');
-                const select = document.getElementById('driver_id');
-                
-                drivers.forEach(d => {
-                    const opt = document.createElement('option');
-                    opt.value = d.id;
-                    opt.textContent = `${d.title || ''}${d.first_name} ${d.last_name}`;
-                    select.appendChild(opt);
-                });
+                const res = await API.get('/api/survey/drivers');
+                if (res.success && res.data && res.data.length > 0) {
+                    allDrivers = res.data;
+                    renderDriverCards();
+                } else {
+                    container.innerHTML = '<div class="col-12 text-center text-muted">ไม่พบข้อมูลพนักงานขับรถ</div>';
+                }
             } catch (err) {
                 console.error(err);
-                showAlert('ไม่สามารถโหลดรายชื่อคนขับได้', 'danger');
+                container.innerHTML = '<div class="col-12 text-center text-danger">เกิดข้อผิดพลาดในการโหลดรายชื่อพนักงาน</div>';
             }
         }
 
-        async function submitEvaluation() {
-            const driver_id = document.getElementById('driver_id').value;
-            const score_driving = parseInt(document.querySelector('input[name="score_driving"]:checked')?.value || 0);
-            const score_service = parseInt(document.querySelector('input[name="score_service"]:checked')?.value || 0);
-            const score_punctuality = parseInt(document.querySelector('input[name="score_punctuality"]:checked')?.value || 0);
-            const comments = document.getElementById('comments').value;
+        function renderDriverCards() {
+            const container = document.getElementById('driverCardsContainer');
+            container.innerHTML = '';
 
-            if (!score_driving || !score_service || !score_punctuality) {
-                Swal.fire('แจ้งเตือน', 'กรุณาให้คะแนนให้ครบทั้ง 3 ด้าน', 'warning');
+            allDrivers.forEach(d => {
+                const isEvaluated = !!evaluatedDrivers[d.id];
+                const col = document.createElement('div');
+                col.className = 'col-6 col-md-3';
+                col.innerHTML = `
+                    <div class="driver-card" id="card-${d.id}" onclick="selectDriver('${d.id}')">
+                        ${isEvaluated ? '<span class="eval-badge-done"><i class="fa-solid fa-check"></i> ประเมินแล้ว</span>' : ''}
+                        <div class="driver-avatar">
+                            <i class="fa-solid fa-user-tie"></i>
+                        </div>
+                        <h6 class="fw-bold text-dark mb-1 text-truncate">${d.name}</h6>
+                        <small class="text-muted d-block text-truncate">
+                            <i class="fa-solid fa-van-shuttle"></i> ${d.license_plate ? d.license_plate : 'รถประจำโรงเรียน'}
+                        </small>
+                    </div>
+                `;
+                container.appendChild(col);
+            });
+        }
+
+        function selectDriver(driverId) {
+            const driver = allDrivers.find(d => d.id === driverId);
+            if (!driver) return;
+
+            document.querySelectorAll('.driver-card').forEach(el => el.classList.remove('selected'));
+            const selectedCard = document.getElementById(`card-${driverId}`);
+            if (selectedCard) selectedCard.classList.add('selected');
+
+            document.getElementById('selectedDriverId').value = driver.id;
+            document.getElementById('selectedCarId').value = driver.car_id || '';
+            document.getElementById('selectedDriverTitle').textContent = `ท่านกำลังประเมิน: ${driver.name}`;
+            document.getElementById('selectedDriverSubtitle').textContent = `รถประจำตัว: ${driver.license_plate || 'รถยนต์ส่วนกลางโรงเรียน'}`;
+
+            document.getElementById('noDriverPrompt').classList.add('d-none');
+            document.getElementById('evaluationFormContainer').classList.remove('d-none');
+
+            // Reset Form stars
+            document.getElementById('passengerSurveyForm').reset();
+            window.scrollTo({ top: document.getElementById('evaluationFormContainer').offsetTop - 30, behavior: 'smooth' });
+        }
+
+        async function handleSurveySubmit(e) {
+            e.preventDefault();
+            const driverId = document.getElementById('selectedDriverId').value;
+            const carId = document.getElementById('selectedCarId').value;
+
+            const safetyScore = parseFloat(document.querySelector('input[name="safety_score"]:checked')?.value || 0);
+            const politenessScore = parseFloat(document.querySelector('input[name="politeness_score"]:checked')?.value || 0);
+            const punctualityScore = parseFloat(document.querySelector('input[name="punctuality_score"]:checked')?.value || 0);
+            const comments = document.getElementById('surveyComment').value.trim();
+
+            if (!safetyScore || !politenessScore || !punctualityScore) {
+                Swal.fire('กรุณาให้คะแนน', 'โปรดคลิกเลือกดาวให้ครบทั้ง 3 ด้าน', 'warning');
                 return;
             }
 
-            // Logic to force comments if score is low
-            if ((score_driving <= 2 || score_service <= 2 || score_punctuality <= 2) && comments.trim() === '') {
-                Swal.fire('แจ้งเตือน', 'ท่านให้คะแนนต่ำกว่าเกณฑ์ปกติ กรุณาระบุข้อเสนอแนะหรือสาเหตุเพื่อเป็นข้อมูลให้คณะกรรมการ', 'warning');
+            // If any score < 3, enforce comment
+            if ((safetyScore < 3 || politenessScore < 3 || punctualityScore < 3) && !comments) {
+                Swal.fire('โปรดระบุเหตุผล', 'เนื่องจากท่านให้คะแนนต่ำกว่า 3 ดาวในบางข้อ โปรดระบุข้อเสนอแนะหรือสาเหตุสั้นๆ เพื่อให้พนักงานนำไปปรับปรุง', 'info');
+                document.getElementById('surveyComment').focus();
                 return;
             }
 
-            const urlParams = new URLSearchParams(window.location.search);
-            const queue_id = urlParams.get('queue_id');
+            const overallScore = ((safetyScore + politenessScore + punctualityScore) / 3);
+
+            const payload = {
+                driver_id: driverId,
+                car_id: carId || undefined,
+                safety_score: safetyScore,
+                politeness_score: politenessScore,
+                punctuality_score: punctualityScore,
+                overall_score: parseFloat(overallScore.toFixed(2)),
+                comment: comments,
+                respondent_name: 'ผู้รับบริการ (Online Survey)'
+            };
+
+            const btn = document.getElementById('btnSubmitSurvey');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> กำลังบันทึกผล...';
 
             try {
-                const btn = document.querySelector('button[type="submit"]');
-                btn.disabled = true;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> กำลังส่งข้อมูล...';
+                const res = await API.post('/api/survey/submit', payload);
+                if (res.success) {
+                    // Mark in localStorage
+                    evaluatedDrivers[driverId] = true;
+                    localStorage.setItem('ppk_evaluated_drivers', JSON.stringify(evaluatedDrivers));
+                    renderDriverCards();
 
-                await API.post('/api/evaluations', {
-                    driver_id,
-                    queue_id,
-                    evaluation_type: 'passenger',
-                    score_driving,
-                    score_service,
-                    score_punctuality,
-                    comments
-                });
-
-                Swal.fire({
-                    title: 'ขอบคุณครับ!',
-                    text: 'ระบบได้รับผลการประเมินของท่านเรียบร้อยแล้ว',
-                    icon: 'success',
-                    confirmButtonText: 'กลับหน้าหลัก'
-                }).then(() => {
-                    window.location.href = 'dashboard.html';
-                });
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'ขอบคุณสำหรับการประเมิน',
+                        text: 'ระบบได้บันทึกข้อมูลคะแนนความพึงพอใจของท่านเรียบร้อยแล้ว',
+                        confirmButtonText: 'ประเมินพนักงานคนอื่นต่อ'
+                    }).then(() => {
+                        document.getElementById('passengerSurveyForm').reset();
+                        document.getElementById('evaluationFormContainer').classList.add('d-none');
+                        document.getElementById('noDriverPrompt').classList.remove('d-none');
+                        document.querySelectorAll('.driver-card').forEach(el => el.classList.remove('selected'));
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    });
+                } else {
+                    Swal.fire('เกิดข้อผิดพลาด', res.error || 'ไม่สามารถบันทึกแบบประเมินได้', 'error');
+                }
             } catch (err) {
                 console.error(err);
-                Swal.fire('ข้อผิดพลาด', err.message, 'error');
-                const btn = document.querySelector('button[type="submit"]');
+                Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
+            } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> ส่งแบบประเมิน';
+                btn.innerHTML = '<i class="fa-solid fa-paper-plane me-2"></i> ส่งผลการประเมิน';
             }
+        }
+
+        function copyShareableLink() {
+            const link = `${window.location.origin}/evaluate-trip.html`;
+            navigator.clipboard.writeText(link).then(() => {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'คัดลอกลิงก์สำเร็จ',
+                    text: 'สามารถนำลิงก์นี้ไปส่งในกลุ่ม LINE เพื่อให้ผู้โดยสาร/คณะครูประเมินได้เลยครับ',
+                    timer: 2500,
+                    showConfirmButton: false
+                });
+            }).catch(() => {
+                prompt('กรุณาคัดลอกลิงก์นี้:', link);
+            });
         }
     </script>
 </body>

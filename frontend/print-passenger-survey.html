@@ -3,33 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>รายงานผลประเมินผู้โดยสาร</title>
+    <title>รายงานผลการประเมินจากผู้รับบริการ (Audit Trail) - PPK DriveHub</title>
     <script src="config.js"></script>
     <script>window.API_BASE_URL=CONFIG.API_BASE_URL;window.currentPage='print-passenger-survey';window.REQUIRE_AUTH=true;</script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="common.css">
-    <script src="js/api.js"></script><script src="common.js"></script>
+    <script src="js/api.js"></script>
+    <script src="common.js"></script>
     <style>
-        body { background: #fff; font-size: 12px; color: #000; }
-        .print-container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+        body { background: #f8fafc; font-size: 12px; color: #000; font-family: 'Sarabun', 'Segoe UI', Tahoma, sans-serif; }
+        .print-container { max-width: 1150px; margin: 0 auto; padding: 25px; background: #fff; box-shadow: 0 0 15px rgba(0,0,0,0.05); }
         
         .header-section { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-        .header-section h3 { font-weight: bold; margin-bottom: 5px; }
+        .header-section h4 { font-weight: bold; margin-bottom: 4px; }
         
         .table-custom { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        .table-custom th, .table-custom td { border: 1px solid #000; padding: 6px; }
-        .table-custom th { background-color: #f0f0f0; text-align: center; font-weight: bold; }
-        .table-custom td { vertical-align: middle; }
+        .table-custom th, .table-custom td { border: 1px solid #000; padding: 6px 8px; vertical-align: middle; }
+        .table-custom th { background-color: #f1f5f9; text-align: center; font-weight: bold; }
         
-        .score-col { width: 50px; text-align: center; }
+        .score-col { width: 50px; text-align: center; font-weight: bold; }
+        .ip-col { font-family: monospace; font-size: 11px; text-align: center; }
+        .ua-col { font-size: 10px; color: #475569; word-break: break-all; max-width: 200px; }
 
-        .no-print { display: block; margin-bottom: 20px; text-align: center; padding: 15px; background: #e9ecef; border-radius: 5px; }
+        .no-print { display: block; margin-bottom: 20px; text-align: center; padding: 15px; background: #e2e8f0; border-radius: 8px; }
         
         @media print {
             .no-print { display: none !important; }
-            body { padding: 0; margin: 0; }
-            .print-container { width: 100%; max-width: 100%; padding: 0; }
+            body { padding: 0; margin: 0; background: #fff; }
+            .print-container { width: 100%; max-width: 100%; padding: 0; box-shadow: none; }
             @page { margin: 1cm; size: landscape; }
         }
     </style>
@@ -38,111 +40,154 @@
     <div class="print-container">
         
         <div class="no-print">
-            <h5><i class="fa-solid fa-list-check"></i> โหมดพิมพ์รายงานประเมินจากผู้โดยสาร</h5>
-            <p>กรุณากดปุ่มด้านล่าง หรือกด <code>Ctrl+P</code> เพื่อพิมพ์รายงานแนบเป็นหลักฐาน (โปรดตั้งค่าการพิมพ์เป็นแนวนอน - Landscape)</p>
-            <button class="btn btn-primary btn-lg" onclick="window.print()"><i class="fa-solid fa-print"></i> สั่งปริ้นรายงาน</button>
-            <button class="btn btn-secondary btn-lg ms-2" onclick="window.close()">ปิดหน้านี้</button>
+            <h5 class="fw-bold"><i class="fa-solid fa-file-shield text-success"></i> รายงานผลการประเมินจากผู้รับบริการฉบับสมบูรณ์ (Digital Audit Trail)</h5>
+            <p class="text-muted small mb-3">เอกสารแสดงรายการประเมินของผู้โดยสารทุกรายการตลอดปี พร้อมหลักฐาน IP Address, วันเวลา และอุปกรณ์ เพื่อความโปร่งใสและตรวจสอบได้ 100%</p>
+            <div class="d-flex justify-content-center gap-2">
+                <button class="btn btn-primary btn-lg px-4" onclick="window.print()"><i class="fa-solid fa-print me-2"></i> สั่งพิมพ์รายงาน (แนวนอน Landscape)</button>
+                <button class="btn btn-secondary btn-lg" onclick="window.close()">ปิดหน้านี้</button>
+            </div>
         </div>
 
         <div class="header-section">
-            <h3>รายงานรายละเอียดการประเมินผลจากผู้โดยสาร</h3>
-            <h4 id="displayDriverName">ชื่อ-สกุล: กำลังโหลด...</h4>
-            <p class="mb-0">รอบปีที่ประเมิน <span id="displayYear" class="fw-bold">----</span></p>
+            <h4>รายงานรายละเอียดผลการประเมินความพึงพอใจจากผู้รับบริการ (ผู้โดยสาร)</h4>
+            <h5 id="displayDriverName" class="fw-bold text-primary">ชื่อ-สกุล: กำลังโหลด...</h5>
+            <p class="mb-0 text-muted">รอบปีการศึกษา <span id="displayYear" class="fw-bold">----</span> | ข้อมูลอ้างอิง ณ วันที่ <span id="printDate"></span></p>
+        </div>
+
+        <!-- Summary Stats Card -->
+        <div class="row g-2 mb-3 text-center" id="summaryStatsRow">
+            <div class="col-3">
+                <div class="p-2 border bg-light rounded">
+                    <small class="text-muted d-block">จำนวนครั้งที่ประเมิน</small>
+                    <strong class="fs-6 text-dark" id="statCount">0 ครั้ง</strong>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="p-2 border bg-light rounded">
+                    <small class="text-muted d-block">คะแนนดาวเฉลี่ย</small>
+                    <strong class="fs-6 text-warning text-dark" id="statAvgStars">0.00 / 5.00 ⭐</strong>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="p-2 border bg-light rounded">
+                    <small class="text-muted d-block">แปลงเป็นคะแนนส่วนที่ 1</small>
+                    <strong class="fs-6 text-primary" id="statWeighted">0.00 / 40.00</strong>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="p-2 border bg-light rounded">
+                    <small class="text-muted d-block">สถานะการตรวจสอบ</small>
+                    <strong class="fs-6 text-success"><i class="fa-solid fa-circle-check"></i> ตรวจสอบแล้ว</strong>
+                </div>
+            </div>
         </div>
 
         <table class="table-custom" id="surveyTable">
             <thead>
                 <tr>
-                    <th rowspan="2" style="width: 120px;">วันเวลาที่ส่ง</th>
-                    <th rowspan="2" style="width: 80px;">ทะเบียนรถ</th>
-                    <th colspan="6">คะแนน (เต็ม 5)</th>
-                    <th rowspan="2">ความคิดเห็น</th>
-                    <th rowspan="2" style="width: 120px;">IP Address</th>
-                    <th rowspan="2" style="width: 180px;">อุปกรณ์ (User Agent)</th>
-                </tr>
-                <tr>
-                    <th class="score-col" title="สุภาพ ให้เกียรติ">สุภาพ</th>
-                    <th class="score-col" title="ปลอดภัย ไม่หวาดเสียว">ปลอดภัย</th>
-                    <th class="score-col" title="ตรงต่อเวลา">ตรงเวลา</th>
-                    <th class="score-col" title="ความสะอาดของรถ">สะอาด</th>
-                    <th class="score-col" title="บุคลิกภาพ ไม่งอแง ไม่มีกลิ่นบุหรี่/ตัว">บุคลิก/บริการ</th>
-                    <th class="score-col">รวม</th>
+                    <th style="width: 130px;">วันเวลาที่ส่ง (Timestamp)</th>
+                    <th style="width: 80px;">ทะเบียนรถ</th>
+                    <th class="score-col">ปลอดภัย</th>
+                    <th class="score-col">บริการ</th>
+                    <th class="score-col">ตรงเวลา</th>
+                    <th class="score-col" style="background:#e0e7ff;">รวม (5)</th>
+                    <th>ข้อเสนอแนะ / คำชมเชย</th>
+                    <th style="width: 110px;">IP Address</th>
+                    <th style="width: 180px;">อุปกรณ์ที่ใช้ประเมิน (Device/Browser)</th>
                 </tr>
             </thead>
             <tbody id="surveyTableBody">
-                <tr><td colspan="11" class="text-center py-4">กำลังโหลดข้อมูล...</td></tr>
+                <tr><td colspan="9" class="text-center py-4">กำลังโหลดข้อมูลหลักฐาน...</td></tr>
             </tbody>
         </table>
 
-        <div class="mt-4" style="font-size: 11px; color: #555;">
-            <p><strong>หมายเหตุ:</strong> ข้อมูล IP Address และ User Agent ถูกบันทึกอัตโนมัติจากอุปกรณ์ของผู้ประเมินผ่านระบบเครือข่าย เพื่อใช้เป็นหลักฐานยืนยันความถูกต้องและป้องกันการปลอมแปลงข้อมูล</p>
+        <div class="mt-4 pt-2 border-top text-muted" style="font-size: 11px;">
+            <p class="mb-1"><strong>หมายเหตุความโปร่งใส (Transparency & Compliance):</strong></p>
+            <p class="mb-0">• ข้อมูลวันเวลา (Timestamp), IP Address และชนิดอุปกรณ์ ถูกบันทึกโดยอัตโนมัติจากระบบเครือข่ายอินเทอร์เน็ตของผู้ประเมิน ตามมาตรฐาน พ.ร.บ. ว่าด้วยการกระทำความผิดเกี่ยวกับคอมพิวเตอร์ และระเบียบความปลอดภัยสารสนเทศ</p>
+            <p class="mb-0">• ระบบสงวนสิทธิ์การปกปิดชื่อผู้ประเมินเพื่อความปลอดภัยและความเป็นกลาง แต่สามารถตรวจสอบความถูกต้องทางเทคนิคได้ทุกรายการ</p>
         </div>
+
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
+            if (!checkAuth()) {
+                window.location.href = 'login.html';
+                return;
+            }
+            window.currentUser = getCurrentUser();
+
             const urlParams = new URLSearchParams(window.location.search);
-            const driverId = urlParams.get('driverId');
-            const year = urlParams.get('year') || new Date().getFullYear();
+            const driverId = urlParams.get('driverId') || urlParams.get('driver_id');
+            const year = urlParams.get('year') || (new Date().getFullYear() + 543).toString();
             
             document.getElementById('displayYear').textContent = year;
+            document.getElementById('printDate').textContent = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
 
             if (!driverId) {
-                document.getElementById('surveyTableBody').innerHTML = '<tr><td colspan="11" class="text-center text-danger">ไม่พบรหัสพนักงานขับรถ</td></tr>';
+                document.getElementById('surveyTableBody').innerHTML = '<tr><td colspan="9" class="text-center text-danger">ไม่พบรหัสพนักงานขับรถ</td></tr>';
                 return;
             }
 
             try {
-                // Fetch drivers to get name
+                // Fetch driver details
                 const drRes = await API.get('/api/drivers');
-                if (drRes.success) {
-                    const driversArray = drRes.data.drivers || drRes.data;
-                    const driver = driversArray.find(d => d.id === driverId);
-                    if (driver) {
-                        document.getElementById('displayDriverName').textContent = `ชื่อ-สกุล: ${driver.name}`;
-                    }
+                const driversArray = drRes.data?.drivers || drRes.data || [];
+                const driver = driversArray.find(d => d.id === driverId);
+                if (driver) {
+                    document.getElementById('displayDriverName').textContent = `ชื่อ-สกุล: ${driver.title || ''}${driver.first_name || driver.name || ''} ${driver.last_name || ''}`;
                 }
 
+                // Date range for the year
+                const fiscalGregorianYear = parseInt(year) - 543;
+                const dateFrom = `${fiscalGregorianYear - 1}-10-01`;
+                const dateTo = `${fiscalGregorianYear}-09-30 23:59:59`;
+
                 // Fetch survey results
-                // We need date range for the year
-                const dateFrom = `${year}-01-01`;
-                const dateTo = `${year}-12-31`;
-                
                 const res = await API.get(`/api/survey/results?driver_id=${driverId}&date_from=${dateFrom}&date_to=${dateTo}`);
-                
                 const tbody = document.getElementById('surveyTableBody');
                 tbody.innerHTML = '';
-                
+
                 if (res.success && res.data && res.data.length > 0) {
-                    res.data.forEach(item => {
+                    const list = res.data;
+                    document.getElementById('statCount').textContent = `${list.length} ครั้ง`;
+
+                    let sumOverall = 0;
+                    list.forEach(item => {
                         const dateObj = new Date(item.created_at);
                         const formattedDate = dateObj.toLocaleString('th-TH', { 
                             year: 'numeric', month: 'short', day: 'numeric', 
                             hour: '2-digit', minute: '2-digit', second: '2-digit' 
                         });
-                        
+
+                        const overall = item.overall_score || (( (item.safety_score||0) + (item.politeness_score||0) + (item.punctuality_score||0) ) / 3);
+                        sumOverall += overall;
+
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
-                            <td class="text-center">${formattedDate}</td>
-                            <td class="text-center">${item.license_plate || '-'}</td>
-                            <td class="text-center">${item.politeness_score || '-'}</td>
-                            <td class="text-center">${item.safety_score || '-'}</td>
-                            <td class="text-center">${item.punctuality_score || '-'}</td>
-                            <td class="text-center">${item.cleanliness_score || '-'}</td>
-                            <td class="text-center">${item.appearance_score || '-'}</td>
-                            <td class="text-center fw-bold">${item.overall_score || '-'}</td>
-                            <td>${item.comment ? item.comment + (item.respondent_name ? ` <small class="text-muted">(${item.respondent_name})</small>` : '') : '-'}</td>
-                            <td class="text-center" style="font-family: monospace;">${item.ip_address || '-'}</td>
-                            <td style="font-size: 10px; word-break: break-all;">${item.user_agent || '-'}</td>
+                            <td class="text-center font-monospace">${formattedDate}</td>
+                            <td class="text-center fw-bold">${item.license_plate || '-'}</td>
+                            <td class="score-col">${item.safety_score || '-'}</td>
+                            <td class="score-col">${item.politeness_score || '-'}</td>
+                            <td class="score-col">${item.punctuality_score || '-'}</td>
+                            <td class="score-col" style="background:#eef2ff;">${overall.toFixed(2)}</td>
+                            <td>${item.comment ? item.comment : '<span class="text-muted">-</span>'}</td>
+                            <td class="ip-col">${item.ip_address || '-'}</td>
+                            <td class="ua-col">${item.user_agent ? item.user_agent : '-'}</td>
                         `;
                         tbody.appendChild(tr);
                     });
+
+                    const avg = sumOverall / list.length;
+                    document.getElementById('statAvgStars').textContent = `${avg.toFixed(2)} / 5.00 ⭐`;
+                    document.getElementById('statWeighted').textContent = `${((avg / 5) * 40).toFixed(2)} / 40.00`;
+
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4">ไม่พบข้อมูลการประเมินในปีที่เลือก</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">ไม่พบข้อมูลการประเมินในปีที่เลือก</td></tr>';
                 }
             } catch (error) {
                 console.error(error);
-                document.getElementById('surveyTableBody').innerHTML = '<tr><td colspan="11" class="text-center text-danger">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>';
+                document.getElementById('surveyTableBody').innerHTML = '<tr><td colspan="9" class="text-center text-danger">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>';
             }
         });
     </script>

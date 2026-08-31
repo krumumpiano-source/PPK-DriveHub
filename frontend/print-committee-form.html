@@ -3,42 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>แบบฟอร์มประเมินพนักงานขับรถ - คณะกรรมการ</title>
+    <title>ชุดเอกสารประเมินผลการปฏิบัติงานพนักงานขับรถ - PPK DriveHub</title>
     <script src="config.js"></script>
     <script>window.API_BASE_URL=CONFIG.API_BASE_URL;window.currentPage='print-committee-form';window.REQUIRE_AUTH=true;</script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="common.css">
-    <script src="js/api.js"></script><script src="common.js"></script>
+    <script src="js/api.js"></script>
+    <script src="common.js"></script>
     <style>
-        body { background: #fff; font-size: 14px; color: #000; }
-        .print-container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        body { background: #f8fafc; font-size: 13px; color: #000; font-family: 'Sarabun', 'Segoe UI', Tahoma, sans-serif; }
+        .print-container { max-width: 900px; margin: 0 auto; padding: 25px; background: #fff; box-shadow: 0 0 15px rgba(0,0,0,0.05); }
         
         .header-section { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-        .header-section h3 { font-weight: bold; margin-bottom: 5px; }
+        .header-section h4 { font-weight: bold; margin-bottom: 4px; }
+        .header-section h5 { font-weight: bold; margin-bottom: 4px; }
         
-        .info-box { border: 1px solid #000; padding: 15px; margin-bottom: 20px; border-radius: 5px; background: #f9f9f9; }
-        .info-box h5 { margin-top: 0; font-weight: bold; border-bottom: 1px dashed #ccc; padding-bottom: 5px; }
+        .rubric-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+        .rubric-table th, .rubric-table td { border: 1px solid #000; padding: 6px 10px; }
+        .rubric-table th { background-color: #f1f5f9; text-align: center; font-weight: bold; }
         
-        .rubric-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        .rubric-table th, .rubric-table td { border: 1px solid #000; padding: 10px; }
-        .rubric-table th { background-color: #f0f0f0; text-align: center; font-weight: bold; }
-        
-        .criteria-list { margin: 0; padding-left: 20px; }
-        .criteria-list li { margin-bottom: 3px; }
-        
-        .score-box { width: 100px; text-align: center; vertical-align: bottom; font-weight: bold; }
-        .score-input-line { border-bottom: 1px dotted #000; display: inline-block; width: 50px; text-align: center; }
+        .score-box { width: 90px; text-align: center; vertical-align: middle; font-weight: bold; }
+        .score-input-line { border-bottom: 1px dotted #000; display: inline-block; width: 40px; text-align: center; }
 
-        .signature-section { margin-top: 40px; text-align: right; }
-        .signature-line { display: inline-block; border-bottom: 1px solid #000; width: 250px; margin-bottom: 5px; }
+        .signature-grid { display: flex; justify-content: space-between; margin-top: 25px; }
+        .signature-box { width: 45%; text-align: center; }
+        .signature-line { display: inline-block; border-bottom: 1px solid #000; width: 220px; margin-bottom: 4px; }
 
-        .no-print { display: block; margin-bottom: 20px; text-align: center; padding: 15px; background: #e9ecef; border-radius: 5px; }
+        .page-break { page-break-before: always; margin-top: 30px; padding-top: 20px; border-top: 2px dashed #94a3b8; }
+        
+        .no-print { display: block; margin-bottom: 20px; text-align: center; padding: 15px; background: #e2e8f0; border-radius: 8px; }
         
         @media print {
             .no-print { display: none !important; }
-            body { padding: 0; margin: 0; }
-            .print-container { width: 100%; max-width: 100%; padding: 0; }
+            body { padding: 0; margin: 0; background: #fff; }
+            .print-container { width: 100%; max-width: 100%; padding: 0; box-shadow: none; }
+            .page-break { page-break-before: always; margin-top: 0; padding-top: 15px; border-top: none; }
+            @page { margin: 1.2cm; size: portrait; }
         }
     </style>
 </head>
@@ -46,146 +47,20 @@
     <div class="print-container">
         
         <div class="no-print">
-            <h5><i class="fa-solid fa-print"></i> โหมดพิมพ์เอกสาร (Print Mode)</h5>
-            <p>กรุณากดปุ่มด้านล่าง หรือกด <code>Ctrl+P</code> เพื่อพิมพ์กระดาษแจกให้คณะกรรมการ</p>
-            <button class="btn btn-primary btn-lg" onclick="window.print()"><i class="fa-solid fa-print"></i> สั่งปริ้นลงกระดาษ A4</button>
-            <a href="driver-performance.html" class="btn btn-secondary btn-lg ms-2">กลับไปหน้า Dashboard</a>
+            <h5 class="fw-bold"><i class="fa-solid fa-print text-primary"></i> โหมดพิมพ์ชุดเอกสารประเมินพนักงาน (All-in-One Dossier)</h5>
+            <p class="text-muted small mb-3">เอกสารชุดนี้ประกอบด้วย <strong>หน้า 1: ใบให้คะแนนและลงนามกรรมการ 5 ท่าน</strong> และ <strong>หน้า 2: สถิติเชิงประจักษ์ + ตารางลืมบันทึกไมล์ + ลายเซ็นรับทราบผลของคนขับ</strong></p>
+            <div class="d-flex justify-content-center gap-2">
+                <button class="btn btn-primary btn-lg px-4" onclick="window.print()"><i class="fa-solid fa-print me-2"></i> สั่งพิมพ์ A4 / บันทึก PDF</button>
+                <a href="driver-performance.html" class="btn btn-secondary btn-lg">กลับหน้าหลัก</a>
+            </div>
         </div>
 
-        <div class="header-section">
-            <h3>แบบประเมินผลการปฏิบัติงานพนักงานขับรถตู้ (ส่วนที่ 2: คณะกรรมการ)</h3>
-            <h4 id="displayDriverName">ชื่อ-สกุล: กำลังโหลด...</h4>
-            <p class="mb-0">ปีการศึกษา <span id="displayYear">----</span></p>
-        </div>
-
-        <p class="fw-bold mb-2 mt-4">คำชี้แจง: โปรดพิจารณาผลการปฏิบัติงานตามเกณฑ์ด้านล่าง แล้วกรอกคะแนนที่เหมาะสมลงในช่องว่าง</p>
-        
-        <table class="rubric-table">
-            <thead>
-                <tr>
-                    <th style="width: 75%;">หัวข้อการประเมินและเกณฑ์พิจารณา</th>
-                    <th style="width: 25%;">คะแนนที่ได้</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Topic 1 -->
-                <tr>
-                    <td colspan="2" class="bg-light">
-                        <strong>1. ด้านการดูแลรถและซ่อมบำรุง (คะแนนเต็ม 30)</strong><br>
-                        <em>(แนวทาง: ทำได้ดีให้ข้อละ 6 คะแนน / ลดหลั่นตามความเหมาะสม)</em>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="ps-4">- ล้างและทำความสะอาดรถทั้งภายนอกและภายในให้สะอาดอยู่เสมอ</td>
-                    <td class="score-box" style="vertical-align: middle;"><span class="score-input-line"></span> / 6</td>
-                </tr>
-                <tr>
-                    <td class="ps-4">- ตรวจเช็คสภาพเครื่องยนต์พื้นฐานรายวัน (น้ำ, น้ำมันเครื่อง, แบตเตอรี่, ลมยาง) ก่อนออกรถ</td>
-                    <td class="score-box" style="vertical-align: middle;"><span class="score-input-line"></span> / 6</td>
-                </tr>
-                <tr>
-                    <td class="ps-4">- นำรถเข้าตรวจเช็คระยะ และเปลี่ยนถ่ายน้ำมันเครื่องตรงตามกำหนดเวลา</td>
-                    <td class="score-box" style="vertical-align: middle;"><span class="score-input-line"></span> / 6</td>
-                </tr>
-                <tr>
-                    <td class="ps-4">- สังเกตความผิดปกติของรถ และรีบทำเรื่อง "แจ้งซ่อมบำรุง" ทันทีก่อนเกิดความเสียหายรุนแรง</td>
-                    <td class="score-box" style="vertical-align: middle;"><span class="score-input-line"></span> / 6</td>
-                </tr>
-                <tr>
-                    <td class="ps-4">- จอดรถในสถานที่ที่โรงเรียนกำหนดอย่างเป็นระเบียบ</td>
-                    <td class="score-box" style="vertical-align: middle;"><span class="score-input-line"></span> / 6</td>
-                </tr>
-                <tr>
-                    <td class="text-end fw-bold">รวมคะแนนด้านที่ 1</td>
-                    <td class="score-box fw-bold" style="vertical-align: middle;"><span class="score-input-line"></span> / 30</td>
-                </tr>
-
-                <!-- Topic 2 -->
-                <tr>
-                    <td colspan="2" class="bg-light">
-                        <strong>2. ด้านระเบียบวินัยและการทำงาน (คะแนนเต็ม 40)</strong><br>
-                        <em>(แนวทาง: ทำได้ดีให้ข้อละ 8 คะแนน / ลดหลั่นตามความเหมาะสม)</em>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="ps-4">- มาปฏิบัติงานตรงเวลา และไม่ละทิ้งหน้าที่ในเวลาราชการ</td>
-                    <td class="score-box" style="vertical-align: middle;"><span class="score-input-line"></span> / 8</td>
-                </tr>
-                <tr>
-                    <td class="ps-4">- ปฏิบัติตามคำสั่งของโรงเรียนและผู้บังคับบัญชาอย่างเคร่งครัด</td>
-                    <td class="score-box" style="vertical-align: middle;"><span class="score-input-line"></span> / 8</td>
-                </tr>
-                <tr>
-                    <td class="ps-4">- สถิติการลากิจ ลาป่วย อยู่ในเกณฑ์ที่กำหนด และมีการแจ้งลาล่วงหน้าตามระเบียบ</td>
-                    <td class="score-box" style="vertical-align: middle;"><span class="score-input-line"></span> / 8</td>
-                </tr>
-                <tr>
-                    <td class="ps-4">- บันทึกข้อมูลการใช้รถ (ไมล์เข้า-ไมล์ออก) ในระบบแอปพลิเคชันอย่างสม่ำเสมอและเป็นปัจจุบัน</td>
-                    <td class="score-box" style="vertical-align: middle;"><span class="score-input-line"></span> / 8</td>
-                </tr>
-                <tr>
-                    <td class="ps-4">- ประจำอยู่ที่จุดพักหรือบริเวณที่กำหนดพร้อมปฏิบัติหน้าที่เสมอ ไม่ออกนอกสถานศึกษาในเวลาราชการโดยไม่ได้รับอนุญาต</td>
-                    <td class="score-box" style="vertical-align: middle;"><span class="score-input-line"></span> / 8</td>
-                </tr>
-                <tr>
-                    <td class="text-end fw-bold">รวมคะแนนด้านที่ 2</td>
-                    <td class="score-box fw-bold" style="vertical-align: middle;"><span class="score-input-line"></span> / 40</td>
-                </tr>
-
-                <!-- Topic 3 -->
-                <tr>
-                    <td colspan="2" class="bg-light">
-                        <strong>3. ด้านการทุ่มเทและจิตอาสา (คะแนนเต็ม 30)</strong><br>
-                        <em>(แนวทาง: ทำได้ดีให้ข้อละ 6 คะแนน / ลดหลั่นตามความเหมาะสม)</em>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="ps-4">- อุทิศเวลาให้แก่ราชการ ยินดีปฏิบัติงานนอกเวลาราชการเมื่อมีเหตุจำเป็นเร่งด่วน</td>
-                    <td class="score-box" style="vertical-align: middle;"><span class="score-input-line"></span> / 6</td>
-                </tr>
-                <tr>
-                    <td class="ps-4">- เสนอตัวช่วยเหลืองานส่วนรวมของโรงเรียน (เช่น งานรับส่งเอกสาร, งานรับส่งพัสดุ) ในช่วงเวลาที่ไม่มีคิววิ่งรถ</td>
-                    <td class="score-box" style="vertical-align: middle;"><span class="score-input-line"></span> / 6</td>
-                </tr>
-                <tr>
-                    <td class="ps-4">- มีน้ำใจ เอื้อเฟื้อเผื่อแผ่ และสามารถทำงานร่วมกับเพื่อนร่วมงานและคณะครูได้เป็นอย่างดี</td>
-                    <td class="score-box" style="vertical-align: middle;"><span class="score-input-line"></span> / 6</td>
-                </tr>
-                <tr>
-                    <td class="ps-4">- ดูแลรักษาความสะอาดบริเวณลานจอดรถ หรือโรงจอดรถของโรงเรียนให้เป็นระเบียบเรียบร้อยอยู่เสมอ</td>
-                    <td class="score-box" style="vertical-align: middle;"><span class="score-input-line"></span> / 6</td>
-                </tr>
-                <tr>
-                    <td class="ps-4">- มีทัศนคติที่ดีต่อองค์กร ไม่สร้างความแตกแยก และช่วยรักษาภาพลักษณ์ที่ดีของโรงเรียน</td>
-                    <td class="score-box" style="vertical-align: middle;"><span class="score-input-line"></span> / 6</td>
-                </tr>
-                <tr>
-                    <td class="text-end fw-bold">รวมคะแนนด้านที่ 3</td>
-                    <td class="score-box fw-bold" style="vertical-align: middle;"><span class="score-input-line"></span> / 30</td>
-                </tr>
-                
-                <!-- Total -->
-                <tr>
-                    <td class="text-end fw-bold" style="font-size: 16px;">รวมคะแนนส่วนของคณะกรรมการทั้งหมด (นำไปคิดสัดส่วน 60% ในระบบ)</td>
-                    <td class="score-box" style="background-color: #d1e7dd; font-size: 16px; vertical-align: middle;">
-                        <span class="score-input-line"></span> / 100
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-
-        <div class="mb-4">
-            <p class="fw-bold mb-1">ความเห็นเพิ่มเติมจากคณะกรรมการ:</p>
-            <div style="border-bottom: 1px dotted #000; height: 30px;"></div>
-            <div style="border-bottom: 1px dotted #000; height: 30px;"></div>
-        </div>
-
-        <div class="signature-section">
-            <p>ลงชื่อผู้ประเมิน</p>
-            <div class="signature-line"></div>
-            <p class="mt-2">(.......................................................................)</p>
-            <p>ตำแหน่ง คณะกรรมการประเมินผลการปฏิบัติงาน</p>
-            <p>วันที่ ........../........../................</p>
+        <div id="dossierContent">
+            <!-- Populated by JavaScript -->
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary"></div>
+                <p class="mt-2 text-muted">กำลังเตรียมชุดเอกสารประเมิน...</p>
+            </div>
         </div>
 
     </div>
@@ -199,27 +74,274 @@
             window.currentUser = getCurrentUser();
             
             const urlParams = new URLSearchParams(window.location.search);
-            const driverId = urlParams.get('driver_id');
+            const driverId = urlParams.get('driverId') || urlParams.get('driver_id');
             const year = urlParams.get('year') || (new Date().getFullYear() + 543).toString();
-
-            if (!driverId) {
-                alert('ไม่พบข้อมูลคนขับรถ กรุณากลับไปที่หน้า Dashboard แล้วเข้าใหม่');
-                return;
-            }
+            const batchAll = urlParams.get('batch') === '1' || urlParams.get('all') === '1';
 
             try {
-                // Fetch driver details
                 const driversRes = await API.get('/api/drivers');
-                const driver = (driversRes.data.drivers || driversRes.data || []).find(d => d.id === driverId);
-                if(driver) {
-                    document.getElementById('displayDriverName').textContent = `ชื่อ-สกุล: ${driver.title || ''}${driver.first_name} ${driver.last_name}`;
-                    document.getElementById('displayYear').textContent = year;
+                const driversList = driversRes.data?.drivers || driversRes.data || [];
+                const activeDrivers = driversList.filter(d => d.status === 'active' || d.id === driverId);
+
+                let driversToRender = [];
+                if (batchAll) {
+                    driversToRender = activeDrivers;
+                } else if (driverId) {
+                    const single = activeDrivers.find(d => d.id === driverId);
+                    if (single) driversToRender = [single];
                 }
+
+                if (driversToRender.length === 0) {
+                    document.getElementById('dossierContent').innerHTML = '<div class="alert alert-danger text-center">ไม่พบข้อมูลพนักงานขับรถ</div>';
+                    return;
+                }
+
+                let html = '';
+                for (let i = 0; i < driversToRender.length; i++) {
+                    const d = driversToRender[i];
+                    const isNotFirst = i > 0;
+                    html += await buildDriverDossierHtml(d, year, isNotFirst);
+                }
+
+                document.getElementById('dossierContent').innerHTML = html;
+
             } catch (err) {
                 console.error(err);
-                alert('เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + err.message);
+                document.getElementById('dossierContent').innerHTML = `<div class="alert alert-danger text-center">เกิดข้อผิดพลาดในการโหลดข้อมูล: ${err.message}</div>`;
             }
         });
+
+        async function buildDriverDossierHtml(driver, year, addPageBreakBefore) {
+            let evalData = {};
+            let empData = {};
+            try {
+                const [eRes, mRes] = await Promise.all([
+                    API.get(`/api/evaluations/driver/${driver.id}?year=${year}`),
+                    API.get(`/api/evaluations/empirical/${driver.id}?year=${year}`)
+                ]);
+                evalData = eRes.data || {};
+                empData = mRes.data || {};
+            } catch (e) {
+                console.warn(e);
+            }
+
+            const passengerScore = evalData.passenger_weighted ? evalData.passenger_weighted.toFixed(2) : '0.00';
+            const passengerTrips = evalData.passenger_stats?.total_trips || 0;
+            const totalTrips = evalData.usage_stats?.total_completed_trips || 0;
+            const missedLogs = evalData.usage_stats?.missed_logs || 0;
+
+            const missedList = empData.missed_details || [];
+            let missedRows = '';
+            if (missedList.length > 0) {
+                missedList.forEach(m => {
+                    missedRows += `
+                        <tr>
+                            <td class="text-center">${m.date || '-'}</td>
+                            <td class="text-center">${m.car || '-'}</td>
+                            <td>${m.mission || '-'}</td>
+                            <td class="text-danger fw-bold">${m.missed || '-'}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                missedRows = '<tr><td colspan="4" class="text-center text-success py-2"><i class="fa-solid fa-circle-check"></i> ไม่พบประวัติการลืมบันทึกไมล์ (ปฏิบัติตามระเบียบครบถ้วน 100%)</td></tr>';
+            }
+
+            return `
+                <div class="${addPageBreakBefore ? 'page-break' : ''}">
+                    <!-- PAGE 1: COMMITTEE SCORING FORM -->
+                    <div class="header-section">
+                        <h4>แบบประเมินผลการปฏิบัติงานพนักงานขับรถ (ส่วนที่ 2: คณะกรรมการ)</h4>
+                        <h5>โรงเรียนพะเยาพิทยาคม ประจำปีการศึกษา ${year}</h5>
+                        <p class="mb-0 fw-bold">ชื่อ-สกุล พนักงานขับรถ: ${driver.title || ''}${driver.first_name || driver.name || ''} ${driver.last_name || ''}</p>
+                    </div>
+
+                    <p class="fw-bold mb-2">คำชี้แจง: โปรดพิจารณาผลการปฏิบัติงานตามเกณฑ์ด้านล่าง แล้วกรอกคะแนนที่เหมาะสมลงในช่องว่าง</p>
+                    
+                    <table class="rubric-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 75%;">หัวข้อการประเมินและเกณฑ์พิจารณา (เต็ม 100 คะแนน)</th>
+                                <th style="width: 25%;">คะแนนที่ได้</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Topic 1 -->
+                            <tr class="table-light">
+                                <td colspan="2"><strong>1. ด้านการดูแลรถและซ่อมบำรุง (คะแนนเต็ม 30)</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3">• ล้างและทำความสะอาดรถทั้งภายนอกและภายในให้สะอาดอยู่เสมอ (6 คะแนน)</td>
+                                <td class="score-box"><span class="score-input-line"></span> / 6</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3">• ตรวจเช็คสภาพเครื่องยนต์พื้นฐานรายวัน (น้ำ, น้ำมันเครื่อง, ลมยาง) ก่อนออกรถ (6 คะแนน)</td>
+                                <td class="score-box"><span class="score-input-line"></span> / 6</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3">• นำรถเข้าตรวจเช็คระยะ และเปลี่ยนถ่ายน้ำมันเครื่องตรงตามกำหนดเวลา (6 คะแนน)</td>
+                                <td class="score-box"><span class="score-input-line"></span> / 6</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3">• สังเกตความผิดปกติของรถ และรีบทำเรื่องแจ้งซ่อมบำรุงทันทีก่อนเกิดความเสียหาย (6 คะแนน)</td>
+                                <td class="score-box"><span class="score-input-line"></span> / 6</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3">• จอดรถในสถานที่ที่โรงเรียนกำหนดอย่างเป็นระเบียบ (6 คะแนน)</td>
+                                <td class="score-box"><span class="score-input-line"></span> / 6</td>
+                            </tr>
+                            <tr>
+                                <td class="text-end fw-bold">รวมคะแนนด้านที่ 1</td>
+                                <td class="score-box fw-bold"><span class="score-input-line"></span> / 30</td>
+                            </tr>
+
+                            <!-- Topic 2 -->
+                            <tr class="table-light">
+                                <td colspan="2"><strong>2. ด้านระเบียบวินัยและการทำงาน (คะแนนเต็ม 40)</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3">• มาปฏิบัติงานตรงเวลา และไม่ละทิ้งหน้าที่ในเวลาราชการ (8 คะแนน)</td>
+                                <td class="score-box"><span class="score-input-line"></span> / 8</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3">• ปฏิบัติตามคำสั่งของโรงเรียนและผู้บังคับบัญชาอย่างเคร่งครัด (8 คะแนน)</td>
+                                <td class="score-box"><span class="score-input-line"></span> / 8</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3">• สถิติการลากิจ ลาป่วย อยู่ในเกณฑ์ที่กำหนด และมีการแจ้งลาล่วงหน้าตามระเบียบ (8 คะแนน)</td>
+                                <td class="score-box"><span class="score-input-line"></span> / 8</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3 fw-bold">• บันทึกข้อมูลการใช้รถ (ไมล์เข้า-ออก) ในระบบแอปพลิเคชันอย่างสม่ำเสมอและเป็นปัจจุบัน (8 คะแนน)</td>
+                                <td class="score-box"><span class="score-input-line"></span> / 8</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3">• ประจำอยู่ที่จุดพักพร้อมปฏิบัติหน้าที่ ไม่ออกนอกสถานศึกษาโดยไม่ได้รับอนุญาต (8 คะแนน)</td>
+                                <td class="score-box"><span class="score-input-line"></span> / 8</td>
+                            </tr>
+                            <tr>
+                                <td class="text-end fw-bold">รวมคะแนนด้านที่ 2</td>
+                                <td class="score-box fw-bold"><span class="score-input-line"></span> / 40</td>
+                            </tr>
+
+                            <!-- Topic 3 -->
+                            <tr class="table-light">
+                                <td colspan="2"><strong>3. ด้านการทุ่มเทและจิตอาสา (คะแนนเต็ม 30)</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3">• อุทิศเวลาให้แก่ราชการ ยินดีปฏิบัติงานนอกเวลาราชการเมื่อมีเหตุจำเป็นเร่งด่วน (6 คะแนน)</td>
+                                <td class="score-box"><span class="score-input-line"></span> / 6</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3">• เสนอตัวช่วยเหลืองานส่วนรวมของโรงเรียน (งานรับส่งเอกสาร/พัสดุ) ในช่วงไม่มีคิววิ่งรถ (6 คะแนน)</td>
+                                <td class="score-box"><span class="score-input-line"></span> / 6</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3">• มีน้ำใจ เอื้อเฟื้อเผื่อแผ่ และสามารถทำงานร่วมกับคณะครูได้เป็นอย่างดี (6 คะแนน)</td>
+                                <td class="score-box"><span class="score-input-line"></span> / 6</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3">• ดูแลรักษาความสะอาดบริเวณลานจอดรถของโรงเรียนให้เรียบร้อย (6 คะแนน)</td>
+                                <td class="score-box"><span class="score-input-line"></span> / 6</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3">• มีทัศนคติที่ดีต่อองค์กร ไม่สร้างความแตกแยก และช่วยรักษาภาพลักษณ์ที่ดี (6 คะแนน)</td>
+                                <td class="score-box"><span class="score-input-line"></span> / 6</td>
+                            </tr>
+                            <tr>
+                                <td class="text-end fw-bold">รวมคะแนนด้านที่ 3</td>
+                                <td class="score-box fw-bold"><span class="score-input-line"></span> / 30</td>
+                            </tr>
+
+                            <!-- Total -->
+                            <tr style="background-color: #f1f5f9;">
+                                <td class="text-end fw-bold fs-6">รวมคะแนนกรรมการ (คิดสัดส่วน 60 คะแนนสุทธิในระบบ)</td>
+                                <td class="score-box fs-6 fw-bold"><span class="score-input-line"></span> / 100</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="signature-grid">
+                        <div class="signature-box">
+                            <p class="mb-1">ลงชื่อกรรมการผู้ประเมิน</p>
+                            <div class="signature-line"></div>
+                            <p class="mb-0 small">(.......................................................................)</p>
+                            <p class="small text-muted">ตำแหน่ง คณะกรรมการประเมินผลการปฏิบัติงาน</p>
+                        </div>
+                        <div class="signature-box">
+                            <p class="mb-1">ลงชื่อประธานกรรมการ</p>
+                            <div class="signature-line"></div>
+                            <p class="mb-0 small">(.......................................................................)</p>
+                            <p class="small text-muted">ตำแหน่ง ประธานคณะกรรมการประเมินฯ</p>
+                        </div>
+                    </div>
+
+                    <!-- PAGE 2: EMPIRICAL EVIDENCE & AUDIT DRILLDOWN -->
+                    <div class="page-break">
+                        <div class="header-section">
+                            <h4>ข้อมูลสถิติเชิงประจักษ์ประกอบการประเมิน (Empirical Evidence)</h4>
+                            <h5>เอกสารแนบประกอบการพิจารณาผลการปฏิบัติงาน: ${driver.title || ''}${driver.first_name || driver.name || ''} ${driver.last_name || ''}</h5>
+                            <p class="mb-0 small text-muted">ข้อมูลสถิติดึงจากระบบฐานข้อมูลกลาง PPK DriveHub ณ วันที่ ${new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                        </div>
+
+                        <!-- 1. Passenger Score Summary -->
+                        <h6 class="fw-bold mb-2"><i class="fa-solid fa-star text-warning"></i> 1. สรุปคะแนนความพึงพอใจจากผู้รับบริการ (ผู้โดยสาร):</h6>
+                        <table class="rubric-table mb-3">
+                            <tr>
+                                <td style="width: 35%; background: #f8fafc; font-weight: bold;">คะแนนเฉลี่ยจากผู้โดยสาร:</td>
+                                <td class="fw-bold text-primary">${passengerScore} / เต็ม 40 คะแนน</td>
+                                <td style="width: 25%; background: #f8fafc; font-weight: bold;">จำนวนครั้งที่ประเมิน:</td>
+                                <td>${passengerTrips} ครั้ง</td>
+                            </tr>
+                        </table>
+
+                        <!-- 2. Trip and Mileage Compliance -->
+                        <h6 class="fw-bold mb-2"><i class="fa-solid fa-car text-primary"></i> 2. สถิติการปฏิบัติงานและการบันทึกข้อมูลการใช้รถ:</h6>
+                        <table class="rubric-table mb-3">
+                            <tr>
+                                <td style="width: 25%; background: #f8fafc; font-weight: bold;">วิ่งงานเสร็จสิ้น (คิว):</td>
+                                <td class="text-center fw-bold">${totalTrips} คิว</td>
+                                <td style="width: 25%; background: #f8fafc; font-weight: bold;">จำนวนครั้งที่ลืมบันทึกไมล์:</td>
+                                <td class="text-center fw-bold ${missedLogs > 0 ? 'text-danger' : 'text-success'}">${missedLogs} ครั้ง</td>
+                            </tr>
+                        </table>
+
+                        <!-- 3. Detailed Missed Mileage Drilldown -->
+                        <h6 class="fw-bold mb-2"><i class="fa-solid fa-magnifying-glass text-danger"></i> 3. รายละเอียดและประวัติการลืมบันทึกไมล์ (Audit Trail):</h6>
+                        <table class="rubric-table mb-4" style="font-size: 11px;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 18%;">วันที่</th>
+                                    <th style="width: 15%;">ทะเบียนรถ</th>
+                                    <th>ภารกิจ / สถานที่</th>
+                                    <th style="width: 28%;">ส่วนที่ไม่ได้บันทึก</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${missedRows}
+                            </tbody>
+                        </table>
+
+                        <!-- 4. Driver Acknowledgment -->
+                        <div class="p-3 border rounded bg-light mt-4">
+                            <h6 class="fw-bold mb-2"><i class="fa-solid fa-signature text-secondary"></i> การลงนามรับทราบผลการประเมินของพนักงานขับรถ:</h6>
+                            <p class="small mb-3">ข้าพเจ้าได้รับทราบผลคะแนนการประเมินและข้อมูลสถิติเชิงประจักษ์ข้างต้นเรียบร้อยแล้ว</p>
+                            <div class="row align-items-end text-center">
+                                <div class="col-6">
+                                    <div class="signature-line" style="width: 200px;"></div>
+                                    <p class="small mb-0">ลงชื่อ (${driver.title || ''}${driver.first_name || driver.name || ''} ${driver.last_name || ''})</p>
+                                    <p class="small text-muted mb-0">พนักงานขับรถผู้รับการประเมิน</p>
+                                </div>
+                                <div class="col-6">
+                                    <p class="small mb-0">วันที่ .......... / .......... / ..............</p>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            `;
+        }
     </script>
 </body>
 </html>
