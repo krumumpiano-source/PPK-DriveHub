@@ -470,8 +470,8 @@
                         const expected = trips * 2;
                         const complianceRate = expected > 0 ? (((expected - missed) / expected) * 100) : 100;
 
-                        const hasEval = (pWeighted > 0 || cWeighted > 0) || ((e.passenger_stats?.total_trips || 0) > 0 || (e.committee_stats?.committee_count || 0) > 0);
-                        const finalGrade = hasEval ? (e.grade || 'พอใช้') : 'ยังไม่ประเมิน';
+                        const hasEval = (e.passenger_stats?.total_trips > 0) || (e.committee_stats?.committee_count > 0) || (totalScore > 0);
+                        const finalGrade = hasEval ? (e.grade && e.grade !== 'ยังไม่ประเมิน' ? e.grade : 'พอใช้') : 'ยังไม่ประเมิน';
 
                         matrixRows.push({
                             driver: d,
@@ -483,6 +483,7 @@
                             passengerScore: pWeighted,
                             committeeScore: cWeighted,
                             totalScore: totalScore,
+                            hasEval: hasEval,
                             grade: finalGrade
                         });
                     } catch (err) {
@@ -519,6 +520,10 @@
                 else if (r.grade === 'พอใช้') gradeBadgeClass = 'bg-warning text-dark';
                 else if (r.grade === 'ต้องปรับปรุง') gradeBadgeClass = 'bg-danger';
 
+                const displayPassenger = r.hasEval && r.passengerScore > 0 ? r.passengerScore.toFixed(2) : '<span class="text-muted">-</span>';
+                const displayCommittee = r.hasEval && r.committeeScore > 0 ? r.committeeScore.toFixed(2) : '<span class="text-muted">-</span>';
+                const displayTotal = r.hasEval && r.totalScore > 0 ? r.totalScore.toFixed(2) : '<span class="text-muted">-</span>';
+
                 tr.innerHTML = `
                     <td class="text-start fw-bold">
                         <span class="badge bg-secondary me-1">#${idx+1}</span>
@@ -534,9 +539,9 @@
                             <span class="small fw-bold">${r.complianceRate.toFixed(1)}%</span>
                         </div>
                     </td>
-                    <td class="text-primary fw-bold">${r.passengerScore.toFixed(2)}</td>
-                    <td class="text-info fw-bold">${r.committeeScore.toFixed(2)}</td>
-                    <td class="fw-bold fs-6" style="background-color: #f1f5f9;">${r.totalScore.toFixed(2)}</td>
+                    <td class="text-primary fw-bold">${displayPassenger}</td>
+                    <td class="text-info fw-bold">${displayCommittee}</td>
+                    <td class="fw-bold fs-6" style="background-color: #f1f5f9;">${displayTotal}</td>
                     <td><span class="badge ${gradeBadgeClass}">${r.grade}</span></td>
                 `;
                 tbody.appendChild(tr);
@@ -554,6 +559,10 @@
                 else if (r.grade === 'พอใช้') gradeBadgeClass = 'badge bg-warning text-dark';
                 else if (r.grade === 'ต้องปรับปรุง') gradeBadgeClass = 'badge bg-danger';
 
+                const displayPassenger = r.hasEval && r.passengerScore > 0 ? r.passengerScore.toFixed(2) : '-';
+                const displayCommittee = r.hasEval && r.committeeScore > 0 ? r.committeeScore.toFixed(2) : '-';
+                const displayTotal = r.hasEval && r.totalScore > 0 ? r.totalScore.toFixed(2) : '-';
+
                 tr.innerHTML = `
                     <td>${idx+1}</td>
                     <td class="text-start fw-bold">${r.driver.title || ''}${r.driver.first_name || r.driver.name} ${r.driver.last_name || ''}</td>
@@ -561,9 +570,9 @@
                     <td>${r.trips}</td>
                     <td class="${r.missed > 0 ? 'text-danger fw-bold' : ''}">${r.missed}</td>
                     <td class="${r.anomalous > 0 ? 'text-danger fw-bold' : ''}">${r.anomalous}</td>
-                    <td>${r.passengerScore.toFixed(2)}</td>
-                    <td>${r.committeeScore.toFixed(2)}</td>
-                    <td class="fw-bold fs-6">${r.totalScore.toFixed(2)}</td>
+                    <td>${displayPassenger}</td>
+                    <td>${displayCommittee}</td>
+                    <td class="fw-bold fs-6">${displayTotal}</td>
                     <td><span class="${gradeBadgeClass}">${r.grade}</span></td>
                 `;
                 tbody.appendChild(tr);
@@ -595,25 +604,27 @@
                 const res = await API.get(`/api/evaluations/driver/${driverId}?year=${year}`);
                 const data = res.data || {};
 
-                document.getElementById('passengerScore').textContent = data.passenger_weighted ? data.passenger_weighted.toFixed(2) : '0.00';
-                document.getElementById('passengerTripCount').textContent = `เต็ม 40 คะแนน (จาก ${data.passenger_stats?.total_trips || 0} ทริป)`;
+                const pTrips = data.passenger_stats?.total_trips || 0;
+                const cCount = data.committee_stats?.committee_count || 0;
+                const hasEval = (pTrips > 0) || (cCount > 0) || ((data.passenger_weighted || 0) + (data.committee_weighted || 0) > 0);
 
-                document.getElementById('committeeScore').textContent = data.committee_weighted ? data.committee_weighted.toFixed(2) : '0.00';
-                document.getElementById('committeeCount').textContent = `เต็ม 60 คะแนน (ประเมินแล้ว ${data.committee_stats?.committee_count || 0}/5 ท่าน)`;
+                document.getElementById('passengerScore').textContent = hasEval && data.passenger_weighted ? data.passenger_weighted.toFixed(2) : '--';
+                document.getElementById('passengerTripCount').textContent = `เต็ม 40 คะแนน (จาก ${pTrips} ทริป)`;
+
+                document.getElementById('committeeScore').textContent = hasEval && data.committee_weighted ? data.committee_weighted.toFixed(2) : '--';
+                document.getElementById('committeeCount').textContent = `เต็ม 60 คะแนน (ประเมินแล้ว ${cCount}/5 ท่าน)`;
 
                 const total = (data.passenger_weighted || 0) + (data.committee_weighted || 0);
-                document.getElementById('totalScore').textContent = (data.passenger_weighted || data.committee_weighted) ? total.toFixed(2) : '--';
+                document.getElementById('totalScore').textContent = hasEval && total > 0 ? total.toFixed(2) : '--';
                 
-                const hasEval = (data.passenger_weighted > 0 || data.committee_weighted > 0) || ((data.passenger_stats?.total_trips || 0) > 0 || (data.committee_stats?.committee_count || 0) > 0);
-                const displayGrade = hasEval ? (data.grade || 'พอใช้') : 'ยังไม่ประเมิน';
-
                 const gradeBadge = document.getElementById('finalGrade');
-                gradeBadge.textContent = displayGrade;
+                const gradeText = hasEval && data.grade ? data.grade : 'ยังไม่ประเมิน';
+                gradeBadge.textContent = gradeText;
                 gradeBadge.className = 'badge fs-6 px-3 py-1 ';
-                if (displayGrade === 'ดีเด่น' || displayGrade === 'ดีมาก') gradeBadge.classList.add('bg-success');
-                else if (displayGrade === 'ดี') gradeBadge.classList.add('bg-primary');
-                else if (displayGrade === 'พอใช้') gradeBadge.classList.add('bg-warning', 'text-dark');
-                else if (displayGrade === 'ต้องปรับปรุง') gradeBadge.classList.add('bg-danger');
+                if (gradeText === 'ดีเด่น' || gradeText === 'ดีมาก') gradeBadge.classList.add('bg-success');
+                else if (gradeText === 'ดี') gradeBadge.classList.add('bg-primary');
+                else if (gradeText === 'พอใช้') gradeBadge.classList.add('bg-warning', 'text-dark');
+                else if (gradeText === 'ต้องปรับปรุง') gradeBadge.classList.add('bg-danger');
                 else gradeBadge.classList.add('bg-secondary');
 
                 // Stats
