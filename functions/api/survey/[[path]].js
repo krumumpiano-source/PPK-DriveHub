@@ -11,7 +11,7 @@ export async function onRequest(context) {
   const path = url.pathname;
   const method = request.method;
 
-  // --- GET /api/survey/drivers --- PUBLIC (สำหรับดึงรายชื่อคนขับให้ผู้โดยสารเลือกเอง)
+  // --- GET /api/survey/drivers --- PUBLIC (สำหรับดึงรายชื่อคนขับให้ผู้โดยสารเลือกเอง - เฉพาะ 4 คนหลัก)
   if (path === '/api/survey/drivers' && method === 'GET') {
       const drivers = await dbAll(env.DB, `
         SELECT d.id, d.name, d.status,
@@ -27,7 +27,20 @@ export async function onRequest(context) {
           GROUP BY q.driver_id
         ) c ON d.id = c.driver_id
         WHERE d.status = 'active'
-        ORDER BY d.name ASC
+          AND (
+            d.name LIKE '%ชารี%' 
+            OR d.name LIKE '%ณัฐวุฒิ%' 
+            OR d.name LIKE '%สมชาย%' 
+            OR d.name LIKE '%สุรเชษฐ์%'
+          )
+        ORDER BY 
+          CASE 
+            WHEN d.name LIKE '%ชารี%' THEN 1
+            WHEN d.name LIKE '%ณัฐวุฒิ%' THEN 2
+            WHEN d.name LIKE '%สมชาย%' THEN 3
+            WHEN d.name LIKE '%สุรเชษฐ์%' THEN 4
+            ELSE 5
+          END
       `);
       return success(drivers);
   }

@@ -81,7 +81,8 @@
             try {
                 const driversRes = await API.get('/api/drivers');
                 const driversList = driversRes.data?.drivers || driversRes.data || [];
-                const activeDrivers = driversList.filter(d => d.status === 'active' || d.id === driverId);
+                const mainKeywords = ['ชารี', 'ณัฐวุฒิ', 'สมชาย', 'สุรเชษฐ์'];
+                const activeDrivers = driversList.filter(d => (d.status === 'active' || d.id === driverId) && mainKeywords.some(k => (d.name || d.first_name || '').includes(k)));
 
                 let driversToRender = [];
                 if (batchAll) {

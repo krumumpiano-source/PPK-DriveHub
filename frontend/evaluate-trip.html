@@ -261,7 +261,8 @@
             try {
                 const res = await API.get('/api/survey/drivers');
                 if (res.success && res.data && res.data.length > 0) {
-                    allDrivers = res.data;
+                    const mainKeywords = ['ชารี', 'ณัฐวุฒิ', 'สมชาย', 'สุรเชษฐ์'];
+                    allDrivers = res.data.filter(d => mainKeywords.some(k => (d.name || '').includes(k)));
                     renderDriverCards();
                 } else {
                     container.innerHTML = '<div class="col-12 text-center text-muted">ไม่พบข้อมูลพนักงานขับรถ</div>';

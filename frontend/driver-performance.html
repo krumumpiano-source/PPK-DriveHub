@@ -395,7 +395,9 @@
 
             try {
                 const res = await API.get('/api/drivers');
-                allDrivers = (res.data?.drivers || res.data || []).filter(d => d.status === 'active');
+                const rawList = res.data?.drivers || res.data || [];
+                const mainKeywords = ['ชารี', 'ณัฐวุฒิ', 'สมชาย', 'สุรเชษฐ์'];
+                allDrivers = rawList.filter(d => d.status === 'active' && mainKeywords.some(k => (d.name || d.first_name || '').includes(k)));
                 
                 list.innerHTML = '';
                 allDrivers.forEach(d => {
