@@ -388,6 +388,14 @@ export async function onRequest(context) {
       return success({ id, total_score: totalScore, message: 'Evaluation submitted successfully' });
     }
 
+    // 4. DELETE /api/evaluations/:id - Delete evaluation record
+    if (request.method === 'DELETE' && path) {
+      if (!env.user) return error('Unauthorized', 401);
+      const evalId = path;
+      await db.prepare(`DELETE FROM driver_evaluations WHERE id = ?`).bind(evalId).run();
+      return success({ message: 'ลบผลการประเมินเรียบร้อยแล้ว' });
+    }
+
     return error('Not Found', 404);
   } catch (err) {
     return error(err.message, 500);
