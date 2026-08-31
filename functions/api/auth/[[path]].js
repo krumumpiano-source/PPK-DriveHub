@@ -45,9 +45,9 @@ export async function onRequest(context) {
         const generatedUsername = inputUsername.split('@')[0];
         
         await dbRun(env.DB,
-          `INSERT INTO users (id, username, email, password_hash, salt, role, permissions, display_name, active, pdpa_accepted, must_change_password, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, 'staff', ?, ?, 1, 0, 0, ?, ?)`,
-          [userId, inputUsername, inputUsername, pwHash, pwSalt, defaultPerms, generatedUsername, ts, ts]
+          `INSERT INTO users (id, username, email, password_hash, salt, role, permissions, first_name, last_name, display_name, active, pdpa_accepted, must_change_password, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, 'staff', ?, ?, '', ?, 1, 0, 0, ?, ?)`,
+          [userId, inputUsername, inputUsername, pwHash, pwSalt, defaultPerms, generatedUsername, generatedUsername, ts, ts]
         );
         
         user = await dbFirst(env.DB, 'SELECT * FROM users WHERE id = ?', [userId]);
@@ -129,10 +129,10 @@ export async function onRequest(context) {
     const defaultPerms = JSON.stringify({});
 
     await dbRun(env.DB,
-      `INSERT INTO users (id, username, email, password_hash, salt, role, permissions, title, first_name, last_name, display_name, phone, position, active, pdpa_accepted, must_change_password, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, 'staff', ?, ?, ?, ?, ?, ?, ?, 1, 0, 0, ?, ?)`,
+      `INSERT INTO users (id, username, email, password_hash, salt, role, permissions, title, first_name, last_name, display_name, phone, active, pdpa_accepted, must_change_password, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, 'staff', ?, ?, ?, ?, ?, ?, 1, 0, 0, ?, ?)`,
       [userId, email, email, pwHash, pwSalt, defaultPerms,
-       title || null, fnFirst, fnLast, displayName, phone || null, department || null, ts, ts]
+       title || null, fnFirst, fnLast, displayName, phone || null, ts, ts]
     );
 
     // Generate session token for instant auto-login
