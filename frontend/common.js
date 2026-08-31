@@ -219,10 +219,8 @@ function renderNavigation() {
     nav += _sidebarGroupBegin('evaluation', 'ระบบประเมิน', '⭐');
     nav += _sidebarItem('evaluation-guide.html', 'evaluation-guide', '📖', 'เกณฑ์และคำอธิบาย');
     nav += _sidebarItem('evaluate-trip.html', 'evaluate-trip', '📝', 'ประเมินโดยผู้ใช้บริการ');
-    if (hasPermission(['admin', 'super_admin', 'manager', 'committee']) || hasModulePermission('reports', 'view')) {
-        nav += _sidebarItem('driver-performance.html#committee', 'committee-eval', '⚖️', 'ประเมินโดยกรรมการ');
-        nav += _sidebarItem('driver-performance.html', 'driver-performance', '📊', 'สรุปผลและสถิติ');
-    }
+    nav += _sidebarItem('driver-performance.html', 'driver-performance', '⚖️', 'ประเมินโดยกรรมการ');
+    nav += _sidebarItem('driver-performance.html', 'driver-performance', '📊', 'สรุปผลและสถิติ');
     nav += _sidebarGroupEnd();
 
     // ── 5. รายงานและสถิติ ──
