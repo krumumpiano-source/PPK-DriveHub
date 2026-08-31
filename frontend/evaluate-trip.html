@@ -273,22 +273,21 @@
             }
         }
 
-        function getDriverDisplayName(name) {
-            if (!name) return '';
-            if (name.includes('ชารี')) return 'นายชารี ศรีพรม (น้อย)';
-            if (name.includes('ณัฐวุฒิ')) return 'นายณัฐวุฒิ ใหญ่วงศ์ (เดียร์)';
-            if (name.includes('สมชาย')) return 'นายสมชาย พรมศร (ท้อป)';
-            if (name.includes('สุรเชษฐ์')) return 'นายสุรเชษฐ์ บุริวงศ์ (ปู)';
-            return name;
-        }
+        const nicknameMap = {
+            'ชารี': 'น้อย',
+            'ณัฐวุฒิ': 'เดียร์',
+            'สมชาย': 'ท้อป',
+            'สุรเชษฐ์': 'ปู'
+        };
 
-        function getDriverNickname(name) {
-            if (!name) return '';
-            if (name.includes('ชารี')) return 'น้อย';
-            if (name.includes('ณัฐวุฒิ')) return 'เดียร์';
-            if (name.includes('สมชาย')) return 'ท้อป';
-            if (name.includes('สุรเชษฐ์')) return 'ปู';
-            return '';
+        function getDriverDisplayName(driverName) {
+            if (!driverName) return '';
+            for (const [key, nick] of Object.entries(nicknameMap)) {
+                if (driverName.includes(key)) {
+                    return `${driverName} (${nick})`;
+                }
+            }
+            return driverName;
         }
 
         function renderDriverCards() {
@@ -298,19 +297,15 @@
             allDrivers.forEach(d => {
                 const isEvaluated = !!evaluatedDrivers[d.id];
                 const displayName = getDriverDisplayName(d.name);
-                const nick = getDriverNickname(d.name);
                 const col = document.createElement('div');
                 col.className = 'col-6 col-md-3';
                 col.innerHTML = `
                     <div class="driver-card text-center p-3" id="card-${d.id}" onclick="selectDriver('${d.id}')">
                         ${isEvaluated ? '<span class="eval-badge-done"><i class="fa-solid fa-check"></i> ประเมินแล้ว</span>' : ''}
-                        <div class="driver-avatar mb-2 mx-auto">
+                        <div class="driver-avatar mb-2">
                             <i class="fa-solid fa-user-tie"></i>
                         </div>
-                        <h6 class="fw-bold text-dark mb-1">${displayName}</h6>
-                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1">
-                            <i class="fa-solid fa-id-badge me-1"></i> (${nick})
-                        </span>
+                        <h6 class="fw-bold text-dark mb-0 fs-6">${displayName}</h6>
                     </div>
                 `;
                 container.appendChild(col);
@@ -321,15 +316,16 @@
             const driver = allDrivers.find(d => d.id === driverId);
             if (!driver) return;
 
+            const displayName = getDriverDisplayName(driver.name);
+
             document.querySelectorAll('.driver-card').forEach(el => el.classList.remove('selected'));
             const selectedCard = document.getElementById(`card-${driverId}`);
             if (selectedCard) selectedCard.classList.add('selected');
 
-            const displayName = getDriverDisplayName(driver.name);
             document.getElementById('selectedDriverId').value = driver.id;
             document.getElementById('selectedCarId').value = driver.car_id || '';
             document.getElementById('selectedDriverTitle').textContent = `ท่านกำลังประเมิน: ${displayName}`;
-            document.getElementById('selectedDriverSubtitle').textContent = `พนักงานขับรถโรงเรียนพะเยาพิทยาคม`;
+            document.getElementById('selectedDriverSubtitle').textContent = `พนักงานขับรถ โรงเรียนพะเยาพิทยาคม`;
 
             document.getElementById('noDriverPrompt').classList.add('d-none');
             document.getElementById('evaluationFormContainer').classList.remove('d-none');
