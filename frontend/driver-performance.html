@@ -470,6 +470,9 @@
                         const expected = trips * 2;
                         const complianceRate = expected > 0 ? (((expected - missed) / expected) * 100) : 100;
 
+                        const hasEval = (pWeighted > 0 || cWeighted > 0) || ((e.passenger_stats?.total_trips || 0) > 0 || (e.committee_stats?.committee_count || 0) > 0);
+                        const finalGrade = hasEval ? (e.grade || 'พอใช้') : 'ยังไม่ประเมิน';
+
                         matrixRows.push({
                             driver: d,
                             trips: trips,
@@ -480,7 +483,7 @@
                             passengerScore: pWeighted,
                             committeeScore: cWeighted,
                             totalScore: totalScore,
-                            grade: e.grade || 'พอใช้'
+                            grade: finalGrade
                         });
                     } catch (err) {
                         console.warn(err);
@@ -599,15 +602,18 @@
                 document.getElementById('committeeCount').textContent = `เต็ม 60 คะแนน (ประเมินแล้ว ${data.committee_stats?.committee_count || 0}/5 ท่าน)`;
 
                 const total = (data.passenger_weighted || 0) + (data.committee_weighted || 0);
-                document.getElementById('totalScore').textContent = total.toFixed(2);
+                document.getElementById('totalScore').textContent = (data.passenger_weighted || data.committee_weighted) ? total.toFixed(2) : '--';
                 
+                const hasEval = (data.passenger_weighted > 0 || data.committee_weighted > 0) || ((data.passenger_stats?.total_trips || 0) > 0 || (data.committee_stats?.committee_count || 0) > 0);
+                const displayGrade = hasEval ? (data.grade || 'พอใช้') : 'ยังไม่ประเมิน';
+
                 const gradeBadge = document.getElementById('finalGrade');
-                gradeBadge.textContent = data.grade || 'ยังไม่ประเมิน';
+                gradeBadge.textContent = displayGrade;
                 gradeBadge.className = 'badge fs-6 px-3 py-1 ';
-                if (data.grade === 'ดีเด่น' || data.grade === 'ดีมาก') gradeBadge.classList.add('bg-success');
-                else if (data.grade === 'ดี') gradeBadge.classList.add('bg-primary');
-                else if (data.grade === 'พอใช้') gradeBadge.classList.add('bg-warning', 'text-dark');
-                else if (data.grade === 'ต้องปรับปรุง') gradeBadge.classList.add('bg-danger');
+                if (displayGrade === 'ดีเด่น' || displayGrade === 'ดีมาก') gradeBadge.classList.add('bg-success');
+                else if (displayGrade === 'ดี') gradeBadge.classList.add('bg-primary');
+                else if (displayGrade === 'พอใช้') gradeBadge.classList.add('bg-warning', 'text-dark');
+                else if (displayGrade === 'ต้องปรับปรุง') gradeBadge.classList.add('bg-danger');
                 else gradeBadge.classList.add('bg-secondary');
 
                 // Stats
