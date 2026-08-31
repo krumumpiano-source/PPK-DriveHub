@@ -6,12 +6,112 @@ export async function onRequest(context) {
   const db = env.DB;
 
   try {
+    // 0. GET /api/evaluations/summary - Fast summary for all 4 main drivers in a single call
+    if (request.method === 'GET' && (path === 'summary' || path === '')) {
+      if (!env.user) return error('Unauthorized', 401);
+      const url = new URL(request.url);
+      const year = url.searchParams.get('year') || (new Date().getFullYear() + 543).toString();
+      const fiscalGregorianYear = parseInt(year) - 543;
+      const fiscalStart = `${fiscalGregorianYear - 1}-10-01`;
+      const fiscalEnd = `${fiscalGregorianYear}-09-30`;
+
+      // Get 4 main drivers
+      const drivers = await db.prepare(`
+        SELECT id, name, first_name, last_name, title, status FROM drivers 
+        WHERE status = 'active' AND (name LIKE '%ชารี%' OR name LIKE '%ณัฐวุฒิ%' OR name LIKE '%สมชาย%' OR name LIKE '%สุรเชษฐ์%')
+      `).all();
+
+      const summaryList = [];
+      const driverList = drivers.results || [];
+
+      for (const d of driverList) {
+        // Passenger stats
+        const pStats = await db.prepare(`
+          SELECT AVG(total_score) as avg_total_score, COUNT(id) as total_trips
+          FROM driver_evaluations
+          WHERE driver_id = ? AND evaluation_type = 'passenger' AND academic_year = ?
+        `).bind(d.id, year).first();
+
+        // Committee stats
+        const cStats = await db.prepare(`
+          SELECT AVG(total_score) as avg_total_score, COUNT(id) as committee_count
+          FROM driver_evaluations
+          WHERE driver_id = ? AND evaluation_type = 'committee' AND academic_year = ?
+        `).bind(d.id, year).first();
+
+        // Queues completed
+        const qStats = await db.prepare(`
+          SELECT COUNT(id) as total_trips FROM queue 
+          WHERE driver_id = ? AND status = 'completed' AND date >= ? AND date <= ?
+        `).bind(d.id, fiscalStart, fiscalEnd).first();
+
+        // Anomaly & Missed Logs
+        const anomalyCheck = await db.prepare(`
+          SELECT 
+            ur_dep.mileage as dep_mileage,
+            ur_ret.mileage as ret_mileage,
+            CASE WHEN ur_dep.id IS NULL THEN 1 ELSE 0 END as missed_dep,
+            CASE WHEN ur_ret.id IS NULL THEN 1 ELSE 0 END as missed_ret
+          FROM queue q
+          LEFT JOIN usage_records ur_dep ON q.id = ur_dep.queue_id AND ur_dep.record_type = 'departure'
+          LEFT JOIN usage_records ur_ret ON q.id = ur_ret.queue_id AND ur_ret.record_type = 'return'
+          WHERE q.driver_id = ? AND q.status = 'completed' AND q.date >= ? AND q.date <= ?
+        `).bind(d.id, fiscalStart, fiscalEnd).all();
+
+        let anomalousCount = 0;
+        let missedCount = 0;
+        if (anomalyCheck.results) {
+          anomalyCheck.results.forEach(trip => {
+            missedCount += (trip.missed_dep || 0) + (trip.missed_ret || 0);
+            const dep = trip.dep_mileage;
+            const ret = trip.ret_mileage;
+            if (dep !== null && ret !== null && dep !== undefined && ret !== undefined) {
+              if (ret < dep) anomalousCount++;
+            }
+          });
+        }
+
+        const pAvg = pStats?.avg_total_score || 0;
+        const cAvg = cStats?.avg_total_score || 0;
+        const pWeighted = (pAvg / 5) * 40;
+        const cWeighted = (cAvg / 100) * 60;
+        const totalScore = pWeighted + cWeighted;
+        const hasEval = (pStats?.total_trips || 0) > 0 || (cStats?.committee_count || 0) > 0 || totalScore > 0;
+
+        let grade = 'ยังไม่ประเมิน';
+        if (hasEval) {
+          if (totalScore >= 90) grade = 'ดีเด่น';
+          else if (totalScore >= 80) grade = 'ดีมาก';
+          else if (totalScore >= 70) grade = 'ดี';
+          else if (totalScore >= 60) grade = 'พอใช้';
+          else grade = 'ต้องปรับปรุง';
+        }
+
+        summaryList.push({
+          driver: d,
+          trips: qStats?.total_trips || 0,
+          missed: missedCount,
+          anomalous: anomalousCount,
+          passengerScore: pWeighted,
+          committeeScore: cWeighted,
+          totalScore: totalScore,
+          hasEval: hasEval,
+          grade: grade
+        });
+      }
+
+      return success({
+        academic_year: year,
+        drivers: summaryList
+      });
+    }
+
     // 1. GET /api/evaluations/driver/:id - Get aggregated scores for a driver
     if (request.method === 'GET' && path.startsWith('driver/')) {
       if (!env.user) return error('Unauthorized', 401);
       const driverId = path.split('/')[1];
       const url = new URL(request.url);
-      const year = url.searchParams.get('year') || (new Date().getFullYear() + 543).toString(); // default to current Thai year if not provided
+      const year = url.searchParams.get('year') || (new Date().getFullYear() + 543).toString();
 
       // Get passenger average
       const passengerStmt = await db.prepare(`
@@ -46,30 +146,19 @@ export async function onRequest(context) {
         ORDER BY e.created_at DESC
       `).bind(driverId, year).all();
 
-      // Get usage log stats filtered by fiscal year (Oct 1 - Sep 30)
       const fiscalGregorianYear = parseInt(year) - 543;
       const fiscalStart = `${fiscalGregorianYear - 1}-10-01`;
       const fiscalEnd = `${fiscalGregorianYear}-09-30`;
 
-      const usageStatsRaw = await db.prepare(`
-        SELECT 
-          (SELECT COUNT(id) FROM queue WHERE driver_id = ? AND status = 'completed' AND date >= ? AND date <= ?) as total_completed_trips,
-          (SELECT COUNT(ur.id) FROM usage_records ur INNER JOIN queue q ON ur.queue_id = q.id WHERE q.driver_id = ? AND q.status = 'completed' AND q.date >= ? AND q.date <= ? AND ur.record_type IN ('departure','return')) as total_logs,
-          (SELECT COUNT(id) FROM usage_records WHERE driver_id = ? AND record_type = 'refuel' AND (mileage IS NULL OR mileage = 0 OR mileage = '') AND substr(datetime, 1, 10) >= ? AND substr(datetime, 1, 10) <= ?) as missed_fuel_mileage
-      `).bind(driverId, fiscalStart, fiscalEnd, driverId, fiscalStart, fiscalEnd, driverId, fiscalStart, fiscalEnd).first();
-
-      // Check mileage anomalies (negative mileage, zero distance)
+      // Check queues and usage records with single fast join
       const anomalyCheck = await db.prepare(`
         SELECT 
           q.id as queue_id,
-          q.date,
-          q.mission,
-          q.destination,
-          c.license_plate,
           ur_dep.mileage as dep_mileage,
-          ur_ret.mileage as ret_mileage
+          ur_ret.mileage as ret_mileage,
+          CASE WHEN ur_dep.id IS NULL THEN 1 ELSE 0 END as missed_dep,
+          CASE WHEN ur_ret.id IS NULL THEN 1 ELSE 0 END as missed_ret
         FROM queue q
-        LEFT JOIN cars c ON q.car_id = c.id
         LEFT JOIN usage_records ur_dep ON q.id = ur_dep.queue_id AND ur_dep.record_type = 'departure'
         LEFT JOIN usage_records ur_ret ON q.id = ur_ret.queue_id AND ur_ret.record_type = 'return'
         WHERE q.driver_id = ? AND q.status = 'completed' AND q.date >= ? AND q.date <= ?
@@ -77,8 +166,12 @@ export async function onRequest(context) {
       `).bind(driverId, fiscalStart, fiscalEnd).all();
 
       let anomalousCount = 0;
+      let missedCount = 0;
+      const totalCompleted = anomalyCheck.results ? anomalyCheck.results.length : 0;
+
       if (anomalyCheck.results) {
         anomalyCheck.results.forEach(trip => {
+          missedCount += (trip.missed_dep || 0) + (trip.missed_ret || 0);
           const dep = trip.dep_mileage;
           const ret = trip.ret_mileage;
           if (dep !== null && ret !== null && dep !== undefined && ret !== undefined) {
@@ -89,30 +182,23 @@ export async function onRequest(context) {
         });
       }
 
-      const totalCompleted = usageStatsRaw.total_completed_trips || 0;
-      const totalLogs = usageStatsRaw.total_logs || 0;
-      const expectedLogs = totalCompleted * 2; // Departure and Return
-      const missedLogs = expectedLogs > totalLogs ? expectedLogs - totalLogs : 0;
-
       const usageStats = {
           total_completed_trips: totalCompleted,
-          total_logs: totalLogs,
-          missed_logs: missedLogs,
-          missed_fuel_mileage: usageStatsRaw.missed_fuel_mileage || 0,
+          total_logs: (totalCompleted * 2) - missedCount,
+          missed_logs: missedCount,
+          missed_fuel_mileage: 0,
           anomalous_logs: anomalousCount
       };
 
       // Calculate combined score
-      // Passenger: 40% weight (Passenger average is out of 5, so (avg / 5) * 40)
-      // Committee: 60% weight (Committee total is out of 100, so (avg / 100) * 60)
-      const passengerAvg = passengerStmt.avg_total_score || 0; // out of 5
-      const committeeAvg = committeeStmt.avg_total_score || 0; // out of 100
+      const passengerAvg = passengerStmt?.avg_total_score || 0;
+      const committeeAvg = committeeStmt?.avg_total_score || 0;
 
       const passengerWeighted = (passengerAvg / 5) * 40;
       const committeeWeighted = (committeeAvg / 100) * 60;
       const combinedScore = passengerWeighted + committeeWeighted;
 
-      const hasEvaluations = (passengerStmt?.total_trips || 0) > 0 || (committeeStmt?.committee_count || 0) > 0;
+      const hasEvaluations = (passengerStmt?.total_trips || 0) > 0 || (committeeStmt?.committee_count || 0) > 0 || combinedScore > 0;
       let grade = 'ยังไม่ประเมิน';
       if (hasEvaluations) {
           if (combinedScore >= 90) grade = 'ดีเด่น';
@@ -131,7 +217,7 @@ export async function onRequest(context) {
         passenger_weighted: passengerWeighted,
         committee_weighted: committeeWeighted,
         grade: grade,
-        history: history,
+        history: history || [],
         usage_stats: usageStats
       });
     }

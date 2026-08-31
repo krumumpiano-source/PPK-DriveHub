@@ -119,46 +119,9 @@
             container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">กำลังคำนวณและประมวลผลข้อมูล...</p></div>';
 
             try {
-                const driversRes = await API.get('/api/drivers');
-                const driversList = driversRes.data?.drivers || driversRes.data || [];
-                const mainKeywords = ['ชารี', 'ณัฐวุฒิ', 'สมชาย', 'สุรเชษฐ์'];
-                const activeDrivers = driversList.filter(d => d.status === 'active' && mainKeywords.some(k => (d.name || d.first_name || '').includes(k)));
-
-                let reportRows = [];
-                for (const d of activeDrivers) {
-                    try {
-                        const [evalRes, empRes] = await Promise.all([
-                            API.get(`/api/evaluations/driver/${d.id}?year=${currentYear}`),
-                            API.get(`/api/evaluations/empirical/${d.id}?year=${currentYear}`)
-                        ]);
-                        const e = evalRes.data || {};
-                        const m = empRes.data || {};
-
-                        const pWeighted = e.passenger_weighted || 0;
-                        const cWeighted = e.committee_weighted || 0;
-                        const totalScore = pWeighted + cWeighted;
-                        const trips = e.usage_stats?.total_completed_trips || 0;
-                        const missed = e.usage_stats?.missed_logs || 0;
-                        const anomalous = e.usage_stats?.anomalous_logs || m.anomalous_count || 0;
-
-                        const hasEval = (e.passenger_stats?.total_trips > 0) || (e.committee_stats?.committee_count > 0) || (totalScore > 0);
-                        const finalGrade = hasEval ? (e.grade && e.grade !== 'ยังไม่ประเมิน' ? e.grade : 'พอใช้') : 'ยังไม่ประเมิน';
-
-                        reportRows.push({
-                            driver: d,
-                            trips: trips,
-                            missed: missed,
-                            anomalous: anomalous,
-                            passengerScore: pWeighted,
-                            committeeScore: cWeighted,
-                            totalScore: totalScore,
-                            hasEval: hasEval,
-                            grade: finalGrade
-                        });
-                    } catch (err) {
-                        console.warn(err);
-                    }
-                }
+                const res = await API.get(`/api/evaluations/summary?year=${currentYear}`);
+                const summaryData = res.data || {};
+                const reportRows = summaryData.drivers || [];
 
                 // Sort by totalScore descending
                 reportRows.sort((a, b) => b.totalScore - a.totalScore);
