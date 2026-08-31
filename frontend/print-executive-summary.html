@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>รายงานสรุปผลการประเมินการปฏิบัติหน้าที่พนักงานขับรถยนต์ (อย่างเป็นทางการ) - โรงเรียนพะเยาพิทยาคม</title>
+    <title>แบบสรุปผลการประเมินการปฏิบัติหน้าที่พนักงานขับรถยนต์ - โรงเรียนพะเยาพิทยาคม</title>
     <script src="config.js"></script>
     <script>window.API_BASE_URL=CONFIG.API_BASE_URL;window.currentPage='print-executive-summary';window.REQUIRE_AUTH=true;</script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -13,19 +13,21 @@
     <script src="common.js"></script>
     <style>
         body { background: #f8fafc; font-size: 13px; color: #000; font-family: 'Sarabun', 'Segoe UI', Tahoma, sans-serif; line-height: 1.5; }
-        .print-container { max-width: 900px; margin: 0 auto; padding: 30px; background: #fff; box-shadow: 0 0 15px rgba(0,0,0,0.05); }
+        .print-container { max-width: 960px; margin: 0 auto; padding: 25px 30px; background: #fff; box-shadow: 0 0 15px rgba(0,0,0,0.05); }
         
-        .header-section { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 12px; }
-        .header-section h4 { font-weight: bold; margin-bottom: 4px; font-size: 18px; }
-        .header-section h5 { font-weight: bold; margin-bottom: 4px; font-size: 15px; }
+        .header-section { text-align: center; margin-bottom: 18px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+        .header-section h4 { font-weight: bold; margin-bottom: 3px; font-size: 17px; }
+        .header-section h5 { font-weight: bold; margin-bottom: 3px; font-size: 14.5px; }
         
-        .report-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        .report-table th, .report-table td { border: 1px solid #000; padding: 7px 8px; font-size: 12.5px; }
-        .report-table th { background-color: #f1f5f9; text-align: center; font-weight: bold; }
+        .report-table { width: 100%; border-collapse: collapse; margin-bottom: 18px; font-size: 12px; }
+        .report-table th, .report-table td { border: 1px solid #000; padding: 6px 5px; text-align: center; }
+        .report-table th { background-color: #f1f5f9; font-weight: bold; vertical-align: middle; }
         
-        .signature-grid { display: flex; justify-content: space-between; margin-top: 35px; }
+        .summary-card { border: 1px solid #000; padding: 12px 15px; margin-bottom: 12px; border-radius: 4px; }
+        
+        .signature-grid { display: flex; justify-content: space-between; margin-top: 30px; }
         .signature-box { width: 45%; text-align: center; }
-        .signature-line { display: inline-block; border-bottom: 1px solid #000; width: 230px; margin-bottom: 5px; }
+        .signature-line { display: inline-block; border-bottom: 1px solid #000; width: 220px; margin-bottom: 4px; }
 
         .no-print { display: block; margin-bottom: 20px; padding: 15px; background: #e2e8f0; border-radius: 8px; }
         
@@ -33,7 +35,7 @@
             .no-print { display: none !important; }
             body { padding: 0; margin: 0; background: #fff; }
             .print-container { width: 100%; max-width: 100%; padding: 0; box-shadow: none; }
-            @page { margin: 1.2cm; size: portrait; }
+            @page { margin: 1cm 1.2cm; size: portrait; }
         }
     </style>
 </head>
@@ -44,8 +46,8 @@
         <div class="no-print">
             <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-3">
                 <div>
-                    <h5 class="fw-bold mb-1"><i class="fa-solid fa-file-signature text-primary me-2"></i> รายงานสรุปผลการประเมินอย่างเป็นทางการ (สำหรับผู้บริหาร/ผู้อำนวยการ)</h5>
-                    <p class="text-muted small mb-0">รายงานสรุปเปรียบเทียบผลงาน 1 หน้า A4 พร้อมช่องลงนามมติคณะกรรมการและผู้อำนวยการสถานศึกษา</p>
+                    <h5 class="fw-bold mb-1"><i class="fa-solid fa-file-signature text-primary me-2"></i> แบบสรุปผลการประเมินการปฏิบัติหน้าที่พนักงานขับรถยนต์ (เอกสารทางการ)</h5>
+                    <p class="text-muted small mb-0">รายงานสรุปผลคะแนนแยกตามรายด้านอย่างละเอียด สรุปผลเป็นรายบุคคล สำหรับเสนอผู้บริหาร/ผู้อำนวยการ</p>
                 </div>
                 <div class="d-flex gap-2">
                     <button class="btn btn-primary px-4 fw-bold shadow-sm" onclick="window.print()"><i class="fa-solid fa-print me-2"></i> สั่งพิมพ์ A4 / PDF</button>
@@ -73,10 +75,9 @@
         </div>
 
         <div id="reportContent">
-            <!-- Loading -->
             <div class="text-center py-5">
                 <div class="spinner-border text-primary"></div>
-                <p class="mt-2 text-muted">กำลังรวบรวมรายงานสรุปผลการประเมิน...</p>
+                <p class="mt-2 text-muted">กำลังรวบรวมแบบสรุปผลการประเมิน...</p>
             </div>
         </div>
 
@@ -116,7 +117,7 @@
 
         async function loadExecutiveReportData() {
             const container = document.getElementById('reportContent');
-            container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">กำลังคำนวณและประมวลผลข้อมูล...</p></div>';
+            container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">กำลังประมวลผลข้อมูล...</p></div>';
 
             try {
                 const res = await API.get(`/api/evaluations/summary?year=${currentYear}`);
@@ -127,54 +128,123 @@
                 reportRows.sort((a, b) => b.totalScore - a.totalScore);
 
                 let tableRowsHtml = '';
+                let individualSummaryHtml = '';
+
                 reportRows.forEach((r, idx) => {
-                    const displayPassenger = r.hasEval && r.passengerScore > 0 ? r.passengerScore.toFixed(2) : '-';
-                    const displayCommittee = r.hasEval && r.committeeScore > 0 ? r.committeeScore.toFixed(2) : '-';
-                    const displayTotal = r.hasEval && r.totalScore > 0 ? r.totalScore.toFixed(2) : '-';
+                    const p = r.passenger || {};
+                    const c = r.committee || {};
+
+                    const pCountText = p.count > 0 ? `${p.count}` : '-';
+                    const pAvgText = p.count > 0 ? p.avg_score.toFixed(2) : '-';
+                    const pWeightedText = p.count > 0 ? p.weighted_score.toFixed(2) : '-';
+
+                    const cCountText = c.count > 0 ? `${c.count}` : '-';
+                    const cMaintText = c.count > 0 ? c.avg_maintenance.toFixed(2) : '-';
+                    const cDiscText = c.count > 0 ? c.avg_discipline.toFixed(2) : '-';
+                    const cContText = c.count > 0 ? c.avg_contribution.toFixed(2) : '-';
+                    const cTotalText = c.count > 0 ? c.avg_total.toFixed(2) : '-';
+                    const cWeightedText = c.count > 0 ? c.weighted_score.toFixed(2) : '-';
+
+                    const totalText = r.hasEval && r.totalScore > 0 ? r.totalScore.toFixed(2) : '-';
+                    const fullName = `${r.driver.title || ''}${r.driver.first_name || r.driver.name} ${r.driver.last_name || ''}`;
 
                     tableRowsHtml += `
                         <tr>
-                            <td class="text-center">${idx + 1}</td>
-                            <td class="text-start fw-bold">${r.driver.title || ''}${r.driver.first_name || r.driver.name} ${r.driver.last_name || ''}</td>
-                            <td class="text-center">${r.trips}</td>
-                            <td class="text-center ${r.missed > 0 ? 'text-danger fw-bold' : ''}">${r.missed}</td>
-                            <td class="text-center ${r.anomalous > 0 ? 'text-danger fw-bold' : ''}">${r.anomalous}</td>
-                            <td class="text-center">${displayPassenger}</td>
-                            <td class="text-center">${displayCommittee}</td>
-                            <td class="text-center fw-bold fs-6" style="background:#f1f5f9;">${displayTotal}</td>
-                            <td class="text-center fw-bold">${r.grade}</td>
+                            <td>${idx + 1}</td>
+                            <td class="text-start fw-bold">${fullName}</td>
+                            <!-- ส่วนผู้รับบริการ -->
+                            <td>${pCountText}</td>
+                            <td>${pAvgText}</td>
+                            <td class="fw-bold text-primary">${pWeightedText}</td>
+                            <!-- ส่วนคณะกรรมการ -->
+                            <td>${cCountText}</td>
+                            <td>${cMaintText}</td>
+                            <td>${cDiscText}</td>
+                            <td>${cContText}</td>
+                            <td>${cTotalText}</td>
+                            <td class="fw-bold text-info">${cWeightedText}</td>
+                            <!-- รวมสุทธิ & เกรด -->
+                            <td class="fw-bold fs-6" style="background:#f1f5f9;">${totalText}</td>
+                            <td class="fw-bold">${r.grade}</td>
                         </tr>
+                    `;
+
+                    // รายบุคคล
+                    individualSummaryHtml += `
+                        <div class="summary-card">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong class="fs-6">${idx + 1}. ${fullName}</strong>
+                                <span>ระดับผลการประเมิน: <strong>${r.grade}</strong> (คะแนนรวมสุทธิ: <strong>${totalText} / 100.00</strong>)</span>
+                            </div>
+                            <div class="row g-2 small mt-1">
+                                <div class="col-md-6 border-end pe-2">
+                                    <div class="fw-bold text-primary mb-1">• ด้านการประเมินจากผู้รับบริการ (สัดส่วน 40 คะแนน):</div>
+                                    <div class="ps-2">
+                                        - จำนวนผู้ประเมิน: <strong>${p.count > 0 ? p.count + ' ครั้ง' : 'ยังไม่มีผู้ประเมิน'}</strong><br>
+                                        - คะแนนเฉลี่ยความพึงพอใจ: <strong>${p.count > 0 ? p.avg_score.toFixed(2) + ' / 5.00 ดาว' : '-'}</strong><br>
+                                        - คิดเป็นคะแนนสุทธิ: <strong>${pWeightedText} / 40.00 คะแนน</strong>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 ps-2">
+                                    <div class="fw-bold text-info mb-1">• ด้านการประเมินจากคณะกรรมการ (สัดส่วน 60 คะแนน):</div>
+                                    <div class="ps-2">
+                                        - จำนวนกรรมการที่ประเมิน: <strong>${c.count > 0 ? c.count + ' ท่าน' : 'ยังไม่มีกรรมการประเมิน'}</strong><br>
+                                        - ด้านดูแลรักษารถ: <strong>${cMaintText} / 30</strong> | ด้านระเบียบวินัย: <strong>${cDiscText} / 40</strong> | ด้านจิตบริการ: <strong>${cContText} / 30</strong><br>
+                                        - คะแนนรวมเฉลี่ยกรรมการ: <strong>${cTotalText} / 100</strong> (คิดเป็นคะแนนสุทธิ: <strong>${cWeightedText} / 60.00 คะแนน</strong>)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     `;
                 });
 
                 container.innerHTML = `
                     <div class="header-section">
-                        <h4>รายงานสรุปผลการประเมินการปฏิบัติหน้าที่พนักงานขับรถยนต์</h4>
+                        <h4>แบบสรุปผลการประเมินการปฏิบัติหน้าที่พนักงานขับรถยนต์</h4>
                         <h5>โรงเรียนพะเยาพิทยาคม ประจำปีงบประมาณ ${currentYear}</h5>
-                        <p class="mb-0 text-muted small">สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาพะเยา (ข้อมูลประมวลผล ณ วันที่ ${new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })})</p>
+                        <p class="mb-0 text-muted small">สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาพะเยา (ข้อมูลสรุปผลการประเมินอย่างเป็นทางการ)</p>
                     </div>
 
-                    <p class="mb-2 fw-bold">สรุปผลการประเมินการปฏิบัติหน้าที่ตามมาตรฐานตัวชี้วัด สัดส่วนผู้รับบริการ (40 คะแนน) และคณะกรรมการประเมิน (60 คะแนน):</p>
+                    <!-- 1. ตารางสรุปภาพรวมแยกตามรายด้าน -->
+                    <h6 class="fw-bold mb-2">1. ตารางสรุปผลคะแนนการประเมินการปฏิบัติหน้าที่แยกตามรายด้าน:</h6>
+                    <div class="table-responsive">
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th rowspan="2" style="width: 4%;">ที่</th>
+                                    <th rowspan="2" style="width: 22%;" class="text-start">ชื่อ-สกุล พนักงานขับรถยนต์</th>
+                                    <th colspan="3" style="background:#e0f2fe;">1. ผู้รับบริการ (สัดส่วน 40)</th>
+                                    <th colspan="6" style="background:#ecfdf5;">2. คณะกรรมการ (สัดส่วน 60)</th>
+                                    <th rowspan="2" style="width: 9%; background:#f1f5f9;">รวมสุทธิ<br>(100)</th>
+                                    <th rowspan="2" style="width: 11%;">ระดับผล<br>การประเมิน</th>
+                                </tr>
+                                <tr>
+                                    <!-- ผู้รับบริการ -->
+                                    <th style="width: 6%;">ผู้ประเมิน<br>(ครั้ง)</th>
+                                    <th style="width: 6%;">เฉลี่ย<br>(/5)</th>
+                                    <th style="width: 7%; background:#e0f2fe;">สุทธิ<br>(40)</th>
+                                    <!-- กรรมการ -->
+                                    <th style="width: 5%;">กรรมการ<br>(ท่าน)</th>
+                                    <th style="width: 6%;">ดูแลรถ<br>(30)</th>
+                                    <th style="width: 6%;">วินัย<br>(40)</th>
+                                    <th style="width: 6%;">จิตอาสา<br>(30)</th>
+                                    <th style="width: 6%;">รวม<br>(100)</th>
+                                    <th style="width: 7%; background:#ecfdf5;">สุทธิ<br>(60)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${tableRowsHtml}
+                            </tbody>
+                        </table>
+                    </div>
 
-                    <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 5%;">ที่</th>
-                                <th style="width: 25%;" class="text-start">ชื่อ-สกุล พนักงานขับรถยนต์</th>
-                                <th style="width: 10%;">คิวงาน (เที่ยว)</th>
-                                <th style="width: 10%;">ไม่บันทึกไมล์ (ครั้ง)</th>
-                                <th style="width: 10%;">ไมล์ถอยหลัง (ครั้ง)</th>
-                                <th style="width: 10%;">ผู้โดยสาร (40)</th>
-                                <th style="width: 10%;">กรรมการ (60)</th>
-                                <th style="width: 10%; background:#e2e8f0;">รวมสุทธิ (100)</th>
-                                <th style="width: 10%;">ระดับผลการประเมิน</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${tableRowsHtml}
-                        </tbody>
-                    </table>
+                    <!-- 2. สรุปผลรายบุคคลเป็นข้อๆ -->
+                    <h6 class="fw-bold mb-2 mt-3">2. สรุปรายละเอียดผลการประเมินรายบุคคลตามมาตรฐานตัวชี้วัด:</h6>
+                    <div class="mb-3">
+                        ${individualSummaryHtml}
+                    </div>
 
+                    <!-- 3. เกณฑ์มาตรฐานระดับผลการประเมิน -->
                     <div class="mb-3 p-2 border rounded bg-light" style="font-size: 11.5px;">
                         <strong>เกณฑ์ระดับผลการประเมิน:</strong> 
                         ดีเด่น (90.00 - 100.00 คะแนน) | 
@@ -184,6 +254,7 @@
                         ต้องปรับปรุง (ต่ำกว่า 60.00 คะแนน)
                     </div>
 
+                    <!-- 4. ส่วนลงนามรับรองผล -->
                     <div class="signature-grid">
                         <div class="signature-box">
                             <p class="mb-1">ลงชื่อ ...........................................................</p>

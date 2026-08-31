@@ -27,49 +27,27 @@ export async function onRequest(context) {
       for (const d of driverList) {
         // Passenger stats
         const pStats = await db.prepare(`
-          SELECT AVG(total_score) as avg_total_score, COUNT(id) as total_trips
+          SELECT 
+            AVG(score_driving) as avg_driving,
+            AVG(score_service) as avg_service,
+            AVG(score_punctuality) as avg_punctuality,
+            AVG(total_score) as avg_total_score,
+            COUNT(id) as total_trips
           FROM driver_evaluations
           WHERE driver_id = ? AND evaluation_type = 'passenger' AND academic_year = ?
         `).bind(d.id, year).first();
 
         // Committee stats
         const cStats = await db.prepare(`
-          SELECT AVG(total_score) as avg_total_score, COUNT(id) as committee_count
+          SELECT 
+            AVG(score_maintenance) as avg_maintenance,
+            AVG(score_discipline) as avg_discipline,
+            AVG(score_contribution) as avg_contribution,
+            AVG(total_score) as avg_total_score,
+            COUNT(id) as committee_count
           FROM driver_evaluations
           WHERE driver_id = ? AND evaluation_type = 'committee' AND academic_year = ?
         `).bind(d.id, year).first();
-
-        // Queues completed
-        const qStats = await db.prepare(`
-          SELECT COUNT(id) as total_trips FROM queue 
-          WHERE driver_id = ? AND status = 'completed' AND date >= ? AND date <= ?
-        `).bind(d.id, fiscalStart, fiscalEnd).first();
-
-        // Anomaly & Missed Logs
-        const anomalyCheck = await db.prepare(`
-          SELECT 
-            ur_dep.mileage as dep_mileage,
-            ur_ret.mileage as ret_mileage,
-            CASE WHEN ur_dep.id IS NULL THEN 1 ELSE 0 END as missed_dep,
-            CASE WHEN ur_ret.id IS NULL THEN 1 ELSE 0 END as missed_ret
-          FROM queue q
-          LEFT JOIN usage_records ur_dep ON q.id = ur_dep.queue_id AND ur_dep.record_type = 'departure'
-          LEFT JOIN usage_records ur_ret ON q.id = ur_ret.queue_id AND ur_ret.record_type = 'return'
-          WHERE q.driver_id = ? AND q.status = 'completed' AND q.date >= ? AND q.date <= ?
-        `).bind(d.id, fiscalStart, fiscalEnd).all();
-
-        let anomalousCount = 0;
-        let missedCount = 0;
-        if (anomalyCheck.results) {
-          anomalyCheck.results.forEach(trip => {
-            missedCount += (trip.missed_dep || 0) + (trip.missed_ret || 0);
-            const dep = trip.dep_mileage;
-            const ret = trip.ret_mileage;
-            if (dep !== null && ret !== null && dep !== undefined && ret !== undefined) {
-              if (ret < dep) anomalousCount++;
-            }
-          });
-        }
 
         const pAvg = pStats?.avg_total_score || 0;
         const cAvg = cStats?.avg_total_score || 0;
@@ -89,9 +67,22 @@ export async function onRequest(context) {
 
         summaryList.push({
           driver: d,
-          trips: qStats?.total_trips || 0,
-          missed: missedCount,
-          anomalous: anomalousCount,
+          passenger: {
+            count: pStats?.total_trips || 0,
+            avg_score: pStats?.avg_total_score || 0,
+            avg_driving: pStats?.avg_driving || 0,
+            avg_service: pStats?.avg_service || 0,
+            avg_punctuality: pStats?.avg_punctuality || 0,
+            weighted_score: pWeighted
+          },
+          committee: {
+            count: cStats?.committee_count || 0,
+            avg_maintenance: cStats?.avg_maintenance || 0,
+            avg_discipline: cStats?.avg_discipline || 0,
+            avg_contribution: cStats?.avg_contribution || 0,
+            avg_total: cStats?.avg_total_score || 0,
+            weighted_score: cWeighted
+          },
           passengerScore: pWeighted,
           committeeScore: cWeighted,
           totalScore: totalScore,
