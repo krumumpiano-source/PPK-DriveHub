@@ -1019,6 +1019,10 @@
             <input type="text" id="create_requested_by" list="requesterSuggestions" required placeholder="ชื่อผู้ขอใช้รถ">
           </div>
           <div class="form-group">
+            <label>เบอร์โทรผู้ขอใช้รถ</label>
+            <input type="tel" id="create_requester_phone" placeholder="เช่น 081-234-5678">
+          </div>
+          <div class="form-group">
             <label>จำนวนผู้โดยสาร <span class="required">*</span></label>
             <input type="number" id="create_passenger_count" min="0" required placeholder="จำนวนผู้โดยสาร"
               oninput="checkCreatePassengerCount()">
@@ -1312,6 +1316,7 @@
     function applySavedFormMemory() {
       var memory = getFormMemory();
       fillInputIfEmpty('create_requested_by', memory.requested_by || '');
+      fillInputIfEmpty('create_requester_phone', memory.requester_phone || '');
       fillInputIfEmpty('create_destination', memory.destination || '');
       fillInputIfEmpty('create_mission', memory.mission || '');
       fillInputIfEmpty('create_notes', memory.notes || '');
@@ -2395,7 +2400,12 @@
       var car_id = document.getElementById('create_car_id').value;
       var driver_id = document.getElementById('create_driver_id').value;
       var mission = document.getElementById('create_mission').value.trim();
-      var requested_by = document.getElementById('create_requested_by').value.trim();
+      var raw_requested_by = document.getElementById('create_requested_by').value.trim();
+      var requester_phone = document.getElementById('create_requester_phone') ? document.getElementById('create_requester_phone').value.trim() : '';
+      var requested_by = raw_requested_by;
+      if (requester_phone) {
+        requested_by += ' (โทร. ' + requester_phone + ')';
+      }
       var passenger_count = document.getElementById('create_passenger_count').value;
       var destination = document.getElementById('create_destination').value.trim();
 
@@ -2421,7 +2431,8 @@
       };
 
       saveFormMemory({
-        requested_by: requested_by,
+        requested_by: raw_requested_by,
+        requester_phone: requester_phone,
         destination: destination,
         mission: mission,
         notes: formData.notes
@@ -2925,7 +2936,8 @@ ${dTagHeader}📅 วันเดินทาง: ${dateFormatted}
       };
 
       saveFormMemory({
-        requested_by: requested_by,
+        requested_by: raw_requested_by,
+        requester_phone: requester_phone,
         destination: destination,
         mission: mission,
         notes: formData.notes
