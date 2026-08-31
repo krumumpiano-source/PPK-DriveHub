@@ -38,6 +38,7 @@ export async function onRequest(context) {
        d.name AS driver_name, d.line_id AS driver_line_id, d.phone AS driver_phone,
        bd.name AS backup_driver_name,
        u.display_name AS requester_display_name,
+       COALESCE(u.phone, uc.phone) AS requester_phone,
        uc.display_name AS created_by_name,
        uu.display_name AS updated_by_name
        FROM queue q
@@ -70,6 +71,7 @@ export async function onRequest(context) {
        d.name AS driver_name, d.line_id AS driver_line_id, d.phone AS driver_phone,
        bd.name AS backup_driver_name,
        u.display_name AS requester_display_name,
+       COALESCE(u.phone, uc.phone) AS requester_phone,
        uc.display_name AS created_by_name,
        uu.display_name AS updated_by_name
        FROM queue q

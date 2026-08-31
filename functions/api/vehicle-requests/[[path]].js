@@ -35,6 +35,7 @@ export async function onRequest(context) {
        d.name AS driver_name, d.line_id AS driver_line_id, d.phone AS driver_phone,
        u.display_name AS approved_by_name,
        uc.display_name AS requester_display_name,
+       COALESCE(u.phone, uc.phone) AS requester_phone,
        uc.display_name AS created_by_name
        FROM vehicle_requests vr
        LEFT JOIN cars c ON vr.assigned_car_id = c.id
@@ -56,6 +57,7 @@ export async function onRequest(context) {
        d.name AS driver_name, d.line_id AS driver_line_id, d.phone AS driver_phone,
        u.display_name AS approved_by_name,
        uc.display_name AS requester_display_name,
+       COALESCE(u.phone, uc.phone) AS requester_phone,
        uc.display_name AS created_by_name
        FROM vehicle_requests vr
        LEFT JOIN cars c ON vr.assigned_car_id = c.id
@@ -392,27 +394,41 @@ export async function onRequest(context) {
     // Get requester email and send confirmation
     const requester = await dbFirst(env.DB, 'SELECT email FROM users WHERE id = ?', [row.requester_id]);
     const confirmationUrl = `${url.origin}/vehicle-request.html?id=${id}`;
-    const driverTag = (driverCheck.line_id && driverCheck.line_id.startsWith('@')) ? driverCheck.line_id : (driverCheck.line_id ? `@${driverCheck.line_id}` : '');
-    const driverTagHeader = driverTag ? `🔔 ถึง: ${driverTag} (พนักงานขับรถ)\n` : '';
-    const driverDisplay = driverTag ? `${driverCheck.name} (${driverTag})` : driverCheck.name;
-    const cleanPhone = driverCheck.phone ? driverCheck.phone.replace(/\D/g, '') : '';
-    const formattedPhone = cleanPhone.length === 10 ? cleanPhone.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3') : driverCheck.phone;
-    const driverPhoneStr = formattedPhone ? `\n📞 โทรคนขับ: ${formattedPhone}` : '';
-    const dateRange = row.return_date && row.return_date !== row.date ? `${row.date} ถึง ${row.return_date}` : row.date;
+    function formatThaiDate(dateStr) {
+      if (!dateStr) return '-';
+      try {
+        const s = String(dateStr).substring(0, 10);
+        const d = new Date(s + 'T00:00:00');
+        if (isNaN(d.getTime())) return dateStr;
+        const days = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
+        const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        return `${days[d.getDay()]}ที่ ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543}`;
+      } catch { return dateStr; }
+    }
 
-    const lineMessage = `📋 [สั่งการคิวรถราชการ - โรงเรียนพะเยาพิทยาคม]
-──────────────────────
-${driverTagHeader}📅 วันเดินทาง: ${dateRange}
-⏰ เวลาล้อหมุน: ${timeStart} - ${timeEnd} น.
-📍 สถานที่ไป: ${row.destination || '-'}
+    const driverTag = (driverCheck.line_id && driverCheck.line_id.startsWith('@')) ? driverCheck.line_id : (driverCheck.line_id ? `@${driverCheck.line_id}` : driverCheck.name);
+    
+    // Multi-day vs single day date formatting
+    let dateLine = '';
+    if (row.return_date && row.return_date !== row.date) {
+      dateLine = `📅 วันเดินทาง: ${formatThaiDate(row.date)} เวลา ${timeStart} น. ถึง ${formatThaiDate(row.return_date)} เวลา ${timeEnd} น.`;
+    } else {
+      dateLine = `📅 วันเดินทาง: ${formatThaiDate(row.date)}  เวลา : ${timeStart} - ${timeEnd} น.`;
+    }
+
+    // Requester phone
+    const cleanReqPhone = (row.requester_phone || '').replace(/\D/g, '');
+    const formattedReqPhone = cleanReqPhone.length === 10 ? cleanReqPhone.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3') : (cleanReqPhone.length === 9 ? cleanReqPhone.replace(/(\d{2})(\d{3})(\d{4})/, '$1-$2-$3') : (row.requester_phone || ''));
+    const reqPhoneStr = formattedReqPhone ? ` (โทร ${formattedReqPhone})` : '';
+
+    const carPlateOnly = (carCheck?.license_plate || carLabel).split(' ')[0];
+
+    const lineMessage = `🔔 ถึง: ${driverTag}
+${dateLine}
+📍 สถานที่: ${row.destination || '-'}
 🎯 ภารกิจ: ${row.purpose || '-'}
-
-🚗 รถที่ใช้: ${carLabel}
-👤 คนขับ: ${driverDisplay}${driverPhoneStr}
-
-👥 ผู้ขอ/คณะเดินทาง: ${row.requester_name || '-'} (${row.requester_department || '-'}) จำนวน ${row.passengers || 1} คน
-──────────────────────
-📌 ขอให้พนักงานขับรถเตรียมความพร้อม และตรวจเช็ครถก่อนออกเดินทางครับ`;
+🚗 รถที่ใช้: ${carPlateOnly}
+👥 ผู้ขอ/คณะเดินทาง: ${row.requester_name || '-'} (จำนวน ${row.passengers || 1} คน)${reqPhoneStr}`;
     
     if (requester && requester.email) {
       await sendEmailViaGAS(env, requester.email, 'อนุมัติการขอใช้รถ', lineMessage);
