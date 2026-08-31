@@ -393,11 +393,26 @@ export async function onRequest(context) {
     const requester = await dbFirst(env.DB, 'SELECT email FROM users WHERE id = ?', [row.requester_id]);
     const confirmationUrl = `${url.origin}/vehicle-request.html?id=${id}`;
     const driverTag = (driverCheck.line_id && driverCheck.line_id.startsWith('@')) ? driverCheck.line_id : (driverCheck.line_id ? `@${driverCheck.line_id}` : '');
-    const driverTagHeader = driverTag ? `\n🔔 แจ้งเตือน: ${driverTag} (มีมอบหมายคิวงานใหม่)` : '';
+    const driverTagHeader = driverTag ? `🔔 ถึง: ${driverTag} (พนักงานขับรถ)\n` : '';
     const driverDisplay = driverTag ? `${driverCheck.name} (${driverTag})` : driverCheck.name;
-    const driverPhoneStr = driverCheck.phone ? ` 📞 ${driverCheck.phone}` : '';
+    const cleanPhone = driverCheck.phone ? driverCheck.phone.replace(/\D/g, '') : '';
+    const formattedPhone = cleanPhone.length === 10 ? cleanPhone.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3') : driverCheck.phone;
+    const driverPhoneStr = formattedPhone ? `\n📞 โทรคนขับ: ${formattedPhone}` : '';
+    const dateRange = row.return_date && row.return_date !== row.date ? `${row.date} ถึง ${row.return_date}` : row.date;
 
-    const lineMessage = `🚐 [คิวงานรถราชการ - โรงเรียนพะเยาพิทยาคม]${driverTagHeader}\n📌 เลขที่คำขอ: ${row.request_no || '-'}\n📅 วันที่เดินทาง: ${row.date}${row.return_date && row.return_date !== row.date ? ' ถึง ' + row.return_date : ''} (${timeStart} - ${timeEnd} น.)\n📍 ปลายทาง: ${row.destination}\n🎯 ภารกิจ: ${row.purpose || '-'}\n🚗 รถที่มอบหมาย: ${carLabel}\n👤 พนักงานขับรถ: ${driverDisplay}${driverPhoneStr}\n🙋‍♂️ ผู้ขอใช้รถ: ${row.requester_name} (${row.requester_department || '-'})\n👥 ผู้ร่วมเดินทาง: ${row.passengers || 1} คน`;
+    const lineMessage = `📋 [สั่งการคิวรถราชการ - โรงเรียนพะเยาพิทยาคม]
+──────────────────────
+${driverTagHeader}📅 วันเดินทาง: ${dateRange}
+⏰ เวลาล้อหมุน: ${timeStart} - ${timeEnd} น.
+📍 สถานที่ไป: ${row.destination || '-'}
+🎯 ภารกิจ: ${row.purpose || '-'}
+
+🚗 รถที่ใช้: ${carLabel}
+👤 คนขับ: ${driverDisplay}${driverPhoneStr}
+
+👥 ผู้ขอ/คณะเดินทาง: ${row.requester_name || '-'} (${row.requester_department || '-'}) จำนวน ${row.passengers || 1} คน
+──────────────────────
+📌 ขอให้พนักงานขับรถเตรียมความพร้อม และตรวจเช็ครถก่อนออกเดินทางครับ`;
     
     if (requester && requester.email) {
       await sendEmailViaGAS(env, requester.email, 'อนุมัติการขอใช้รถ', lineMessage);

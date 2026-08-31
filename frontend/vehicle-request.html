@@ -594,12 +594,33 @@
       if (r.status === 'approved') {
         var carLabel = (r.license_plate || '-') + ' ' + (r.car_brand || '');
         var dTag = r.driver_line_id ? (r.driver_line_id.startsWith('@') ? r.driver_line_id : '@' + r.driver_line_id) : '';
-        var dTagHeader = dTag ? `\n🔔 แจ้งเตือน: ${dTag} (มีมอบหมายคิวงาน)` : '';
+        var dTagHeader = dTag ? `🔔 ถึง: ${dTag} (พนักงานขับรถ)\n` : '';
         var dNameDisplay = dTag ? `${r.driver_name || '-'} (${dTag})` : (r.driver_name || '-');
-        var dPhoneStr = r.driver_phone ? ` 📞 ${r.driver_phone}` : '';
-        var dateRange = r.return_date && r.return_date !== r.date ? `${r.date} ถึง ${r.return_date}` : r.date;
+        
+        var formatPhoneFn = function(p) {
+          if (!p || p === '-') return '';
+          var c = String(p).replace(/\D/g, '');
+          if (c.length === 10) return c.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+          if (c.length === 9) return c.replace(/(\d{2})(\d{3})(\d{4})/, '$1-$2-$3');
+          return p;
+        };
+        var dPhoneStr = formatPhoneFn(r.driver_phone);
+        var dateRange = r.return_date && r.return_date !== r.date ? `${formatDateThai(r.date)} ถึง ${formatDateThai(r.return_date)}` : formatDateThai(r.date);
+        var timeStr = (r.time_start || '-') + (r.time_end ? ' - ' + r.time_end + ' น.' : ' น. เป็นต้นไป');
 
-        var lineText = `🚐 [คิวงานรถราชการ - โรงเรียนพะเยาพิทยาคม]${dTagHeader}\n📌 เลขที่คำขอ: ${r.request_no || '-'}\n📅 วันที่: ${dateRange} (${r.time_start || '-'}-${r.time_end || '-'} น.)\n📍 ปลายทาง: ${r.destination}\n🎯 ภารกิจ: ${r.purpose || '-'}\n🚗 รถ: ${carLabel.trim()}\n👤 คนขับ: ${dNameDisplay}${dPhoneStr}\n🙋‍♂️ ผู้ขอ: ${r.requester_name} (${r.requester_department || '-'})\n👥 ผู้ร่วมเดินทาง: ${r.passengers || 1} คน`;
+        var lineText = `📋 [สั่งการคิวรถราชการ - โรงเรียนพะเยาพิทยาคม]
+──────────────────────
+${dTagHeader}📅 วันเดินทาง: ${dateRange}
+⏰ เวลาล้อหมุน: ${timeStr}
+📍 สถานที่ไป: ${r.destination || '-'}
+🎯 ภารกิจ: ${r.purpose || '-'}
+
+🚗 รถที่ใช้: ${carLabel.trim()}
+👤 คนขับ: ${dNameDisplay}${dPhoneStr ? '\n📞 โทรคนขับ: ' + dPhoneStr : ''}
+
+👥 ผู้ขอ/คณะเดินทาง: ${r.requester_name || '-'} (${r.requester_department || '-'}) จำนวน ${r.passengers || 1} คน
+──────────────────────
+📌 ขอให้พนักงานขับรถเตรียมความพร้อม และตรวจเช็ครถก่อนออกเดินทางครับ`;
         var lineShareUrl = 'https://line.me/R/share?text=' + encodeURIComponent(lineText);
         h += `<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">`;
         h += `<button class="btn btn-outline btn-sm" onclick="copyLineMessage(this, \`${lineText.replace(/`/g, '\\`')}\`)">📋 คัดลอกข้อความส่ง LINE</button>`;
