@@ -951,18 +951,6 @@
             <label>เลขที่คำสั่งเดินทาง</label>
             <input type="text" id="create_travel_order_number" placeholder="เช่น คส. 123/2568">
           </div>
-          <div class="form-group">
-            <label>หัวหน้างานยานพาหนะ (ผู้อนุมัติ ①)</label>
-            <input type="text" id="create_signed_vehicle_chief" placeholder="ชื่อ-สกุล">
-          </div>
-          <div class="form-group">
-            <label>รองผอ.ฝ่ายบริหาร (ผู้อนุมัติ ②)</label>
-            <input type="text" id="create_signed_deputy_director" placeholder="ชื่อ-สกุล">
-          </div>
-          <div class="form-group">
-            <label>ผอ.โรงเรียน (ผู้อนุมัติ ③)</label>
-            <input type="text" id="create_signed_director" placeholder="ชื่อ-สกุล">
-          </div>
         </div>
 
         <div id="createProgressContainer" style="display: none;">
@@ -1079,18 +1067,6 @@
           <div class="form-group">
             <label>เลขที่คำสั่งเดินทาง</label>
             <input type="text" id="edit_travel_order_number" placeholder="เช่น คส. 123/2568">
-          </div>
-          <div class="form-group">
-            <label>หัวหน้างานยานพาหนะ (ผู้อนุมัติ ①)</label>
-            <input type="text" id="edit_signed_vehicle_chief" placeholder="ชื่อ-สกุล">
-          </div>
-          <div class="form-group">
-            <label>รองผอ.ฝ่ายบริหาร (ผู้อนุมัติ ②)</label>
-            <input type="text" id="edit_signed_deputy_director" placeholder="ชื่อ-สกุล">
-          </div>
-          <div class="form-group">
-            <label>ผอ.โรงเรียน (ผู้อนุมัติ ③)</label>
-            <input type="text" id="edit_signed_director" placeholder="ชื่อ-สกุล">
           </div>
         </div>
 
@@ -1615,7 +1591,8 @@
         if (loadingEl) loadingEl.style.display = 'none';
         if (containerEl) containerEl.style.display = 'block';
       }
-    }
+    }
+
 
     function includeVehicleInQueueList(vehicle) {
       var category = vehicle.vehicle_category || 'primary';
@@ -2312,9 +2289,6 @@
         notes: document.getElementById('create_notes').value.trim() || '',
         purpose_category: document.getElementById('create_purpose_category').value.trim() || '',
         travel_order_number: document.getElementById('create_travel_order_number').value.trim() || '',
-        signed_vehicle_chief: document.getElementById('create_signed_vehicle_chief').value.trim() || '',
-        signed_deputy_director: document.getElementById('create_signed_deputy_director').value.trim() || '',
-        signed_director: document.getElementById('create_signed_director').value.trim() || '',
         allow_flexible: false,
         emergency_override: false
       };
@@ -2658,9 +2632,6 @@
           document.getElementById('edit_notes').value = editingQueueData.notes || '';
           document.getElementById('edit_purpose_category').value = editingQueueData.purpose_category || '';
           document.getElementById('edit_travel_order_number').value = editingQueueData.travel_order_number || '';
-          document.getElementById('edit_signed_vehicle_chief').value = editingQueueData.signed_vehicle_chief || '';
-          document.getElementById('edit_signed_deputy_director').value = editingQueueData.signed_deputy_director || '';
-          document.getElementById('edit_signed_director').value = editingQueueData.signed_director || '';
 
           setTimeout(function () {
             checkEditPassengerCount();
@@ -2823,10 +2794,7 @@ ${dTagHeader}📅 วันเดินทาง: ${dateFormatted}
         passengers: parseInt(passenger_count) || 0,
         notes: document.getElementById('edit_notes').value.trim() || '',
         purpose_category: document.getElementById('edit_purpose_category').value.trim() || '',
-        travel_order_number: document.getElementById('edit_travel_order_number').value.trim() || '',
-        signed_vehicle_chief: document.getElementById('edit_signed_vehicle_chief').value.trim() || '',
-        signed_deputy_director: document.getElementById('edit_signed_deputy_director').value.trim() || '',
-        signed_director: document.getElementById('edit_signed_director').value.trim() || ''
+        travel_order_number: document.getElementById('edit_travel_order_number').value.trim() || ''
       };
 
       saveFormMemory({
