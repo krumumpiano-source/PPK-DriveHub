@@ -41,11 +41,16 @@
                     <!-- Populated dynamically -->
                 </select>
                 <button class="btn btn-outline-primary shadow-sm" onclick="openExecutiveReport()">
-                    <i class="fa-solid fa-file-signature"></i> รายงานสรุป 1 หน้า A4 (ผอ.)
+                    <i class="fa-solid fa-file-signature"></i> สรุป 1 หน้า (ผอ.)
                 </button>
-                <button class="btn btn-primary shadow-sm" onclick="openBatchPrintDossiers()">
-                    <i class="fa-solid fa-print"></i> พิมพ์ชุดประเมิน 4 คน
-                </button>
+                <div class="btn-group shadow-sm">
+                    <button class="btn btn-success" onclick="openBatchPrintDossiers()">
+                        <i class="fa-solid fa-clipboard-check me-1"></i> พิมพ์แบบประเมิน (4 ท่าน)
+                    </button>
+                    <button class="btn btn-info text-white" onclick="openBatchPrintEmpirical()">
+                        <i class="fa-solid fa-chart-line me-1"></i> พิมพ์สถิติเชิงประจักษ์ (4 ท่าน)
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -114,8 +119,9 @@
                                 </div>
                             </div>
                             <div class="d-flex flex-wrap gap-1">
-                                <button class="btn btn-sm btn-info text-white" onclick="openPrintForm()"><i class="fa-solid fa-file-pdf"></i> ชุดประเมิน+สถิติ (รายบุคคล)</button>
-                                <button class="btn btn-sm btn-warning text-dark" onclick="openPrintPassengerSurvey()"><i class="fa-solid fa-users"></i> รายงานผู้โดยสาร (Audit Trail)</button>
+                                <button class="btn btn-sm btn-outline-success" onclick="openPrintForm()"><i class="fa-solid fa-clipboard-check"></i> พิมพ์แบบประเมินกรรมการ</button>
+                                <button class="btn btn-sm btn-outline-info" onclick="openPrintEmpirical()"><i class="fa-solid fa-chart-line"></i> พิมพ์สถิติเชิงประจักษ์</button>
+                                <button class="btn btn-sm btn-outline-warning text-dark" onclick="openPrintPassengerSurvey()"><i class="fa-solid fa-users"></i> พิมพ์ Audit ผู้โดยสาร</button>
                             </div>
                         </div>
                         <div class="card-body p-4">
@@ -688,6 +694,17 @@
         function openBatchPrintDossiers() {
             const year = document.getElementById('academicYearFilter').value;
             window.open(`print-committee-form.html?batch=1&year=${year}`, '_blank');
+        }
+
+        function openPrintEmpirical() {
+            if (!currentDriverId) return;
+            const year = document.getElementById('academicYearFilter').value;
+            window.open(`print-empirical-evidence.html?driverId=${currentDriverId}&year=${year}`, '_blank');
+        }
+
+        function openBatchPrintEmpirical() {
+            const year = document.getElementById('academicYearFilter').value;
+            window.open(`print-empirical-evidence.html?batch=1&year=${year}`, '_blank');
         }
 
         function openPrintPassengerSurvey() {
