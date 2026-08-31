@@ -91,9 +91,35 @@ export async function onRequest(context) {
         });
       }
 
+      // Get distinct committee evaluator names submitted for this year
+      const committeeEvaluators = await db.prepare(`
+        SELECT DISTINCT e.evaluator_id, e.comments, u.display_name, u.first_name, u.last_name
+        FROM driver_evaluations e
+        LEFT JOIN users u ON e.evaluator_id = u.id
+        WHERE e.evaluation_type = 'committee' AND e.academic_year = ?
+      `).bind(year).all();
+
+      const evaluatorsList = [];
+      if (committeeEvaluators.results) {
+        committeeEvaluators.results.forEach(ce => {
+          let name = '';
+          if (ce.comments && ce.comments.startsWith('[ผู้ประเมิน:')) {
+            name = ce.comments.split(']')[0].replace('[ผู้ประเมิน:', '').trim();
+          } else if (ce.first_name || ce.last_name) {
+            name = `${ce.first_name || ''} ${ce.last_name || ''}`.trim();
+          } else if (ce.display_name) {
+            name = ce.display_name;
+          }
+          if (name && !evaluatorsList.includes(name)) {
+            evaluatorsList.push(name);
+          }
+        });
+      }
+
       return success({
         academic_year: year,
-        drivers: summaryList
+        drivers: summaryList,
+        committee_evaluators: evaluatorsList
       });
     }
 

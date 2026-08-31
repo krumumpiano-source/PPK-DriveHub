@@ -254,21 +254,28 @@
                         ต้องปรับปรุง (ต่ำกว่า 60.00 คะแนน)
                     </div>
 
-                    <!-- 4. ส่วนลงนามรับรองผล -->
-                    <div class="signature-grid">
-                        <div class="signature-box">
-                            <p class="mb-1">ลงชื่อ ...........................................................</p>
-                            <div class="signature-line"></div>
-                            <p class="mb-0 small">(.......................................................................)</p>
-                            <p class="small text-muted mb-0">ประธานคณะกรรมการประเมินผลการปฏิบัติหน้าที่</p>
-                            <p class="small text-muted">วันที่ .......... / .......... / ..............</p>
-                        </div>
-                        <div class="signature-box">
-                            <p class="mb-1">ลงชื่อ ...........................................................</p>
-                            <div class="signature-line"></div>
-                            <p class="mb-0 small">(.......................................................................)</p>
-                            <p class="small text-muted mb-0">ผู้อำนวยการโรงเรียนพะเยาพิทยาคม</p>
-                            <p class="small text-muted">วันที่ .......... / .......... / ..............</p>
+                    <!-- 4. ส่วนลงนามรับรองผลของคณะกรรมการทุกคนและผู้อำนวยการสถานศึกษา -->
+                    <h6 class="fw-bold mb-3 mt-4">3. การลงนามรับรองมติผลการประเมินของคณะกรรมการผู้ประเมินทุกคน:</h6>
+                    <div class="row g-3 text-center mb-4" id="committeeSignaturesContainer">
+                        ${renderAllCommitteeSignatures(summaryData.committee_evaluators || [])}
+                    </div>
+
+                    <!-- 5. ส่วนลงนามและคำสั่งของผู้อำนวยการสถานศึกษา -->
+                    <div class="p-3 border rounded bg-light mt-3">
+                        <div class="row align-items-center">
+                            <div class="col-md-6 mb-3 mb-md-0 border-end">
+                                <h6 class="fw-bold mb-2">4. ความเห็นและข้อสั่งการของผู้อำนวยการสถานศึกษา:</h6>
+                                <p class="small mb-1"><i class="fa-regular fa-square me-1"></i> <strong>เห็นชอบ</strong> ตามมติผลการประเมินของคณะกรรมการ และอนุมัติการต่อสัญญาจ้าง</p>
+                                <p class="small mb-1"><i class="fa-regular fa-square me-1"></i> <strong>เห็นชอบให้ปรับปรุงการปฏิบัติงาน (PIP)</strong> ตามเงื่อนไขและระยะเวลาที่กำหนด</p>
+                                <p class="small mb-0"><i class="fa-regular fa-square me-1"></i> อื่นๆ .........................................................................................................................</p>
+                            </div>
+                            <div class="col-md-6 text-center">
+                                <p class="mb-1">ลงชื่อ ....................................................................................</p>
+                                <div class="signature-line" style="width: 240px;"></div>
+                                <p class="mb-0 fw-bold small">(....................................................................................)</p>
+                                <p class="small text-muted mb-0">ผู้อำนวยการโรงเรียนพะเยาพิทยาคม</p>
+                                <p class="small text-muted">วันที่ .......... / .......... / ..............</p>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -277,6 +284,42 @@
                 console.error(err);
                 container.innerHTML = `<div class="alert alert-danger text-center">เกิดข้อผิดพลาดในการโหลดรายงาน: ${err.message}</div>`;
             }
+        }
+
+        function renderAllCommitteeSignatures(evaluators) {
+            let list = evaluators;
+            if (!list || list.length === 0) {
+                list = [
+                    'ประธานคณะกรรมการ',
+                    'กรรมการ',
+                    'กรรมการ',
+                    'กรรมการ',
+                    'กรรมการและเลขานุการ'
+                ];
+            }
+
+            let html = '';
+            list.forEach((name, idx) => {
+                const isPreset = name.includes('กรรมการ') || name.includes('ประธาน');
+                const displayName = isPreset ? '(.......................................................................)' : `(${name})`;
+                let role = 'คณะกรรมการประเมินผลการปฏิบัติหน้าที่';
+                if (idx === 0) role = 'ประธานคณะกรรมการประเมินผลการปฏิบัติหน้าที่';
+                else if (idx === list.length - 1 && list.length >= 3) role = 'กรรมการและเลขานุการ';
+
+                html += `
+                    <div class="col-md-4 col-6 mb-3">
+                        <div class="p-2 border rounded bg-white text-center h-100">
+                            <p class="mb-1 small">ลงชื่อ ...........................................................</p>
+                            <div class="signature-line" style="width: 180px;"></div>
+                            <p class="mb-0 small fw-bold">${displayName}</p>
+                            <p class="small text-muted mb-0" style="font-size: 11px;">ตำแหน่ง ${role}</p>
+                            <p class="small text-muted mb-0" style="font-size: 10.5px;">วันที่ .......... / .......... / ..............</p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            return html;
         }
     </script>
 </body>
