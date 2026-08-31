@@ -112,11 +112,15 @@ export async function onRequest(context) {
       const committeeWeighted = (committeeAvg / 100) * 60;
       const combinedScore = passengerWeighted + committeeWeighted;
 
-      let grade = 'ต้องปรับปรุง';
-      if (combinedScore >= 90) grade = 'ดีเด่น';
-      else if (combinedScore >= 80) grade = 'ดีมาก';
-      else if (combinedScore >= 70) grade = 'ดี';
-      else if (combinedScore >= 60) grade = 'พอใช้';
+      const hasEvaluations = (passengerStmt?.total_trips || 0) > 0 || (committeeStmt?.committee_count || 0) > 0;
+      let grade = 'ยังไม่ประเมิน';
+      if (hasEvaluations) {
+          if (combinedScore >= 90) grade = 'ดีเด่น';
+          else if (combinedScore >= 80) grade = 'ดีมาก';
+          else if (combinedScore >= 70) grade = 'ดี';
+          else if (combinedScore >= 60) grade = 'พอใช้';
+          else grade = 'ต้องปรับปรุง';
+      }
 
       return success({
         driver_id: driverId,

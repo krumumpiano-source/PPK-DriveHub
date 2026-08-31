@@ -504,7 +504,12 @@
             tbody.innerHTML = '';
             rows.forEach((r, idx) => {
                 const tr = document.createElement('tr');
-                const gradeBadgeClass = r.totalScore >= 80 ? 'bg-success' : r.totalScore >= 70 ? 'bg-primary' : r.totalScore >= 60 ? 'bg-warning text-dark' : 'bg-danger';
+                let gradeBadgeClass = 'bg-secondary';
+                if (r.grade === 'ดีเด่น' || r.grade === 'ดีมาก') gradeBadgeClass = 'bg-success';
+                else if (r.grade === 'ดี') gradeBadgeClass = 'bg-primary';
+                else if (r.grade === 'พอใช้') gradeBadgeClass = 'bg-warning text-dark';
+                else if (r.grade === 'ต้องปรับปรุง') gradeBadgeClass = 'bg-danger';
+
                 tr.innerHTML = `
                     <td class="text-start fw-bold">
                         <span class="badge bg-secondary me-1">#${idx+1}</span>
@@ -534,7 +539,12 @@
             tbody.innerHTML = '';
             rows.forEach((r, idx) => {
                 const tr = document.createElement('tr');
-                const gradeBadgeClass = r.totalScore >= 80 ? 'badge bg-success' : r.totalScore >= 70 ? 'badge bg-primary' : r.totalScore >= 60 ? 'badge bg-warning text-dark' : 'badge bg-danger';
+                let gradeBadgeClass = 'badge bg-secondary';
+                if (r.grade === 'ดีเด่น' || r.grade === 'ดีมาก') gradeBadgeClass = 'badge bg-success';
+                else if (r.grade === 'ดี') gradeBadgeClass = 'badge bg-primary';
+                else if (r.grade === 'พอใช้') gradeBadgeClass = 'badge bg-warning text-dark';
+                else if (r.grade === 'ต้องปรับปรุง') gradeBadgeClass = 'badge bg-danger';
+
                 tr.innerHTML = `
                     <td>${idx+1}</td>
                     <td class="text-start fw-bold">${r.driver.title || ''}${r.driver.first_name || r.driver.name} ${r.driver.last_name || ''}</td>
@@ -586,12 +596,13 @@
                 document.getElementById('totalScore').textContent = total.toFixed(2);
                 
                 const gradeBadge = document.getElementById('finalGrade');
-                gradeBadge.textContent = data.grade || 'พอใช้';
+                gradeBadge.textContent = data.grade || 'ยังไม่ประเมิน';
                 gradeBadge.className = 'badge fs-6 px-3 py-1 ';
-                if(total >= 80) gradeBadge.classList.add('bg-success');
-                else if(total >= 70) gradeBadge.classList.add('bg-primary');
-                else if(total >= 60) gradeBadge.classList.add('bg-warning', 'text-dark');
-                else gradeBadge.classList.add('bg-danger');
+                if (data.grade === 'ดีเด่น' || data.grade === 'ดีมาก') gradeBadge.classList.add('bg-success');
+                else if (data.grade === 'ดี') gradeBadge.classList.add('bg-primary');
+                else if (data.grade === 'พอใช้') gradeBadge.classList.add('bg-warning', 'text-dark');
+                else if (data.grade === 'ต้องปรับปรุง') gradeBadge.classList.add('bg-danger');
+                else gradeBadge.classList.add('bg-secondary');
 
                 // Stats
                 if (data.usage_stats) {
