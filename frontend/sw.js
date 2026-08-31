@@ -55,7 +55,7 @@ self.addEventListener('fetch',function(e){
         return resp;
       }).catch(function(){
         return caches.match(e.request).then(function(cached){
-          return cached||new Response('',{status:503});
+          return cached || fetch(e.request);
         });
       })
     );

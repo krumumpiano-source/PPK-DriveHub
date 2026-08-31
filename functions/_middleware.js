@@ -63,7 +63,15 @@ export async function onRequest(context) {
   // Static files — pass through with security headers
   if (!url.pathname.startsWith('/api/')) {
     try {
-      const response = await next();
+      let response = await next();
+      if (response.status === 404 && !url.pathname.includes('.')) {
+        const htmlUrl = new URL(request.url);
+        htmlUrl.pathname = `${url.pathname}.html`;
+        const htmlResp = await env.ASSETS ? await env.ASSETS.fetch(new Request(htmlUrl.toString(), request)) : null;
+        if (htmlResp && htmlResp.status === 200) {
+          response = htmlResp;
+        }
+      }
       const headers = new Headers(response.headers);
       headers.set('Content-Security-Policy', CSP);
       addSecurityHeaders(headers);
