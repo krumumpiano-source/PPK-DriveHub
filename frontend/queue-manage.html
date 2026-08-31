@@ -5,15 +5,855 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>จัดคิว - PPK DriveHub</title>
-  <script src="config.js"></script>
+  <script src="config.js">
+// --- Stepper Logic Create ---
+let currentCreateStep = 1;
+function updateCreateStepper() {
+  for (let i = 1; i <= 3; i++) {
+    const stepEl = document.getElementById('createStep' + i);
+    const indEl = document.getElementById('createStepInd' + i);
+    if (stepEl) {
+      if (i === currentCreateStep) {
+        stepEl.classList.add('active');
+        indEl.classList.add('active');
+        indEl.classList.remove('completed');
+      } else {
+        stepEl.classList.remove('active');
+        indEl.classList.remove('active');
+        if (i < currentCreateStep) {
+          indEl.classList.add('completed');
+        } else {
+          indEl.classList.remove('completed');
+        }
+      }
+    }
+  }
+  
+  // Footer buttons
+  document.getElementById('createBtnPrev').style.display = currentCreateStep === 1 ? 'none' : 'block';
+  document.getElementById('createBtnCancel').style.display = currentCreateStep === 1 ? 'block' : 'none';
+  
+  if (currentCreateStep === 3) {
+    document.getElementById('createBtnNext').style.display = 'none';
+    document.getElementById('createSubmitBtn').style.display = 'block';
+  } else {
+    document.getElementById('createBtnNext').style.display = 'block';
+    document.getElementById('createSubmitBtn').style.display = 'none';
+  }
+}
+
+function validateCreateStep(step) {
+  // Simple validation for current step fields
+  const stepEl = document.getElementById('createStep' + step);
+  const inputs = stepEl.querySelectorAll('input[required], select[required]');
+  for (let input of inputs) {
+    // Only validate if it's visible (not inside a display: none group like date ranges)
+    if (input.offsetParent !== null && !input.checkValidity()) {
+      input.reportValidity();
+      return false;
+    }
+  }
+  return true;
+}
+
+function nextCreateStep() {
+  if (validateCreateStep(currentCreateStep) && currentCreateStep < 3) {
+    currentCreateStep++;
+    updateCreateStepper();
+  }
+}
+
+function prevCreateStep() {
+  if (currentCreateStep > 1) {
+    currentCreateStep--;
+    updateCreateStepper();
+  }
+}
+
+function goToCreateStep(step) {
+  if (step < currentCreateStep) {
+    currentCreateStep = step;
+    updateCreateStepper();
+  } else if (step === currentCreateStep + 1 && validateCreateStep(currentCreateStep)) {
+    currentCreateStep = step;
+    updateCreateStepper();
+  }
+}
+
+// Override openCreateModal to reset stepper
+const originalOpenCreateModal = window.openCreateModal;
+window.openCreateModal = function() {
+  if (typeof originalOpenCreateModal === 'function') originalOpenCreateModal();
+  else {
+    document.getElementById('createModal').classList.add('show');
+    if (typeof resetCreateForm === 'function') resetCreateForm();
+  }
+  currentCreateStep = 1;
+  updateCreateStepper();
+};
+
+// --- Stepper Logic Edit ---
+let currentEditStep = 1;
+function updateEditStepper() {
+  for (let i = 1; i <= 3; i++) {
+    const stepEl = document.getElementById('editStep' + i);
+    const indEl = document.getElementById('editStepInd' + i);
+    if (stepEl) {
+      if (i === currentEditStep) {
+        stepEl.classList.add('active');
+        indEl.classList.add('active');
+        indEl.classList.remove('completed');
+      } else {
+        stepEl.classList.remove('active');
+        indEl.classList.remove('active');
+        if (i < currentEditStep) {
+          indEl.classList.add('completed');
+        } else {
+          indEl.classList.remove('completed');
+        }
+      }
+    }
+  }
+  
+  // Footer buttons
+  document.getElementById('editBtnPrev').style.display = currentEditStep === 1 ? 'none' : 'block';
+  document.getElementById('editBtnCancel').style.display = currentEditStep === 1 ? 'block' : 'none';
+  
+  if (currentEditStep === 3) {
+    document.getElementById('editBtnNext').style.display = 'none';
+    document.getElementById('editSubmitBtn').style.display = 'block';
+  } else {
+    document.getElementById('editBtnNext').style.display = 'block';
+    document.getElementById('editSubmitBtn').style.display = 'none';
+  }
+}
+
+function validateEditStep(step) {
+  const stepEl = document.getElementById('editStep' + step);
+  if (!stepEl) return true;
+  const inputs = stepEl.querySelectorAll('input[required], select[required]');
+  for (let input of inputs) {
+    if (input.offsetParent !== null && !input.checkValidity()) {
+      input.reportValidity();
+      return false;
+    }
+  }
+  return true;
+}
+
+function nextEditStep() {
+  if (validateEditStep(currentEditStep) && currentEditStep < 3) {
+    currentEditStep++;
+    updateEditStepper();
+  }
+}
+
+function prevEditStep() {
+  if (currentEditStep > 1) {
+    currentEditStep--;
+    updateEditStepper();
+  }
+}
+
+function goToEditStep(step) {
+  if (step < currentEditStep) {
+    currentEditStep = step;
+    updateEditStepper();
+  } else if (step === currentEditStep + 1 && validateEditStep(currentEditStep)) {
+    currentEditStep = step;
+    updateEditStepper();
+  }
+}
+
+// Hook into openEditModal to reset edit stepper
+const originalOpenEditModal = window.openEditModal;
+window.openEditModal = function(qId) {
+  if (typeof originalOpenEditModal === 'function') originalOpenEditModal(qId);
+  currentEditStep = 1;
+  updateEditStepper();
+};
+
+</script>
   <script>
     window.API_BASE_URL = CONFIG.API_BASE_URL;
     window.currentPage = 'queue';
     window.REQUIRE_AUTH = true;
-  </script>
+  
+// --- Stepper Logic Create ---
+let currentCreateStep = 1;
+function updateCreateStepper() {
+  for (let i = 1; i <= 3; i++) {
+    const stepEl = document.getElementById('createStep' + i);
+    const indEl = document.getElementById('createStepInd' + i);
+    if (stepEl) {
+      if (i === currentCreateStep) {
+        stepEl.classList.add('active');
+        indEl.classList.add('active');
+        indEl.classList.remove('completed');
+      } else {
+        stepEl.classList.remove('active');
+        indEl.classList.remove('active');
+        if (i < currentCreateStep) {
+          indEl.classList.add('completed');
+        } else {
+          indEl.classList.remove('completed');
+        }
+      }
+    }
+  }
+  
+  // Footer buttons
+  document.getElementById('createBtnPrev').style.display = currentCreateStep === 1 ? 'none' : 'block';
+  document.getElementById('createBtnCancel').style.display = currentCreateStep === 1 ? 'block' : 'none';
+  
+  if (currentCreateStep === 3) {
+    document.getElementById('createBtnNext').style.display = 'none';
+    document.getElementById('createSubmitBtn').style.display = 'block';
+  } else {
+    document.getElementById('createBtnNext').style.display = 'block';
+    document.getElementById('createSubmitBtn').style.display = 'none';
+  }
+}
+
+function validateCreateStep(step) {
+  // Simple validation for current step fields
+  const stepEl = document.getElementById('createStep' + step);
+  const inputs = stepEl.querySelectorAll('input[required], select[required]');
+  for (let input of inputs) {
+    // Only validate if it's visible (not inside a display: none group like date ranges)
+    if (input.offsetParent !== null && !input.checkValidity()) {
+      input.reportValidity();
+      return false;
+    }
+  }
+  return true;
+}
+
+function nextCreateStep() {
+  if (validateCreateStep(currentCreateStep) && currentCreateStep < 3) {
+    currentCreateStep++;
+    updateCreateStepper();
+  }
+}
+
+function prevCreateStep() {
+  if (currentCreateStep > 1) {
+    currentCreateStep--;
+    updateCreateStepper();
+  }
+}
+
+function goToCreateStep(step) {
+  if (step < currentCreateStep) {
+    currentCreateStep = step;
+    updateCreateStepper();
+  } else if (step === currentCreateStep + 1 && validateCreateStep(currentCreateStep)) {
+    currentCreateStep = step;
+    updateCreateStepper();
+  }
+}
+
+// Override openCreateModal to reset stepper
+const originalOpenCreateModal = window.openCreateModal;
+window.openCreateModal = function() {
+  if (typeof originalOpenCreateModal === 'function') originalOpenCreateModal();
+  else {
+    document.getElementById('createModal').classList.add('show');
+    if (typeof resetCreateForm === 'function') resetCreateForm();
+  }
+  currentCreateStep = 1;
+  updateCreateStepper();
+};
+
+// --- Stepper Logic Edit ---
+let currentEditStep = 1;
+function updateEditStepper() {
+  for (let i = 1; i <= 3; i++) {
+    const stepEl = document.getElementById('editStep' + i);
+    const indEl = document.getElementById('editStepInd' + i);
+    if (stepEl) {
+      if (i === currentEditStep) {
+        stepEl.classList.add('active');
+        indEl.classList.add('active');
+        indEl.classList.remove('completed');
+      } else {
+        stepEl.classList.remove('active');
+        indEl.classList.remove('active');
+        if (i < currentEditStep) {
+          indEl.classList.add('completed');
+        } else {
+          indEl.classList.remove('completed');
+        }
+      }
+    }
+  }
+  
+  // Footer buttons
+  document.getElementById('editBtnPrev').style.display = currentEditStep === 1 ? 'none' : 'block';
+  document.getElementById('editBtnCancel').style.display = currentEditStep === 1 ? 'block' : 'none';
+  
+  if (currentEditStep === 3) {
+    document.getElementById('editBtnNext').style.display = 'none';
+    document.getElementById('editSubmitBtn').style.display = 'block';
+  } else {
+    document.getElementById('editBtnNext').style.display = 'block';
+    document.getElementById('editSubmitBtn').style.display = 'none';
+  }
+}
+
+function validateEditStep(step) {
+  const stepEl = document.getElementById('editStep' + step);
+  if (!stepEl) return true;
+  const inputs = stepEl.querySelectorAll('input[required], select[required]');
+  for (let input of inputs) {
+    if (input.offsetParent !== null && !input.checkValidity()) {
+      input.reportValidity();
+      return false;
+    }
+  }
+  return true;
+}
+
+function nextEditStep() {
+  if (validateEditStep(currentEditStep) && currentEditStep < 3) {
+    currentEditStep++;
+    updateEditStepper();
+  }
+}
+
+function prevEditStep() {
+  if (currentEditStep > 1) {
+    currentEditStep--;
+    updateEditStepper();
+  }
+}
+
+function goToEditStep(step) {
+  if (step < currentEditStep) {
+    currentEditStep = step;
+    updateEditStepper();
+  } else if (step === currentEditStep + 1 && validateEditStep(currentEditStep)) {
+    currentEditStep = step;
+    updateEditStepper();
+  }
+}
+
+// Hook into openEditModal to reset edit stepper
+const originalOpenEditModal = window.openEditModal;
+window.openEditModal = function(qId) {
+  if (typeof originalOpenEditModal === 'function') originalOpenEditModal(qId);
+  currentEditStep = 1;
+  updateEditStepper();
+};
+
+</script>
   <link rel="stylesheet" href="common.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-  <script src="js/api.js"></script><script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script><script src="common.js?v=20260831_eval1"></script>
+  <script src="js/api.js">
+// --- Stepper Logic Create ---
+let currentCreateStep = 1;
+function updateCreateStepper() {
+  for (let i = 1; i <= 3; i++) {
+    const stepEl = document.getElementById('createStep' + i);
+    const indEl = document.getElementById('createStepInd' + i);
+    if (stepEl) {
+      if (i === currentCreateStep) {
+        stepEl.classList.add('active');
+        indEl.classList.add('active');
+        indEl.classList.remove('completed');
+      } else {
+        stepEl.classList.remove('active');
+        indEl.classList.remove('active');
+        if (i < currentCreateStep) {
+          indEl.classList.add('completed');
+        } else {
+          indEl.classList.remove('completed');
+        }
+      }
+    }
+  }
+  
+  // Footer buttons
+  document.getElementById('createBtnPrev').style.display = currentCreateStep === 1 ? 'none' : 'block';
+  document.getElementById('createBtnCancel').style.display = currentCreateStep === 1 ? 'block' : 'none';
+  
+  if (currentCreateStep === 3) {
+    document.getElementById('createBtnNext').style.display = 'none';
+    document.getElementById('createSubmitBtn').style.display = 'block';
+  } else {
+    document.getElementById('createBtnNext').style.display = 'block';
+    document.getElementById('createSubmitBtn').style.display = 'none';
+  }
+}
+
+function validateCreateStep(step) {
+  // Simple validation for current step fields
+  const stepEl = document.getElementById('createStep' + step);
+  const inputs = stepEl.querySelectorAll('input[required], select[required]');
+  for (let input of inputs) {
+    // Only validate if it's visible (not inside a display: none group like date ranges)
+    if (input.offsetParent !== null && !input.checkValidity()) {
+      input.reportValidity();
+      return false;
+    }
+  }
+  return true;
+}
+
+function nextCreateStep() {
+  if (validateCreateStep(currentCreateStep) && currentCreateStep < 3) {
+    currentCreateStep++;
+    updateCreateStepper();
+  }
+}
+
+function prevCreateStep() {
+  if (currentCreateStep > 1) {
+    currentCreateStep--;
+    updateCreateStepper();
+  }
+}
+
+function goToCreateStep(step) {
+  if (step < currentCreateStep) {
+    currentCreateStep = step;
+    updateCreateStepper();
+  } else if (step === currentCreateStep + 1 && validateCreateStep(currentCreateStep)) {
+    currentCreateStep = step;
+    updateCreateStepper();
+  }
+}
+
+// Override openCreateModal to reset stepper
+const originalOpenCreateModal = window.openCreateModal;
+window.openCreateModal = function() {
+  if (typeof originalOpenCreateModal === 'function') originalOpenCreateModal();
+  else {
+    document.getElementById('createModal').classList.add('show');
+    if (typeof resetCreateForm === 'function') resetCreateForm();
+  }
+  currentCreateStep = 1;
+  updateCreateStepper();
+};
+
+// --- Stepper Logic Edit ---
+let currentEditStep = 1;
+function updateEditStepper() {
+  for (let i = 1; i <= 3; i++) {
+    const stepEl = document.getElementById('editStep' + i);
+    const indEl = document.getElementById('editStepInd' + i);
+    if (stepEl) {
+      if (i === currentEditStep) {
+        stepEl.classList.add('active');
+        indEl.classList.add('active');
+        indEl.classList.remove('completed');
+      } else {
+        stepEl.classList.remove('active');
+        indEl.classList.remove('active');
+        if (i < currentEditStep) {
+          indEl.classList.add('completed');
+        } else {
+          indEl.classList.remove('completed');
+        }
+      }
+    }
+  }
+  
+  // Footer buttons
+  document.getElementById('editBtnPrev').style.display = currentEditStep === 1 ? 'none' : 'block';
+  document.getElementById('editBtnCancel').style.display = currentEditStep === 1 ? 'block' : 'none';
+  
+  if (currentEditStep === 3) {
+    document.getElementById('editBtnNext').style.display = 'none';
+    document.getElementById('editSubmitBtn').style.display = 'block';
+  } else {
+    document.getElementById('editBtnNext').style.display = 'block';
+    document.getElementById('editSubmitBtn').style.display = 'none';
+  }
+}
+
+function validateEditStep(step) {
+  const stepEl = document.getElementById('editStep' + step);
+  if (!stepEl) return true;
+  const inputs = stepEl.querySelectorAll('input[required], select[required]');
+  for (let input of inputs) {
+    if (input.offsetParent !== null && !input.checkValidity()) {
+      input.reportValidity();
+      return false;
+    }
+  }
+  return true;
+}
+
+function nextEditStep() {
+  if (validateEditStep(currentEditStep) && currentEditStep < 3) {
+    currentEditStep++;
+    updateEditStepper();
+  }
+}
+
+function prevEditStep() {
+  if (currentEditStep > 1) {
+    currentEditStep--;
+    updateEditStepper();
+  }
+}
+
+function goToEditStep(step) {
+  if (step < currentEditStep) {
+    currentEditStep = step;
+    updateEditStepper();
+  } else if (step === currentEditStep + 1 && validateEditStep(currentEditStep)) {
+    currentEditStep = step;
+    updateEditStepper();
+  }
+}
+
+// Hook into openEditModal to reset edit stepper
+const originalOpenEditModal = window.openEditModal;
+window.openEditModal = function(qId) {
+  if (typeof originalOpenEditModal === 'function') originalOpenEditModal(qId);
+  currentEditStep = 1;
+  updateEditStepper();
+};
+
+</script><script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js">
+// --- Stepper Logic Create ---
+let currentCreateStep = 1;
+function updateCreateStepper() {
+  for (let i = 1; i <= 3; i++) {
+    const stepEl = document.getElementById('createStep' + i);
+    const indEl = document.getElementById('createStepInd' + i);
+    if (stepEl) {
+      if (i === currentCreateStep) {
+        stepEl.classList.add('active');
+        indEl.classList.add('active');
+        indEl.classList.remove('completed');
+      } else {
+        stepEl.classList.remove('active');
+        indEl.classList.remove('active');
+        if (i < currentCreateStep) {
+          indEl.classList.add('completed');
+        } else {
+          indEl.classList.remove('completed');
+        }
+      }
+    }
+  }
+  
+  // Footer buttons
+  document.getElementById('createBtnPrev').style.display = currentCreateStep === 1 ? 'none' : 'block';
+  document.getElementById('createBtnCancel').style.display = currentCreateStep === 1 ? 'block' : 'none';
+  
+  if (currentCreateStep === 3) {
+    document.getElementById('createBtnNext').style.display = 'none';
+    document.getElementById('createSubmitBtn').style.display = 'block';
+  } else {
+    document.getElementById('createBtnNext').style.display = 'block';
+    document.getElementById('createSubmitBtn').style.display = 'none';
+  }
+}
+
+function validateCreateStep(step) {
+  // Simple validation for current step fields
+  const stepEl = document.getElementById('createStep' + step);
+  const inputs = stepEl.querySelectorAll('input[required], select[required]');
+  for (let input of inputs) {
+    // Only validate if it's visible (not inside a display: none group like date ranges)
+    if (input.offsetParent !== null && !input.checkValidity()) {
+      input.reportValidity();
+      return false;
+    }
+  }
+  return true;
+}
+
+function nextCreateStep() {
+  if (validateCreateStep(currentCreateStep) && currentCreateStep < 3) {
+    currentCreateStep++;
+    updateCreateStepper();
+  }
+}
+
+function prevCreateStep() {
+  if (currentCreateStep > 1) {
+    currentCreateStep--;
+    updateCreateStepper();
+  }
+}
+
+function goToCreateStep(step) {
+  if (step < currentCreateStep) {
+    currentCreateStep = step;
+    updateCreateStepper();
+  } else if (step === currentCreateStep + 1 && validateCreateStep(currentCreateStep)) {
+    currentCreateStep = step;
+    updateCreateStepper();
+  }
+}
+
+// Override openCreateModal to reset stepper
+const originalOpenCreateModal = window.openCreateModal;
+window.openCreateModal = function() {
+  if (typeof originalOpenCreateModal === 'function') originalOpenCreateModal();
+  else {
+    document.getElementById('createModal').classList.add('show');
+    if (typeof resetCreateForm === 'function') resetCreateForm();
+  }
+  currentCreateStep = 1;
+  updateCreateStepper();
+};
+
+// --- Stepper Logic Edit ---
+let currentEditStep = 1;
+function updateEditStepper() {
+  for (let i = 1; i <= 3; i++) {
+    const stepEl = document.getElementById('editStep' + i);
+    const indEl = document.getElementById('editStepInd' + i);
+    if (stepEl) {
+      if (i === currentEditStep) {
+        stepEl.classList.add('active');
+        indEl.classList.add('active');
+        indEl.classList.remove('completed');
+      } else {
+        stepEl.classList.remove('active');
+        indEl.classList.remove('active');
+        if (i < currentEditStep) {
+          indEl.classList.add('completed');
+        } else {
+          indEl.classList.remove('completed');
+        }
+      }
+    }
+  }
+  
+  // Footer buttons
+  document.getElementById('editBtnPrev').style.display = currentEditStep === 1 ? 'none' : 'block';
+  document.getElementById('editBtnCancel').style.display = currentEditStep === 1 ? 'block' : 'none';
+  
+  if (currentEditStep === 3) {
+    document.getElementById('editBtnNext').style.display = 'none';
+    document.getElementById('editSubmitBtn').style.display = 'block';
+  } else {
+    document.getElementById('editBtnNext').style.display = 'block';
+    document.getElementById('editSubmitBtn').style.display = 'none';
+  }
+}
+
+function validateEditStep(step) {
+  const stepEl = document.getElementById('editStep' + step);
+  if (!stepEl) return true;
+  const inputs = stepEl.querySelectorAll('input[required], select[required]');
+  for (let input of inputs) {
+    if (input.offsetParent !== null && !input.checkValidity()) {
+      input.reportValidity();
+      return false;
+    }
+  }
+  return true;
+}
+
+function nextEditStep() {
+  if (validateEditStep(currentEditStep) && currentEditStep < 3) {
+    currentEditStep++;
+    updateEditStepper();
+  }
+}
+
+function prevEditStep() {
+  if (currentEditStep > 1) {
+    currentEditStep--;
+    updateEditStepper();
+  }
+}
+
+function goToEditStep(step) {
+  if (step < currentEditStep) {
+    currentEditStep = step;
+    updateEditStepper();
+  } else if (step === currentEditStep + 1 && validateEditStep(currentEditStep)) {
+    currentEditStep = step;
+    updateEditStepper();
+  }
+}
+
+// Hook into openEditModal to reset edit stepper
+const originalOpenEditModal = window.openEditModal;
+window.openEditModal = function(qId) {
+  if (typeof originalOpenEditModal === 'function') originalOpenEditModal(qId);
+  currentEditStep = 1;
+  updateEditStepper();
+};
+
+</script><script src="common.js?v=20260831_eval1">
+// --- Stepper Logic Create ---
+let currentCreateStep = 1;
+function updateCreateStepper() {
+  for (let i = 1; i <= 3; i++) {
+    const stepEl = document.getElementById('createStep' + i);
+    const indEl = document.getElementById('createStepInd' + i);
+    if (stepEl) {
+      if (i === currentCreateStep) {
+        stepEl.classList.add('active');
+        indEl.classList.add('active');
+        indEl.classList.remove('completed');
+      } else {
+        stepEl.classList.remove('active');
+        indEl.classList.remove('active');
+        if (i < currentCreateStep) {
+          indEl.classList.add('completed');
+        } else {
+          indEl.classList.remove('completed');
+        }
+      }
+    }
+  }
+  
+  // Footer buttons
+  document.getElementById('createBtnPrev').style.display = currentCreateStep === 1 ? 'none' : 'block';
+  document.getElementById('createBtnCancel').style.display = currentCreateStep === 1 ? 'block' : 'none';
+  
+  if (currentCreateStep === 3) {
+    document.getElementById('createBtnNext').style.display = 'none';
+    document.getElementById('createSubmitBtn').style.display = 'block';
+  } else {
+    document.getElementById('createBtnNext').style.display = 'block';
+    document.getElementById('createSubmitBtn').style.display = 'none';
+  }
+}
+
+function validateCreateStep(step) {
+  // Simple validation for current step fields
+  const stepEl = document.getElementById('createStep' + step);
+  const inputs = stepEl.querySelectorAll('input[required], select[required]');
+  for (let input of inputs) {
+    // Only validate if it's visible (not inside a display: none group like date ranges)
+    if (input.offsetParent !== null && !input.checkValidity()) {
+      input.reportValidity();
+      return false;
+    }
+  }
+  return true;
+}
+
+function nextCreateStep() {
+  if (validateCreateStep(currentCreateStep) && currentCreateStep < 3) {
+    currentCreateStep++;
+    updateCreateStepper();
+  }
+}
+
+function prevCreateStep() {
+  if (currentCreateStep > 1) {
+    currentCreateStep--;
+    updateCreateStepper();
+  }
+}
+
+function goToCreateStep(step) {
+  if (step < currentCreateStep) {
+    currentCreateStep = step;
+    updateCreateStepper();
+  } else if (step === currentCreateStep + 1 && validateCreateStep(currentCreateStep)) {
+    currentCreateStep = step;
+    updateCreateStepper();
+  }
+}
+
+// Override openCreateModal to reset stepper
+const originalOpenCreateModal = window.openCreateModal;
+window.openCreateModal = function() {
+  if (typeof originalOpenCreateModal === 'function') originalOpenCreateModal();
+  else {
+    document.getElementById('createModal').classList.add('show');
+    if (typeof resetCreateForm === 'function') resetCreateForm();
+  }
+  currentCreateStep = 1;
+  updateCreateStepper();
+};
+
+// --- Stepper Logic Edit ---
+let currentEditStep = 1;
+function updateEditStepper() {
+  for (let i = 1; i <= 3; i++) {
+    const stepEl = document.getElementById('editStep' + i);
+    const indEl = document.getElementById('editStepInd' + i);
+    if (stepEl) {
+      if (i === currentEditStep) {
+        stepEl.classList.add('active');
+        indEl.classList.add('active');
+        indEl.classList.remove('completed');
+      } else {
+        stepEl.classList.remove('active');
+        indEl.classList.remove('active');
+        if (i < currentEditStep) {
+          indEl.classList.add('completed');
+        } else {
+          indEl.classList.remove('completed');
+        }
+      }
+    }
+  }
+  
+  // Footer buttons
+  document.getElementById('editBtnPrev').style.display = currentEditStep === 1 ? 'none' : 'block';
+  document.getElementById('editBtnCancel').style.display = currentEditStep === 1 ? 'block' : 'none';
+  
+  if (currentEditStep === 3) {
+    document.getElementById('editBtnNext').style.display = 'none';
+    document.getElementById('editSubmitBtn').style.display = 'block';
+  } else {
+    document.getElementById('editBtnNext').style.display = 'block';
+    document.getElementById('editSubmitBtn').style.display = 'none';
+  }
+}
+
+function validateEditStep(step) {
+  const stepEl = document.getElementById('editStep' + step);
+  if (!stepEl) return true;
+  const inputs = stepEl.querySelectorAll('input[required], select[required]');
+  for (let input of inputs) {
+    if (input.offsetParent !== null && !input.checkValidity()) {
+      input.reportValidity();
+      return false;
+    }
+  }
+  return true;
+}
+
+function nextEditStep() {
+  if (validateEditStep(currentEditStep) && currentEditStep < 3) {
+    currentEditStep++;
+    updateEditStepper();
+  }
+}
+
+function prevEditStep() {
+  if (currentEditStep > 1) {
+    currentEditStep--;
+    updateEditStepper();
+  }
+}
+
+function goToEditStep(step) {
+  if (step < currentEditStep) {
+    currentEditStep = step;
+    updateEditStepper();
+  } else if (step === currentEditStep + 1 && validateEditStep(currentEditStep)) {
+    currentEditStep = step;
+    updateEditStepper();
+  }
+}
+
+// Hook into openEditModal to reset edit stepper
+const originalOpenEditModal = window.openEditModal;
+window.openEditModal = function(qId) {
+  if (typeof originalOpenEditModal === 'function') originalOpenEditModal(qId);
+  currentEditStep = 1;
+  updateEditStepper();
+};
+
+</script>
   <style>
     * { box-sizing: border-box; }
 
@@ -717,7 +1557,92 @@
         width: 100%;
       }
     }
-  </style>
+  
+    /* --- Stepper UI --- */
+    .stepper-container {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    .stepper-container::before {
+      content: '';
+      position: absolute;
+      top: 15px;
+      left: 10%;
+      right: 10%;
+      height: 2px;
+      background: #e0e0e0;
+      z-index: 1;
+    }
+    .step-indicator {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      cursor: pointer;
+    }
+    .step-indicator.disabled {
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    .step-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2px solid #e0e0e0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #999;
+      margin-bottom: 8px;
+      transition: all 0.3s;
+    }
+    .step-label {
+      font-size: 0.85em;
+      color: #999;
+      text-align: center;
+    }
+    .step-indicator.active .step-circle {
+      border-color: var(--color-primary);
+      background: var(--color-primary);
+      color: #fff;
+    }
+    .step-indicator.active .step-label {
+      color: var(--color-primary);
+      font-weight: 600;
+    }
+    .step-indicator.completed .step-circle {
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+    }
+    .step-indicator.completed .step-label {
+      color: var(--color-text);
+    }
+    .form-step {
+      display: none;
+      animation: fadeIn 0.3s;
+    }
+    .form-step.active {
+      display: block;
+    }
+    .stepper-footer {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 1px solid #eee;
+    }
+    @media (max-width: 600px) {
+      .step-label { font-size: 0.75em; }
+      .step-circle { width: 28px; height: 28px; }
+      .stepper-container::before { top: 13px; }
+    }
+</style>
 
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -810,7 +1735,23 @@
         <button class="modal-close" onclick="closeCreateModal()" title="ปิด">×</button>
       </div>
       <form id="createQueueForm" onsubmit="handleCreateSubmit(event); return false;">
-        <div class="form-section">
+
+        <div class="stepper-container" id="createStepper">
+          <div class="step-indicator active" onclick="goToCreateStep(1)" id="createStepInd1">
+            <div class="step-circle">1</div>
+            <div class="step-label">ข้อมูลพื้นฐาน</div>
+          </div>
+          <div class="step-indicator" onclick="goToCreateStep(2)" id="createStepInd2">
+            <div class="step-circle">2</div>
+            <div class="step-label">รถและคนขับ</div>
+          </div>
+          <div class="step-indicator" onclick="goToCreateStep(3)" id="createStepInd3">
+            <div class="step-circle">3</div>
+            <div class="step-label">รายละเอียด</div>
+          </div>
+        </div>
+        
+        <div class="form-section form-step active" id="createStep1">
           <div class="form-section-title">📋 ข้อมูลพื้นฐาน</div>
 
           <div class="form-group">
@@ -881,7 +1822,7 @@
           </div>
         </div>
 
-        <div class="form-section">
+        <div class="form-section form-step" id="createStep2">
           <div class="form-section-title">🚗 รถและคนขับ</div>
           <div class="form-row">
             <div class="form-group">
@@ -911,7 +1852,7 @@
           </div>
         </div>
 
-        <div class="form-section">
+        <div class="form-section form-step" id="createStep3">
           <div class="form-section-title">📝 ข้อมูลการใช้งาน</div>
           <div class="form-group">
             <label>ผู้ขอใช้รถ <span class="required">*</span></label>
@@ -962,10 +1903,14 @@
           </div>
         </div>
 
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-primary" id="createSubmitBtn">💾 สร้างคิว</button>
-          <button type="button" class="btn btn-secondary" onclick="closeCreateModal()">ยกเลิก</button>
+        
+        <div class="stepper-footer" id="createStepperFooter">
+          <button type="button" class="btn btn-secondary" onclick="prevCreateStep()" id="createBtnPrev" style="display: none;">⬅️ ถอยกลับ</button>
+          <button type="button" class="btn btn-secondary" onclick="closeCreateModal()" id="createBtnCancel">ยกเลิก</button>
+          <button type="button" class="btn btn-primary" onclick="nextCreateStep()" id="createBtnNext" style="margin-left: auto;">ถัดไป ➡️</button>
+          <button type="submit" class="btn btn-primary" id="createSubmitBtn" style="display: none; margin-left: auto;">💾 สร้างคิว</button>
         </div>
+                
       </form>
     </div>
   </div>
@@ -979,7 +1924,23 @@
       </div>
       <div id="editQueueInfo" class="queue-info" style="display: none;"></div>
       <form id="editQueueForm" onsubmit="handleEditSubmit(event); return false;">
-        <div class="form-section">
+
+        <div class="stepper-container" id="editStepper">
+          <div class="step-indicator active" onclick="goToEditStep(1)" id="editStepInd1">
+            <div class="step-circle">1</div>
+            <div class="step-label">ข้อมูลพื้นฐาน</div>
+          </div>
+          <div class="step-indicator" onclick="goToEditStep(2)" id="editStepInd2">
+            <div class="step-circle">2</div>
+            <div class="step-label">รถและคนขับ</div>
+          </div>
+          <div class="step-indicator" onclick="goToEditStep(3)" id="editStepInd3">
+            <div class="step-circle">3</div>
+            <div class="step-label">รายละเอียด</div>
+          </div>
+        </div>
+        
+        <div class="form-section form-step active" id="editStep1">
           <div class="form-section-title">📅 ข้อมูลพื้นฐาน</div>
           <div class="form-group">
             <label>วันที่ <span class="required">*</span></label>
@@ -998,7 +1959,7 @@
           </div>
         </div>
 
-        <div class="form-section">
+        <div class="form-section form-step" id="editStep2">
           <div class="form-section-title">🚗 รถและคนขับ</div>
           <div class="form-row">
             <div class="form-group">
@@ -1028,7 +1989,7 @@
           </div>
         </div>
 
-        <div class="form-section">
+        <div class="form-section form-step" id="editStep3">
           <div class="form-section-title">📝 ข้อมูลการใช้งาน</div>
           <div class="form-group">
             <label>ผู้ขอใช้รถ <span class="required">*</span></label>
@@ -1070,12 +2031,18 @@
           </div>
         </div>
 
-        <div class="modal-footer">
-          <button type="button" class="btn btn-danger" onclick="deleteQueue(editingQueueId)"
-            style="margin-right: auto;">🗑️ ลบคิว</button>
-          <button type="button" class="btn btn-secondary" onclick="closeEditModal()">ยกเลิก</button>
-          <button type="submit" class="btn btn-primary" id="editSubmitBtn">💾 บันทึกการแก้ไข</button>
+        
+        <div class="stepper-footer" id="editStepperFooter">
+          <button type="button" class="btn btn-danger" onclick="deleteQueue(editingQueueId)" id="editBtnDelete" style="margin-right: auto;">🗑️ ลบคิว</button>
+          
+          <div style="display: flex; gap: 10px; margin-left: auto;">
+            <button type="button" class="btn btn-secondary" onclick="prevEditStep()" id="editBtnPrev" style="display: none;">⬅️ ถอยกลับ</button>
+            <button type="button" class="btn btn-secondary" onclick="closeEditModal()" id="editBtnCancel">ยกเลิก</button>
+            <button type="button" class="btn btn-primary" onclick="nextEditStep()" id="editBtnNext">ถัดไป ➡️</button>
+            <button type="submit" class="btn btn-primary" id="editSubmitBtn" style="display: none;">💾 บันทึก</button>
+          </div>
         </div>
+                
       </form>
     </div>
   </div>
@@ -2943,7 +3910,175 @@ ${dTagHeader}📅 วันเดินทาง: ${dateFormatted}
         prompt('คัดลอกข้อความด้านล่างเพื่อส่ง LINE:', lineText);
       }
     }
-  </script>
+  
+// --- Stepper Logic Create ---
+let currentCreateStep = 1;
+function updateCreateStepper() {
+  for (let i = 1; i <= 3; i++) {
+    const stepEl = document.getElementById('createStep' + i);
+    const indEl = document.getElementById('createStepInd' + i);
+    if (stepEl) {
+      if (i === currentCreateStep) {
+        stepEl.classList.add('active');
+        indEl.classList.add('active');
+        indEl.classList.remove('completed');
+      } else {
+        stepEl.classList.remove('active');
+        indEl.classList.remove('active');
+        if (i < currentCreateStep) {
+          indEl.classList.add('completed');
+        } else {
+          indEl.classList.remove('completed');
+        }
+      }
+    }
+  }
+  
+  // Footer buttons
+  document.getElementById('createBtnPrev').style.display = currentCreateStep === 1 ? 'none' : 'block';
+  document.getElementById('createBtnCancel').style.display = currentCreateStep === 1 ? 'block' : 'none';
+  
+  if (currentCreateStep === 3) {
+    document.getElementById('createBtnNext').style.display = 'none';
+    document.getElementById('createSubmitBtn').style.display = 'block';
+  } else {
+    document.getElementById('createBtnNext').style.display = 'block';
+    document.getElementById('createSubmitBtn').style.display = 'none';
+  }
+}
+
+function validateCreateStep(step) {
+  // Simple validation for current step fields
+  const stepEl = document.getElementById('createStep' + step);
+  const inputs = stepEl.querySelectorAll('input[required], select[required]');
+  for (let input of inputs) {
+    // Only validate if it's visible (not inside a display: none group like date ranges)
+    if (input.offsetParent !== null && !input.checkValidity()) {
+      input.reportValidity();
+      return false;
+    }
+  }
+  return true;
+}
+
+function nextCreateStep() {
+  if (validateCreateStep(currentCreateStep) && currentCreateStep < 3) {
+    currentCreateStep++;
+    updateCreateStepper();
+  }
+}
+
+function prevCreateStep() {
+  if (currentCreateStep > 1) {
+    currentCreateStep--;
+    updateCreateStepper();
+  }
+}
+
+function goToCreateStep(step) {
+  if (step < currentCreateStep) {
+    currentCreateStep = step;
+    updateCreateStepper();
+  } else if (step === currentCreateStep + 1 && validateCreateStep(currentCreateStep)) {
+    currentCreateStep = step;
+    updateCreateStepper();
+  }
+}
+
+// Override openCreateModal to reset stepper
+const originalOpenCreateModal = window.openCreateModal;
+window.openCreateModal = function() {
+  if (typeof originalOpenCreateModal === 'function') originalOpenCreateModal();
+  else {
+    document.getElementById('createModal').classList.add('show');
+    if (typeof resetCreateForm === 'function') resetCreateForm();
+  }
+  currentCreateStep = 1;
+  updateCreateStepper();
+};
+
+// --- Stepper Logic Edit ---
+let currentEditStep = 1;
+function updateEditStepper() {
+  for (let i = 1; i <= 3; i++) {
+    const stepEl = document.getElementById('editStep' + i);
+    const indEl = document.getElementById('editStepInd' + i);
+    if (stepEl) {
+      if (i === currentEditStep) {
+        stepEl.classList.add('active');
+        indEl.classList.add('active');
+        indEl.classList.remove('completed');
+      } else {
+        stepEl.classList.remove('active');
+        indEl.classList.remove('active');
+        if (i < currentEditStep) {
+          indEl.classList.add('completed');
+        } else {
+          indEl.classList.remove('completed');
+        }
+      }
+    }
+  }
+  
+  // Footer buttons
+  document.getElementById('editBtnPrev').style.display = currentEditStep === 1 ? 'none' : 'block';
+  document.getElementById('editBtnCancel').style.display = currentEditStep === 1 ? 'block' : 'none';
+  
+  if (currentEditStep === 3) {
+    document.getElementById('editBtnNext').style.display = 'none';
+    document.getElementById('editSubmitBtn').style.display = 'block';
+  } else {
+    document.getElementById('editBtnNext').style.display = 'block';
+    document.getElementById('editSubmitBtn').style.display = 'none';
+  }
+}
+
+function validateEditStep(step) {
+  const stepEl = document.getElementById('editStep' + step);
+  if (!stepEl) return true;
+  const inputs = stepEl.querySelectorAll('input[required], select[required]');
+  for (let input of inputs) {
+    if (input.offsetParent !== null && !input.checkValidity()) {
+      input.reportValidity();
+      return false;
+    }
+  }
+  return true;
+}
+
+function nextEditStep() {
+  if (validateEditStep(currentEditStep) && currentEditStep < 3) {
+    currentEditStep++;
+    updateEditStepper();
+  }
+}
+
+function prevEditStep() {
+  if (currentEditStep > 1) {
+    currentEditStep--;
+    updateEditStepper();
+  }
+}
+
+function goToEditStep(step) {
+  if (step < currentEditStep) {
+    currentEditStep = step;
+    updateEditStepper();
+  } else if (step === currentEditStep + 1 && validateEditStep(currentEditStep)) {
+    currentEditStep = step;
+    updateEditStepper();
+  }
+}
+
+// Hook into openEditModal to reset edit stepper
+const originalOpenEditModal = window.openEditModal;
+window.openEditModal = function(qId) {
+  if (typeof originalOpenEditModal === 'function') originalOpenEditModal(qId);
+  currentEditStep = 1;
+  updateEditStepper();
+};
+
+</script>
 
   <div style="background: var(--color-bg-light); padding: 20px; text-align: center; color: var(--color-text-muted); font-size: 0.9em; margin-top: 20px;">
     <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
