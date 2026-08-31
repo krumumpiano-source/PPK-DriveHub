@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>รายงานสรุปผลการประเมินการปฏิบัติหน้าที่พนักงานขับรถยนต์ (อย่างเป็นทางการ) - โรงเรียนพะเยาพิทยาคม</title>
+    <script src="config.js"></script>
+    <script>window.API_BASE_URL=CONFIG.API_BASE_URL;window.currentPage='print-executive-summary';window.REQUIRE_AUTH=true;</script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="common.css">
+    <script src="js/api.js"></script>
+    <script src="common.js"></script>
+    <style>
+        body { background: #f8fafc; font-size: 13px; color: #000; font-family: 'Sarabun', 'Segoe UI', Tahoma, sans-serif; line-height: 1.5; }
+        .print-container { max-width: 900px; margin: 0 auto; padding: 30px; background: #fff; box-shadow: 0 0 15px rgba(0,0,0,0.05); }
+        
+        .header-section { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 12px; }
+        .header-section h4 { font-weight: bold; margin-bottom: 4px; font-size: 18px; }
+        .header-section h5 { font-weight: bold; margin-bottom: 4px; font-size: 15px; }
+        
+        .report-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .report-table th, .report-table td { border: 1px solid #000; padding: 7px 8px; font-size: 12.5px; }
+        .report-table th { background-color: #f1f5f9; text-align: center; font-weight: bold; }
+        
+        .signature-grid { display: flex; justify-content: space-between; margin-top: 35px; }
+        .signature-box { width: 45%; text-align: center; }
+        .signature-line { display: inline-block; border-bottom: 1px solid #000; width: 230px; margin-bottom: 5px; }
+
+        .no-print { display: block; margin-bottom: 20px; padding: 15px; background: #e2e8f0; border-radius: 8px; }
+        
+        @media print {
+            .no-print { display: none !important; }
+            body { padding: 0; margin: 0; background: #fff; }
+            .print-container { width: 100%; max-width: 100%; padding: 0; box-shadow: none; }
+            @page { margin: 1.2cm; size: portrait; }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-container">
+        
+        <!-- Top Control Bar (Hidden on Print) -->
+        <div class="no-print">
+            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-3">
+                <div>
+                    <h5 class="fw-bold mb-1"><i class="fa-solid fa-file-signature text-primary me-2"></i> รายงานสรุปผลการประเมินอย่างเป็นทางการ (สำหรับผู้บริหาร/ผู้อำนวยการ)</h5>
+                    <p class="text-muted small mb-0">รายงานสรุปเปรียบเทียบผลงาน 1 หน้า A4 พร้อมช่องลงนามมติคณะกรรมการและผู้อำนวยการสถานศึกษา</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary px-4 fw-bold shadow-sm" onclick="window.print()"><i class="fa-solid fa-print me-2"></i> สั่งพิมพ์ A4 / PDF</button>
+                    <a href="driver-performance.html" class="btn btn-secondary">กลับหน้าหลัก</a>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="row g-2 align-items-center bg-white p-3 rounded border">
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold mb-1">เลือกปีงบประมาณ / ปีการศึกษา:</label>
+                    <select class="form-select form-select-sm" id="yearSelector" onchange="handleYearChange()">
+                        <!-- Dynamic -->
+                    </select>
+                </div>
+                <div class="col-md-8 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end gap-2">
+                    <a href="print-committee-form.html" class="btn btn-sm btn-outline-success">
+                        <i class="fa-solid fa-clipboard-check me-1"></i> แบบประเมินรายบุคคล
+                    </a>
+                    <a href="print-empirical-evidence.html" class="btn btn-sm btn-outline-info">
+                        <i class="fa-solid fa-chart-line me-1"></i> ข้อมูลสถิติเชิงประจักษ์
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div id="reportContent">
+            <!-- Loading -->
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary"></div>
+                <p class="mt-2 text-muted">กำลังรวบรวมรายงานสรุปผลการประเมิน...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let currentYear = (new Date().getFullYear() + 543).toString();
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!checkAuth()) {
+                window.location.href = 'login.html';
+                return;
+            }
+            window.currentUser = getCurrentUser();
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            currentYear = urlParams.get('year') || currentYear;
+
+            // Populate Year Dropdown
+            const yNum = parseInt(currentYear);
+            const yearSelect = document.getElementById('yearSelector');
+            yearSelect.innerHTML = `
+                <option value="${yNum}" ${currentYear === yNum.toString() ? 'selected' : ''}>ปีงบประมาณ ${yNum}</option>
+                <option value="${yNum - 1}" ${currentYear === (yNum - 1).toString() ? 'selected' : ''}>ปีงบประมาณ ${yNum - 1}</option>
+                <option value="${yNum - 2}" ${currentYear === (yNum - 2).toString() ? 'selected' : ''}>ปีงบประมาณ ${yNum - 2}</option>
+            `;
+
+            await loadExecutiveReportData();
+        });
+
+        async function handleYearChange() {
+            currentYear = document.getElementById('yearSelector').value;
+            const newUrl = `${window.location.pathname}?year=${currentYear}`;
+            window.history.replaceState({}, '', newUrl);
+            await loadExecutiveReportData();
+        }
+
+        async function loadExecutiveReportData() {
+            const container = document.getElementById('reportContent');
+            container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">กำลังคำนวณและประมวลผลข้อมูล...</p></div>';
+
+            try {
+                const driversRes = await API.get('/api/drivers');
+                const driversList = driversRes.data?.drivers || driversRes.data || [];
+                const mainKeywords = ['ชารี', 'ณัฐวุฒิ', 'สมชาย', 'สุรเชษฐ์'];
+                const activeDrivers = driversList.filter(d => d.status === 'active' && mainKeywords.some(k => (d.name || d.first_name || '').includes(k)));
+
+                let reportRows = [];
+                for (const d of activeDrivers) {
+                    try {
+                        const [evalRes, empRes] = await Promise.all([
+                            API.get(`/api/evaluations/driver/${d.id}?year=${currentYear}`),
+                            API.get(`/api/evaluations/empirical/${d.id}?year=${currentYear}`)
+                        ]);
+                        const e = evalRes.data || {};
+                        const m = empRes.data || {};
+
+                        const pWeighted = e.passenger_weighted || 0;
+                        const cWeighted = e.committee_weighted || 0;
+                        const totalScore = pWeighted + cWeighted;
+                        const trips = e.usage_stats?.total_completed_trips || 0;
+                        const missed = e.usage_stats?.missed_logs || 0;
+                        const anomalous = e.usage_stats?.anomalous_logs || m.anomalous_count || 0;
+
+                        const hasEval = (e.passenger_stats?.total_trips > 0) || (e.committee_stats?.committee_count > 0) || (totalScore > 0);
+                        const finalGrade = hasEval ? (e.grade && e.grade !== 'ยังไม่ประเมิน' ? e.grade : 'พอใช้') : 'ยังไม่ประเมิน';
+
+                        reportRows.push({
+                            driver: d,
+                            trips: trips,
+                            missed: missed,
+                            anomalous: anomalous,
+                            passengerScore: pWeighted,
+                            committeeScore: cWeighted,
+                            totalScore: totalScore,
+                            hasEval: hasEval,
+                            grade: finalGrade
+                        });
+                    } catch (err) {
+                        console.warn(err);
+                    }
+                }
+
+                // Sort by totalScore descending
+                reportRows.sort((a, b) => b.totalScore - a.totalScore);
+
+                let tableRowsHtml = '';
+                reportRows.forEach((r, idx) => {
+                    const displayPassenger = r.hasEval && r.passengerScore > 0 ? r.passengerScore.toFixed(2) : '-';
+                    const displayCommittee = r.hasEval && r.committeeScore > 0 ? r.committeeScore.toFixed(2) : '-';
+                    const displayTotal = r.hasEval && r.totalScore > 0 ? r.totalScore.toFixed(2) : '-';
+
+                    tableRowsHtml += `
+                        <tr>
+                            <td class="text-center">${idx + 1}</td>
+                            <td class="text-start fw-bold">${r.driver.title || ''}${r.driver.first_name || r.driver.name} ${r.driver.last_name || ''}</td>
+                            <td class="text-center">${r.trips}</td>
+                            <td class="text-center ${r.missed > 0 ? 'text-danger fw-bold' : ''}">${r.missed}</td>
+                            <td class="text-center ${r.anomalous > 0 ? 'text-danger fw-bold' : ''}">${r.anomalous}</td>
+                            <td class="text-center">${displayPassenger}</td>
+                            <td class="text-center">${displayCommittee}</td>
+                            <td class="text-center fw-bold fs-6" style="background:#f1f5f9;">${displayTotal}</td>
+                            <td class="text-center fw-bold">${r.grade}</td>
+                        </tr>
+                    `;
+                });
+
+                container.innerHTML = `
+                    <div class="header-section">
+                        <h4>รายงานสรุปผลการประเมินการปฏิบัติหน้าที่พนักงานขับรถยนต์</h4>
+                        <h5>โรงเรียนพะเยาพิทยาคม ประจำปีงบประมาณ ${currentYear}</h5>
+                        <p class="mb-0 text-muted small">สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาพะเยา (ข้อมูลประมวลผล ณ วันที่ ${new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })})</p>
+                    </div>
+
+                    <p class="mb-2 fw-bold">สรุปผลการประเมินการปฏิบัติหน้าที่ตามมาตรฐานตัวชี้วัด สัดส่วนผู้รับบริการ (40 คะแนน) และคณะกรรมการประเมิน (60 คะแนน):</p>
+
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%;">ที่</th>
+                                <th style="width: 25%;" class="text-start">ชื่อ-สกุล พนักงานขับรถยนต์</th>
+                                <th style="width: 10%;">คิวงาน (เที่ยว)</th>
+                                <th style="width: 10%;">ไม่บันทึกไมล์ (ครั้ง)</th>
+                                <th style="width: 10%;">ไมล์ถอยหลัง (ครั้ง)</th>
+                                <th style="width: 10%;">ผู้โดยสาร (40)</th>
+                                <th style="width: 10%;">กรรมการ (60)</th>
+                                <th style="width: 10%; background:#e2e8f0;">รวมสุทธิ (100)</th>
+                                <th style="width: 10%;">ระดับผลการประเมิน</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tableRowsHtml}
+                        </tbody>
+                    </table>
+
+                    <div class="mb-3 p-2 border rounded bg-light" style="font-size: 11.5px;">
+                        <strong>เกณฑ์ระดับผลการประเมิน:</strong> 
+                        ดีเด่น (90.00 - 100.00 คะแนน) | 
+                        ดีมาก (80.00 - 89.99 คะแนน) | 
+                        ดี (70.00 - 79.99 คะแนน) | 
+                        พอใช้ (60.00 - 69.99 คะแนน) | 
+                        ต้องปรับปรุง (ต่ำกว่า 60.00 คะแนน)
+                    </div>
+
+                    <div class="signature-grid">
+                        <div class="signature-box">
+                            <p class="mb-1">ลงชื่อ ...........................................................</p>
+                            <div class="signature-line"></div>
+                            <p class="mb-0 small">(.......................................................................)</p>
+                            <p class="small text-muted mb-0">ประธานคณะกรรมการประเมินผลการปฏิบัติหน้าที่</p>
+                            <p class="small text-muted">วันที่ .......... / .......... / ..............</p>
+                        </div>
+                        <div class="signature-box">
+                            <p class="mb-1">ลงชื่อ ...........................................................</p>
+                            <div class="signature-line"></div>
+                            <p class="mb-0 small">(.......................................................................)</p>
+                            <p class="small text-muted mb-0">ผู้อำนวยการโรงเรียนพะเยาพิทยาคม</p>
+                            <p class="small text-muted">วันที่ .......... / .......... / ..............</p>
+                        </div>
+                    </div>
+                `;
+
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = `<div class="alert alert-danger text-center">เกิดข้อผิดพลาดในการโหลดรายงาน: ${err.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

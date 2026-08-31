@@ -850,7 +850,8 @@
         }
 
         function openExecutiveReport() {
-            execModal.show();
+            const year = document.getElementById('academicYearFilter').value;
+            window.open(`print-executive-summary.html?year=${year}`, '_blank');
         }
 
         function printExecutiveReport() {
