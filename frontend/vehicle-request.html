@@ -593,10 +593,16 @@
       }
       if (r.status === 'approved') {
         var carLabel = (r.license_plate || '-') + ' ' + (r.car_brand || '');
-        var lineText = `🚐 [คิวงานรถราชการ - โรงเรียนพะเยาพิทยาคม]\n📌 เลขที่คำขอ: ${r.request_no || '-'}\n📅 วันที่: ${r.date} (${r.time_start || '-'}-${r.time_end || '-'})\n📍 ปลายทาง: ${r.destination}\n🚗 รถ: ${carLabel.trim()}\n👤 คนขับ: ${r.driver_name || '-'}\n🙋‍♂️ ผู้ขอ: ${r.requester_name}`;
+        var dTag = r.driver_line_id ? (r.driver_line_id.startsWith('@') ? r.driver_line_id : '@' + r.driver_line_id) : '';
+        var dTagHeader = dTag ? `\n🔔 แจ้งเตือน: ${dTag} (มีมอบหมายคิวงาน)` : '';
+        var dNameDisplay = dTag ? `${r.driver_name || '-'} (${dTag})` : (r.driver_name || '-');
+        var dPhoneStr = r.driver_phone ? ` 📞 ${r.driver_phone}` : '';
+        var dateRange = r.return_date && r.return_date !== r.date ? `${r.date} ถึง ${r.return_date}` : r.date;
+
+        var lineText = `🚐 [คิวงานรถราชการ - โรงเรียนพะเยาพิทยาคม]${dTagHeader}\n📌 เลขที่คำขอ: ${r.request_no || '-'}\n📅 วันที่: ${dateRange} (${r.time_start || '-'}-${r.time_end || '-'} น.)\n📍 ปลายทาง: ${r.destination}\n🎯 ภารกิจ: ${r.purpose || '-'}\n🚗 รถ: ${carLabel.trim()}\n👤 คนขับ: ${dNameDisplay}${dPhoneStr}\n🙋‍♂️ ผู้ขอ: ${r.requester_name} (${r.requester_department || '-'})\n👥 ผู้ร่วมเดินทาง: ${r.passengers || 1} คน`;
         var lineShareUrl = 'https://line.me/R/share?text=' + encodeURIComponent(lineText);
         h += `<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">`;
-        h += `<button class="btn btn-outline btn-sm" onclick="copyLineMessage(this, \`${lineText}\`)">📋 คัดลอกข้อความส่ง LINE</button>`;
+        h += `<button class="btn btn-outline btn-sm" onclick="copyLineMessage(this, \`${lineText.replace(/`/g, '\\`')}\`)">📋 คัดลอกข้อความส่ง LINE</button>`;
         h += `<a href="${lineShareUrl}" target="_blank" class="btn btn-sm" style="background:#06C755;color:white;text-decoration:none;display:inline-flex;align-items:center;gap:4px">💬 เปิดแอป LINE</a>`;
         h += `</div>`;
       }

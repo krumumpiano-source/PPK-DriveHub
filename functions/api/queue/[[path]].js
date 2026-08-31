@@ -35,7 +35,8 @@ export async function onRequest(context) {
     if (driverIdParam) { where.push('q.driver_id = ?'); params.push(driverIdParam); }
     const rows = await dbAll(env.DB,
       `SELECT q.*, c.license_plate, c.brand, c.model,
-       d.name AS driver_name, bd.name AS backup_driver_name,
+       d.name AS driver_name, d.line_id AS driver_line_id, d.phone AS driver_phone,
+       bd.name AS backup_driver_name,
        u.display_name AS requester_display_name,
        uc.display_name AS created_by_name,
        uu.display_name AS updated_by_name
@@ -66,7 +67,8 @@ export async function onRequest(context) {
     const id = extractParam(path, '/api/queue/');
     const row = await dbFirst(env.DB,
       `SELECT q.*, c.license_plate, c.brand, c.model,
-       d.name AS driver_name, bd.name AS backup_driver_name,
+       d.name AS driver_name, d.line_id AS driver_line_id, d.phone AS driver_phone,
+       bd.name AS backup_driver_name,
        u.display_name AS requester_display_name,
        uc.display_name AS created_by_name,
        uu.display_name AS updated_by_name

@@ -32,7 +32,8 @@ export async function onRequest(context) {
     if (needsSignature === 'true') { where.push('vr.signature_image IS NULL'); }
     const rows = await dbAll(env.DB,
       `SELECT vr.*, c.license_plate, c.brand AS car_brand,
-       d.name AS driver_name, u.display_name AS approved_by_name,
+       d.name AS driver_name, d.line_id AS driver_line_id, d.phone AS driver_phone,
+       u.display_name AS approved_by_name,
        uc.display_name AS requester_display_name,
        uc.display_name AS created_by_name
        FROM vehicle_requests vr
@@ -52,7 +53,8 @@ export async function onRequest(context) {
     const id = path.split('/').pop();
     const row = await dbFirst(env.DB,
       `SELECT vr.*, c.license_plate, c.brand AS car_brand,
-       d.name AS driver_name, u.display_name AS approved_by_name,
+       d.name AS driver_name, d.line_id AS driver_line_id, d.phone AS driver_phone,
+       u.display_name AS approved_by_name,
        uc.display_name AS requester_display_name,
        uc.display_name AS created_by_name
        FROM vehicle_requests vr
@@ -390,7 +392,12 @@ export async function onRequest(context) {
     // Get requester email and send confirmation
     const requester = await dbFirst(env.DB, 'SELECT email FROM users WHERE id = ?', [row.requester_id]);
     const confirmationUrl = `${url.origin}/vehicle-request.html?id=${id}`;
-    const lineMessage = `🚐 [คิวงานรถราชการ - โรงเรียนพะเยาพิทยาคม]\n📌 เลขที่คำขอ: ${row.request_no}\n📅 วันที่เดินทาง: ${row.date}${row.return_date && row.return_date !== row.date ? ' ถึง ' + row.return_date : ''} (${timeStart} - ${timeEnd} น.)\n📍 ปลายทาง: ${row.destination}\n📝 วัตถุประสงค์: ${row.purpose || '-'}\n🚗 รถที่มอบหมาย: ${carLabel}\n👤 พนักงานขับรถ: ${driverCheck.name}\n🙋‍♂️ ผู้ขอใช้รถ: ${row.requester_name} (${row.requester_department || '-'})\n👥 ผู้ร่วมเดินทาง: ${row.passengers || 1} คน\n🔗 รายละเอียด: ${confirmationUrl}`;
+    const driverTag = (driverCheck.line_id && driverCheck.line_id.startsWith('@')) ? driverCheck.line_id : (driverCheck.line_id ? `@${driverCheck.line_id}` : '');
+    const driverTagHeader = driverTag ? `\n🔔 แจ้งเตือน: ${driverTag} (มีมอบหมายคิวงานใหม่)` : '';
+    const driverDisplay = driverTag ? `${driverCheck.name} (${driverTag})` : driverCheck.name;
+    const driverPhoneStr = driverCheck.phone ? ` 📞 ${driverCheck.phone}` : '';
+
+    const lineMessage = `🚐 [คิวงานรถราชการ - โรงเรียนพะเยาพิทยาคม]${driverTagHeader}\n📌 เลขที่คำขอ: ${row.request_no || '-'}\n📅 วันที่เดินทาง: ${row.date}${row.return_date && row.return_date !== row.date ? ' ถึง ' + row.return_date : ''} (${timeStart} - ${timeEnd} น.)\n📍 ปลายทาง: ${row.destination}\n🎯 ภารกิจ: ${row.purpose || '-'}\n🚗 รถที่มอบหมาย: ${carLabel}\n👤 พนักงานขับรถ: ${driverDisplay}${driverPhoneStr}\n🙋‍♂️ ผู้ขอใช้รถ: ${row.requester_name} (${row.requester_department || '-'})\n👥 ผู้ร่วมเดินทาง: ${row.passengers || 1} คน`;
     
     if (requester && requester.email) {
       await sendEmailViaGAS(env, requester.email, 'อนุมัติการขอใช้รถ', lineMessage);

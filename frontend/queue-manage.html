@@ -2855,6 +2855,48 @@
         alert.remove();
       }, 5000);
     }
+
+    function copyCurrentQueueToLine(btn) {
+      if (!editingQueueData) {
+        alert('ไม่พบข้อมูลคิวงาน');
+        return;
+      }
+      var q = editingQueueData;
+      var car = vehiclesMap[q.car_id] || {};
+      var carLabel = (q.license_plate || car.license_plate || '-') + ' ' + (q.brand || car.brand || '') + ' ' + (q.model || car.model || '');
+      
+      var driver = driversMap[q.driver_id] || {};
+      var driverName = q.driver_name || driver.name || (document.getElementById('edit_driver_id') ? document.getElementById('edit_driver_id').options[document.getElementById('edit_driver_id').selectedIndex]?.text : '-');
+      var dTag = q.driver_line_id || driver.line_id || '';
+      if (dTag && !dTag.startsWith('@')) dTag = '@' + dTag;
+
+      var dPhone = q.driver_phone || driver.phone || '';
+      var dTagHeader = dTag ? `\n🔔 แจ้งเตือน: ${dTag} (มีมอบหมายคิวงาน)` : '';
+      var dDisplay = dTag ? `${driverName} (${dTag})` : driverName;
+      var dPhoneStr = dPhone ? ` 📞 ${dPhone}` : '';
+
+      var dateVal = document.getElementById('edit_date') ? document.getElementById('edit_date').value : q.date;
+      var timeStart = document.getElementById('edit_time_start') ? document.getElementById('edit_time_start').value : (q.time_start || '-');
+      var timeEnd = document.getElementById('edit_time_end') ? document.getElementById('edit_time_end').value : (q.time_end || '-');
+      var dest = document.getElementById('edit_destination') ? document.getElementById('edit_destination').value : (q.destination || '-');
+      var mission = document.getElementById('edit_mission') ? document.getElementById('edit_mission').value : (q.notes || q.mission || '-');
+      var requester = document.getElementById('edit_requested_by') ? document.getElementById('edit_requested_by').value : (q.requester_name || q.requested_by || '-');
+      var passengerCount = document.getElementById('edit_passenger_count') ? document.getElementById('edit_passenger_count').value : (q.passenger_count || 1);
+
+      var lineText = `🚐 [คิวงานรถราชการ - โรงเรียนพะเยาพิทยาคม]${dTagHeader}\n📅 วันที่: ${dateVal} (${timeStart} - ${timeEnd} น.)\n📍 ปลายทาง: ${dest}\n🎯 ภารกิจ: ${mission}\n🚗 รถ: ${carLabel.trim()}\n👤 คนขับ: ${dDisplay}${dPhoneStr}\n👥 ผู้ขอ/คณะเดินทาง: ${requester} (จำนวน ${passengerCount} คน)`;
+
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(lineText).then(function() {
+          var orig = btn.innerHTML;
+          btn.innerHTML = '✅ คัดลอกแล้ว!';
+          setTimeout(function() { btn.innerHTML = orig; }, 2500);
+        }).catch(function() {
+          prompt('คัดลอกข้อความด้านล่างเพื่อส่ง LINE:', lineText);
+        });
+      } else {
+        prompt('คัดลอกข้อความด้านล่างเพื่อส่ง LINE:', lineText);
+      }
+    }
   </script>
 
   <div style="background: var(--color-bg-light); padding: 20px; text-align: center; color: var(--color-text-muted); font-size: 0.9em; margin-top: 20px;">
