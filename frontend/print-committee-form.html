@@ -130,6 +130,7 @@
             const passengerTrips = evalData.passenger_stats?.total_trips || 0;
             const totalTrips = evalData.usage_stats?.total_completed_trips || 0;
             const missedLogs = evalData.usage_stats?.missed_logs || 0;
+            const anomalousLogs = evalData.usage_stats?.anomalous_logs || empData.anomalous_count || 0;
 
             const missedList = empData.missed_details || [];
             let missedRows = '';
@@ -146,6 +147,23 @@
                 });
             } else {
                 missedRows = '<tr><td colspan="4" class="text-center text-success py-2"><i class="fa-solid fa-circle-check"></i> ไม่พบประวัติการลืมบันทึกไมล์ (ปฏิบัติตามระเบียบครบถ้วน 100%)</td></tr>';
+            }
+
+            const anomalousList = empData.anomalous_details || [];
+            let anomalousRows = '';
+            if (anomalousList.length > 0) {
+                anomalousList.forEach(a => {
+                    anomalousRows += `
+                        <tr>
+                            <td class="text-center">${a.date || '-'}</td>
+                            <td class="text-center">${a.car || '-'}</td>
+                            <td>${a.mission || '-'}</td>
+                            <td class="text-danger fw-bold">${a.reason || '-'}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                anomalousRows = '<tr><td colspan="4" class="text-center text-success py-2"><i class="fa-solid fa-circle-check"></i> ไม่พบประวัติการบันทึกเลขไมล์ผิดปกติ/มั่ว (ถูกต้องตามมาตรฐาน 100%)</td></tr>';
             }
 
             return `
@@ -213,7 +231,7 @@
                                 <td class="score-box"><span class="score-input-line"></span> / 8</td>
                             </tr>
                             <tr>
-                                <td class="ps-3 fw-bold">• บันทึกข้อมูลการใช้รถ (ไมล์เข้า-ออก) ในระบบแอปพลิเคชันอย่างสม่ำเสมอและเป็นปัจจุบัน (8 คะแนน)</td>
+                                <td class="ps-3 fw-bold">• บันทึกข้อมูลการใช้รถ (ไมล์เข้า-ออก) ถูกต้อง ไม่บันทึกมั่ว และเป็นปัจจุบัน (8 คะแนน)</td>
                                 <td class="score-box"><span class="score-input-line"></span> / 8</td>
                             </tr>
                             <tr>
@@ -300,15 +318,33 @@
                         <h6 class="fw-bold mb-2"><i class="fa-solid fa-car text-primary"></i> 2. สถิติการปฏิบัติงานและการบันทึกข้อมูลการใช้รถ:</h6>
                         <table class="rubric-table mb-3">
                             <tr>
-                                <td style="width: 25%; background: #f8fafc; font-weight: bold;">วิ่งงานเสร็จสิ้น (คิว):</td>
+                                <td style="width: 20%; background: #f8fafc; font-weight: bold;">วิ่งงานสำเร็จ:</td>
                                 <td class="text-center fw-bold">${totalTrips} คิว</td>
-                                <td style="width: 25%; background: #f8fafc; font-weight: bold;">จำนวนครั้งที่ลืมบันทึกไมล์:</td>
+                                <td style="width: 20%; background: #f8fafc; font-weight: bold;">ลืมบันทึกไมล์:</td>
                                 <td class="text-center fw-bold ${missedLogs > 0 ? 'text-danger' : 'text-success'}">${missedLogs} ครั้ง</td>
+                                <td style="width: 20%; background: #f8fafc; font-weight: bold;">ไมล์ผิดปกติ/มั่ว:</td>
+                                <td class="text-center fw-bold ${anomalousLogs > 0 ? 'text-danger' : 'text-success'}">${anomalousLogs} ครั้ง</td>
                             </tr>
                         </table>
 
-                        <!-- 3. Detailed Missed Mileage Drilldown -->
-                        <h6 class="fw-bold mb-2"><i class="fa-solid fa-magnifying-glass text-danger"></i> 3. รายละเอียดและประวัติการลืมบันทึกไมล์ (Audit Trail):</h6>
+                        <!-- 3. Detailed Anomalous Mileage Drilldown -->
+                        <h6 class="fw-bold mb-2"><i class="fa-solid fa-triangle-exclamation text-danger"></i> 3. รายการบันทึกเลขไมล์ผิดปกติ/มั่ว (ไมล์ถอยหลัง หรือ ไมล์ 0 กม.):</h6>
+                        <table class="rubric-table mb-3" style="font-size: 11px;">
+                            <thead>
+                                <tr style="background:#fee2e2;">
+                                    <th style="width: 18%;">วันที่</th>
+                                    <th style="width: 15%;">ทะเบียนรถ</th>
+                                    <th>ภารกิจ / สถานที่</th>
+                                    <th style="width: 38%;">ลักษณะความผิดปกติที่ตรวจพบ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${anomalousRows}
+                            </tbody>
+                        </table>
+
+                        <!-- 4. Detailed Missed Mileage Drilldown -->
+                        <h6 class="fw-bold mb-2"><i class="fa-solid fa-magnifying-glass text-secondary"></i> 4. รายละเอียดและประวัติการลืมบันทึกไมล์ (Missed Logs Audit Trail):</h6>
                         <table class="rubric-table mb-4" style="font-size: 11px;">
                             <thead>
                                 <tr>
@@ -323,7 +359,7 @@
                             </tbody>
                         </table>
 
-                        <!-- 4. Driver Acknowledgment -->
+                        <!-- 5. Driver Acknowledgment -->
                         <div class="p-3 border rounded bg-light mt-4">
                             <h6 class="fw-bold mb-2"><i class="fa-solid fa-signature text-secondary"></i> การลงนามรับทราบผลการประเมินของพนักงานขับรถ:</h6>
                             <p class="small mb-3">ข้าพเจ้าได้รับทราบผลคะแนนการประเมินและข้อมูลสถิติเชิงประจักษ์ข้างต้นเรียบร้อยแล้ว</p>

@@ -62,12 +62,13 @@
                     <table class="table table-hover table-bordered table-comparative align-middle mb-0 text-center" id="comparativeTable">
                         <thead>
                             <tr>
-                                <th style="width: 20%;">พนักงานขับรถ</th>
-                                <th>รถประจำตัว</th>
+                                <th style="width: 18%;">พนักงานขับรถ</th>
+                                <th>รถประจำ</th>
                                 <th>คิวงานสำเร็จ</th>
                                 <th>ระยะทาง (กม.)</th>
                                 <th><span class="text-danger">ลืมบันทึกไมล์</span></th>
-                                <th>อัตราความเรียบร้อย (%)</th>
+                                <th><span class="text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation"></i> ไมล์ผิดปกติ</span></th>
+                                <th>ความเรียบร้อย (%)</th>
                                 <th>ผู้โดยสาร (40)</th>
                                 <th>กรรมการ (60)</th>
                                 <th style="background-color: #e0e7ff;">คะแนนสุทธิ (100)</th>
@@ -75,7 +76,7 @@
                             </tr>
                         </thead>
                         <tbody id="comparativeTableBody">
-                            <tr><td colspan="10" class="py-4 text-center text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div> กำลังคำนวณข้อมูลสถิติเปรียบเทียบ...</td></tr>
+                            <tr><td colspan="11" class="py-4 text-center text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div> กำลังคำนวณข้อมูลสถิติเปรียบเทียบ...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -109,7 +110,7 @@
                                 <div class="driver-avatar-sm" id="detailAvatar"><i class="fa-solid fa-user-tie"></i></div>
                                 <div>
                                     <h5 class="card-title mb-0 fw-bold text-dark" id="selectedDriverName">ชื่อคนขับ</h5>
-                                    <small class="text-muted" id="selectedDriverPlate">รถประจำ: นข-1234</small>
+                                    <small class="text-muted" id="selectedDriverPlate">พนักงานขับรถ โรงเรียนพะเยาพิทยาคม</small>
                                 </div>
                             </div>
                             <div class="d-flex flex-wrap gap-1">
@@ -149,27 +150,33 @@
                             <div class="alert alert-light border shadow-sm p-3 mb-4">
                                 <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-chart-line text-primary me-2"></i> ข้อมูลสถิติเชิงประจักษ์ (Empirical Evidence) ประจำปี:</h6>
                                 <div class="row g-2 small">
-                                    <div class="col-6 col-md-3">
-                                        <div class="p-2 border rounded bg-white">
+                                    <div class="col-6 col-md">
+                                        <div class="p-2 border rounded bg-white text-center">
                                             <span class="text-muted d-block">วิ่งงานเสร็จสิ้น</span>
                                             <strong class="fs-6 text-dark" id="statCompletedTrips">0</strong> คิว
                                         </div>
                                     </div>
-                                    <div class="col-6 col-md-3">
-                                        <div class="p-2 border rounded bg-white">
-                                            <span class="text-muted d-block">บันทึกข้อมูลเข้า-ออก</span>
+                                    <div class="col-6 col-md">
+                                        <div class="p-2 border rounded bg-white text-center">
+                                            <span class="text-muted d-block">บันทึกเข้า-ออก</span>
                                             <strong class="fs-6 text-success" id="statUsageLogs">0</strong> ครั้ง
                                         </div>
                                     </div>
-                                    <div class="col-6 col-md-3">
-                                        <div class="p-2 border rounded bg-white">
+                                    <div class="col-6 col-md">
+                                        <div class="p-2 border rounded bg-white text-center">
                                             <span class="text-muted d-block">ลืมบันทึกไมล์</span>
                                             <strong class="fs-6 text-danger" id="statMissedLogs">0</strong> ครั้ง
                                         </div>
                                     </div>
-                                    <div class="col-6 col-md-3">
-                                        <div class="p-2 border rounded bg-white">
-                                            <span class="text-muted d-block">ลืมไมล์เติมน้ำมัน</span>
+                                    <div class="col-6 col-md">
+                                        <div class="p-2 border rounded bg-white text-center">
+                                            <span class="text-muted d-block">ไมล์ผิดปกติ/มั่ว</span>
+                                            <strong class="fs-6 text-danger fw-bold" id="statAnomalousLogs">0</strong> ครั้ง
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md">
+                                        <div class="p-2 border rounded bg-white text-center">
+                                            <span class="text-muted d-block">ลืมไมล์น้ำมัน</span>
                                             <strong class="fs-6 text-warning text-dark" id="statMissedFuelLogs">0</strong> ครั้ง
                                         </div>
                                     </div>
@@ -453,6 +460,7 @@
                         const totalScore = pWeighted + cWeighted;
                         const trips = e.usage_stats?.total_completed_trips || 0;
                         const missed = e.usage_stats?.missed_logs || 0;
+                        const anomalous = e.usage_stats?.anomalous_logs || m.anomalous_count || 0;
                         const expected = trips * 2;
                         const complianceRate = expected > 0 ? (((expected - missed) / expected) * 100) : 100;
 
@@ -461,6 +469,7 @@
                             trips: trips,
                             km: m.comparative?.driver_km || 0,
                             missed: missed,
+                            anomalous: anomalous,
                             complianceRate: Math.max(0, complianceRate),
                             passengerScore: pWeighted,
                             committeeScore: cWeighted,
@@ -478,14 +487,14 @@
 
             } catch (err) {
                 console.error(err);
-                tbody.innerHTML = '<tr><td colspan="10" class="text-center text-danger py-3">เกิดข้อผิดพลาดในการโหลดตารางเปรียบเทียบ</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" class="text-center text-danger py-3">เกิดข้อผิดพลาดในการโหลดตารางเปรียบเทียบ</td></tr>';
             }
         }
 
         function renderComparativeTable(rows) {
             const tbody = document.getElementById('comparativeTableBody');
             if (rows.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-3">ไม่พบข้อมูล</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-3">ไม่พบข้อมูล</td></tr>';
                 return;
             }
 
@@ -505,6 +514,7 @@
                     <td class="fw-bold">${r.trips.toLocaleString()}</td>
                     <td>${r.km.toLocaleString()}</td>
                     <td class="${r.missed > 0 ? 'text-danger fw-bold' : 'text-success'}">${r.missed.toLocaleString()}</td>
+                    <td class="${r.anomalous > 0 ? 'text-danger fw-bold bg-danger bg-opacity-10' : 'text-success'}">${r.anomalous.toLocaleString()}</td>
                     <td>
                         <div class="d-flex align-items-center justify-content-center gap-1">
                             <span class="small fw-bold">${r.complianceRate.toFixed(1)}%</span>
@@ -528,9 +538,10 @@
                 tr.innerHTML = `
                     <td>${idx+1}</td>
                     <td class="text-start fw-bold">${r.driver.title || ''}${r.driver.first_name || r.driver.name} ${r.driver.last_name || ''}</td>
-                    <td>รถตู้ส่วนกลาง</td>
+                    <td>รถยนต์โรงเรียน</td>
                     <td>${r.trips}</td>
                     <td class="${r.missed > 0 ? 'text-danger fw-bold' : ''}">${r.missed}</td>
+                    <td class="${r.anomalous > 0 ? 'text-danger fw-bold' : ''}">${r.anomalous}</td>
                     <td>${r.passengerScore.toFixed(2)}</td>
                     <td>${r.committeeScore.toFixed(2)}</td>
                     <td class="fw-bold fs-6">${r.totalScore.toFixed(2)}</td>
@@ -587,6 +598,7 @@
                     document.getElementById('statCompletedTrips').textContent = data.usage_stats.total_completed_trips || 0;
                     document.getElementById('statUsageLogs').textContent = data.usage_stats.total_logs || 0;
                     document.getElementById('statMissedLogs').textContent = data.usage_stats.missed_logs || 0;
+                    document.getElementById('statAnomalousLogs').textContent = data.usage_stats.anomalous_logs || 0;
                     document.getElementById('statMissedFuelLogs').textContent = data.usage_stats.missed_fuel_mileage || 0;
                 }
             } catch (err) {

@@ -58,6 +58,37 @@ export async function onRequest(context) {
           (SELECT COUNT(id) FROM usage_records WHERE driver_id = ? AND record_type = 'refuel' AND (mileage IS NULL OR mileage = 0 OR mileage = '') AND substr(datetime, 1, 10) >= ? AND substr(datetime, 1, 10) <= ?) as missed_fuel_mileage
       `).bind(driverId, fiscalStart, fiscalEnd, driverId, fiscalStart, fiscalEnd, driverId, fiscalStart, fiscalEnd).first();
 
+      // Check mileage anomalies (negative mileage, zero distance)
+      const anomalyCheck = await db.prepare(`
+        SELECT 
+          q.id as queue_id,
+          q.date,
+          q.mission,
+          q.destination,
+          c.license_plate,
+          ur_dep.mileage as dep_mileage,
+          ur_ret.mileage as ret_mileage
+        FROM queue q
+        LEFT JOIN cars c ON q.car_id = c.id
+        LEFT JOIN usage_records ur_dep ON q.id = ur_dep.queue_id AND ur_dep.record_type = 'departure'
+        LEFT JOIN usage_records ur_ret ON q.id = ur_ret.queue_id AND ur_ret.record_type = 'return'
+        WHERE q.driver_id = ? AND q.status = 'completed' AND q.date >= ? AND q.date <= ?
+        ORDER BY q.date ASC
+      `).bind(driverId, fiscalStart, fiscalEnd).all();
+
+      let anomalousCount = 0;
+      if (anomalyCheck.results) {
+        anomalyCheck.results.forEach(trip => {
+          const dep = trip.dep_mileage;
+          const ret = trip.ret_mileage;
+          if (dep !== null && ret !== null && dep !== undefined && ret !== undefined) {
+            if (ret < dep || (ret === dep && dep > 0)) {
+              anomalousCount++;
+            }
+          }
+        });
+      }
+
       const totalCompleted = usageStatsRaw.total_completed_trips || 0;
       const totalLogs = usageStatsRaw.total_logs || 0;
       const expectedLogs = totalCompleted * 2; // Departure and Return
@@ -67,7 +98,8 @@ export async function onRequest(context) {
           total_completed_trips: totalCompleted,
           total_logs: totalLogs,
           missed_logs: missedLogs,
-          missed_fuel_mileage: usageStatsRaw.missed_fuel_mileage || 0
+          missed_fuel_mileage: usageStatsRaw.missed_fuel_mileage || 0,
+          anomalous_logs: anomalousCount
       };
 
       // Calculate combined score
@@ -143,11 +175,15 @@ export async function onRequest(context) {
                 q.mission,
                 q.destination,
                 c.license_plate,
+                ur_dep.mileage as dep_mileage,
+                ur_ret.mileage as ret_mileage,
                 MAX(CASE WHEN u.record_type = 'departure' THEN 1 ELSE 0 END) as has_departure,
                 MAX(CASE WHEN u.record_type = 'return' THEN 1 ELSE 0 END) as has_return
             FROM queue q
             LEFT JOIN cars c ON q.car_id = c.id
             LEFT JOIN usage_records u ON q.id = u.queue_id
+            LEFT JOIN usage_records ur_dep ON q.id = ur_dep.queue_id AND ur_dep.record_type = 'departure'
+            LEFT JOIN usage_records ur_ret ON q.id = ur_ret.queue_id AND ur_ret.record_type = 'return'
             WHERE q.driver_id = ? AND q.status = 'completed' AND q.date >= ? AND q.date <= ?
             GROUP BY q.id
             ORDER BY q.date ASC
@@ -155,12 +191,13 @@ export async function onRequest(context) {
 
         const monthlyStats = {};
         const missedDetails = [];
+        const anomalousDetails = [];
 
         if (queues.results) {
             queues.results.forEach(q => {
                 const monthKey = q.date.substring(0, 7); // YYYY-MM
                 if (!monthlyStats[monthKey]) {
-                    monthlyStats[monthKey] = { month: monthKey, completed: 0, has_logs: 0, missed_logs: 0 };
+                    monthlyStats[monthKey] = { month: monthKey, completed: 0, has_logs: 0, missed_logs: 0, anomalous_logs: 0 };
                 }
                 
                 monthlyStats[monthKey].completed += 1;
@@ -174,20 +211,44 @@ export async function onRequest(context) {
                 monthlyStats[monthKey].has_logs += logsForThisTrip;
                 monthlyStats[monthKey].missed_logs += missedForThisTrip;
 
-                if (missedForThisTrip > 0) {
-                    let displayMission = q.mission;
-                    if (q.mission === 'บันทึกผ่าน QR') {
-                        displayMission = q.destination ? q.destination : 'ไม่ระบุสถานที่';
-                    } else if (q.destination) {
-                        displayMission = `${q.mission} (${q.destination})`;
-                    }
+                let displayMission = q.mission || 'ปฏิบัติงานตามคิว';
+                if (q.mission === 'บันทึกผ่าน QR') {
+                    displayMission = q.destination ? q.destination : 'ไม่ระบุสถานที่';
+                } else if (q.destination) {
+                    displayMission = `${q.mission} (${q.destination})`;
+                }
 
+                if (missedForThisTrip > 0) {
                     missedDetails.push({
                         date: q.date,
                         queue_id: q.queue_id,
                         mission: displayMission,
-                        car: q.license_plate,
+                        car: q.license_plate || '-',
                         missed: missedParts.join(', ')
+                    });
+                }
+
+                // Check Anomalous Mileage (Retrograde or Zero Distance)
+                const dep = q.dep_mileage;
+                const ret = q.ret_mileage;
+                let anomalyReasons = [];
+
+                if (dep !== null && ret !== null && dep !== undefined && ret !== undefined) {
+                    if (ret < dep) {
+                        anomalyReasons.push(`ไมล์ถอยหลัง (ขาออก: ${dep.toLocaleString()} / ขากลับ: ${ret.toLocaleString()})`);
+                    } else if (ret === dep && dep > 0) {
+                        anomalyReasons.push(`ไมล์เท่าเดิมเป๊ะ 0 กม. (ขาออก: ${dep.toLocaleString()} / ขากลับ: ${ret.toLocaleString()})`);
+                    }
+                }
+
+                if (anomalyReasons.length > 0) {
+                    monthlyStats[monthKey].anomalous_logs = (monthlyStats[monthKey].anomalous_logs || 0) + 1;
+                    anomalousDetails.push({
+                        date: q.date,
+                        queue_id: q.queue_id,
+                        mission: displayMission,
+                        car: q.license_plate || '-',
+                        reason: anomalyReasons.join(', ')
                     });
                 }
             });
@@ -254,6 +315,8 @@ export async function onRequest(context) {
             academic_year: year,
             monthly_stats: Object.values(monthlyStats),
             missed_details: missedDetails,
+            anomalous_count: anomalousDetails.length,
+            anomalous_details: anomalousDetails,
             comparative: {
                 all_queues: allDriversQueues,
                 driver_queues: driverQueueCount,
