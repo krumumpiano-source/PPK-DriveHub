@@ -1,6 +1,6 @@
 // sw.js — PPK DriveHub Service Worker
-// v13: Onboarding registration fields update
-var CACHE_NAME='ppk-v13';
+// v14: Evaluation Hub System
+var CACHE_NAME='ppk-v14';
 // Only pre-cache truly static fallback assets. JS/CSS use network-first below.
 var STATIC_ASSETS=[
   '/manifest.json'
