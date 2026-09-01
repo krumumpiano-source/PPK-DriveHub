@@ -878,6 +878,50 @@
       border-color: #00897b;
       box-shadow: 0 3px 8px rgba(0, 137, 123, 0.35);
     }
+    .driver-group-section {
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid #e0f2f1;
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+    }
+    .driver-group-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .driver-badge {
+      font-size: 0.85em;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .driver-badge.primary-badge {
+      color: #00695c;
+      background: #e0f2f1;
+      border: 1px solid #b2dfdb;
+    }
+    .driver-badge.reserve-badge {
+      color: #b78103;
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+    }
+    .selection-card.driver-card .select-btn.reserve-btn {
+      border-style: dashed;
+      border-color: #ffd54f;
+    }
+    .selection-card.driver-card .select-btn.reserve-btn:hover:not(.selected) {
+      background: #fffde7;
+      border-color: #ffb74d;
+    }
+    .selection-card.driver-card .select-btn.reserve-btn.selected {
+      background: #f57c00;
+      border-color: #f57c00;
+      border-style: solid;
+      box-shadow: 0 3px 8px rgba(245, 124, 0, 0.35);
+    }
     .select-btn:hover:not(.selected) {
       border-color: #81d4fa;
       background: #f0f9ff;
@@ -1094,7 +1138,20 @@
               <span class="selection-card-hint">(คลิกเพื่อเลือก / คลิกซ้ำเพื่อยกเลิก)</span>
             </div>
             <input type="hidden" id="create_driver_id" required>
-            <div id="create_driver_grid" class="select-btn-grid"></div>
+            
+            <div class="driver-group-section">
+              <div class="driver-group-header">
+                <span class="driver-badge primary-badge">🟢 พนักงานขับรถหลัก</span>
+              </div>
+              <div id="create_driver_grid_primary" class="select-btn-grid"></div>
+            </div>
+
+            <div class="driver-group-section" style="margin-top: 14px;">
+              <div class="driver-group-header">
+                <span class="driver-badge reserve-badge">🔄 พนักงานขับรถสำรอง / อื่นๆ</span>
+              </div>
+              <div id="create_driver_grid_reserve" class="select-btn-grid"></div>
+            </div>
           </div>
         </div>
 
@@ -1240,7 +1297,20 @@
               <span class="selection-card-hint">(คลิกเพื่อเลือก / คลิกซ้ำเพื่อยกเลิก)</span>
             </div>
             <input type="hidden" id="edit_driver_id" required>
-            <div id="edit_driver_grid" class="select-btn-grid"></div>
+            
+            <div class="driver-group-section">
+              <div class="driver-group-header">
+                <span class="driver-badge primary-badge">🟢 พนักงานขับรถหลัก</span>
+              </div>
+              <div id="edit_driver_grid_primary" class="select-btn-grid"></div>
+            </div>
+
+            <div class="driver-group-section" style="margin-top: 14px;">
+              <div class="driver-group-header">
+                <span class="driver-badge reserve-badge">🔄 พนักงานขับรถสำรอง / อื่นๆ</span>
+              </div>
+              <div id="edit_driver_grid_reserve" class="select-btn-grid"></div>
+            </div>
           </div>
         </div>
 
@@ -1904,52 +1974,61 @@
     }
 
     function populateDriverSelects() {
-      var createGrid = document.getElementById('create_driver_grid');
-      var createInput = document.getElementById('create_driver_id');
-      if (createGrid && createInput) {
-        createGrid.innerHTML = '';
-        drivers.forEach(function (driver) {
+      function renderDriverButtons(targetGrid, driverList, inputEl, allGrids) {
+        if (!targetGrid) return;
+        targetGrid.innerHTML = '';
+        if (!driverList || driverList.length === 0) {
+          targetGrid.innerHTML = '<div style="color: #999; font-size: 0.85em; grid-column: 1/-1; padding: 6px;">ไม่มีข้อมูล</div>';
+          return;
+        }
+        driverList.forEach(function (driver) {
           var firstName = getDriverFirstName(driver);
-          var btn1 = document.createElement('div');
-          btn1.className = 'select-btn' + (createInput.value === driver.id ? ' selected' : '');
-          btn1.textContent = firstName;
-          btn1.onclick = function() {
-            if (btn1.classList.contains('selected')) {
-              btn1.classList.remove('selected');
-              createInput.value = '';
+          var isReserve = (driver.assignment_type && driver.assignment_type !== 'primary');
+          var btn = document.createElement('div');
+          btn.className = 'select-btn' + (isReserve ? ' reserve-btn' : '') + (inputEl.value === driver.id ? ' selected' : '');
+          btn.textContent = firstName;
+          btn.onclick = function() {
+            if (btn.classList.contains('selected')) {
+              btn.classList.remove('selected');
+              inputEl.value = '';
             } else {
-              Array.from(createGrid.children).forEach(function(c) { c.classList.remove('selected'); });
-              btn1.classList.add('selected');
-              createInput.value = driver.id;
+              allGrids.forEach(function(g) {
+                if (g) Array.from(g.children).forEach(function(c) { c.classList.remove('selected'); });
+              });
+              btn.classList.add('selected');
+              inputEl.value = driver.id;
             }
-            createInput.dispatchEvent(new Event('change'));
+            inputEl.dispatchEvent(new Event('change'));
           };
-          createGrid.appendChild(btn1);
+          targetGrid.appendChild(btn);
         });
       }
 
-      var editGrid = document.getElementById('edit_driver_grid');
+      var primaryDrivers = drivers.filter(function(d) {
+        return !d.assignment_type || d.assignment_type === 'primary';
+      });
+      var reserveDrivers = drivers.filter(function(d) {
+        return d.assignment_type && d.assignment_type !== 'primary';
+      });
+
+      // Create modal
+      var createInput = document.getElementById('create_driver_id');
+      var createPrimaryGrid = document.getElementById('create_driver_grid_primary');
+      var createReserveGrid = document.getElementById('create_driver_grid_reserve');
+      if (createInput) {
+        var createGrids = [createPrimaryGrid, createReserveGrid];
+        renderDriverButtons(createPrimaryGrid, primaryDrivers, createInput, createGrids);
+        renderDriverButtons(createReserveGrid, reserveDrivers, createInput, createGrids);
+      }
+
+      // Edit modal
       var editInput = document.getElementById('edit_driver_id');
-      if (editGrid && editInput) {
-        editGrid.innerHTML = '';
-        drivers.forEach(function (driver) {
-          var firstName = getDriverFirstName(driver);
-          var btn2 = document.createElement('div');
-          btn2.className = 'select-btn' + (editInput.value === driver.id ? ' selected' : '');
-          btn2.textContent = firstName;
-          btn2.onclick = function() {
-            if (btn2.classList.contains('selected')) {
-              btn2.classList.remove('selected');
-              editInput.value = '';
-            } else {
-              Array.from(editGrid.children).forEach(function(c) { c.classList.remove('selected'); });
-              btn2.classList.add('selected');
-              editInput.value = driver.id;
-            }
-            editInput.dispatchEvent(new Event('change'));
-          };
-          editGrid.appendChild(btn2);
-        });
+      var editPrimaryGrid = document.getElementById('edit_driver_grid_primary');
+      var editReserveGrid = document.getElementById('edit_driver_grid_reserve');
+      if (editInput) {
+        var editGrids = [editPrimaryGrid, editReserveGrid];
+        renderDriverButtons(editPrimaryGrid, primaryDrivers, editInput, editGrids);
+        renderDriverButtons(editReserveGrid, reserveDrivers, editInput, editGrids);
       }
     }
 
@@ -2400,8 +2479,10 @@
       if (cDriver) cDriver.value = '';
       var cCarGrid = document.getElementById('create_car_grid');
       if (cCarGrid) Array.from(cCarGrid.children).forEach(function(c) { c.classList.remove('selected'); });
-      var cDriverGrid = document.getElementById('create_driver_grid');
-      if (cDriverGrid) Array.from(cDriverGrid.children).forEach(function(c) { c.classList.remove('selected'); });
+      var cDriverGridPrimary = document.getElementById('create_driver_grid_primary');
+      if (cDriverGridPrimary) Array.from(cDriverGridPrimary.children).forEach(function(c) { c.classList.remove('selected'); });
+      var cDriverGridReserve = document.getElementById('create_driver_grid_reserve');
+      if (cDriverGridReserve) Array.from(cDriverGridReserve.children).forEach(function(c) { c.classList.remove('selected'); });
       updateCarWarning('create_car_id', 'createCarWarning');
     }
 
