@@ -1736,47 +1736,52 @@
     }
 
     function populateCarSelects() {
-      var createSelect = document.getElementById('create_car_id');
-      var editSelect = document.getElementById('edit_car_id');
-      if (!createSelect || !editSelect) return;
-      createSelect.innerHTML = '';
-      editSelect.innerHTML = '';
-      var o1 = document.createElement('option');
-      o1.value = '';
-      o1.textContent = '-- เลือกรถ --';
-      createSelect.appendChild(o1);
-      var o2 = document.createElement('option');
-      o2.value = '';
-      o2.textContent = '-- เลือกรถ --';
-      editSelect.appendChild(o2);
+      var createGrid = document.getElementById('create_car_grid');
+      var editGrid = document.getElementById('edit_car_grid');
+      var createInput = document.getElementById('create_car_id');
+      var editInput = document.getElementById('edit_car_id');
+      if (!createGrid || !editGrid) return;
+      createGrid.innerHTML = '';
+      editGrid.innerHTML = '';
       var editCarIdToInclude = (editingQueueData && editingQueueData.car_id) ? editingQueueData.car_id : null;
       vehicles.forEach(function (vehicle) {
         var includeCreate = includeVehicleInQueueList(vehicle);
         var includeEdit = includeCreate || (editCarIdToInclude === vehicle.id);
         if (!includeCreate && !includeEdit) return;
-        var displayText = vehicle.license_plate + ' - ' + (vehicle.brand || '') + ' ' + (vehicle.model || '');
-        if (vehicle.seat_count) displayText += ' (' + vehicle.seat_count + ' ที่นั่ง)';
+        
+        var displayText = vehicle.license_plate;
         var cat = vehicle.vehicle_category || 'primary';
         var st = vehicle.status || 'active';
-        if (cat === 'support') displayText += ' [รถสนับสนุน]';
-        if (st === 'inactive') displayText += ' [ยกเลิกใช้]';
+        
         if (includeCreate) {
-          var opt1 = document.createElement('option');
-          opt1.value = vehicle.id;
-          opt1.textContent = displayText;
-          opt1.setAttribute('data-seat-count', vehicle.seat_count || '');
-          opt1.setAttribute('data-vehicle-category', cat);
-          opt1.setAttribute('data-status', st);
-          createSelect.appendChild(opt1);
+          var btn1 = document.createElement('div');
+          btn1.className = 'select-btn' + (createInput.value === vehicle.id ? ' selected' : '');
+          btn1.textContent = displayText;
+          if (st === 'inactive') btn1.style.opacity = '0.6';
+          else if (cat === 'support') btn1.style.borderStyle = 'dashed';
+          
+          btn1.onclick = function() {
+            Array.from(createGrid.children).forEach(function(c) { c.classList.remove('selected'); });
+            btn1.classList.add('selected');
+            createInput.value = vehicle.id;
+            createInput.dispatchEvent(new Event('change'));
+          };
+          createGrid.appendChild(btn1);
         }
         if (includeEdit) {
-          var opt2 = document.createElement('option');
-          opt2.value = vehicle.id;
-          opt2.textContent = displayText;
-          opt2.setAttribute('data-seat-count', vehicle.seat_count || '');
-          opt2.setAttribute('data-vehicle-category', cat);
-          opt2.setAttribute('data-status', st);
-          editSelect.appendChild(opt2);
+          var btn2 = document.createElement('div');
+          btn2.className = 'select-btn' + (editInput.value === vehicle.id ? ' selected' : '');
+          btn2.textContent = displayText;
+          if (st === 'inactive') btn2.style.opacity = '0.6';
+          else if (cat === 'support') btn2.style.borderStyle = 'dashed';
+          
+          btn2.onclick = function() {
+            Array.from(editGrid.children).forEach(function(c) { c.classList.remove('selected'); });
+            btn2.classList.add('selected');
+            editInput.value = vehicle.id;
+            editInput.dispatchEvent(new Event('change'));
+          };
+          editGrid.appendChild(btn2);
         }
       });
       updateCarWarning('create_car_id', 'createCarWarning');
@@ -1848,26 +1853,42 @@
             driversMap[d.id] = d;
           });
 
-          // Populate create select
-          var createSelect = document.getElementById('create_driver_id');
-          if (!createSelect) return;
-          createSelect.innerHTML = '<option value="">-- เลือกคนขับ --</option>';
+          // Populate create grid
+          var createGrid = document.getElementById('create_driver_grid');
+          var createInput = document.getElementById('create_driver_id');
+          if (!createGrid) return;
+          createGrid.innerHTML = '';
           drivers.forEach(function (driver) {
-            var option = document.createElement('option');
-            option.value = driver.id;
-            option.textContent = driver.name || '-';
-            createSelect.appendChild(option);
+            var firstName = (driver.name || '-').split(' ')[0];
+            var btn1 = document.createElement('div');
+            btn1.className = 'select-btn' + (createInput.value === driver.id ? ' selected' : '');
+            btn1.textContent = firstName;
+            btn1.onclick = function() {
+              Array.from(createGrid.children).forEach(function(c) { c.classList.remove('selected'); });
+              btn1.classList.add('selected');
+              createInput.value = driver.id;
+              createInput.dispatchEvent(new Event('change'));
+            };
+            createGrid.appendChild(btn1);
           });
 
-          // Populate edit select
-          var editSelect = document.getElementById('edit_driver_id');
-          if (!editSelect) return;
-          editSelect.innerHTML = '<option value="">-- เลือกคนขับ --</option>';
+          // Populate edit grid
+          var editGrid = document.getElementById('edit_driver_grid');
+          var editInput = document.getElementById('edit_driver_id');
+          if (!editGrid) return;
+          editGrid.innerHTML = '';
           drivers.forEach(function (driver) {
-            var option = document.createElement('option');
-            option.value = driver.id;
-            option.textContent = driver.name || '-';
-            editSelect.appendChild(option);
+            var firstName = (driver.name || '-').split(' ')[0];
+            var btn2 = document.createElement('div');
+            btn2.className = 'select-btn' + (editInput.value === driver.id ? ' selected' : '');
+            btn2.textContent = firstName;
+            btn2.onclick = function() {
+              Array.from(editGrid.children).forEach(function(c) { c.classList.remove('selected'); });
+              btn2.classList.add('selected');
+              editInput.value = driver.id;
+              editInput.dispatchEvent(new Event('change'));
+            };
+            editGrid.appendChild(btn2);
           });
         }
       } catch (error) {
