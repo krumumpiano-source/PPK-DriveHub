@@ -802,10 +802,87 @@
       .step-circle { width: 28px; height: 28px; }
       .stepper-container::before { top: 13px; }
     }
-    .select-btn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 5px; }
-    .select-btn { padding: 10px 8px; border: 2px solid #ddd; border-radius: var(--radius-md); background: white; cursor: pointer; text-align: center; font-weight: 600; transition: all 0.3s; font-size: 0.9em; min-height: 44px; display: flex; align-items: center; justify-content: center; word-break: break-word; user-select: none; }
-    .select-btn.selected { background: #4fc3f7; color: white; border-color: #4fc3f7; }
-    .select-btn:hover:not(.selected) { border-color: #b3e5fc; background: #f1f9ff; }
+    .selection-card {
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: var(--radius-lg);
+      padding: 16px 18px;
+      margin-bottom: 18px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+      transition: all 0.2s ease;
+    }
+    .selection-card.vehicle-card {
+      border-left: 6px solid #0288d1;
+      background: #fbfdff;
+    }
+    .selection-card.driver-card {
+      border-left: 6px solid #00897b;
+      background: #fbfdfc;
+      margin-bottom: 0;
+    }
+    .selection-card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      font-weight: 700;
+      font-size: 1.05em;
+      color: var(--color-text);
+      flex-wrap: wrap;
+    }
+    .selection-card.vehicle-card .selection-card-title {
+      color: #0277bd;
+    }
+    .selection-card.driver-card .selection-card-title {
+      color: #00695c;
+    }
+    .selection-card-hint {
+      font-size: 0.8em;
+      font-weight: 400;
+      color: var(--color-text-muted);
+      margin-left: auto;
+    }
+    .select-btn-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .select-btn {
+      padding: 10px 8px;
+      border: 2px solid #e2e8f0;
+      border-radius: var(--radius-md);
+      background: white;
+      cursor: pointer;
+      text-align: center;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      font-size: 0.95em;
+      min-height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      word-break: break-word;
+      user-select: none;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .selection-card.vehicle-card .select-btn.selected {
+      background: #0288d1;
+      color: white;
+      border-color: #0288d1;
+      box-shadow: 0 3px 8px rgba(2, 136, 209, 0.35);
+    }
+    .selection-card.driver-card .select-btn.selected {
+      background: #00897b;
+      color: white;
+      border-color: #00897b;
+      box-shadow: 0 3px 8px rgba(0, 137, 123, 0.35);
+    }
+    .select-btn:hover:not(.selected) {
+      border-color: #81d4fa;
+      background: #f0f9ff;
+      transform: translateY(-1px);
+    }
   </style>
 
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -987,29 +1064,37 @@
         </div>
 
         <div class="form-section form-step" id="createStep2">
-          <div class="form-section-title">🚗 รถและคนขับ</div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>รถ <span class="required">*</span></label>
-              <input type="hidden" id="create_car_id" required onchange="updateCarWarning('create_car_id', 'createCarWarning'); checkCreatePassengerCount();">
-              <div id="create_car_grid" class="select-btn-grid"></div>
-              <div class="vehicle-filter-toggle">
-                <label class="toggle-option" for="create_show_all_vehicles">
-                  <input class="toggle-option-input" type="checkbox" id="create_show_all_vehicles" onchange="toggleShowAllVehicles()">
-                  <span class="toggle-option-control"></span>
-                  <span class="toggle-option-text">แสดงรถเพิ่มเติม</span>
-                </label>
-                <div class="toggle-option-help">รวมรถสนับสนุนและรถที่ยกเลิกใช้งาน</div>
-              </div>
-              <div id="createCarWarning"
-                style="display:none; margin-top:8px; padding:8px; background:#fff3cd; color:#856404; border-radius:var(--radius-md); font-size:0.9em; font-weight:600;">
-              </div>
+          <div class="form-section-title">🚗 เลือกรถและคนขับ</div>
+          
+          <div class="selection-card vehicle-card">
+            <div class="selection-card-header">
+              <span class="selection-card-title">🚗 เลือกรถ</span>
+              <span class="required">*</span>
+              <span class="selection-card-hint">(คลิกเพื่อเลือก / คลิกซ้ำเพื่อยกเลิก)</span>
             </div>
-            <div class="form-group">
-              <label>คนขับ <span class="required">*</span></label>
-              <input type="hidden" id="create_driver_id" required>
-              <div id="create_driver_grid" class="select-btn-grid"></div>
+            <input type="hidden" id="create_car_id" required onchange="updateCarWarning('create_car_id', 'createCarWarning'); checkCreatePassengerCount();">
+            <div id="create_car_grid" class="select-btn-grid"></div>
+            <div class="vehicle-filter-toggle">
+              <label class="toggle-option" for="create_show_all_vehicles">
+                <input class="toggle-option-input" type="checkbox" id="create_show_all_vehicles" onchange="toggleShowAllVehicles()">
+                <span class="toggle-option-control"></span>
+                <span class="toggle-option-text">แสดงรถเพิ่มเติม</span>
+              </label>
+              <div class="toggle-option-help">รวมรถสนับสนุนและรถที่ยกเลิกใช้งาน</div>
             </div>
+            <div id="createCarWarning"
+              style="display:none; margin-top:8px; padding:8px; background:#fff3cd; color:#856404; border-radius:var(--radius-md); font-size:0.9em; font-weight:600;">
+            </div>
+          </div>
+
+          <div class="selection-card driver-card">
+            <div class="selection-card-header">
+              <span class="selection-card-title">👤 เลือกพนักงานขับรถ</span>
+              <span class="required">*</span>
+              <span class="selection-card-hint">(คลิกเพื่อเลือก / คลิกซ้ำเพื่อยกเลิก)</span>
+            </div>
+            <input type="hidden" id="create_driver_id" required>
+            <div id="create_driver_grid" class="select-btn-grid"></div>
           </div>
         </div>
 
@@ -1125,29 +1210,37 @@
         </div>
 
         <div class="form-section form-step" id="editStep2">
-          <div class="form-section-title">🚗 รถและคนขับ</div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>รถ <span class="required">*</span></label>
-              <input type="hidden" id="edit_car_id" required onchange="updateCarWarning('edit_car_id', 'editCarWarning'); if(typeof checkEditPassengerCount === 'function') checkEditPassengerCount();">
-              <div id="edit_car_grid" class="select-btn-grid"></div>
-              <div class="vehicle-filter-toggle">
-                <label class="toggle-option" for="edit_show_all_vehicles">
-                  <input class="toggle-option-input" type="checkbox" id="edit_show_all_vehicles" onchange="toggleShowAllVehicles()">
-                  <span class="toggle-option-control"></span>
-                  <span class="toggle-option-text">แสดงรถเพิ่มเติม</span>
-                </label>
-                <div class="toggle-option-help">รวมรถสนับสนุนและรถที่ยกเลิกใช้งาน</div>
-              </div>
-              <div id="editCarWarning"
-                style="display:none; margin-top:8px; padding:8px; background:#fff3cd; color:#856404; border-radius:var(--radius-md); font-size:0.9em; font-weight:600;">
-              </div>
+          <div class="form-section-title">🚗 เลือกรถและคนขับ</div>
+
+          <div class="selection-card vehicle-card">
+            <div class="selection-card-header">
+              <span class="selection-card-title">🚗 เลือกรถ</span>
+              <span class="required">*</span>
+              <span class="selection-card-hint">(คลิกเพื่อเลือก / คลิกซ้ำเพื่อยกเลิก)</span>
             </div>
-            <div class="form-group">
-              <label>คนขับ <span class="required">*</span></label>
-              <input type="hidden" id="edit_driver_id" required>
-              <div id="edit_driver_grid" class="select-btn-grid"></div>
+            <input type="hidden" id="edit_car_id" required onchange="updateCarWarning('edit_car_id', 'editCarWarning'); if(typeof checkEditPassengerCount === 'function') checkEditPassengerCount();">
+            <div id="edit_car_grid" class="select-btn-grid"></div>
+            <div class="vehicle-filter-toggle">
+              <label class="toggle-option" for="edit_show_all_vehicles">
+                <input class="toggle-option-input" type="checkbox" id="edit_show_all_vehicles" onchange="toggleShowAllVehicles()">
+                <span class="toggle-option-control"></span>
+                <span class="toggle-option-text">แสดงรถเพิ่มเติม</span>
+              </label>
+              <div class="toggle-option-help">รวมรถสนับสนุนและรถที่ยกเลิกใช้งาน</div>
             </div>
+            <div id="editCarWarning"
+              style="display:none; margin-top:8px; padding:8px; background:#fff3cd; color:#856404; border-radius:var(--radius-md); font-size:0.9em; font-weight:600;">
+            </div>
+          </div>
+
+          <div class="selection-card driver-card">
+            <div class="selection-card-header">
+              <span class="selection-card-title">👤 เลือกพนักงานขับรถ</span>
+              <span class="required">*</span>
+              <span class="selection-card-hint">(คลิกเพื่อเลือก / คลิกซ้ำเพื่อยกเลิก)</span>
+            </div>
+            <input type="hidden" id="edit_driver_id" required>
+            <div id="edit_driver_grid" class="select-btn-grid"></div>
           </div>
         </div>
 
@@ -1735,6 +1828,18 @@
       return category === 'primary' && status === 'active';
     }
 
+    function getDriverFirstName(driver) {
+      if (!driver) return '-';
+      if (driver.first_name && driver.first_name.trim()) return driver.first_name.trim();
+      var name = (driver.name || '').trim();
+      if (name.startsWith('นางสาว')) {
+        name = name.slice(6).trim();
+      } else if (name.startsWith('นาง') || name.startsWith('นาย')) {
+        name = name.slice(3).trim();
+      }
+      return name.split(' ')[0] || driver.name || '-';
+    }
+
     function populateCarSelects() {
       var createGrid = document.getElementById('create_car_grid');
       var editGrid = document.getElementById('edit_car_grid');
@@ -1761,9 +1866,14 @@
           else if (cat === 'support') btn1.style.borderStyle = 'dashed';
           
           btn1.onclick = function() {
-            Array.from(createGrid.children).forEach(function(c) { c.classList.remove('selected'); });
-            btn1.classList.add('selected');
-            createInput.value = vehicle.id;
+            if (btn1.classList.contains('selected')) {
+              btn1.classList.remove('selected');
+              createInput.value = '';
+            } else {
+              Array.from(createGrid.children).forEach(function(c) { c.classList.remove('selected'); });
+              btn1.classList.add('selected');
+              createInput.value = vehicle.id;
+            }
             createInput.dispatchEvent(new Event('change'));
           };
           createGrid.appendChild(btn1);
@@ -1776,9 +1886,14 @@
           else if (cat === 'support') btn2.style.borderStyle = 'dashed';
           
           btn2.onclick = function() {
-            Array.from(editGrid.children).forEach(function(c) { c.classList.remove('selected'); });
-            btn2.classList.add('selected');
-            editInput.value = vehicle.id;
+            if (btn2.classList.contains('selected')) {
+              btn2.classList.remove('selected');
+              editInput.value = '';
+            } else {
+              Array.from(editGrid.children).forEach(function(c) { c.classList.remove('selected'); });
+              btn2.classList.add('selected');
+              editInput.value = vehicle.id;
+            }
             editInput.dispatchEvent(new Event('change'));
           };
           editGrid.appendChild(btn2);
@@ -1786,6 +1901,56 @@
       });
       updateCarWarning('create_car_id', 'createCarWarning');
       updateCarWarning('edit_car_id', 'editCarWarning');
+    }
+
+    function populateDriverSelects() {
+      var createGrid = document.getElementById('create_driver_grid');
+      var createInput = document.getElementById('create_driver_id');
+      if (createGrid && createInput) {
+        createGrid.innerHTML = '';
+        drivers.forEach(function (driver) {
+          var firstName = getDriverFirstName(driver);
+          var btn1 = document.createElement('div');
+          btn1.className = 'select-btn' + (createInput.value === driver.id ? ' selected' : '');
+          btn1.textContent = firstName;
+          btn1.onclick = function() {
+            if (btn1.classList.contains('selected')) {
+              btn1.classList.remove('selected');
+              createInput.value = '';
+            } else {
+              Array.from(createGrid.children).forEach(function(c) { c.classList.remove('selected'); });
+              btn1.classList.add('selected');
+              createInput.value = driver.id;
+            }
+            createInput.dispatchEvent(new Event('change'));
+          };
+          createGrid.appendChild(btn1);
+        });
+      }
+
+      var editGrid = document.getElementById('edit_driver_grid');
+      var editInput = document.getElementById('edit_driver_id');
+      if (editGrid && editInput) {
+        editGrid.innerHTML = '';
+        drivers.forEach(function (driver) {
+          var firstName = getDriverFirstName(driver);
+          var btn2 = document.createElement('div');
+          btn2.className = 'select-btn' + (editInput.value === driver.id ? ' selected' : '');
+          btn2.textContent = firstName;
+          btn2.onclick = function() {
+            if (btn2.classList.contains('selected')) {
+              btn2.classList.remove('selected');
+              editInput.value = '';
+            } else {
+              Array.from(editGrid.children).forEach(function(c) { c.classList.remove('selected'); });
+              btn2.classList.add('selected');
+              editInput.value = driver.id;
+            }
+            editInput.dispatchEvent(new Event('change'));
+          };
+          editGrid.appendChild(btn2);
+        });
+      }
     }
 
     function toggleShowAllVehicles() {
@@ -1852,44 +2017,7 @@
           drivers.forEach(function (d) {
             driversMap[d.id] = d;
           });
-
-          // Populate create grid
-          var createGrid = document.getElementById('create_driver_grid');
-          var createInput = document.getElementById('create_driver_id');
-          if (!createGrid) return;
-          createGrid.innerHTML = '';
-          drivers.forEach(function (driver) {
-            var firstName = (driver.name || '-').split(' ')[0];
-            var btn1 = document.createElement('div');
-            btn1.className = 'select-btn' + (createInput.value === driver.id ? ' selected' : '');
-            btn1.textContent = firstName;
-            btn1.onclick = function() {
-              Array.from(createGrid.children).forEach(function(c) { c.classList.remove('selected'); });
-              btn1.classList.add('selected');
-              createInput.value = driver.id;
-              createInput.dispatchEvent(new Event('change'));
-            };
-            createGrid.appendChild(btn1);
-          });
-
-          // Populate edit grid
-          var editGrid = document.getElementById('edit_driver_grid');
-          var editInput = document.getElementById('edit_driver_id');
-          if (!editGrid) return;
-          editGrid.innerHTML = '';
-          drivers.forEach(function (driver) {
-            var firstName = (driver.name || '-').split(' ')[0];
-            var btn2 = document.createElement('div');
-            btn2.className = 'select-btn' + (editInput.value === driver.id ? ' selected' : '');
-            btn2.textContent = firstName;
-            btn2.onclick = function() {
-              Array.from(editGrid.children).forEach(function(c) { c.classList.remove('selected'); });
-              btn2.classList.add('selected');
-              editInput.value = driver.id;
-              editInput.dispatchEvent(new Event('change'));
-            };
-            editGrid.appendChild(btn2);
-          });
+          populateDriverSelects();
         }
       } catch (error) {
         console.error('Error loading drivers:', error);
@@ -2266,6 +2394,15 @@
       document.getElementById('create_time_start').value = timeStr;
       document.getElementById('createProgressContainer').style.display = 'none';
       document.getElementById('createPassengerWarning').style.display = 'none';
+      var cCar = document.getElementById('create_car_id');
+      if (cCar) cCar.value = '';
+      var cDriver = document.getElementById('create_driver_id');
+      if (cDriver) cDriver.value = '';
+      var cCarGrid = document.getElementById('create_car_grid');
+      if (cCarGrid) Array.from(cCarGrid.children).forEach(function(c) { c.classList.remove('selected'); });
+      var cDriverGrid = document.getElementById('create_driver_grid');
+      if (cDriverGrid) Array.from(cDriverGrid.children).forEach(function(c) { c.classList.remove('selected'); });
+      updateCarWarning('create_car_id', 'createCarWarning');
     }
 
     function setDateType(type) {
@@ -2778,12 +2915,10 @@
               }
             } catch (e) { console.warn('inject missing driver failed', e); }
           }
-          // Re-populate car/driver selects so the current vehicle/driver
-          // is guaranteed to appear (เช่น รถถูกปิดใช้งาน/ซ่อมก็ยังเลือกได้)
-          if (typeof populateCarSelects === 'function') populateCarSelects();
-          if (typeof populateDriverSelects === 'function') populateDriverSelects();
           document.getElementById('edit_car_id').value = editingQueueData.car_id || '';
           document.getElementById('edit_driver_id').value = editingQueueData.driver_id || '';
+          if (typeof populateCarSelects === 'function') populateCarSelects();
+          if (typeof populateDriverSelects === 'function') populateDriverSelects();
           document.getElementById('edit_mission').value = editingQueueData.mission || '';
           document.getElementById('edit_destination').value = editingQueueData.destination || '';
           document.getElementById('edit_requested_by').value = editingQueueData.requested_by || '';
