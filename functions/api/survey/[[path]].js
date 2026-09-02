@@ -45,8 +45,8 @@ export async function onRequest(context) {
       return success(drivers);
   }
 
-  // --- GET /api/survey/info --- PUBLIC (สำหรับ QR survey page หรือส่งลิงก์ตรง)
-  if (path === '/api/survey/info' && method === 'GET') {
+  // --- GET /api/survey/info or /api/survey/car-info --- PUBLIC (สำหรับ QR survey page หรือส่งลิงก์ตรง)
+  if ((path === '/api/survey/info' || path === '/api/survey/car-info') && method === 'GET') {
     const carId = url.searchParams.get('car_id');
     const driverId = url.searchParams.get('driver_id');
     
@@ -138,9 +138,10 @@ export async function onRequest(context) {
     if (carId) { where.push('sr.car_id = ?'); params.push(carId); }
     if (driverId) { where.push('sr.driver_id = ?'); params.push(driverId); }
     if (dateFrom) { where.push('sr.created_at >= ?'); params.push(dateFrom); }
-    if (dateTo) { where.push('sr.created_at <= ?'); params.push(dateTo + 'T23:59:59'); }
+    if (dateTo) { where.push('sr.created_at <= ?'); params.push(dateTo.includes('T') ? dateTo : dateTo + 'T23:59:59'); }
     const rows = await dbAll(env.DB,
-      `SELECT sr.*, c.license_plate, c.brand, d.name AS driver_name
+      `SELECT sr.*, c.license_plate, c.brand, c.model, 
+              d.name AS driver_name, d.first_name, d.last_name, d.title
        FROM survey_responses sr
        LEFT JOIN cars c ON sr.car_id = c.id
        LEFT JOIN drivers d ON sr.driver_id = d.id
@@ -154,7 +155,7 @@ export async function onRequest(context) {
   // --- GET /api/survey/summary --- สรุปคะแนนเฉลี่ยรายพนักงาน
   if (path === '/api/survey/summary' && method === 'GET') {
     const rows = await dbAll(env.DB,
-      `SELECT sr.driver_id, d.name AS driver_name,
+      `SELECT sr.driver_id, d.name AS driver_name, d.first_name, d.last_name,
        COUNT(*) AS total_responses,
        ROUND(AVG(sr.politeness_score), 2) AS avg_politeness,
        ROUND(AVG(sr.safety_score), 2) AS avg_safety,
@@ -169,6 +170,17 @@ export async function onRequest(context) {
        ORDER BY avg_overall DESC`
     );
     return success(rows);
+  }
+
+  // --- DELETE /api/survey/:id --- ลบผลการประเมิน (Admin only)
+  const deleteMatch = path.match(/^\/api\/survey\/([a-zA-Z0-9_-]+)$/);
+  if (deleteMatch && method === 'DELETE') {
+    if (user.role !== 'admin' && user.role !== 'super_admin') {
+      return error('Forbidden', 403);
+    }
+    const responseId = deleteMatch[1];
+    await dbRun(env.DB, `DELETE FROM survey_responses WHERE id = ?`, [responseId]);
+    return success({ message: 'ลบข้อมูลแบบประเมินเรียบร้อยแล้ว' });
   }
 
   return error('Not Found', 404);
