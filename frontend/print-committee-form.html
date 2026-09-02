@@ -9,6 +9,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="common.css">
+    <script src="https://cdn.jsdelivr.net/npm/docx@9.7.1/build/index.umd.js"></script>
     <script src="js/api.js"></script>
     <script src="common.js"></script>
     <style>
@@ -53,8 +54,9 @@
                     <h5 class="fw-bold mb-1"><i class="fa-solid fa-clipboard-check text-success me-2"></i> แบบประเมินผลสำหรับคณะกรรมการ (Scoring Form)</h5>
                     <p class="text-muted small mb-0">แบบฟอร์มลงคะแนนและลงนามสำหรับคณะกรรมการ 5 ท่าน (1 หน้า A4 ต่อคนขับ)</p>
                 </div>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-primary px-4 fw-bold shadow-sm" onclick="window.print()"><i class="fa-solid fa-print me-2"></i> สั่งพิมพ์ A4</button>
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-primary px-3 fw-bold shadow-sm" onclick="window.print()"><i class="fa-solid fa-print me-2"></i> สั่งพิมพ์ A4 / PDF</button>
+                    <button class="btn btn-success px-3 fw-bold shadow-sm" id="btnExportDocx" onclick="exportCommitteeDocx(this)"><i class="fa-solid fa-file-word me-2"></i> บันทึกเป็น Word (.docx)</button>
                     <a href="driver-performance.html" class="btn btn-secondary">กลับหน้าหลัก</a>
                 </div>
             </div>
@@ -320,6 +322,424 @@
                     </div>
                 </div>
             `;
+        }
+
+        async function ensureDocx() {
+            if (window.docx) return true;
+            return new Promise((resolve) => {
+                const s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/docx@9.7.1/build/index.umd.js';
+                s.onload = () => resolve(!!window.docx);
+                s.onerror = () => {
+                    const s2 = document.createElement('script');
+                    s2.src = 'https://unpkg.com/docx@9.7.1/build/index.umd.js';
+                    s2.onload = () => resolve(!!window.docx);
+                    s2.onerror = () => resolve(false);
+                    document.head.appendChild(s2);
+                };
+                document.head.appendChild(s);
+            });
+        }
+
+        function dlDocx(blobOrBuf, name) {
+            const blob = (blobOrBuf instanceof Blob) ? blobOrBuf : new Blob([blobOrBuf], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => { URL.revokeObjectURL(url); }, 3000);
+        }
+
+        async function exportCommitteeDocx(btn) {
+            if (!await ensureDocx()) {
+                alert('ไม่สามารถโหลดไลบรารี Word (docx) ได้ กรุณาลองใหม่อีกครั้ง');
+                return;
+            }
+
+            const origHtml = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> กำลังสร้าง Word...';
+            }
+
+            try {
+                const driverId = document.getElementById('driverSelector').value;
+                const year = document.getElementById('yearSelector').value || currentYear;
+                
+                let driversToExport = [];
+                if (driverId === 'all') {
+                    driversToExport = allDrivers;
+                } else {
+                    const single = allDrivers.find(d => d.id === driverId);
+                    if (single) driversToExport = [single];
+                }
+
+                if (driversToExport.length === 0) {
+                    alert('ไม่พบข้อมูลพนักงานขับรถ');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = origHtml;
+                    }
+                    return;
+                }
+
+                const d = window.docx;
+                const FONT_NAME = 'TH Sarabun New';
+                const BC = {
+                    top: { style: d.BorderStyle.SINGLE, size: 4, color: '000000' },
+                    bottom: { style: d.BorderStyle.SINGLE, size: 4, color: '000000' },
+                    left: { style: d.BorderStyle.SINGLE, size: 4, color: '000000' },
+                    right: { style: d.BorderStyle.SINGLE, size: 4, color: '000000' }
+                };
+                const BCNONE = {
+                    top: { style: d.BorderStyle.NONE, size: 0, color: 'auto' },
+                    bottom: { style: d.BorderStyle.NONE, size: 0, color: 'auto' },
+                    left: { style: d.BorderStyle.NONE, size: 0, color: 'auto' },
+                    right: { style: d.BorderStyle.NONE, size: 0, color: 'auto' }
+                };
+
+                const sections = [];
+
+                for (let i = 0; i < driversToExport.length; i++) {
+                    const driver = driversToExport[i];
+                    const driverName = `${driver.title || ''}${driver.first_name || driver.name || ''} ${driver.last_name || ''}`.trim();
+                    const children = [];
+
+                    // 1. Header Section
+                    children.push(
+                        new d.Paragraph({
+                            alignment: d.AlignmentType.CENTER,
+                            spacing: { before: 0, after: 40, line: 260 },
+                            children: [
+                                new d.TextRun({ text: 'แบบประเมินผลการปฏิบัติหน้าที่พนักงานขับรถยนต์ (ส่วนที่ 2: คณะกรรมการ)', font: FONT_NAME, size: 30, bold: true })
+                            ]
+                        }),
+                        new d.Paragraph({
+                            alignment: d.AlignmentType.CENTER,
+                            spacing: { before: 0, after: 40, line: 260 },
+                            children: [
+                                new d.TextRun({ text: `โรงเรียนพะเยาพิทยาคม ประจำปีการศึกษา ${year}`, font: FONT_NAME, size: 28, bold: true })
+                            ]
+                        }),
+                        new d.Paragraph({
+                            alignment: d.AlignmentType.CENTER,
+                            spacing: { before: 0, after: 60, line: 260 },
+                            children: [
+                                new d.TextRun({ text: `ชื่อ-สกุล พนักงานขับรถยนต์: ${driverName}`, font: FONT_NAME, size: 28, bold: true })
+                            ]
+                        }),
+                        new d.Paragraph({
+                            alignment: d.AlignmentType.LEFT,
+                            spacing: { before: 20, after: 60, line: 260 },
+                            children: [
+                                new d.TextRun({ text: 'คำชี้แจง: ', font: FONT_NAME, size: 26, bold: true }),
+                                new d.TextRun({ text: 'โปรดพิจารณาและประเมินผลการปฏิบัติหน้าที่ตามมาตรฐานตัวชี้วัด โดยกรอกคะแนนที่เหมาะสมลงในช่องว่าง', font: FONT_NAME, size: 26 })
+                            ]
+                        })
+                    );
+
+                    // 2. Build Rubric Table
+                    const tableRows = [];
+
+                    // Table Header
+                    tableRows.push(
+                        new d.TableRow({
+                            tableHeader: true,
+                            children: [
+                                new d.TableCell({
+                                    width: { size: 7300, type: d.WidthType.DXA },
+                                    borders: BC,
+                                    shading: { fill: 'F1F5F9', type: d.ShadingType.CLEAR },
+                                    children: [
+                                        new d.Paragraph({
+                                            alignment: d.AlignmentType.CENTER,
+                                            spacing: { before: 30, after: 30 },
+                                            children: [new d.TextRun({ text: 'หัวข้อการประเมินและเกณฑ์พิจารณา (คะแนนเต็ม 100 คะแนน)', font: FONT_NAME, size: 26, bold: true })]
+                                        })
+                                    ]
+                                }),
+                                new d.TableCell({
+                                    width: { size: 2200, type: d.WidthType.DXA },
+                                    borders: BC,
+                                    shading: { fill: 'F1F5F9', type: d.ShadingType.CLEAR },
+                                    children: [
+                                        new d.Paragraph({
+                                            alignment: d.AlignmentType.CENTER,
+                                            spacing: { before: 30, after: 30 },
+                                            children: [new d.TextRun({ text: 'คะแนนที่ได้', font: FONT_NAME, size: 26, bold: true })]
+                                        })
+                                    ]
+                                })
+                            ]
+                        })
+                    );
+
+                    // Category Helper
+                    function addCategoryHeader(title) {
+                        tableRows.push(
+                            new d.TableRow({
+                                children: [
+                                    new d.TableCell({
+                                        columnSpan: 2,
+                                        borders: BC,
+                                        shading: { fill: 'F8FAFC', type: d.ShadingType.CLEAR },
+                                        children: [
+                                            new d.Paragraph({
+                                                alignment: d.AlignmentType.LEFT,
+                                                spacing: { before: 20, after: 20 },
+                                                children: [new d.TextRun({ text: title, font: FONT_NAME, size: 25, bold: true })]
+                                            })
+                                        ]
+                                    })
+                                ]
+                            })
+                        );
+                    }
+
+                    function addCriteriaRow(text, maxScore) {
+                        tableRows.push(
+                            new d.TableRow({
+                                children: [
+                                    new d.TableCell({
+                                        width: { size: 7300, type: d.WidthType.DXA },
+                                        borders: BC,
+                                        children: [
+                                            new d.Paragraph({
+                                                alignment: d.AlignmentType.LEFT,
+                                                indent: { left: 160 },
+                                                spacing: { before: 15, after: 15 },
+                                                children: [new d.TextRun({ text: text, font: FONT_NAME, size: 24 })]
+                                            })
+                                        ]
+                                    }),
+                                    new d.TableCell({
+                                        width: { size: 2200, type: d.WidthType.DXA },
+                                        borders: BC,
+                                        children: [
+                                            new d.Paragraph({
+                                                alignment: d.AlignmentType.CENTER,
+                                                spacing: { before: 15, after: 15 },
+                                                children: [
+                                                    new d.TextRun({ text: `…… / ${maxScore}`, font: FONT_NAME, size: 24, bold: true })
+                                                ]
+                                            })
+                                        ]
+                                    })
+                                ]
+                            })
+                        );
+                    }
+
+                    function addSubtotalRow(title, maxScore) {
+                        tableRows.push(
+                            new d.TableRow({
+                                children: [
+                                    new d.TableCell({
+                                        width: { size: 7300, type: d.WidthType.DXA },
+                                        borders: BC,
+                                        children: [
+                                            new d.Paragraph({
+                                                alignment: d.AlignmentType.RIGHT,
+                                                spacing: { before: 20, after: 20 },
+                                                children: [new d.TextRun({ text: title, font: FONT_NAME, size: 25, bold: true })]
+                                            })
+                                        ]
+                                    }),
+                                    new d.TableCell({
+                                        width: { size: 2200, type: d.WidthType.DXA },
+                                        borders: BC,
+                                        children: [
+                                            new d.Paragraph({
+                                                alignment: d.AlignmentType.CENTER,
+                                                spacing: { before: 20, after: 20 },
+                                                children: [new d.TextRun({ text: `…… / ${maxScore}`, font: FONT_NAME, size: 25, bold: true })]
+                                            })
+                                        ]
+                                    })
+                                ]
+                            })
+                        );
+                    }
+
+                    // หมวดที่ 1
+                    addCategoryHeader('1. ด้านการดูแลรักษาและบำรุงรักษายานพาหนะ (คะแนนเต็ม 30 คะแนน)');
+                    addCriteriaRow('• ทำความสะอาดและดูแลสุขอนามัยภายในและภายนอกยานพาหนะอย่างสม่ำเสมอ (6 คะแนน)', 6);
+                    addCriteriaRow('• ตรวจสอบความพร้อมของระบบเครื่องยนต์ ของเหลว และอุปกรณ์ความปลอดภัยพื้นฐานก่อนปฏิบัติหน้าที่ (6 คะแนน)', 6);
+                    addCriteriaRow('• นำยานพาหนะเข้ารับการตรวจเช็คระยะ เปลี่ยนถ่ายของเหลว และบำรุงรักษาตามรอบระยะเวลาที่กำหนด (6 คะแนน)', 6);
+                    addCriteriaRow('• สังเกตและรายงานความผิดปกติของยานพาหนะ พร้อมดำเนินการแจ้งซ่อมบำรุงตามขั้นตอนราชการทันที (6 คะแนน)', 6);
+                    addCriteriaRow('• จัดเก็บและจอดพักยานพาหนะในสถานที่ที่สถานศึกษากำหนดอย่างเป็นระเบียบเรียบร้อย (6 คะแนน)', 6);
+                    addSubtotalRow('รวมคะแนนด้านที่ 1', 30);
+
+                    // หมวดที่ 2
+                    addCategoryHeader('2. ด้านวินัย จรรยาบรรณ และการปฏิบัติหน้าที่ (คะแนนเต็ม 40 คะแนน)');
+                    addCriteriaRow('• ปฏิบัติหน้าที่ตรงต่อเวลา ไม่ออกนอกสถานศึกษาหรือละทิ้งหน้าที่ในเวลาราชการโดยไม่ได้รับอนุญาต (8 คะแนน)', 8);
+                    addCriteriaRow('• ปฏิบัติตามคำสั่งของผู้บังคับบัญชาและระเบียบของสถานศึกษาอย่างเคร่งครัด (8 คะแนน)', 8);
+                    addCriteriaRow('• สถิติการลา (ลากิจ/ลาป่วย) อยู่ในเกณฑ์ที่ระเบียบกำหนด และดำเนินการขออนุญาตลาถูกต้องตามระเบียบสารบรรณ (8 คะแนน)', 8);
+                    addCriteriaRow('• บันทึกข้อมูลการใช้ยานพาหนะ (เลขไมล์เข้า-ออก) ถูกต้องครบถ้วน ตรงตามความเป็นจริง และเป็นปัจจุบัน (8 คะแนน)', 8);
+                    addCriteriaRow('• มีความพร้อมในการปฏิบัติหน้าที่ ณ จุดนัดหมาย และดูแลความปลอดภัยของผู้โดยสารตลอดการเดินทาง (8 คะแนน)', 8);
+                    addSubtotalRow('รวมคะแนนด้านที่ 2', 40);
+
+                    // หมวดที่ 3
+                    addCategoryHeader('3. ด้านจิตบริการ การอุทิศเวลา และความร่วมมือในองค์กร (คะแนนเต็ม 30 คะแนน)');
+                    addCriteriaRow('• อุทิศเวลาและพร้อมปฏิบัติหน้าที่นอกเวลาราชการหรือภารกิจเร่งด่วนของสถานศึกษา (6 คะแนน)', 6);
+                    addCriteriaRow('• ให้ความร่วมมือและช่วยเหลือภารกิจส่วนรวมของสถานศึกษาในช่วงเวลาที่ไม่มีภารกิจการใช้รถ (6 คะแนน)', 6);
+                    addCriteriaRow('• มีมนุษยสัมพันธ์ สุภาพเรียบร้อย และทำงานร่วมกับคณะครู บุคลากร และนักเรียนได้เป็นอย่างดี (6 คะแนน)', 6);
+                    addCriteriaRow('• ดูแลรักษาความสะอาดและสุขอนามัยบริเวณโรงจอดรถและพื้นที่ปฏิบัติงาน (6 คะแนน)', 6);
+                    addCriteriaRow('• มีทัศนคติที่ดีต่อสถานศึกษา ปฏิบัติตนตามจรรยาบรรณ และรักษาภาพลักษณ์อันดีขององค์กร (6 คะแนน)', 6);
+                    addSubtotalRow('รวมคะแนนด้านที่ 3', 30);
+
+                    // รวมคะแนนทั้งหมด
+                    tableRows.push(
+                        new d.TableRow({
+                            children: [
+                                new d.TableCell({
+                                    width: { size: 7300, type: d.WidthType.DXA },
+                                    borders: BC,
+                                    shading: { fill: 'F1F5F9', type: d.ShadingType.CLEAR },
+                                    children: [
+                                        new d.Paragraph({
+                                            alignment: d.AlignmentType.RIGHT,
+                                            spacing: { before: 25, after: 25 },
+                                            children: [new d.TextRun({ text: 'รวมคะแนนของคณะกรรมการ (นำไปคิดสัดส่วน 60 คะแนนสุทธิในระบบ)', font: FONT_NAME, size: 26, bold: true })]
+                                        })
+                                    ]
+                                }),
+                                new d.TableCell({
+                                    width: { size: 2200, type: d.WidthType.DXA },
+                                    borders: BC,
+                                    shading: { fill: 'F1F5F9', type: d.ShadingType.CLEAR },
+                                    children: [
+                                        new d.Paragraph({
+                                            alignment: d.AlignmentType.CENTER,
+                                            spacing: { before: 25, after: 25 },
+                                            children: [new d.TextRun({ text: '…… / 100', font: FONT_NAME, size: 26, bold: true })]
+                                        })
+                                    ]
+                                })
+                            ]
+                        })
+                    );
+
+                    const rubricTable = new d.Table({
+                        width: { size: 9500, type: d.WidthType.DXA },
+                        rows: tableRows,
+                        alignment: d.AlignmentType.CENTER
+                    });
+
+                    children.push(rubricTable);
+
+                    // 3. Signature Block
+                    const sigTable = new d.Table({
+                        width: { size: 9500, type: d.WidthType.DXA },
+                        alignment: d.AlignmentType.CENTER,
+                        rows: [
+                            new d.TableRow({
+                                children: [
+                                    new d.TableCell({
+                                        width: { size: 4750, type: d.WidthType.DXA },
+                                        borders: BCNONE,
+                                        children: [
+                                            new d.Paragraph({
+                                                alignment: d.AlignmentType.CENTER,
+                                                spacing: { before: 180, after: 100 },
+                                                children: [new d.TextRun({ text: 'ลงชื่อกรรมการผู้ประเมิน', font: FONT_NAME, size: 25 })]
+                                            }),
+                                            new d.Paragraph({
+                                                alignment: d.AlignmentType.CENTER,
+                                                spacing: { before: 0, after: 20 },
+                                                children: [new d.TextRun({ text: '.......................................................................', font: FONT_NAME, size: 24 })]
+                                            }),
+                                            new d.Paragraph({
+                                                alignment: d.AlignmentType.CENTER,
+                                                spacing: { before: 0, after: 20 },
+                                                children: [new d.TextRun({ text: '(.......................................................................)', font: FONT_NAME, size: 24 })]
+                                            }),
+                                            new d.Paragraph({
+                                                alignment: d.AlignmentType.CENTER,
+                                                spacing: { before: 0, after: 0 },
+                                                children: [new d.TextRun({ text: 'ตำแหน่ง คณะกรรมการประเมินผลการปฏิบัติหน้าที่', font: FONT_NAME, size: 23, color: '555555' })]
+                                            })
+                                        ]
+                                    }),
+                                    new d.TableCell({
+                                        width: { size: 4750, type: d.WidthType.DXA },
+                                        borders: BCNONE,
+                                        children: [
+                                            new d.Paragraph({
+                                                alignment: d.AlignmentType.CENTER,
+                                                spacing: { before: 180, after: 100 },
+                                                children: [new d.TextRun({ text: 'ลงชื่อประธานกรรมการ', font: FONT_NAME, size: 25 })]
+                                            }),
+                                            new d.Paragraph({
+                                                alignment: d.AlignmentType.CENTER,
+                                                spacing: { before: 0, after: 20 },
+                                                children: [new d.TextRun({ text: '.......................................................................', font: FONT_NAME, size: 24 })]
+                                            }),
+                                            new d.Paragraph({
+                                                alignment: d.AlignmentType.CENTER,
+                                                spacing: { before: 0, after: 20 },
+                                                children: [new d.TextRun({ text: '(.......................................................................)', font: FONT_NAME, size: 24 })]
+                                            }),
+                                            new d.Paragraph({
+                                                alignment: d.AlignmentType.CENTER,
+                                                spacing: { before: 0, after: 0 },
+                                                children: [new d.TextRun({ text: 'ตำแหน่ง ประธานคณะกรรมการประเมินผลการปฏิบัติหน้าที่', font: FONT_NAME, size: 23, color: '555555' })]
+                                            })
+                                        ]
+                                    })
+                                ]
+                            })
+                        ]
+                    });
+
+                    children.push(sigTable);
+
+                    sections.push({
+                        properties: {
+                            page: {
+                                size: {
+                                    orientation: d.PageOrientation.PORTRAIT,
+                                    width: 11906,
+                                    height: 16838
+                                },
+                                margin: {
+                                    top: 720,
+                                    bottom: 720,
+                                    left: 1000,
+                                    right: 1000
+                                }
+                            }
+                        },
+                        children: children
+                    });
+                }
+
+                const doc = new d.Document({
+                    creator: 'PPK DriveHub',
+                    title: 'แบบประเมินผลการปฏิบัติหน้าที่พนักงานขับรถยนต์ (คณะกรรมการ)',
+                    description: 'แบบประเมินผลสำหรับคณะกรรมการ โรงเรียนพะเยาพิทยาคม',
+                    sections: sections
+                });
+
+                const blob = await d.Packer.toBlob(doc);
+                const filename = (driverId === 'all')
+                    ? `แบบประเมินคณะกรรมการ-ทุกคน-ปี${year}.docx`
+                    : `แบบประเมินคณะกรรมการ-${driversToExport[0].first_name || driversToExport[0].name}-ปี${year}.docx`;
+
+                dlDocx(blob, filename);
+
+            } catch (err) {
+                console.error(err);
+                alert('เกิดข้อผิดพลาดในการสร้างไฟล์ Word: ' + err.message);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = origHtml;
+                }
+            }
         }
     </script>
 </body>
