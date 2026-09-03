@@ -1,4 +1,4 @@
-﻿// Refactored: ฟังก์ชัน sync หลัก ใช้ร่วมกันทั้ง public cron + admin manual
+// Refactored: ฟังก์ชัน sync หลัก ใช้ร่วมกันทั้ง public cron + admin manual
 // ตั้ง env vars:
 //   GOOGLE_SERVICE_ACCOUNT_JSON  = JSON string ของ service account
 //   GFORM_SHEET_MAP              = JSON: { "<license_plate>": "<spreadsheet_id>", ... }
@@ -81,12 +81,13 @@ async function findDriverByName(db, rawName) {
   return null;
 }
 
-async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report, env) {
-  const car = await dbFirst(db,
-    `SELECT id FROM cars WHERE license_plate = ? OR registration_number = ?
-     OR REPLACE(license_plate,' ','') = REPLACE(?,' ','')
-     LIMIT 1`,
-    [licensePlate, licensePlate, licensePlate]
+async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report, env, allDrivers, allCars) {
+  const normPlate = normalizeName(licensePlate).replace(/\s+/g, '');
+  const car = allCars.find(c => 
+    c.license_plate === licensePlate || 
+    c.registration_number === licensePlate ||
+    normalizeName(c.license_plate).replace(/\s+/g, '') === normPlate ||
+    normalizeName(c.registration_number || '').replace(/\s+/g, '') === normPlate
   );
   if (!car) {
     report.error = `ไม่พบรถทะเบียน "${licensePlate}" ในระบบ`;
@@ -102,8 +103,9 @@ async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report
     return;
   }
   report.fetched = rows.length;
+  if (!rows || rows.length === 0) return;
 
-  // โหลด existing google_form records ทั้งหมดพร้อมข้อมูลเพื่อเปรียบเทียบ
+  // โหลด existing google_form records ของรถคันนี้ (Index idx_usage_records_sync_lookup จะทำงานทันที)
   const existingRows = await dbAll(db,
     `SELECT id,
             record_type || '|' || form_timestamp AS key,
@@ -115,14 +117,6 @@ async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report
   // Map key → record (เพื่อเปรียบเทียบว่าข้อมูลเปลี่ยนไหม)
   const existingMap = new Map(existingRows.map(r => [r.key, r]));
 
-  // โหลด driver map ทั้งหมดใน 1 query (ลด D1 calls)
-  const allDrivers = await dbAll(db,
-    `SELECT id, name, COALESCE(title,'') AS title,
-            COALESCE(first_name,'') AS first_name,
-            COALESCE(last_name,'') AS last_name
-     FROM drivers WHERE deactivated_at IS NULL`,
-    []
-  );
   function findDriverLocal(rawName) {
     const name = normalizeName(rawName);
     if (!name) return null;
@@ -292,9 +286,15 @@ export async function runGoogleFormSync(env, triggerSource, triggeredBy) {
     const tokenResp = await getGoogleAccessToken(saJson, 'https://www.googleapis.com/auth/spreadsheets.readonly');
     const accessToken = tokenResp.access_token;
 
+    // โหลด cars และ active drivers ทั้งหมดใน 2 queries เพื่อใช้กับทุกชีต (แทนการ query ซ้ำในทุกลูป)
+    const [allCars, allDrivers] = await Promise.all([
+      dbAll(env.DB, `SELECT id, license_plate, registration_number FROM cars WHERE status != 'inactive'`, []),
+      dbAll(env.DB, `SELECT id, name, COALESCE(title,'') AS title, COALESCE(first_name,'') AS first_name, COALESCE(last_name,'') AS last_name FROM drivers WHERE deactivated_at IS NULL`, [])
+    ]);
+
     for (const [licensePlate, spreadsheetId] of Object.entries(sheetMap)) {
       const report = { fetched: 0, inserted: 0, skipped: 0, failed: 0 };
-      try { await syncOneSheet(env.DB, accessToken, licensePlate, spreadsheetId, report, env); }
+      try { await syncOneSheet(env.DB, accessToken, licensePlate, spreadsheetId, report, env, allDrivers, allCars); }
       catch (e) { report.error = e.message; }
       summary.sheets_processed++;
       summary.rows_fetched += report.fetched;

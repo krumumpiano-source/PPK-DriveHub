@@ -2,9 +2,10 @@ name: Sync Google Form to DriveHub
 
 on:
   schedule:
-    # ทุก 5 นาที (เวลา UTC แต่ cron ทุก 5 นาทีเหมือนกันทุก timezone)
-    - cron: '*/5 * * * *'
-  workflow_dispatch:    # ให้กดรันมือได้จาก Actions tab
+    # ทุก 30 นาที (ลดโหลด D1 83% และยังได้ข้อมูลอัปเดตสม่ำเสมอ)
+    - cron: '*/30 * * * *'
+  workflow_dispatch:    # ให้กดรันมือได้จาก Actions tab หรือผ่านหน้าเว็บ DriveHub
+
 
 jobs:
   sync:

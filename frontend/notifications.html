@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 
 <head>
@@ -110,7 +110,6 @@
     </div>
   </div>
 
-
   <script>
     // Check authentication (ไม่ redirect — ให้แสดงหน้าได้)
     var isAuthenticated = requireAuth();
@@ -123,10 +122,21 @@
     async function initPage() {
       await loadNotifications();
 
-      // Auto refresh every 30 seconds
+      // Auto refresh every 60 seconds (เฉพาะเมื่อเปิดแท็บนี้อยู่)
+      var lastNotifRefresh = Date.now();
       setInterval(function () {
-        loadNotifications();
-      }, 30000);
+        if (!document.hidden) {
+          loadNotifications();
+          lastNotifRefresh = Date.now();
+        }
+      }, 60000);
+
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden && (Date.now() - lastNotifRefresh > 60000)) {
+          loadNotifications();
+          lastNotifRefresh = Date.now();
+        }
+      });
     }
 
     async function loadNotifications() {

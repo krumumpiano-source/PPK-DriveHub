@@ -887,3 +887,11 @@ CREATE TABLE IF NOT EXISTS fuel_budget (
   updated_at TEXT NOT NULL,
   UNIQUE(fiscal_year_be, fuel_type)
 );
+
+-- Added from 051-optimize-d1-read-indexes.sql
+CREATE INDEX IF NOT EXISTS idx_usage_records_sync_lookup ON usage_records(car_id, record_source, form_timestamp);
+CREATE INDEX IF NOT EXISTS idx_usage_records_car_datetime ON usage_records(car_id, datetime DESC);
+CREATE INDEX IF NOT EXISTS idx_usage_records_heal_lookup ON usage_records(car_id, record_type, datetime DESC);
+CREATE INDEX IF NOT EXISTS idx_queue_car_status_date ON queue(car_id, status, date DESC, time_start DESC);
+CREATE INDEX IF NOT EXISTS idx_fuel_log_car_del_date ON fuel_log(car_id, deleted_at, date);
+CREATE INDEX IF NOT EXISTS idx_repair_log_car_date ON repair_log(car_id, date_reported);

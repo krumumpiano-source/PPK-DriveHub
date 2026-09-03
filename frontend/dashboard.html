@@ -1794,10 +1794,22 @@
           document.getElementById('vehiclesAvailableList').innerHTML = vehiclesHtml;
         }
 
-        // Auto refresh every 5 minutes
+        // Auto refresh every 5 minutes (เฉพาะเมื่อผู้ใช้กำลังเปิดดูหน้าจอนี้อยู่)
+        var lastRefreshTime = Date.now();
         setInterval(function () {
-          loadDashboard();
+          if (!document.hidden) {
+            loadDashboard();
+            lastRefreshTime = Date.now();
+          }
         }, 5 * 60 * 1000);
+
+        // เมื่อสลับกลับมาที่แท็บนี้ ถ้าเกิน 5 นาทีให้โหลดใหม่ 1 ครั้ง
+        document.addEventListener('visibilitychange', function () {
+          if (!document.hidden && (Date.now() - lastRefreshTime > 5 * 60 * 1000)) {
+            loadDashboard();
+            lastRefreshTime = Date.now();
+          }
+        });
       </script>
 
       <div class="footer"
