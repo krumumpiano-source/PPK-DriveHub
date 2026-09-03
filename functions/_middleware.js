@@ -17,6 +17,7 @@ const PUBLIC_PATHS = [
   '/api/vehicles/qr-info',      // QR โหลดข้อมูลรถ (ไม่ต้อง login)
   '/api/survey/submit',         // QR แบบประเมิน (ไม่ต้อง login)
   '/api/survey/car-info',       // QR ข้อมูลรถสำหรับแบบประเมิน
+  '/api/survey/drivers',        // รายชื่อคนขับสำหรับแบบประเมิน (ไม่ต้อง login)
   '/api/cron/sync-google-forms', // Cron token auth (X-Cron-Token header)
   '/api/maps'                   // Map proxy endpoints
 ];
