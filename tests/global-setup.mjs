@@ -39,6 +39,7 @@ export default async function globalSetup() {
 
   // Step 2: Apply incremental migrations that add columns not in original schema
   const extraMigrations = [
+    'migrations/003-usage-quality-and-indexes.sql',
     'migrations/005-system-overhaul.sql',
     'migrations/006-repair-detail-fields.sql',
     'migrations/016-usage-manual-driver-purpose.sql',
@@ -67,7 +68,10 @@ export default async function globalSetup() {
     'migrations/046-optimize-evaluations-indexes.sql',
     'migrations/047-survey-tracking.sql',
     'migrations/048-optimize-usage-queue-id.sql',
+    'migrations/050-vehicle-request-workflow.sql',
     'migrations/054-fix-queue-driver-nullable-repair-invoice.sql',
+    'migrations/055-add-user-department-and-onboarding.sql',
+    'migrations/056-add-tracking-to-vehicle-requests.sql',
   ];
 
   for (const mig of extraMigrations) {
@@ -80,15 +84,15 @@ export default async function globalSetup() {
   }
   console.log('[global-setup] Extra migrations applied.');
 
-  // Step 3: Clear all data
+  // Step 3: Clear all data in safe dependency order using clear-db.sql
   console.log('[global-setup] Clearing all data...');
-  for (const t of TABLES) {
-    try {
-      execSync(
-        `npx wrangler d1 execute ppk-drivehub-db --local --command "DELETE FROM ${t};"`,
-        { cwd: process.cwd(), stdio: 'pipe', timeout: 10000 }
-      );
-    } catch { /* table may not exist */ }
+  try {
+    execSync(
+      `npx wrangler d1 execute ppk-drivehub-db --local --file "tests/clear-db.sql"`,
+      { cwd: process.cwd(), stdio: 'pipe', timeout: 30000 }
+    );
+  } catch (e) {
+    console.warn('[global-setup] Error clearing data with clear-db.sql:', e.stderr?.toString().slice(0, 200));
   }
   console.log('[global-setup] Database reset complete.');
 }

@@ -36,6 +36,8 @@ CREATE TABLE vehicle_requests_new (
   estimated_km REAL,
   pdf_generated_at TEXT,
   signature_image TEXT,
+  created_by TEXT,
+  updated_by TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   FOREIGN KEY (requester_id) REFERENCES users(id),
@@ -51,7 +53,7 @@ INSERT INTO vehicle_requests_new (
   id, request_no, requester_id, requester_name, requester_department, date, return_date, time_start, time_end,
   destination, route, purpose, passengers, passenger_names, priority, is_urgent,
   status, approved_by, approved_at, assigned_car_id, assigned_driver_id, assigned_queue_id,
-  rejection_reason, notes, waypoints, dest_lat, dest_lng, estimated_km, pdf_generated_at, signature_image, created_at, updated_at
+  rejection_reason, notes, waypoints, dest_lat, dest_lng, estimated_km, pdf_generated_at, signature_image, created_by, updated_by, created_at, updated_at
 )
 SELECT 
   id, request_no, requester_id, requester_name, requester_department, date, return_date, time_start, time_end,
@@ -61,7 +63,7 @@ SELECT
     ELSE status 
   END, 
   approved_by, approved_at, assigned_car_id, assigned_driver_id, assigned_queue_id,
-  rejection_reason, notes, waypoints, dest_lat, dest_lng, estimated_km, pdf_generated_at, signature_image, created_at, updated_at
+  rejection_reason, notes, waypoints, dest_lat, dest_lng, estimated_km, pdf_generated_at, signature_image, requester_id, approved_by, created_at, updated_at
 FROM vehicle_requests;
 
 DROP TABLE vehicle_requests;

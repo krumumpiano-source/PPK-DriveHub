@@ -456,8 +456,8 @@
 
     async function loadCarFilter() {
       try {
-        var r = await API.get('/api/cars?per_page=200');
-        var list = (r&&r.data)?(r.data.cars||r.data):(r&&r.cars?r.cars:[]);
+        var r = await API.get('/api/vehicles?per_page=200');
+        var list = (r&&r.data)?(r.data.vehicles||r.data.cars||r.data):(r&&r.vehicles?r.vehicles:r&&r.cars?r.cars:[]);
         var sel = document.getElementById('filterCar');
         list.forEach(function(v) {
           var o=document.createElement('option');

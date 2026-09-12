@@ -489,7 +489,7 @@ export async function onRequest(context) {
       await createNotification(env.DB, driverUser.id, 'queue', `มีคิวใหม่${isPooled}`,
         `คิววันที่ ${row.date} ไป${row.destination} — รถ: ${carLabel}${isPooled}${notifyNotes}`);
     }
-    const closeQueueUrl = `https://ppk-drivehub.pages.dev/qr-usage-record.html?type=return&car_id=${body.assigned_car_id}&queue_id=${queueId}`;
+    const _closeQueueUrl = `https://ppk-drivehub.pages.dev/qr-usage-record.html?type=return&car_id=${body.assigned_car_id}&queue_id=${queueId}`;
 
     if (driverCheck && driverCheck.line_id) {
       await sendLineMessage(env, driverCheck.line_id, 
@@ -512,7 +512,7 @@ export async function onRequest(context) {
       } catch { return dateStr; }
     }
 
-    const driverTag = (driverCheck.line_id && driverCheck.line_id.startsWith('@')) ? driverCheck.line_id : (driverCheck.line_id ? `@${driverCheck.line_id}` : driverCheck.name);
+    const _driverTag = (driverCheck.line_id && driverCheck.line_id.startsWith('@')) ? driverCheck.line_id : (driverCheck.line_id ? `@${driverCheck.line_id}` : driverCheck.name);
     
     // Multi-day vs single day date formatting
     let dateLine = '';
@@ -527,7 +527,7 @@ export async function onRequest(context) {
     const formattedReqPhone = cleanReqPhone.length === 10 ? cleanReqPhone.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3') : (cleanReqPhone.length === 9 ? cleanReqPhone.replace(/(\d{2})(\d{3})(\d{4})/, '$1-$2-$3') : (row.requester_phone || ''));
     const reqPhoneStr = formattedReqPhone ? ` (โทร ${formattedReqPhone})` : '';
 
-    const carPlateOnly = (carCheck?.license_plate || carLabel).split(' ')[0];
+    const _carPlateOnly = (carCheck?.license_plate || carLabel).split(' ')[0];
 
     const lineMessage = `🔔 [แจ้งงานขับรถราชการ - PPK DriveHub]
 👤 พนักงานขับรถ: ${driverCheck.name}${driverCheck.phone ? ' (โทร. ' + driverCheck.phone + ')' : ''}

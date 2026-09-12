@@ -1,7 +1,7 @@
 // Reports & dashboard analytics
 import {
-  dbAll, dbFirst, dbRun, generateUUID, now, success, error,
-  parseBody, requirePermission
+  dbAll, dbFirst, now, success, error,
+  requirePermission
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
@@ -1029,12 +1029,6 @@ export async function onRequest(context) {
     const dateFrom = url.searchParams.get('date_from');
     const dateTo = url.searchParams.get('date_to');
     const driverId = url.searchParams.get('driver_id');
-    const where = ['q.status IN (\'completed\',\'ongoing\')'];
-    const params = [];
-    if (dateFrom) { where.push('q.date >= ?'); params.push(dateFrom); }
-    if (dateTo) { where.push('q.date <= ?'); params.push(dateTo); }
-    if (driverId) { where.push('q.driver_id = ?'); params.push(driverId); }
-    const whereClause = 'WHERE ' + where.join(' AND ');
 
     const rows = await dbAll(env.DB,
       `WITH combined_trips AS (

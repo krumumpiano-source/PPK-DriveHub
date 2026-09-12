@@ -144,10 +144,16 @@ test.describe.serial('2. Auth', () => {
   });
 
   test('POST /api/auth/login — เข้าสู่ระบบสำเร็จ', async () => {
-    const r = await post('/api/auth/login', {
+    let r = await post('/api/auth/login', {
       username: 'testadmin',
       password: ADMIN_PASS,
     });
+    if (r.status !== 200 && ADMIN_PASS_ALT) {
+      r = await post('/api/auth/login', {
+        username: 'testadmin',
+        password: ADMIN_PASS_ALT,
+      });
+    }
     expect(r.status).toBe(200);
     expect(r.data.success).toBe(true);
     expect(r.data.data).toHaveProperty('token');

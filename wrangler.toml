@@ -2,6 +2,10 @@ name = "ppk-drivehub"
 compatibility_date = "2024-01-01"
 pages_build_output_dir = "./frontend"
 
+send_email = [
+  { name = "SEMAIL" }
+]
+
 [[d1_databases]]
 binding = "DB"
 database_name = "ppk-drivehub-db"
@@ -11,10 +15,6 @@ database_id = "4b18fad9-15f5-4741-bfa1-877fb34a8298"
 # [[r2_buckets]]
 # binding = "STORAGE"
 # bucket_name = "ppk-drivehub-files"
-
-send_email = [
-  { name = "SEMAIL" }
-]
 
 [vars]
 APP_NAME = "PPK DriveHub"

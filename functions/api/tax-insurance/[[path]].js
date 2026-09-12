@@ -136,7 +136,7 @@ export async function onRequest(context) {
       `INSERT INTO insurance_records (id, car_id, insurance_type, insurance_company, policy_number,
         amount, paid_date, expiry_date, coverage_details, receipt_image, notes, created_by, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, body.car_id, body.insurance_type || 'compulsory', body.insurance_company || '',
+      [id, body.car_id, body.insurance_type || 'compulsory', body.insurance_company || body.company || '',
        body.policy_number || '', body.amount || 0, body.paid_date || null,
        body.expiry_date || null, body.coverage_details || '', receiptUrl || body.receipt_image || '',
        body.notes || '', user.id, ts]
@@ -149,6 +149,7 @@ export async function onRequest(context) {
     try { requirePermission(user, 'insurance', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[4];
     const body = await parseBody(request);
+    if (body.insurance_company === undefined && body.company !== undefined) body.insurance_company = body.company;
     const fields = ['insurance_type', 'insurance_company', 'policy_number', 'amount',
       'paid_date', 'expiry_date', 'coverage_details', 'notes'];
     const updates = [];
@@ -241,6 +242,7 @@ export async function onRequest(context) {
   if (path.match(/\/api\/tax-insurance\/inspections\/[^/]+/) && method === 'PUT') {
     const id = path.split('/')[4];
     const body = await parseBody(request);
+    if (body.inspection_center === undefined && body.center !== undefined) body.inspection_center = body.center;
     const sets = [];
     const params = [];
     const fields = ['car_id','inspection_date','expiry_date','inspection_center',
