@@ -3,7 +3,7 @@ import {
   dbFirst, dbRun, dbAll, generateUUID, now, success, error,
   parseBody, hashPassword, verifyPassword, generateSalt, generateToken,
   writeAuditLog, validatePasswordComplexity, checkPasswordReuse,
-  sendTelegramMessage, notifyAllAdmins
+  sendTelegramMessage, notifyAllAdmins, sendPasswordResetEmail
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
@@ -21,37 +21,47 @@ export async function onRequest(context) {
     const inputPassword = body.password.trim();
 
     let user = await dbFirst(env.DB,
-      'SELECT * FROM users WHERE (username = ? OR email = ?) AND active = 1',
+      'SELECT * FROM users WHERE (LOWER(username) = ? OR LOWER(email) = ?) AND active = 1',
       [inputUsername, inputUsername]
     );
 
-    let isPasswordlessLogin = false;
+    let isFirstTimePhoneLogin = false;
 
     if (user) {
       // User exists, verify password
-      const valid = await verifyPassword(inputPassword, user.salt, user.password_hash);
+      // If user is pending onboarding (onboarding_completed = 0), test with raw or digits
+      let valid = await verifyPassword(inputPassword, user.salt, user.password_hash);
+      if (!valid && inputPassword.replace(/\D/g, '').length >= 9) {
+        valid = await verifyPassword(inputPassword.replace(/\D/g, ''), user.salt, user.password_hash);
+      }
+
       if (!valid) {
         return error('username/email หรือ password ไม่ถูกต้อง', 401);
       }
     } else {
       // User not found. Check if it's a new @ppk.ac.th registration & first login attempt
       if (inputUsername.endsWith('@ppk.ac.th')) {
-        isPasswordlessLogin = true;
+        isFirstTimePhoneLogin = true;
+        const cleanPhone = inputPassword.replace(/\D/g, '');
+        if (cleanPhone.length < 9 || cleanPhone.length > 10) {
+          return error('กรุณากรอกเบอร์โทรศัพท์มือถือ 9-10 หลัก เป็นรหัสผ่านสำหรับการเข้าสู่ระบบครั้งแรก');
+        }
+
         const ts = now();
         const userId = generateUUID();
         const defaultPerms = JSON.stringify({});
         const pwSalt = generateSalt();
-        const pwHash = await hashPassword(inputPassword, pwSalt); // Save the input password on first login
+        const pwHash = await hashPassword(cleanPhone, pwSalt); // Save cleaned phone number as initial password
         const generatedUsername = inputUsername.split('@')[0];
         
         await dbRun(env.DB,
-          `INSERT INTO users (id, username, email, password_hash, salt, role, permissions, first_name, last_name, display_name, active, pdpa_accepted, must_change_password, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, 'staff', ?, ?, '', ?, 1, 0, 0, ?, ?)`,
-          [userId, inputUsername, inputUsername, pwHash, pwSalt, defaultPerms, generatedUsername, generatedUsername, ts, ts]
+          `INSERT INTO users (id, username, email, phone, password_hash, salt, role, permissions, first_name, last_name, display_name, active, pdpa_accepted, must_change_password, onboarding_completed, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, 'staff', ?, ?, '', ?, 1, 0, 0, 0, ?, ?)`,
+          [userId, inputUsername, inputUsername, cleanPhone, pwHash, pwSalt, defaultPerms, generatedUsername, generatedUsername, ts, ts]
         );
         
         user = await dbFirst(env.DB, 'SELECT * FROM users WHERE id = ?', [userId]);
-        await notifyAllAdmins(env.DB, 'system', 'ผู้ขอใช้รถล็อกอินตั้งรหัสผ่านครั้งแรก', `${generatedUsername} (${inputUsername}) เข้าสู่ระบบและตั้งรหัสผ่านครั้งแรกสำเร็จ`);
+        await notifyAllAdmins(env.DB, 'system', 'ผู้ขอใช้รถล็อกอินครั้งแรกด้วยเบอร์โทรศัพท์', `${generatedUsername} (${inputUsername}) เข้าสู่ระบบด้วยเบอร์โทรศัพท์สำเร็จ กำลังกรอกข้อมูล Onboarding`);
       } else {
         return error('username/email หรือ password ไม่ถูกต้อง', 401);
       }
@@ -69,8 +79,10 @@ export async function onRequest(context) {
     await dbRun(env.DB, 'UPDATE users SET last_login = ?, updated_at = ? WHERE id = ?',
       [now(), now(), user.id]);
 
-    const auditAction = isPasswordlessLogin ? 'login_requester' : 'login';
+    const auditAction = isFirstTimePhoneLogin ? 'login_first_time_phone' : 'login';
     await writeAuditLog(env.DB, user.id, user.username, auditAction, 'auth', user.id, null);
+
+    const needsOnboarding = user.onboarding_completed === 0;
 
     return success({
       token,
@@ -80,7 +92,12 @@ export async function onRequest(context) {
       role: user.role,
       permissions: JSON.parse(user.permissions || '{}'),
       must_change_password: user.must_change_password === 1,
-      pdpa_accepted: user.pdpa_accepted === 1
+      pdpa_accepted: user.pdpa_accepted === 1,
+      needs_onboarding: needsOnboarding,
+      onboarding_completed: !needsOnboarding,
+      department: user.department || '',
+      phone: user.phone || '',
+      email: user.email || user.username
     });
   }
 
@@ -129,9 +146,9 @@ export async function onRequest(context) {
     const defaultPerms = JSON.stringify({});
 
     await dbRun(env.DB,
-      `INSERT INTO users (id, username, email, password_hash, salt, role, permissions, title, first_name, last_name, display_name, phone, active, pdpa_accepted, must_change_password, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, 'staff', ?, ?, ?, ?, ?, ?, 1, 0, 0, ?, ?)`,
-      [userId, email, email, pwHash, pwSalt, defaultPerms,
+      `INSERT INTO users (id, username, email, department, password_hash, salt, role, permissions, title, first_name, last_name, display_name, phone, active, pdpa_accepted, must_change_password, onboarding_completed, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'staff', ?, ?, ?, ?, ?, ?, 1, 0, 0, 1, ?, ?)`,
+      [userId, email, email, department || null, pwHash, pwSalt, defaultPerms,
        title || null, fnFirst, fnLast, displayName, phone || null, ts, ts]
     );
 
@@ -154,7 +171,69 @@ export async function onRequest(context) {
       username: email,
       display_name: displayName,
       role: 'staff',
-      permissions: {}
+      permissions: {},
+      onboarding_completed: true,
+      needs_onboarding: false
+    });
+  }
+
+  if (path === '/api/auth/complete-onboarding' && method === 'POST') {
+    if (!env.user) return error('กรุณาเข้าสู่ระบบ', 401);
+    const body = await parseBody(request);
+    const title = String(body?.title || '').trim();
+    const firstName = String(body?.first_name || '').trim();
+    const lastName = String(body?.last_name || '').trim();
+    const department = String(body?.department || '').trim();
+    const rawPhone = String(body?.phone || '').trim();
+    const phone = rawPhone.replace(/\D/g, '');
+
+    if (!firstName || !lastName) return error('กรุณากรอกชื่อจริงและนามสกุล');
+    if (!department) return error('กรุณาเลือกกลุ่มสาระการเรียนรู้ หรือกลุ่มงาน');
+    if (!phone || phone.length < 9) return error('กรุณากรอกเบอร์โทรศัพท์ติดต่อที่ถูกต้อง (9-10 หลัก)');
+
+    const displayName = (title ? `${title}${firstName} ${lastName}` : `${firstName} ${lastName}`).trim();
+    const ts = now();
+
+    // If phone was updated by user, also update password_hash to the new phone so phone stays as initial password
+    const currentUser = await dbFirst(env.DB, 'SELECT phone, salt, password_hash FROM users WHERE id = ?', [env.user.id]);
+    let pwUpdateSql = '';
+    let pwParams = [];
+    if (currentUser && phone && currentUser.phone !== phone) {
+      const newSalt = generateSalt();
+      const newHash = await hashPassword(phone, newSalt);
+      pwUpdateSql = ', password_hash = ?, salt = ?';
+      pwParams = [newHash, newSalt];
+    }
+
+    await dbRun(env.DB,
+      `UPDATE users SET title = ?, first_name = ?, last_name = ?, display_name = ?, department = ?, phone = ?, onboarding_completed = 1, updated_at = ?${pwUpdateSql} WHERE id = ?`,
+      [title || null, firstName, lastName, displayName, department, phone, ts, ...pwParams, env.user.id]
+    );
+
+    const updated = await dbFirst(env.DB,
+      'SELECT id, username, email, role, permissions, title, first_name, last_name, display_name, department, phone, profile_image, pdpa_accepted, must_change_password, onboarding_completed FROM users WHERE id = ?',
+      [env.user.id]
+    );
+
+    await writeAuditLog(env.DB, env.user.id, updated.display_name || updated.username, 'complete_onboarding', 'auth', env.user.id, null);
+
+    return success({
+      message: 'บันทึกข้อมูลและเข้าสู่ระบบเรียบร้อย',
+      user: {
+        id: updated.id,
+        username: updated.username,
+        email: updated.email,
+        display_name: updated.display_name,
+        title: updated.title,
+        first_name: updated.first_name,
+        last_name: updated.last_name,
+        department: updated.department,
+        phone: updated.phone,
+        role: updated.role,
+        permissions: JSON.parse(updated.permissions || '{}'),
+        onboarding_completed: true,
+        needs_onboarding: false
+      }
     });
   }
 
@@ -168,20 +247,25 @@ export async function onRequest(context) {
     const isSchoolEmail = rawIdentity.endsWith('@ppk.ac.th');
 
     const user = await dbFirst(env.DB,
-      'SELECT id, username, email, display_name, first_name, last_name, role FROM users WHERE (LOWER(username) = ? OR LOWER(email) = ?) AND active = 1',
+      'SELECT id, username, email, display_name, first_name, last_name, role, department, phone, onboarding_completed FROM users WHERE (LOWER(username) = ? OR LOWER(email) = ?) AND active = 1',
       [rawIdentity, rawIdentity]
     );
 
     if (user) {
+      const isFirstTime = user.onboarding_completed === 0;
       const name = user.display_name || (user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user.username);
       return success({
         exists: true,
         is_school_email: isSchoolEmail,
+        is_first_time: isFirstTime,
         user: {
           username: user.username,
           email: user.email || user.username,
           display_name: name,
-          role: user.role
+          role: user.role,
+          phone: user.phone || '',
+          department: user.department || '',
+          onboarding_completed: user.onboarding_completed === 1
         }
       });
     }
@@ -198,6 +282,7 @@ export async function onRequest(context) {
     return success({
       exists: false,
       is_school_email: isSchoolEmail,
+      is_first_time: isSchoolEmail,
       suggested_username: rawIdentity,
       suggested_first_name: suggestedFirstName,
       suggested_last_name: suggestedLastName,
@@ -217,11 +302,16 @@ export async function onRequest(context) {
   if (path === '/api/auth/me' && method === 'GET') {
     if (!env.user) return error('กรุณาเข้าสู่ระบบ', 401);
     const user = await dbFirst(env.DB,
-      'SELECT id, username, email, role, permissions, title, first_name, last_name, display_name, phone, profile_image, driver_id, pdpa_accepted, must_change_password, last_login FROM users WHERE id = ?',
+      'SELECT id, username, email, role, permissions, title, first_name, last_name, display_name, department, phone, profile_image, driver_id, pdpa_accepted, must_change_password, onboarding_completed, last_login FROM users WHERE id = ?',
       [env.user.id]
     );
     if (!user) return error('ไม่พบข้อมูลผู้ใช้', 404);
-    return success({ ...user, permissions: JSON.parse(user.permissions || '{}') });
+    return success({
+      ...user,
+      permissions: JSON.parse(user.permissions || '{}'),
+      onboarding_completed: user.onboarding_completed === 1,
+      needs_onboarding: user.onboarding_completed === 0
+    });
   }
 
   if (path === '/api/auth/change-password' && method === 'POST') {
@@ -265,7 +355,7 @@ export async function onRequest(context) {
   if (path === '/api/auth/forgot-password' && method === 'POST') {
     const body = await parseBody(request);
     if (!body?.email) return error('กรุณาระบุ email');
-    const user = await dbFirst(env.DB, 'SELECT id, email, first_name FROM users WHERE email = ?', [body.email]);
+    const user = await dbFirst(env.DB, 'SELECT id, email, first_name, display_name FROM users WHERE (LOWER(email) = ? OR LOWER(username) = ?) AND active = 1', [body.email.toLowerCase().trim(), body.email.toLowerCase().trim()]);
     // Don't reveal if email exists
     if (!user) return success({ message: 'ถ้า email นี้มีในระบบ จะได้รับลิงก์รีเซ็ตรหัสผ่านทางอีเมล' });
 
@@ -276,6 +366,9 @@ export async function onRequest(context) {
        VALUES (?, ?, ?, ?, ?, 0, ?)`,
       [generateUUID(), user.id, user.email, token, expiresAt, now()]
     );
+
+    const origin = request.headers.get('Origin') || new URL(request.url).origin;
+    await sendPasswordResetEmail(env, user, token, origin);
 
     return success({ message: 'ถ้า email นี้มีในระบบ จะได้รับลิงก์รีเซ็ตรหัสผ่านทางอีเมล' });
   }
@@ -319,7 +412,7 @@ export async function onRequest(context) {
   if (path === '/api/auth/profile' && method === 'PUT') {
     if (!env.user) return error('กรุณาเข้าสู่ระบบ', 401);
     const body = await parseBody(request);
-    const allowed = ['title', 'first_name', 'last_name', 'phone'];
+    const allowed = ['title', 'first_name', 'last_name', 'phone', 'department'];
     const updates = [];
     const params = [];
     for (const field of allowed) {
@@ -330,12 +423,13 @@ export async function onRequest(context) {
     }
     if (!updates.length) return error('ไม่มีข้อมูลที่จะอัปเดต');
 
-    if (body.first_name || body.last_name) {
-      const user = await dbFirst(env.DB, 'SELECT first_name, last_name FROM users WHERE id = ?', [env.user.id]);
-      const fn = body.first_name || user.first_name;
-      const ln = body.last_name || user.last_name;
+    if (body.first_name || body.last_name || body.title !== undefined) {
+      const user = await dbFirst(env.DB, 'SELECT title, first_name, last_name FROM users WHERE id = ?', [env.user.id]);
+      const t = body.title !== undefined ? body.title : (user.title || '');
+      const fn = body.first_name !== undefined ? body.first_name : user.first_name;
+      const ln = body.last_name !== undefined ? body.last_name : user.last_name;
       updates.push('display_name = ?');
-      params.push(`${fn} ${ln}`);
+      params.push((t ? `${t}${fn} ${ln}` : `${fn} ${ln}`).trim());
     }
 
     updates.push('updated_at = ?');

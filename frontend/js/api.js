@@ -88,6 +88,7 @@ const API = (() => {
     del:  (path) => request(path, { method: 'DELETE' }),
     delete: (path) => request(path, { method: 'DELETE' }),
     checkIdentity: (identity) => request('/api/auth/check-identity', { method: 'POST', body: { identity } }),
+    completeOnboarding: (data) => request('/api/auth/complete-onboarding', { method: 'POST', body: data }),
   };
 })();
 
@@ -97,6 +98,7 @@ const ACTION_MAP = {
   // Auth
   'login':               (d) => API.post('/api/auth/login', d),
   'register':            (d) => API.post('/api/auth/register', d),
+  'completeOnboarding':  (d) => API.post('/api/auth/complete-onboarding', d),
   'logout':              ()  => API.post('/api/auth/logout'),
   'getMe':               ()  => API.get('/api/auth/me'),
   'changePassword':      (d) => API.post('/api/auth/change-password', d),

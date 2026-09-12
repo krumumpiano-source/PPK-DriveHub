@@ -1,9 +1,9 @@
 // Admin: users, settings, requests
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
-  parseBody, hashPassword, generateSalt, requireAdmin,
+  parseBody, hashPassword, generateSalt, generateToken, requireAdmin,
   extractParam, writeAuditLog, validatePasswordComplexity,
-  sendTelegramMessage, createNotification
+  sendTelegramMessage, createNotification, sendPasswordResetEmail
 } from '../../_helpers.js';
 import { runGoogleFormSync } from '../../_lib/gform-sync.js';
 
@@ -119,7 +119,44 @@ export async function onRequest(context) {
 
   if (path.match(/\/api\/admin\/users\/[^/]+\/reset-password/) && method === 'PUT') {
     const id = path.split('/')[4];
+    const targetUser = await dbFirst(env.DB, 'SELECT id, username, email, phone, display_name, first_name, role FROM users WHERE id = ?', [id]);
+    if (!targetUser) return error('ไม่พบผู้ใช้งานในระบบ', 404);
+
     const body = await parseBody(request);
+    const action = body?.action || (body?.new_password ? 'custom' : 'phone');
+
+    if (action === 'phone') {
+      const cleanPhone = (targetUser.phone || '').replace(/\D/g, '');
+      if (!cleanPhone || cleanPhone.length < 9) {
+        return error('ผู้ใช้นี้ยังไม่มีเบอร์โทรศัพท์ในระบบ ไม่สามารถรีเซ็ตเป็นเบอร์โทรได้ กรุณาระบุรหัสผ่านใหม่');
+      }
+      const salt = generateSalt();
+      const hash = await hashPassword(cleanPhone, salt);
+      await dbRun(env.DB,
+        'UPDATE users SET password_hash = ?, salt = ?, must_change_password = 0, updated_at = ? WHERE id = ?',
+        [hash, salt, now(), id]
+      );
+      await dbRun(env.DB, 'DELETE FROM sessions WHERE user_id = ?', [id]);
+      await writeAuditLog(env.DB, user.id, user.displayName || user.username, 'admin_reset_password_phone', 'admin', id, { phone: cleanPhone });
+      return success({ message: `รีเซ็ตรหัสผ่านกลับไปเป็นเบอร์โทรศัพท์ (${cleanPhone}) เรียบร้อยแล้ว` });
+    }
+
+    if (action === 'email') {
+      if (!targetUser.email) return error('ผู้ใช้นี้ไม่มีอีเมลในระบบ');
+      const token = generateToken();
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      await dbRun(env.DB,
+        `INSERT INTO reset_password_requests (id, user_id, email, token, expires_at, used, created_at)
+         VALUES (?, ?, ?, ?, ?, 0, ?)`,
+        [generateUUID(), targetUser.id, targetUser.email, token, expiresAt, now()]
+      );
+      const origin = request.headers.get('Origin') || new URL(request.url).origin;
+      await sendPasswordResetEmail(env, targetUser, token, origin);
+      await writeAuditLog(env.DB, user.id, user.displayName || user.username, 'admin_send_reset_email', 'admin', id, null);
+      return success({ message: `ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมล ${targetUser.email} เรียบร้อยแล้ว` });
+    }
+
+    // Default action === 'custom' with new_password
     if (!body?.new_password) return error('กรุณาระบุรหัสผ่านใหม่');
 
     const complexityErr = validatePasswordComplexity(body.new_password);
@@ -132,7 +169,7 @@ export async function onRequest(context) {
       [hash, salt, now(), id]
     );
     await dbRun(env.DB, 'DELETE FROM sessions WHERE user_id = ?', [id]);
-    await writeAuditLog(env.DB, user.id, user.displayName, 'reset_user_password', 'admin', id, null);
+    await writeAuditLog(env.DB, user.id, user.displayName || user.username, 'reset_user_password', 'admin', id, null);
     return success({ message: 'รีเซ็ตรหัสผ่านเรียบร้อย' });
   }
 

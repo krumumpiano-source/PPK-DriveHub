@@ -337,7 +337,7 @@
         </button>
       </div>
 
-      <!-- STEP 2A: EXISTING USER LOGIN -->
+      <!-- STEP 2: LOGIN (PASSWORD OR PHONE NUMBER) -->
       <div id="step-login" class="step-panel" style="display:none;">
         <div class="user-preview-pill">
           <div>
@@ -347,48 +347,51 @@
           <a href="#" onclick="resetStep();return false;" style="font-size:0.85em;color:#4338ca;font-weight:600;">เปลี่ยน</a>
         </div>
 
+        <div id="firstTimeLoginNotice" class="welcome-badge" style="display:none;margin-bottom:14px;">
+          <span>📱</span>
+          <span><b>เข้าใช้งานครั้งแรก:</b> ใช้เบอร์โทรศัพท์เป็นรหัสผ่านเริ่มต้น</span>
+        </div>
+
         <form onsubmit="handleLogin(event); return false;">
           <div class="form-group">
-            <label for="loginPassword">รหัสผ่าน</label>
+            <label for="loginPassword" id="loginPasswordLabel">รหัสผ่าน</label>
             <div class="password-wrapper">
               <input type="password" id="loginPassword" required autocomplete="current-password"
                 placeholder="กรอกรหัสผ่านของคุณ">
-              <button type="button" class="toggle-password" onclick="togglePassword('loginPassword', this)" title="แสดง/ซ่อนรหัสผ่าน">👁️</button>
+              <button type="button" class="toggle-password" id="toggleLoginPasswordBtn" onclick="togglePassword('loginPassword', this)" title="แสดง/ซ่อนรหัสผ่าน">👁️</button>
             </div>
+            <small id="loginPasswordHelp" style="display:none;color:#4f46e5;font-size:0.84em;margin-top:6px;line-height:1.4;">
+              💡 ใช้เบอร์โทรศัพท์มือถือ 9-10 หลัก เป็นรหัสผ่านเริ่มต้นสำหรับการเข้าสู่ระบบครั้งแรก
+            </small>
           </div>
 
-          <div class="login-links">
+          <div class="login-links" id="loginLinksRow">
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--color-text-muted);">
               <input type="checkbox" id="remember-me" checked> จำฉันไว้ในระบบ
             </label>
-            <a href="forgot-password.html">ลืมรหัสผ่าน?</a>
+            <a href="forgot-password.html" id="forgotPasswordLink">ลืมรหัสผ่าน?</a>
           </div>
 
           <button type="submit" class="btn-action" id="loginBtn">
             <span class="btn-icon">🔓</span>
-            <span>เข้าสู่ระบบ</span>
+            <span id="loginBtnText">เข้าสู่ระบบ</span>
           </button>
         </form>
       </div>
 
-      <!-- STEP 2B: FIRST-TIME USER ONBOARDING -->
+      <!-- STEP 3: FIRST-TIME USER ONBOARDING / PROFILE COMPLETION -->
       <div id="step-onboard" class="step-panel" style="display:none;">
         <div class="welcome-badge">
           <span>✨</span>
-          <span><b>ยินดีต้อนรับบุคลากรใหม่!</b> กรอกข้อมูลเพื่อเปิดบัญชีเข้าใช้งาน</span>
+          <span><b>ยินดีต้อนรับบุคลากรใหม่!</b> กรุณากรอกข้อมูลเพื่อบันทึกลงระบบครั้งแรก</span>
         </div>
 
         <form onsubmit="handleOnboard(event); return false;">
-          <div class="form-group">
-            <label for="onboardEmail">อีเมล / ชื่อผู้ใช้</label>
-            <input type="text" id="onboardEmail" readonly style="background:#f1f5f9;color:#475569;font-weight:600;">
-          </div>
-
           <!-- คำนำหน้า และ ชื่อ-นามสกุล -->
           <div class="form-group">
-            <label>คำนำหน้า และ ชื่อ - นามสกุล</label>
+            <label>คำนำหน้า และ ชื่อ - นามสกุล <span style="color:#ef4444;">*</span></label>
             <div style="display:flex;gap:8px;align-items:center;">
-              <select id="onboardTitle" style="width:110px;flex-shrink:0;">
+              <select id="onboardTitle" style="width:115px;flex-shrink:0;">
                 <option value="นาย">นาย</option>
                 <option value="นาง">นาง</option>
                 <option value="นางสาว">นางสาว</option>
@@ -398,16 +401,16 @@
                 <option value="ว่าที่ ร.ต.">ว่าที่ ร.ต.</option>
                 <option value="">อื่นๆ</option>
               </select>
-              <input type="text" id="onboardFirstName" required placeholder="ชื่อ" style="flex:1;">
+              <input type="text" id="onboardFirstName" required placeholder="ชื่อจริง" style="flex:1;">
               <input type="text" id="onboardLastName" required placeholder="นามสกุล" style="flex:1;">
             </div>
           </div>
 
           <!-- กลุ่มสาระการเรียนรู้ / หน่วยงาน -->
           <div class="form-group">
-            <label for="onboardDepartment">กลุ่มสาระการเรียนรู้ / หน่วยงาน</label>
+            <label for="onboardDepartment">กลุ่มสาระการเรียนรู้ หรือกลุ่มงาน <span style="color:#ef4444;">*</span></label>
             <select id="onboardDepartment" required style="width:100%;">
-              <option value="">-- เลือกกลุ่มสาระการเรียนรู้ / หน่วยงาน --</option>
+              <option value="">-- เลือกกลุ่มสาระการเรียนรู้ / กลุ่มงาน --</option>
               <option value="กลุ่มสาระการเรียนรู้วิทยาศาสตร์และเทคโนโลยี">กลุ่มสาระการเรียนรู้วิทยาศาสตร์และเทคโนโลยี</option>
               <option value="กลุ่มสาระการเรียนรู้คณิตศาสตร์">กลุ่มสาระการเรียนรู้คณิตศาสตร์</option>
               <option value="กลุ่มสาระการเรียนรู้ภาษาไทย">กลุ่มสาระการเรียนรู้ภาษาไทย</option>
@@ -417,42 +420,32 @@
               <option value="กลุ่มสาระการเรียนรู้ศิลปะ">กลุ่มสาระการเรียนรู้ศิลปะ</option>
               <option value="กลุ่มสาระการเรียนรู้การงานอาชีพ">กลุ่มสาระการเรียนรู้การงานอาชีพ</option>
               <option value="กิจกรรมพัฒนาผู้เรียน">กิจกรรมพัฒนาผู้เรียน</option>
-              <option value="งานยานพาหนะ / บริหารงานทั่วไป">งานยานพาหนะ / บริหารงานทั่วไป</option>
-              <option value="สำนักงานอำนวยการ / บุคลากรสนับสนุน">สำนักงานอำนวยการ / บุคลากรสนับสนุน</option>
+              <option value="งานยานพาหนะ / กลุ่มบริหารงานทั่วไป">งานยานพาหนะ / กลุ่มบริหารงานทั่วไป</option>
+              <option value="สำนักงานอำนวยการ / กลุ่มบริหารบุคคล">สำนักงานอำนวยการ / กลุ่มบริหารบุคคล</option>
+              <option value="กลุ่มบริหารวิชาการ">กลุ่มบริหารวิชาการ</option>
+              <option value="กลุ่มบริหารงบประมาณและแผนงาน">กลุ่มบริหารงบประมาณและแผนงาน</option>
               <option value="อื่นๆ">อื่นๆ</option>
             </select>
           </div>
 
-          <!-- เบอร์โทรศัพท์ -->
+          <!-- ยืนยันเบอร์โทรศัพท์ -->
           <div class="form-group">
-            <label for="onboardPhone">เบอร์โทรศัพท์ติดต่อ</label>
-            <input type="tel" id="onboardPhone" required placeholder="เช่น 0812345678" pattern="[0-9]{9,10}" title="กรอกเบอร์โทรศัพท์ 9-10 หลัก">
+            <label for="onboardPhone">ยืนยันเบอร์โทรศัพท์ติดต่อ <span style="color:#ef4444;">*</span></label>
+            <input type="tel" id="onboardPhone" required placeholder="เช่น 0812345678" pattern="[0-9]{9,10}" maxlength="10" title="กรอกเบอร์โทรศัพท์ 9-10 หลัก">
+            <small style="color:var(--color-text-muted);font-size:0.82em;display:block;margin-top:4px;">
+              * เบอร์โทรนี้จะถูกใช้ในการติดต่อประสานงานคิวรถและเป็นรหัสผ่านเข้าใช้งาน
+            </small>
           </div>
 
-          <!-- รหัสผ่าน 2 ช่องเพื่อยืนยัน -->
+          <!-- ยืนยันอีเมล -->
           <div class="form-group">
-            <label for="onboardPassword">ตั้งรหัสผ่านเข้าใช้งาน</label>
-            <div class="password-wrapper">
-              <input type="password" id="onboardPassword" required placeholder="รหัสผ่านอย่างน้อย 8 ตัวอักษร">
-              <button type="button" class="toggle-password" onclick="togglePassword('onboardPassword', this)" title="แสดง/ซ่อนรหัสผ่าน">👁️</button>
-            </div>
+            <label for="onboardEmail">ยืนยันอีเมลโรงเรียน (@ppk.ac.th)</label>
+            <input type="text" id="onboardEmail" readonly style="background:#f1f5f9;color:#475569;font-weight:600;">
           </div>
 
-          <div class="form-group">
-            <label for="onboardConfirmPassword">ยืนยันรหัสผ่านอีกครั้ง</label>
-            <div class="password-wrapper">
-              <input type="password" id="onboardConfirmPassword" required placeholder="กรอกรหัสผ่านซ้ำอีกครั้ง">
-              <button type="button" class="toggle-password" onclick="togglePassword('onboardConfirmPassword', this)" title="แสดง/ซ่อนรหัสผ่าน">👁️</button>
-            </div>
-          </div>
-
-          <div class="login-links" style="justify-content:flex-start;margin-top:10px;">
-            <a href="#" onclick="resetStep();return false;">⬅️ เปลี่ยนอีเมล / ชื่อผู้ใช้</a>
-          </div>
-
-          <button type="submit" class="btn-action btn-success-action" id="onboardBtn" style="margin-top:10px;">
-            <span class="btn-icon">🚀</span>
-            <span>สมัครและเริ่มใช้งานทันที</span>
+          <button type="submit" class="btn-action btn-success-action" id="onboardBtn" style="margin-top:14px;">
+            <span class="btn-icon">💾</span>
+            <span>บันทึกข้อมูลและเริ่มใช้งานทันที</span>
           </button>
         </form>
       </div>
@@ -462,6 +455,18 @@
 
   <script>
     var currentIdentityData = null;
+
+    // Auto redirect if already logged in
+    (function checkAlreadyLoggedIn() {
+      try {
+        if (typeof API !== 'undefined' && API.getToken()) {
+          var u = API.getUser();
+          if (u && !u.needs_onboarding && u.onboarding_completed !== false) {
+            window.location.href = 'dashboard.html';
+          }
+        }
+      } catch (e) {}
+    })();
 
     function showAlert(msg, type) {
       var alertContainer = document.getElementById('alert-container');
@@ -488,6 +493,7 @@
       document.getElementById('step-identity').style.display = 'block';
       document.getElementById('step-login').style.display = 'none';
       document.getElementById('step-onboard').style.display = 'none';
+      document.getElementById('loginPassword').value = '';
       document.getElementById('identityInput').focus();
     }
 
@@ -512,34 +518,54 @@
         if (res.success && res.data) {
           currentIdentityData = res.data;
           document.getElementById('step-identity').style.display = 'none';
+          document.getElementById('step-onboard').style.display = 'none';
+          document.getElementById('step-login').style.display = 'block';
 
-          if (res.data.exists) {
-            // STEP 2A: User exists -> Show Password Login
-            document.getElementById('userDisplayName').textContent = res.data.user.display_name || res.data.user.username;
-            document.getElementById('userDisplayEmail').textContent = res.data.user.email || res.data.user.username;
-            document.getElementById('step-login').style.display = 'block';
-            document.getElementById('loginPassword').value = '';
-            document.getElementById('loginPassword').focus();
+          var pwInput = document.getElementById('loginPassword');
+          var pwLabel = document.getElementById('loginPasswordLabel');
+          var pwHelp = document.getElementById('loginPasswordHelp');
+          var toggleBtn = document.getElementById('toggleLoginPasswordBtn');
+          var firstTimeNotice = document.getElementById('firstTimeLoginNotice');
+          var forgotLink = document.getElementById('forgotPasswordLink');
+          var loginBtnText = document.getElementById('loginBtnText');
+
+          pwInput.value = '';
+
+          if (res.data.is_first_time) {
+            // CASE: First-time @ppk.ac.th user -> Phone number login!
+            var displayName = res.data.user ? (res.data.user.display_name || res.data.user.username) : (res.data.suggested_name || inputVal);
+            document.getElementById('userDisplayName').textContent = displayName;
+            document.getElementById('userDisplayEmail').textContent = inputVal;
+
+            firstTimeNotice.style.display = 'flex';
+            pwLabel.textContent = 'เบอร์โทรศัพท์ของคุณ (ใช้เป็นรหัสผ่านเริ่มต้น)';
+            pwInput.type = 'tel';
+            pwInput.placeholder = 'เช่น 0812345678 (9-10 หลัก)';
+            pwInput.maxLength = 10;
+            pwInput.pattern = '[0-9]{9,10}';
+            pwHelp.style.display = 'block';
+            toggleBtn.style.display = 'none';
+            forgotLink.style.display = 'none';
+            loginBtnText.textContent = 'เข้าสู่ระบบและเริ่มใช้งาน';
+            pwInput.focus();
           } else {
-            // STEP 2B: New User -> Show Onboarding
-            document.getElementById('onboardEmail').value = inputVal;
-            if (res.data.suggested_first_name) {
-              document.getElementById('onboardFirstName').value = res.data.suggested_first_name;
-              document.getElementById('onboardLastName').value = res.data.suggested_last_name || '';
-            } else if (res.data.suggested_name) {
-              var parts = res.data.suggested_name.split(' ');
-              document.getElementById('onboardFirstName').value = parts[0] || '';
-              document.getElementById('onboardLastName').value = parts.slice(1).join(' ') || '';
-            } else {
-              document.getElementById('onboardFirstName').value = '';
-              document.getElementById('onboardLastName').value = '';
-            }
-            document.getElementById('step-onboard').style.display = 'block';
-            if (!document.getElementById('onboardFirstName').value) {
-              document.getElementById('onboardFirstName').focus();
-            } else {
-              document.getElementById('onboardDepartment').focus();
-            }
+            // CASE: Existing user (Admin / staff with normal password)
+            var u = res.data.user || {};
+            document.getElementById('userDisplayName').textContent = u.display_name || u.username || inputVal;
+            document.getElementById('userDisplayEmail').textContent = u.email || u.username || inputVal;
+
+            firstTimeNotice.style.display = 'none';
+            pwLabel.textContent = 'รหัสผ่าน';
+            pwInput.type = 'password';
+            pwInput.placeholder = 'กรอกรหัสผ่านของคุณ';
+            pwInput.removeAttribute('maxLength');
+            pwInput.removeAttribute('pattern');
+            pwHelp.style.display = 'none';
+            toggleBtn.style.display = 'block';
+            toggleBtn.textContent = '👁️';
+            forgotLink.style.display = 'inline';
+            loginBtnText.textContent = 'เข้าสู่ระบบ';
+            pwInput.focus();
           }
         } else {
           showAlert(res.message || 'ไม่สามารถตรวจสอบข้อมูลได้', 'error');
@@ -554,15 +580,17 @@
     async function handleLogin(event) {
       event.preventDefault();
       clearAlert();
-      var password = document.getElementById('loginPassword').value;
+      var password = document.getElementById('loginPassword').value.trim();
       var loginBtn = document.getElementById('loginBtn');
 
       if (!password) {
-        showAlert('กรุณากรอกรหัสผ่าน', 'error');
+        showAlert('กรุณากรอกรหัสผ่านหรือเบอร์โทรศัพท์', 'error');
         return;
       }
 
-      var username = currentIdentityData && currentIdentityData.user ? currentIdentityData.user.username : document.getElementById('identityInput').value.trim();
+      var username = (currentIdentityData && currentIdentityData.user && currentIdentityData.user.username) 
+        ? currentIdentityData.user.username 
+        : document.getElementById('identityInput').value.trim();
 
       loginBtn.disabled = true;
       loginBtn.innerHTML = '<span>กำลังเข้าสู่ระบบ...</span>';
@@ -579,23 +607,57 @@
             role: result.data.role,
             permissions: result.data.permissions || {},
             must_change_password: result.data.must_change_password,
-            pdpa_accepted: result.data.pdpa_accepted
+            pdpa_accepted: result.data.pdpa_accepted,
+            needs_onboarding: result.data.needs_onboarding,
+            onboarding_completed: result.data.onboarding_completed,
+            department: result.data.department || '',
+            phone: result.data.phone || password
           });
 
+          // Check if onboarding required
+          if (result.data.needs_onboarding || !result.data.onboarding_completed) {
+            // STEP 3: Switch to Onboarding Panel
+            loginBtn.disabled = false;
+            loginBtn.innerHTML = '<span class="btn-icon">🔓</span><span id="loginBtnText">เข้าสู่ระบบ</span>';
+
+            document.getElementById('step-login').style.display = 'none';
+            document.getElementById('step-onboard').style.display = 'block';
+
+            document.getElementById('onboardEmail').value = result.data.email || username;
+            document.getElementById('onboardPhone').value = (result.data.phone || password).replace(/\D/g, '');
+
+            if (currentIdentityData && currentIdentityData.suggested_first_name) {
+              document.getElementById('onboardFirstName').value = currentIdentityData.suggested_first_name;
+              document.getElementById('onboardLastName').value = currentIdentityData.suggested_last_name || '';
+            } else if (currentIdentityData && currentIdentityData.suggested_name) {
+              var parts = currentIdentityData.suggested_name.split(' ');
+              document.getElementById('onboardFirstName').value = parts[0] || '';
+              document.getElementById('onboardLastName').value = parts.slice(1).join(' ') || '';
+            }
+
+            if (!document.getElementById('onboardFirstName').value) {
+              document.getElementById('onboardFirstName').focus();
+            } else {
+              document.getElementById('onboardDepartment').focus();
+            }
+            return;
+          }
+
+          // Normal login redirect
           if (result.data.must_change_password) {
             window.location.href = 'change-password.html';
           } else {
             window.location.href = 'dashboard.html';
           }
         } else {
-          showAlert(result.message || 'รหัสผ่านไม่ถูกต้อง', 'error');
+          showAlert(result.message || 'รหัสผ่านหรือเบอร์โทรศัพท์ไม่ถูกต้อง', 'error');
           loginBtn.disabled = false;
-          loginBtn.innerHTML = '<span class="btn-icon">🔓</span><span>เข้าสู่ระบบ</span>';
+          loginBtn.innerHTML = '<span class="btn-icon">🔓</span><span id="loginBtnText">เข้าสู่ระบบ</span>';
         }
       } catch (err) {
         loginBtn.disabled = false;
-        loginBtn.innerHTML = '<span class="btn-icon">🔓</span><span>เข้าสู่ระบบ</span>';
-        showAlert(err.message || 'รหัสผ่านไม่ถูกต้อง', 'error');
+        loginBtn.innerHTML = '<span class="btn-icon">🔓</span><span id="loginBtnText">เข้าสู่ระบบ</span>';
+        showAlert(err.message || 'รหัสผ่านหรือเบอร์โทรศัพท์ไม่ถูกต้อง', 'error');
       }
     }
 
@@ -607,71 +669,63 @@
       var firstName = document.getElementById('onboardFirstName').value.trim();
       var lastName = document.getElementById('onboardLastName').value.trim();
       var department = document.getElementById('onboardDepartment').value.trim();
-      var phone = document.getElementById('onboardPhone').value.trim();
-      var password = document.getElementById('onboardPassword').value;
-      var confirmPassword = document.getElementById('onboardConfirmPassword').value;
+      var phone = document.getElementById('onboardPhone').value.trim().replace(/\D/g, '');
       var onboardBtn = document.getElementById('onboardBtn');
 
       if (!firstName || !lastName) {
-        showAlert('กรุณากรอกชื่อและนามสกุลให้ครบถ้วน', 'error');
+        showAlert('กรุณากรอกชื่อจริงและนามสกุลให้ครบถ้วน', 'error');
         return;
       }
       if (!department) {
-        showAlert('กรุณาเลือกกลุ่มสาระการเรียนรู้ / หน่วยงาน', 'error');
+        showAlert('กรุณาเลือกกลุ่มสาระการเรียนรู้ หรือกลุ่มงาน', 'error');
         return;
       }
       if (!phone || phone.length < 9) {
         showAlert('กรุณากรอกเบอร์โทรศัพท์ติดต่อที่ถูกต้อง (9-10 หลัก)', 'error');
         return;
       }
-      if (!password || password.length < 8) {
-        showAlert('รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร', 'error');
-        return;
-      }
-      if (password !== confirmPassword) {
-        showAlert('รหัสผ่านทั้งสองช่องไม่ตรงกัน กรุณาตรวจสอบอีกครั้ง', 'error');
-        return;
-      }
 
       onboardBtn.disabled = true;
-      onboardBtn.innerHTML = '<span>กำลังสร้างบัญชีและเข้าสู่ระบบ...</span>';
+      onboardBtn.innerHTML = '<span>กำลังบันทึกข้อมูล...</span>';
 
       try {
-        var res = await API.post('/api/auth/register', {
+        var res = await API.completeOnboarding({
           email: email,
           title: title,
           first_name: firstName,
           last_name: lastName,
           department: department,
-          phone: phone,
-          password: password
+          phone: phone
         });
 
-        if (res.success && res.data && res.data.token) {
-          // INSTANT AUTO-LOGIN SUCCESS!
-          API.setToken(res.data.token, true);
+        if (res.success && res.data && res.data.user) {
+          var updatedUser = res.data.user;
           API.setUser({
-            id: res.data.user_id,
-            username: res.data.username,
-            display_name: res.data.display_name || (title + firstName + ' ' + lastName),
-            role: res.data.role || 'staff',
-            permissions: {}
+            id: updatedUser.id,
+            username: updatedUser.username,
+            display_name: updatedUser.display_name,
+            role: updatedUser.role || 'staff',
+            permissions: updatedUser.permissions || {},
+            needs_onboarding: false,
+            onboarding_completed: true,
+            department: updatedUser.department,
+            phone: updatedUser.phone,
+            email: updatedUser.email
           });
-          window.location.href = 'dashboard.html';
-        } else if (res.success) {
-          showAlert('สมัครสมาชิกสำเร็จ! กำลังนำคุณเข้าสู่ระบบ...', 'success');
+
+          showAlert('✨ บันทึกข้อมูลและเข้าสู่ระบบเรียบร้อย กำลังนำท่านเข้าสู่ระบบ...', 'success');
           setTimeout(function() {
             window.location.href = 'dashboard.html';
-          }, 800);
+          }, 600);
         } else {
-          showAlert(res.message || 'ไม่สามารถลงทะเบียนได้', 'error');
+          showAlert(res.message || 'ไม่สามารถบันทึกข้อมูลได้', 'error');
           onboardBtn.disabled = false;
-          onboardBtn.innerHTML = '<span class="btn-icon">🚀</span><span>สมัครและเริ่มใช้งานทันที</span>';
+          onboardBtn.innerHTML = '<span class="btn-icon">💾</span><span>บันทึกข้อมูลและเริ่มใช้งานทันที</span>';
         }
       } catch (err) {
         onboardBtn.disabled = false;
-        onboardBtn.innerHTML = '<span class="btn-icon">🚀</span><span>สมัครและเริ่มใช้งานทันที</span>';
-        showAlert(err.message || 'เกิดข้อผิดพลาดในการสมัครใช้งาน', 'error');
+        onboardBtn.innerHTML = '<span class="btn-icon">💾</span><span>บันทึกข้อมูลและเริ่มใช้งานทันที</span>';
+        showAlert(err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
       }
     }
 

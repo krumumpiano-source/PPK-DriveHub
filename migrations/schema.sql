@@ -9,6 +9,7 @@
 CREATE TABLE IF NOT EXISTS users (
   line_user_id TEXT,
   position TEXT,
+  department TEXT,
   id TEXT PRIMARY KEY,
   username TEXT UNIQUE NOT NULL,
   email TEXT UNIQUE NOT NULL,
@@ -27,6 +28,7 @@ CREATE TABLE IF NOT EXISTS users (
   pdpa_accepted INTEGER NOT NULL DEFAULT 0,
   pdpa_accepted_at TEXT,
   must_change_password INTEGER NOT NULL DEFAULT 1,
+  onboarding_completed INTEGER NOT NULL DEFAULT 1,
   last_login TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL

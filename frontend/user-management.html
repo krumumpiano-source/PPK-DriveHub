@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 
 <head>
@@ -583,6 +583,65 @@
     </div>
   </div>
 
+    <!-- ── Modal: รีเซ็ตรหัสผ่าน ── -->
+  <div class="modal-overlay" id="resetPasswordModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>🔑 รีเซ็ตรหัสผ่านผู้ใช้งาน</h2>
+        <button class="modal-close" onclick="closeResetModal()" title="ปิด">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="resetUserId">
+        <div class="form-group">
+          <label>ชื่อผู้ใช้งาน</label>
+          <input type="text" id="resetUserName" readonly style="background:#f8fafc;font-weight:600;">
+        </div>
+        <div class="form-group">
+          <label>อีเมล / เบอร์โทรศัพท์</label>
+          <input type="text" id="resetUserContact" readonly style="background:#f8fafc;color:var(--color-text-muted);">
+        </div>
+
+        <div class="form-group">
+          <label>เลือกวิธีรีเซ็ตรหัสผ่าน</label>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px;">
+            <label style="display:flex;align-items:center;gap:8px;padding:10px 14px;border:2px solid #e2e8f0;border-radius:var(--radius-md);cursor:pointer;" id="resetOptPhoneLabel">
+              <input type="radio" name="resetMethod" value="phone" id="resetOptPhone" onchange="onResetMethodChange()" checked>
+              <div>
+                <strong>📱 รีเซ็ตกลับเป็นเบอร์โทรศัพท์</strong>
+                <div style="font-size:0.82em;color:var(--color-text-muted);" id="resetPhoneHint">ใช้เบอร์โทรศัพท์ที่ลงทะเบียนไว้เป็นรหัสผ่าน</div>
+              </div>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:8px;padding:10px 14px;border:2px solid #e2e8f0;border-radius:var(--radius-md);cursor:pointer;">
+              <input type="radio" name="resetMethod" value="email" id="resetOptEmail" onchange="onResetMethodChange()">
+              <div>
+                <strong>📧 ส่งลิงก์รีเซ็ตรหัสผ่านทางอีเมล</strong>
+                <div style="font-size:0.82em;color:var(--color-text-muted);">ส่งอีเมลพร้อมลิงก์ให้ผู้ใช้คลิกตั้งรหัสผ่านใหม่เอง (หมดอายุใน 1 ชม.)</div>
+              </div>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:8px;padding:10px 14px;border:2px solid #e2e8f0;border-radius:var(--radius-md);cursor:pointer;">
+              <input type="radio" name="resetMethod" value="custom" id="resetOptCustom" onchange="onResetMethodChange()">
+              <div>
+                <strong>✏️ แอดมินกำหนดรหัสผ่านใหม่ให้ทันที</strong>
+                <div style="font-size:0.82em;color:var(--color-text-muted);">ระบุรหัสผ่านใหม่โดยตรง</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group" id="resetCustomGroup" style="display:none;margin-top:14px;">
+          <label for="resetNewPassword">รหัสผ่านใหม่ (อย่างน้อย 8 ตัวอักษร มีตัวพิมพ์และตัวเลข)</label>
+          <input type="password" id="resetNewPassword" placeholder="ระบุรหัสผ่านใหม่">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeResetModal()">ยกเลิก</button>
+        <button class="btn btn-warning" style="background:#f59e0b;color:#fff;border:none;" id="confirmResetBtn" onclick="confirmResetPassword()">🔑 ยืนยันการรีเซ็ต</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast -->
   <div class="toast" id="toast"></div>
 
@@ -794,7 +853,8 @@
           (isActive ? '✅ ใช้งาน' : '🚫 ระงับ') + '</span></td>';
         html += '<td>' + renderPermIcons(perms, isAdmin) + '</td>';
         html += '<td><div class="action-btns">';
-        html += '<button class="btn btn-primary" style="padding:5px 12px;font-size:0.85em;" title="แก้ไขผู้ใช้" onclick="openEditModal(\'' + u.id + '\')">✏️ แก้ไข</button>';
+        html += '<button class="btn btn-primary" style="padding:5px 12px;font-size:0.85em;" title="แก้ไขผู้ใช้" onclick="openEditModal(\'' + u.id + '\')">✏️ แก้ไข</button> ' +
+          '<button class="btn btn-warning" style="padding:5px 12px;font-size:0.85em;background:#f59e0b;color:#fff;border:none;border-radius:var(--radius-sm);" title="รีเซ็ตรหัสผ่าน" onclick="openResetModal(\'' + u.id + '\')">🔑 รีเซ็ต</button>';
         if (u.role !== 'super_admin') {
           html += '<button class="btn btn-secondary" style="padding:5px 12px;font-size:0.85em;" title="ดูมุมมองผู้ใช้นี้" onclick="startImpersonate(\'' + u.id + '\')">👁️ ดูมุมมอง</button>';
         }
@@ -1285,6 +1345,79 @@
       t.className = 'toast ' + (type || 'success');
       setTimeout(function() { t.classList.add('show'); }, 10);
       setTimeout(function() { t.classList.remove('show'); }, 3000);
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  Reset Password Functions
+    // ══════════════════════════════════════════════════════════
+    function openResetModal(userId) {
+      var u = _allUsers.find(function(x) { return String(x.id) === String(userId); });
+      if (!u) return;
+      var name = ((u.first_name || '') + ' ' + (u.last_name || '')).trim() || u.display_name || u.username || '—';
+      document.getElementById('resetUserId').value = u.id;
+      document.getElementById('resetUserName').value = name;
+      document.getElementById('resetUserContact').value = (u.email ? u.email : '') + (u.phone ? ' | โทร. ' + u.phone : '');
+
+      var hasPhone = !!(u.phone && u.phone.replace(/\D/g, '').length >= 9);
+      var optPhone = document.getElementById('resetOptPhone');
+      var phoneLabel = document.getElementById('resetOptPhoneLabel');
+      if (!hasPhone) {
+        optPhone.disabled = true;
+        optPhone.checked = false;
+        phoneLabel.style.opacity = '0.5';
+        document.getElementById('resetOptEmail').checked = true;
+      } else {
+        optPhone.disabled = false;
+        optPhone.checked = true;
+        phoneLabel.style.opacity = '1';
+        document.getElementById('resetPhoneHint').textContent = 'รหัสผ่านจะถูกเปลี่ยนเป็น: ' + u.phone.replace(/\D/g, '');
+      }
+      onResetMethodChange();
+      document.getElementById('resetPasswordModal').classList.add('active');
+    }
+
+    function closeResetModal() {
+      document.getElementById('resetPasswordModal').classList.remove('active');
+      document.getElementById('resetNewPassword').value = '';
+    }
+
+    function onResetMethodChange() {
+      var customChecked = document.getElementById('resetOptCustom').checked;
+      document.getElementById('resetCustomGroup').style.display = customChecked ? 'block' : 'none';
+    }
+
+    async function confirmResetPassword() {
+      var id = document.getElementById('resetUserId').value;
+      var methods = document.getElementsByName('resetMethod');
+      var selectedMethod = 'phone';
+      for (var i = 0; i < methods.length; i++) {
+        if (methods[i].checked) { selectedMethod = methods[i].value; break; }
+      }
+
+      var payload = { action: selectedMethod };
+      if (selectedMethod === 'custom') {
+        var pw = document.getElementById('resetNewPassword').value;
+        if (!pw || pw.length < 8) {
+          showToast('รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร', 'error');
+          return;
+        }
+        payload.new_password = pw;
+      }
+
+      var btn = document.getElementById('confirmResetBtn');
+      btn.disabled = true;
+      btn.textContent = 'กำลังดำเนินการ...';
+
+      try {
+        var res = await API.put('/api/admin/users/' + id + '/reset-password', payload);
+        showToast(res.message || 'รีเซ็ตรหัสผ่านเรียบร้อย', 'success');
+        closeResetModal();
+      } catch (err) {
+        showToast(err.message || 'เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🔑 ยืนยันการรีเซ็ต';
+      }
     }
   </script>
 </body>

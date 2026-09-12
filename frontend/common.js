@@ -29,6 +29,12 @@ function checkAuth() {
     // api.js provides API.getUser() — reads from localStorage or sessionStorage
     if (typeof API !== 'undefined') {
         currentUser = API.getUser();
+        if (currentUser && (currentUser.needs_onboarding === true || currentUser.onboarding_completed === false)) {
+            if (typeof window !== 'undefined' && window.location && !window.location.pathname.includes('login.html')) {
+                window.location.href = 'login.html';
+                return false;
+            }
+        }
         return !!API.getToken();
     }
     return false;

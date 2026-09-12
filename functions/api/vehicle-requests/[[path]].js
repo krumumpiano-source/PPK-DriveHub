@@ -2,7 +2,8 @@
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, writeAuditLog,
-  sendTelegramMessage, createNotification, notifyAllAdmins, sendLineMessage, uploadToR2, sendEmailViaGAS
+  sendTelegramMessage, createNotification, notifyAllAdmins, sendLineMessage, uploadToR2, sendEmailViaGAS,
+  sendRequestCreatedEmail, sendRequestCancelledEmail, sendRequestApprovedEmail
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
@@ -169,6 +170,17 @@ export async function onRequest(context) {
       await createNotification(env.DB, mgr.id, 'vehicle_request', 'คำขอใช้รถใหม่',
         `${body.requester_name || user.display_name || ''} ขอใช้รถวันที่ ${body.date}${body.return_date && body.return_date !== body.date ? ' ถึง ' + body.return_date : ''} ไป${body.destination}`);
     }
+
+    // Send confirmation email to requester
+    try {
+      const createdRow = await dbFirst(env.DB, 'SELECT * FROM vehicle_requests WHERE id = ?', [id]);
+      if (createdRow) {
+        await sendRequestCreatedEmail(env, createdRow, user);
+      }
+    } catch (emailErr) {
+      console.error('Error sending request created email:', emailErr);
+    }
+
     return success({ id, message: 'สร้างคำขอใช้รถเรียบร้อย' }, 201);
   }
 
@@ -233,9 +245,14 @@ export async function onRequest(context) {
     await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'cancel_vehicle_request', 'vehicle_request', id, null);
     
     // Get requester email
-    const requester = await dbFirst(env.DB, 'SELECT email FROM users WHERE id = ?', [row.requester_id]);
+    const requester = await dbFirst(env.DB, 'SELECT email, display_name, first_name FROM users WHERE id = ?', [row.requester_id]);
     if (requester && requester.email) {
-      await sendEmailViaGAS(env, requester.email, 'ยกเลิกการขอใช้รถ', `คำขอใช้รถเลขที่ ${row.request_no} วันที่ ${row.date} ไปยัง ${row.destination} ได้ถูกยกเลิกแล้ว`);
+      try {
+        await sendRequestCancelledEmail(env, row, requester, user.display_name || user.username);
+      } catch (emailErr) {
+        console.error('Error sending request cancelled email:', emailErr);
+        await sendEmailViaGAS(env, requester.email, 'ยกเลิกการขอใช้รถ', `คำขอใช้รถเลขที่ ${row.request_no} วันที่ ${row.date} ไปยัง ${row.destination} ได้ถูกยกเลิกแล้ว`);
+      }
     }
 
     // Return line message template for frontend
@@ -308,7 +325,7 @@ export async function onRequest(context) {
     if (carCheck.status === 'under_repair') return error('รถคันนี้อยู่ระหว่างซ่อม ไม่สามารถจัดให้ได้');
 
     // Validation: ตรวจสอบใบขับขี่
-    const driverCheck = await dbFirst(env.DB, 'SELECT name, license_expiry, status, line_id FROM drivers WHERE id = ?', [body.assigned_driver_id]);
+    const driverCheck = await dbFirst(env.DB, 'SELECT name, license_expiry, status, line_id, phone FROM drivers WHERE id = ?', [body.assigned_driver_id]);
     if (!driverCheck) return error('ไม่พบข้อมูลพนักงานขับรถ');
     if (driverCheck.license_expiry && driverCheck.license_expiry < new Date().toISOString().substr(0,10))
       return error('ใบขับขี่พนักงานขับรถหมดอายุ');
@@ -392,7 +409,7 @@ export async function onRequest(context) {
     }
 
     // Get requester email and send confirmation
-    const requester = await dbFirst(env.DB, 'SELECT email FROM users WHERE id = ?', [row.requester_id]);
+    const requester = await dbFirst(env.DB, 'SELECT email, display_name, first_name FROM users WHERE id = ?', [row.requester_id]);
     const confirmationUrl = `${url.origin}/vehicle-request.html?id=${id}`;
     function formatThaiDate(dateStr) {
       if (!dateStr) return '-';
@@ -431,7 +448,12 @@ ${dateLine}
 👥 ผู้ขอ/คณะเดินทาง: ${row.requester_name || '-'} (จำนวน ${row.passengers || 1} คน)${reqPhoneStr}`;
     
     if (requester && requester.email) {
-      await sendEmailViaGAS(env, requester.email, 'อนุมัติการขอใช้รถ', lineMessage);
+      try {
+        await sendRequestApprovedEmail(env, row, requester, carCheck, driverCheck);
+      } catch (emailErr) {
+        console.error('Error sending request approved email:', emailErr);
+        await sendEmailViaGAS(env, requester.email, 'อนุมัติการขอใช้รถ', lineMessage);
+      }
     }
 
     return success({ id, queue_id: queueId, message: 'อนุมัติคำขอและสร้างคิวเรียบร้อย', lineMessage, confirmation_url: confirmationUrl });
