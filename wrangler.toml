@@ -12,6 +12,10 @@ database_id = "4b18fad9-15f5-4741-bfa1-877fb34a8298"
 # binding = "STORAGE"
 # bucket_name = "ppk-drivehub-files"
 
+send_email = [
+  { name = "SEMAIL" }
+]
+
 [vars]
 APP_NAME = "PPK DriveHub"
 APP_VERSION = "1.0.0"

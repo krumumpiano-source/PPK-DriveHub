@@ -262,42 +262,54 @@ export async function checkPasswordReuse(db, userId, newPassword, limit = 5) {
   return false;
 }
 
+// Send notification email
+// Priority 1: Cloudflare Native Send Email binding (env.SEMAIL) — 100% Free, runs inside Cloudflare directly, 0 external setup
+// Priority 2: Resend REST API (if env.RESEND_API_KEY is configured)
+// Priority 3: Webhook URL (if env.EMAIL_WEBHOOK_URL is configured)
 export async function sendEmailViaGAS(env, to, subject, body) {
   return sendNotificationEmail(env, { to, subject, text: body });
 }
 
 export async function sendNotificationEmail(env, { to, subject, html, text }) {
   if (!to) return false;
-  const webhookUrl = env.EMAIL_WEBHOOK_URL;
-  const resendKey = env.RESEND_API_KEY;
-
   const emailText = text || '';
   const emailHtml = html || `<div style="font-family: sans-serif; line-height: 1.6; color: #1e293b;">${emailText.replace(/\n/g, '<br>')}</div>`;
 
-  // 1. Google Apps Script Webhook (MailApp.sendEmail - Free)
-  if (webhookUrl) {
+  // 1. Cloudflare Native Email (send_email binding — 100% Free, Zero External Setup)
+  if (env && (env.SEMAIL || env.SEND_EMAIL)) {
     try {
-      const resp = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to,
-          subject,
-          text: emailText,
-          html: emailHtml,
-          body: emailText
-        })
-      });
-      if (resp.ok) return true;
+      const semail = env.SEMAIL || env.SEND_EMAIL;
+      const fromAddr = env.EMAIL_FROM || 'PPK DriveHub <noreply@ppk-drivehub.pages.dev>';
+      const rawFrom = fromAddr.includes('<') ? fromAddr.replace(/^.*<([^>]+)>.*$/, '$1') : fromAddr;
+
+      const subjectB64 = btoa(unescape(encodeURIComponent(subject)));
+      const bodyB64 = btoa(unescape(encodeURIComponent(emailHtml)));
+
+      const rawMime = [
+        `From: ${fromAddr}`,
+        `To: ${to}`,
+        `Subject: =?UTF-8?B?${subjectB64}?=`,
+        'MIME-Version: 1.0',
+        'Content-Type: text/html; charset=UTF-8',
+        'Content-Transfer-Encoding: base64',
+        '',
+        bodyB64
+      ].join('\r\n');
+
+      const { EmailMessage } = await import('cloudflare:email');
+      const message = new EmailMessage(rawFrom, to, rawMime);
+      await semail.send(message);
+      return true;
     } catch (e) {
-      console.error('GAS Webhook Email Error:', e);
+      console.warn('Cloudflare Native Send Email:', e.message);
     }
   }
 
   // 2. Resend REST API (if configured)
+  const resendKey = env?.RESEND_API_KEY;
   if (resendKey) {
     try {
-      const fromAddr = env.EMAIL_FROM || 'PPK DriveHub <onboarding@resend.dev>';
+      const fromAddr = env?.EMAIL_FROM || 'PPK DriveHub <onboarding@resend.dev>';
       const resp = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
