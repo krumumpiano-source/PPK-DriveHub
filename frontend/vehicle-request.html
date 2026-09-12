@@ -576,12 +576,14 @@
       if (btn) btn.innerHTML = '✨ แนะนำอัตโนมัติ';
     }
 
-    function switchTab(tab) {
+    function switchTab(tab, tabBtnEl) {
       document.querySelectorAll('.vr-tab').forEach(function(t){ t.classList.remove('active'); });
       document.querySelectorAll('.vr-panel').forEach(function(p){ p.classList.remove('active'); });
       var map = { create:'panelCreate', mylist:'panelMylist', approve:'panelApprove', manager:'panelManager' };
-      document.getElementById(map[tab]).classList.add('active');
-      event.target.classList.add('active');
+      var panel = document.getElementById(map[tab]);
+      if (panel) panel.classList.add('active');
+      var btn = tabBtnEl || (window.event && window.event.target && window.event.target.classList ? window.event.target : null) || document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)) || document.querySelector('.vr-tab[onclick*="\'' + tab + '\'"]');
+      if (btn) btn.classList.add('active');
       if (tab === 'mylist') loadMyRequests();
       if (tab === 'approve') loadPendingRequests();
       if (tab === 'manager') loadManagerRequests();
@@ -1805,6 +1807,26 @@ ${dateLine}
       setTimeout(function() {
         renderAvailabilityCalendar();
         initMap();
+
+        try {
+          var urlParams = new URLSearchParams(window.location.search);
+          var initialTab = urlParams.get('tab');
+          var approveId = urlParams.get('approve_id');
+          if (initialTab === 'approve' && canApprove) {
+            switchTab('approve');
+            if (approveId) {
+              setTimeout(function() {
+                if (typeof openApproveModal === 'function') openApproveModal(approveId);
+              }, 300);
+            }
+          } else if (initialTab === 'mylist') {
+            switchTab('mylist');
+          } else if (initialTab === 'manager' && canSign) {
+            switchTab('manager');
+          }
+        } catch (e) {
+          console.warn('Error processing initial tab from URL:', e);
+        }
       }, 400); // Initialize calendar and map after UI renders
     });
   </script>

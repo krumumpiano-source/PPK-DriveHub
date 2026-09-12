@@ -947,9 +947,40 @@
     <div class="content">
       <div id="alertContainer"></div>
 
+      <!-- Pending Vehicle Requests Notification Banner -->
+      <div id="pendingRequestsBanner" style="display: none; margin-bottom: 25px; background: linear-gradient(135deg, #fff9c4 0%, #fffde7 100%); border: 2px solid #fbc02d; border-radius: var(--radius-lg); padding: 18px 22px; box-shadow: 0 4px 15px rgba(251, 192, 45, 0.2);">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="font-size: 2.2em; line-height: 1;">🔔</div>
+            <div>
+              <div style="font-size: 1.15em; font-weight: 800; color: #b78103;" id="pendingRequestsCountText">
+                มีคำขอใช้รถออนไลน์รอจัดคิวและอนุมัติ (0 รายการ)
+              </div>
+              <div style="font-size: 0.9em; color: #6d4c41; margin-top: 3px;">
+                ตรวจสอบความเหมาะสมของภารกิจ จำนวนคน สถานะรถว่าง และพนักงานขับรถว่าง แล้วดำเนินการอนุมัติจัดคิว
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button type="button" class="btn" onclick="togglePendingRequestsPreview()" style="font-size: 0.9em; padding: 8px 16px; border: 1px solid #d7ccc8; background: white; color: #5d4037; border-radius: var(--radius-md); font-weight: 600; cursor: pointer;">
+              👁️ <span id="togglePendingPreviewText">ดูรายการคำขอ</span>
+            </button>
+            <a href="vehicle-request.html?tab=approve" class="btn" style="background: #f57c00; color: white; font-size: 0.9em; padding: 8px 18px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; border-radius: var(--radius-md); border: none;">
+              ⚡ ไปหน้าจัดคิว/อนุมัติคำขอ
+            </a>
+          </div>
+        </div>
+        <div id="pendingRequestsListContainer" style="display: none; margin-top: 16px; border-top: 1px dashed #fbc02d; padding-top: 16px;">
+          <!-- Injected cards -->
+        </div>
+      </div>
+
       <div class="tabs" style="display:flex; border-bottom:1px solid #ddd; margin-bottom:20px; gap:10px;">
         <button class="tab active" onclick="switchTab('calendar')" style="padding:10px 20px; border:none; background:none; border-bottom:3px solid var(--color-primary); color:var(--color-primary); font-weight:bold; cursor:pointer;">📅 ปฏิทินคิวรถ</button>
         <button class="tab" onclick="switchTab('gantt')" style="padding:10px 20px; border:none; background:none; border-bottom:3px solid transparent; color:#666; font-weight:bold; cursor:pointer;">📊 ตารางการใช้รถ (Gantt)</button>
+        <a id="pendingRequestsTabLink" href="vehicle-request.html?tab=approve" style="display:none; padding:10px 20px; text-decoration:none; border-bottom:3px solid transparent; color:#e65100; font-weight:bold; align-items:center; gap:6px;">
+          🔔 คำขอรออนุมัติ <span id="pendingRequestsTabBadge" style="background:#ff9800; color:white; border-radius:12px; padding:2px 8px; font-size:0.8em;">0</span>
+        </a>
       </div>
 
       <!-- Tab: Gantt Chart -->
@@ -2180,12 +2211,14 @@
 
         // Always render calendar, even if no queues
         renderCalendar();
+        checkPendingVehicleRequests();
 
       } catch (error) {
         console.error('Error loading queues:', error);
         queues = [];
         // Still render calendar on error
         renderCalendar();
+        checkPendingVehicleRequests();
       } finally {
         var loadingEl = document.getElementById('loading');
         var containerEl = document.getElementById('calendarContainer');
@@ -3599,6 +3632,107 @@ window.openEditModal = function(qId) {
   currentEditStep = 1;
   updateEditStepper();
 };
+
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+async function checkPendingVehicleRequests() {
+  var banner = document.getElementById('pendingRequestsBanner');
+  var tabLink = document.getElementById('pendingRequestsTabLink');
+  var tabBadge = document.getElementById('pendingRequestsTabBadge');
+  if (!banner && !tabLink) return;
+
+  try {
+    var res = await apiCall('getVehicleRequests', { status: 'pending' });
+    var requests = (res && res.success && Array.isArray(res.data)) ? res.data : [];
+
+    if (requests.length === 0) {
+      if (banner) banner.style.display = 'none';
+      if (tabLink) tabLink.style.display = 'none';
+      return;
+    }
+
+    if (tabLink) {
+      tabLink.style.display = 'inline-flex';
+      if (tabBadge) tabBadge.textContent = requests.length;
+    }
+
+    if (banner) {
+      banner.style.display = 'block';
+      var countEl = document.getElementById('pendingRequestsCountText');
+      if (countEl) {
+        countEl.textContent = 'มีคำขอใช้รถออนไลน์รอจัดคิวและอนุมัติ (' + requests.length + ' รายการ)';
+      }
+      renderPendingRequestsList(requests);
+    }
+  } catch (err) {
+    console.warn('Could not load pending vehicle requests:', err);
+  }
+}
+
+function togglePendingRequestsPreview() {
+  var listContainer = document.getElementById('pendingRequestsListContainer');
+  var toggleText = document.getElementById('togglePendingPreviewText');
+  if (!listContainer) return;
+  if (listContainer.style.display === 'none' || !listContainer.style.display) {
+    listContainer.style.display = 'block';
+    if (toggleText) toggleText.textContent = 'ซ่อนรายการ';
+  } else {
+    listContainer.style.display = 'none';
+    if (toggleText) toggleText.textContent = 'ดูรายการคำขอ';
+  }
+}
+
+function renderPendingRequestsList(requests) {
+  var listContainer = document.getElementById('pendingRequestsListContainer');
+  if (!listContainer) return;
+
+  if (requests.length === 0) {
+    listContainer.innerHTML = '<div style="text-align: center; color: #888; padding: 10px;">ไม่มีคำขอที่รออนุมัติ</div>';
+    return;
+  }
+
+  var html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; margin-top: 10px;">';
+  requests.forEach(function (r) {
+    var dateDisplay = r.date || r.start_date || '-';
+    if (r.end_date && r.end_date !== r.start_date && r.end_date !== r.date) {
+      dateDisplay += ' ถึง ' + r.end_date;
+    }
+    var timeDisplay = (r.time_start || '') + (r.time_end ? ' - ' + r.time_end : '');
+    var requester = r.requester_name || r.requester_display_name || 'ไม่ระบุชื่อ';
+    var phone = r.requester_phone ? ' 📞 ' + r.requester_phone : '';
+    var dept = r.department ? ' (' + r.department + ')' : '';
+
+    html += '<div style="background: white; border: 1px solid #ffe082; border-radius: var(--radius-md); padding: 14px 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between;">';
+    html += '  <div>';
+    html += '    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">';
+    html += '      <span style="background: #fff3e0; color: #e65100; font-weight: 700; font-size: 0.8em; padding: 2px 8px; border-radius: 10px;">🕒 รออนุมัติ</span>';
+    html += '      <span style="font-size: 0.85em; color: #757575; font-weight: 600;">' + escapeHtml(dateDisplay) + '</span>';
+    html += '    </div>';
+    html += '    <div style="font-weight: 700; color: var(--color-text); font-size: 1.05em; margin-bottom: 4px;">📍 ' + escapeHtml(r.destination || '-') + '</div>';
+    html += '    <div style="font-size: 0.9em; color: #555; margin-bottom: 4px;">🎯 ภารกิจ: ' + escapeHtml(r.purpose || '-') + '</div>';
+    html += '    <div style="font-size: 0.85em; color: #666; margin-bottom: 2px;">👤 ผู้ขอ: ' + escapeHtml(requester) + dept + phone + '</div>';
+    html += '    <div style="font-size: 0.85em; color: #666;">👥 ผู้โดยสาร: ' + (r.passenger_count || 1) + ' คน ' + (timeDisplay ? ' | ⏰ ' + timeDisplay : '') + '</div>';
+    html += '  </div>';
+    html += '  <div style="margin-top: 12px; display: flex; justify-content: flex-end; gap: 8px;">';
+    html += '    <a href="vehicle-request.html?tab=approve&approve_id=' + encodeURIComponent(r.id) + '" class="btn btn-primary" style="background: #2e7d32; border-color: #1b5e20; font-size: 0.85em; padding: 6px 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; font-weight: 700; border-radius: 6px; color: white;">';
+    html += '      ✅ ตรวจสอบและอนุมัติ';
+    html += '    </a>';
+    html += '  </div>';
+    html += '</div>';
+  });
+  html += '</div>';
+
+  listContainer.innerHTML = html;
+}
+
 
 </script>
 
