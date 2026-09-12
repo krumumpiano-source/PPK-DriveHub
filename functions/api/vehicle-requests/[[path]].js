@@ -319,53 +319,127 @@ export async function onRequest(context) {
     const body = await parseBody(request);
     if (!body?.assigned_car_id || !body?.assigned_driver_id) return error('กรุณาระบุรถและพนักงานขับรถ');
 
-    // Validation: ตรวจสอบสถานะรถ
-    const carCheck = await dbFirst(env.DB, 'SELECT status, license_plate, brand FROM cars WHERE id = ?', [body.assigned_car_id]);
-    if (!carCheck) return error('ไม่พบข้อมูลรถ');
-    if (carCheck.status === 'under_repair') return error('รถคันนี้อยู่ระหว่างซ่อม ไม่สามารถจัดให้ได้');
-
-    // Validation: ตรวจสอบใบขับขี่
-    const driverCheck = await dbFirst(env.DB, 'SELECT name, license_expiry, status, line_id, phone FROM drivers WHERE id = ?', [body.assigned_driver_id]);
-    if (!driverCheck) return error('ไม่พบข้อมูลพนักงานขับรถ');
-    if (driverCheck.license_expiry && driverCheck.license_expiry < new Date().toISOString().substr(0,10))
-      return error('ใบขับขี่พนักงานขับรถหมดอายุ');
-    if (driverCheck.status === 'inactive') return error('พนักงานขับรถถูกปิดใช้งาน');
-
-    const ts = now();
-    const carLabel = `${carCheck.license_plate} ${carCheck.brand || ''}`.trim();
+    const returnDate = row.return_date || row.date;
     const timeStart = row.time_start || '08:00';
     const timeEnd = row.time_end || '17:00';
+    const estKm = parseFloat(row.estimated_km) || 0;
 
-    // Validation: ตรวจสอบคิวซ้อน (Conflict detection)
-    if (!body.force_queue) {
+    const blockers = [];
+    const isOverride = !!(body.override || body.force_queue);
+    const overrideReason = (body.override_reason || '').trim();
+
+    // 1. Validation: ตรวจสอบสถานะรถ
+    const carCheck = await dbFirst(env.DB, 'SELECT id, status, license_plate, brand, model FROM cars WHERE id = ?', [body.assigned_car_id]);
+    if (!carCheck) return error('ไม่พบข้อมูลรถ');
+    if (carCheck.status === 'under_repair' || carCheck.status === 'maintenance') {
+      blockers.push(`🚗 รถทะเบียน ${carCheck.license_plate} อยู่ระหว่างซ่อมหรือเช็คระยะ`);
+    } else if (carCheck.status === 'inactive') {
+      blockers.push(`🚗 รถทะเบียน ${carCheck.license_plate} ถูกระงับการใช้งาน`);
+    }
+
+    // ตรวจสอบรายการแจ้งซ่อมค้าง
+    const activeRepair = await dbFirst(env.DB, `
+      SELECT id, issue_description, service_type FROM repair_log 
+      WHERE car_id = ? 
+      AND status IN ('requested', 'approved', 'inspected', 'documented', 'repairing')
+      AND date_reported <= ? AND (date_completed IS NULL OR date_completed >= ?)
+    `, [body.assigned_car_id, returnDate, row.date]);
+    if (activeRepair) {
+      blockers.push(`🚗 รถทะเบียน ${carCheck.license_plate} มีรายการแจ้งซ่อม/เช็คระยะค้างอยู่ (${activeRepair.issue_description || activeRepair.service_type || 'กำลังซ่อม'})`);
+    }
+
+    // 2. Validation: ตรวจสอบพนักงานขับรถ
+    const driverCheck = await dbFirst(env.DB, 'SELECT id, name, license_expiry, status, line_id, phone FROM drivers WHERE id = ?', [body.assigned_driver_id]);
+    if (!driverCheck) return error('ไม่พบข้อมูลพนักงานขับรถ');
+    if (driverCheck.status === 'inactive') {
+      blockers.push(`👤 พนักงานขับรถ '${driverCheck.name}' ถูกระงับการปฏิบัติงาน`);
+    } else if (driverCheck.status === 'on_leave') {
+      blockers.push(`👤 พนักงานขับรถ '${driverCheck.name}' อยู่ระหว่างการลา`);
+    }
+    if (driverCheck.license_expiry && driverCheck.license_expiry < new Date().toISOString().substr(0,10)) {
+      blockers.push(`👤 ใบขับขี่พนักงานขับรถ '${driverCheck.name}' หมดอายุแล้ว (${driverCheck.license_expiry})`);
+    }
+
+    // ตรวจสอบตารางการลา (leaves)
+    const activeLeave = await dbFirst(env.DB, `
+      SELECT leave_type, start_date, end_date FROM leaves
+      WHERE driver_id = ? AND status IN ('approved', 'pending')
+      AND start_date <= ? AND end_date >= ?
+    `, [body.assigned_driver_id, returnDate, row.date]);
+    if (activeLeave) {
+      const ltype = activeLeave.leave_type === 'sick' ? 'ลาป่วย' : (activeLeave.leave_type === 'personal' ? 'ลากิจ' : (activeLeave.leave_type === 'vacation' ? 'ลาพักผ่อน' : 'ลา'));
+      blockers.push(`👤 พนักงานขับรถ '${driverCheck.name}' ลางาน (${ltype} วันที่ ${activeLeave.start_date} ถึง ${activeLeave.end_date})`);
+    }
+
+    // 3. กฎความล้า (Fatigue Rule): ขับสะสม >= 400 กม. ในวันก่อนหน้า
+    try {
+      const targetD = new Date(row.date + 'T00:00:00');
+      if (!isNaN(targetD.getTime())) {
+        const prevD = new Date(targetD);
+        prevD.setDate(prevD.getDate() - 1);
+        const prevDateStr = prevD.toISOString().substr(0, 10);
+
+        const prevQueues = await dbAll(env.DB, `
+          SELECT estimated_km FROM queue
+          WHERE driver_id = ? AND (date = ? OR return_date = ?) AND status NOT IN ('cancelled')
+        `, [body.assigned_driver_id, prevDateStr, prevDateStr]);
+
+        let totalPrevKm = 0;
+        for (const pq of prevQueues) totalPrevKm += (pq.estimated_km || 0);
+
+        if (totalPrevKm >= 400 && estKm > 100) {
+          blockers.push(`😴 [กฎความล้า] พนักงานขับรถ '${driverCheck.name}' ขับรถสะสมมากกว่า 400 กม. (${totalPrevKm} กม.) ในวันก่อนหน้า (${prevDateStr}) ไม่อนุญาตให้จัดคิวขับรถทางไกลในวันนี้ (ควรได้พัก หรือวิ่งงานระยะสั้นในพื้นที่เท่านั้น)`);
+        }
+      }
+    } catch (fatigueErr) {
+      console.error('Fatigue check error in approve:', fatigueErr);
+    }
+
+    // 4. ตรวจสอบคิวซ้อน (Conflict detection)
+    if (!isOverride) {
       const conflicts = await dbAll(env.DB,
-        `SELECT q.id, q.time_start, q.time_end, c.license_plate, d.name AS driver_name
+        `SELECT q.id, q.time_start, q.time_end, q.date, q.return_date, c.license_plate, d.name AS driver_name
          FROM queue q
          LEFT JOIN cars c ON q.car_id = c.id
          LEFT JOIN drivers d ON q.driver_id = d.id
-         WHERE q.date = ? AND q.status NOT IN ('cancelled','completed')
-         AND (q.car_id = ? OR q.driver_id = ?)
-         AND q.time_start < ? AND q.time_end > ?`,
-        [row.date, body.assigned_car_id, body.assigned_driver_id, timeEnd, timeStart]
+         WHERE q.status NOT IN ('cancelled','completed')
+         AND q.date <= ? AND COALESCE(q.return_date, q.date) >= ?
+         AND (q.car_id = ? OR q.driver_id = ?)`,
+        [returnDate, row.date, body.assigned_car_id, body.assigned_driver_id]
       );
-      if (conflicts.length > 0) {
-        const labels = conflicts.map(c => `${c.license_plate || ''} ${c.driver_name || ''} (${c.time_start}-${c.time_end})`).join(', ');
-        return error(`คิวซ้อนกัน: ${labels}`, 409);
+      for (const conf of conflicts) {
+        const isMulti = (row.date !== returnDate) || (conf.date !== (conf.return_date || conf.date));
+        if (isMulti || (conf.time_start < timeEnd && conf.time_end > timeStart)) {
+          blockers.push(`คิวซ้อนทับ: ${conf.license_plate || ''} ${conf.driver_name || ''} (${conf.date} เวลา ${conf.time_start}-${conf.time_end})`);
+        }
       }
     }
+
+    // ตรวจสอบเงื่อนไขข้อห้าม และการ Override
+    if (blockers.length > 0) {
+      if (!isOverride || !overrideReason) {
+        return error(`ไม่สามารถอนุมัติได้เนื่องจากติดเงื่อนไข:\n- ${blockers.join('\n- ')}\n(หากจำเป็นต้องอนุมัติเป็นกรณีพิเศษ กรุณากรอกเหตุผลและความจำเป็นในการ Override)`, 409, { blockers, can_override: true });
+      }
+    }
+
+    const ts = now();
+    const carLabel = `${carCheck.license_plate} ${carCheck.brand || ''}`.trim();
+    const notesStr = overrideReason
+      ? `[Override เหตุผล: ${overrideReason}] ${body.notes || row.notes || ''}`.trim()
+      : (body.notes || row.notes || '');
 
     // สร้างคิวอัตโนมัติ
     const queueId = generateUUID();
     await dbRun(env.DB,
       `INSERT INTO queue (id, date, return_date, time_start, time_end, car_id, driver_id,
         requester_id, requested_by, mission, destination, passengers,
-        status, notes, waypoints, estimated_km, estimated_fuel_cost, created_by, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?, ?, ?, ?, ?, ?, ?)`,
-      [queueId, row.date, row.return_date || row.date, timeStart, timeEnd,
+        status, notes, waypoints, estimated_km, estimated_fuel_cost, distance_justification, created_by, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [queueId, row.date, returnDate, timeStart, timeEnd,
        body.assigned_car_id, body.assigned_driver_id,
        row.requester_id, row.requester_name,
        row.purpose || '', row.destination, row.passengers || 1,
-       body.notes || row.notes || '', row.waypoints || null, row.estimated_km || null, body.estimated_fuel_cost || null, user.id, ts, ts]
+       notesStr, row.waypoints || null, row.estimated_km || null, body.estimated_fuel_cost || null, overrideReason || null, user.id, ts, ts]
     );
 
     let signatureImagePath = null;
@@ -382,29 +456,31 @@ export async function onRequest(context) {
       [user.id, user.id, ts, body.assigned_car_id, body.assigned_driver_id, queueId, signatureImagePath, user.id, ts, id]
     );
 
-    await writeAuditLog(env.DB, user.id, user.displayName, 'approve_vehicle_request', 'vehicle_request', id,
-      { car: carLabel, driver: driverCheck.name, queue_id: queueId });
+    if (isOverride && overrideReason) {
+      await writeAuditLog(env.DB, user.id, user.displayName || user.username, 'approve_vehicle_request_override', 'vehicle_request', id,
+        { car: carLabel, driver: driverCheck.name, queue_id: queueId, override_reason: overrideReason, violations: blockers });
+    } else {
+      await writeAuditLog(env.DB, user.id, user.displayName || user.username, 'approve_vehicle_request', 'vehicle_request', id,
+        { car: carLabel, driver: driverCheck.name, queue_id: queueId });
+    }
 
     const isPooled = body.force_queue ? ' [มีการจัดคิวร่วม/แชร์รถ]' : '';
-    const notesStr = body.notes ? `\nหมายเหตุ: ${body.notes}` : '';
+    const notifyNotes = body.notes ? `\nหมายเหตุ: ${body.notes}` : '';
 
     // แจ้งผู้ขอ
     await createNotification(env.DB, row.requester_id, 'vehicle_request', `จัดรถและเสนออนุมัติเรียบร้อย${isPooled}`,
-      `คำขอวันที่ ${row.date} ไป${row.destination} จัดคิวแล้ว (รอ ผอ.เซ็น) — รถ: ${carLabel} พนักงาน: ${driverCheck.name}${isPooled}${notesStr}`);
+      `คำขอวันที่ ${row.date} ไป${row.destination} จัดคิวแล้ว (รอ ผอ.เซ็น) — รถ: ${carLabel} พนักงาน: ${driverCheck.name}${isPooled}${notifyNotes}`);
     // แจ้งพนักงานขับรถ
     const driverUser = await dbFirst(env.DB, 'SELECT id FROM users WHERE driver_id = ?', [body.assigned_driver_id]);
     if (driverUser) {
       await createNotification(env.DB, driverUser.id, 'queue', `มีคิวใหม่${isPooled}`,
-        `คิววันที่ ${row.date} ไป${row.destination} — รถ: ${carLabel}${isPooled}${notesStr}`);
+        `คิววันที่ ${row.date} ไป${row.destination} — รถ: ${carLabel}${isPooled}${notifyNotes}`);
     }
     const closeQueueUrl = `https://ppk-drivehub.pages.dev/qr-usage-record.html?type=return&car_id=${body.assigned_car_id}&queue_id=${queueId}`;
 
-    // await sendTelegramMessage(env,
-    //   `✅ <b>จัดรถและเสนออนุมัติเรียบร้อย</b>${isPooled}\n📅 ${row.date} (${timeStart}-${timeEnd})\n📍 ${row.destination}\n🚗 ${carLabel}\n👤 @${driverCheck.name.replace(/\s+/g,'')} (คนขับ)\n👨‍💼 จัดรถโดย: ${user.displayName}\n📋 ขอโดย: ${row.requester_name}${notesStr}\n\n▶️ <a href="${closeQueueUrl}">กดที่นี่เพื่อบันทึกปิดคิวและกรอกเลขไมล์</a>`);
-
     if (driverCheck && driverCheck.line_id) {
       await sendLineMessage(env, driverCheck.line_id, 
-        `🔔 จัดคิวงานเรียบร้อย${isPooled}\n📅 ${row.date} (${timeStart}-${timeEnd})\n🚗 รถ: ${carLabel}\n📍 ปลายทาง: ${row.destination}\n📋 ขอโดย: ${row.requester_name}${notesStr}`
+        `🔔 จัดคิวงานเรียบร้อย${isPooled}\n📅 ${row.date} (${timeStart}-${timeEnd})\n🚗 รถ: ${carLabel}\n📍 ปลายทาง: ${row.destination}\n📋 ขอโดย: ${row.requester_name}${notifyNotes}`
       );
     }
 
@@ -440,12 +516,14 @@ export async function onRequest(context) {
 
     const carPlateOnly = (carCheck?.license_plate || carLabel).split(' ')[0];
 
-    const lineMessage = `🔔 ถึง: ${driverTag}
+    const lineMessage = `🔔 [แจ้งงานขับรถราชการ - PPK DriveHub]
+👤 พนักงานขับรถ: ${driverCheck.name}${driverCheck.phone ? ' (โทร. ' + driverCheck.phone + ')' : ''}
+🚗 ยานพาหนะ: ${carCheck.license_plate} (${carCheck.brand || ''} ${carCheck.model || ''})
+📋 ผู้ขอใช้รถ: ${row.requester_name || '-'}${reqPhoneStr}
 ${dateLine}
-📍 สถานที่: ${row.destination || '-'}
+📍 จุดหมายปลายทาง: ${row.destination || '-'}
 🎯 ภารกิจ: ${row.purpose || '-'}
-🚗 รถที่ใช้: ${carPlateOnly}
-👥 ผู้ขอ/คณะเดินทาง: ${row.requester_name || '-'} (จำนวน ${row.passengers || 1} คน)${reqPhoneStr}`;
+👥 จำนวนผู้โดยสาร: ${row.passengers || 1} คน`;
     
     if (requester && requester.email) {
       try {

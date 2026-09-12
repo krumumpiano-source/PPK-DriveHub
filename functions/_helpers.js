@@ -513,3 +513,60 @@ ${resetUrl}`;
 
   return sendNotificationEmail(env, { to, subject, html, text });
 }
+
+export function formatQueueLineMessage({ driverName, driverPhone, carLabel, requesterName, requesterPhone, dates, times, destination, purpose, passengers }) {
+  const driverContact = driverPhone ? ` (โทร. ${driverPhone})` : '';
+  const reqContact = requesterPhone ? ` (โทร. ${requesterPhone})` : '';
+  return `🔔 [แจ้งงานขับรถราชการ - PPK DriveHub]
+👤 พนักงานขับรถ: ${driverName || 'พนักงานขับรถ'}${driverContact}
+🚗 ยานพาหนะ: ${carLabel || '-'}
+📋 ผู้ขอใช้รถ: ${requesterName || '-'}${reqContact}
+📅 วันเดินทาง: ${dates || '-'} เวลา ${times || '-'}
+📍 จุดหมายปลายทาง: ${destination || '-'}
+🎯 ภารกิจ: ${purpose || '-'}
+👥 จำนวนผู้โดยสาร: ${passengers || 1} คน`;
+}
+
+export async function sendAdminManualQueueEmail(env, queue, adminUser, car, driver) {
+  const to = adminUser?.email;
+  if (!to) return;
+
+  const subject = `[PPK DriveHub] ยืนยันการลงคิวรถราชการ (Manual / Walk-in) - ${queue.date}`;
+  const dates = queue.return_date && queue.return_date !== queue.date
+    ? `${queue.date} ถึง ${queue.return_date}`
+    : queue.date;
+  const times = queue.time_start ? `${queue.time_start} - ${queue.time_end || ''} น.` : '-';
+
+  const carInfo = car ? `${car.license_plate} (${car.brand || ''} ${car.model || ''})`.trim() : (queue.car_id || '-');
+  const driverName = driver?.name || '-';
+  const driverPhone = driver?.phone ? ` (โทร. ${driver.phone})` : '';
+
+  const html = emailCardWrapper(
+    '📋 ยืนยันการลงคิวรถราชการเรียบร้อยแล้ว (หลักฐานการจัดคิว)',
+    `<p style="font-size: 14px; margin-top: 0;">เรียนแอดมิน <b>${adminUser.display_name || adminUser.username}</b>,</p>
+     <p style="font-size: 14px; color: #334155;">ท่านได้ดำเนินการจัดคิวรถ (Manual / Walk-in) ในระบบ PPK DriveHub เรียบร้อยแล้ว รายละเอียดดังนี้:</p>
+     <table class="info-table">
+       <tr><td class="label">วันที่เดินทาง</td><td class="val"><b>${dates}</b></td></tr>
+       <tr><td class="label">เวลา</td><td class="val">${times}</td></tr>
+       <tr><td class="label">ผู้ขอใช้รถ</td><td class="val">${queue.requested_by || '-'}</td></tr>
+       <tr><td class="label">สถานที่ปลายทาง</td><td class="val">${queue.destination || '-'}</td></tr>
+       <tr><td class="label">ภารกิจ/วัตถุประสงค์</td><td class="val">${queue.mission || '-'}</td></tr>
+       <tr><td class="label">จำนวนผู้โดยสาร</td><td class="val">${queue.passengers || 1} คน</td></tr>
+       <tr><td class="label">🚗 ยานพาหนะที่จัดสรร</td><td class="val"><b>${carInfo}</b></td></tr>
+       <tr><td class="label">👤 พนักงานขับรถ</td><td class="val"><b>${driverName}</b>${driverPhone}</td></tr>
+       <tr><td class="label">ผู้ลงคิว/แอดมิน</td><td class="val">${adminUser.display_name || adminUser.username}</td></tr>
+     </table>
+     <p style="font-size: 12px; color: #64748b; margin-top: 14px;">อีเมลนี้เป็นหลักฐานการจัดคิวยานพาหนะในระบบ</p>`
+  );
+
+  const text = `[PPK DriveHub] ยืนยันการลงคิวรถราชการ (Manual / Walk-in)
+วันเดินทาง: ${dates} เวลา ${times}
+ผู้ขอใช้รถ: ${queue.requested_by}
+ปลายทาง: ${queue.destination}
+ภารกิจ: ${queue.mission}
+ยานพาหนะ: ${carInfo}
+คนขับ: ${driverName}${driverPhone}
+ผู้จัดคิว: ${adminUser.display_name || adminUser.username}`;
+
+  return sendNotificationEmail(env, { to, subject, html, text });
+}

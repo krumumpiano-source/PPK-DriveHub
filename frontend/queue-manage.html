@@ -1396,15 +1396,46 @@
               สามารถวิ่งรอบได้)</label>
           </div>
           <div class="checkbox-group">
-            <input type="checkbox" id="modal_emergency_override">
-            <label for="modal_emergency_override" style="margin: 0;">Override การตรวจสอบ (กรณีฉุกเฉิน -
-              ข้ามการตรวจสอบซ่อม/ลา)</label>
+            <input type="checkbox" id="modal_emergency_override" onchange="toggleModalOverrideReason()">
+            <label for="modal_emergency_override" style="margin: 0;">Override การตรวจสอบ (กรณีฉุกเฉิน/จำเป็นพิเศษ - ข้ามการตรวจสอบซ่อม/ลา/ข้อจำกัด)</label>
+          </div>
+          <div id="modal_override_reason_box" style="display:none; margin-top:10px; padding:10px; background:#fef2f2; border:1px solid #fca5a5; border-radius:6px;">
+            <label style="font-size:0.88rem; font-weight:600; color:#991b1b; display:block; margin-bottom:4px;">
+              ระบุเหตุผลความจำเป็นในการ Override (บังคับบันทึก Audit Logs) <span class="required" style="color:red">*</span>
+            </label>
+            <textarea id="modal_override_reason" rows="2" style="width:100%; border:1px solid #f87171; border-radius:4px; padding:6px; font-size:0.88rem;" placeholder="เช่น ภารกิจเร่งด่วนพิเศษ ผอ. สั่งการ หรือได้รับอนุญาตเป็นกรณีพิเศษ"></textarea>
+            <div style="font-size:0.78rem; color:#991b1b; margin-top:3px;">* ระบบจะบันทึก Log การ Override ลงใน Audit Logs พร้อมชื่อผู้บันทึกเสมอ</div>
           </div>
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="closeConflictModal()">ยกเลิก</button>
         <button type="button" class="btn btn-primary" onclick="confirmWithOptions()">ยืนยัน</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dispatch Success Modal for Admin Manual Queue -->
+  <div id="queueSuccessModal" class="modal-overlay" onclick="if(event.target === this) closeQueueSuccessModal()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:550px">
+      <div class="modal-header">
+        <span>🎉 สร้างคิวสำเร็จเรียบร้อย</span>
+        <button class="modal-close" onclick="closeQueueSuccessModal()" title="ปิด">×</button>
+      </div>
+      <div class="modal-body">
+        <div style="background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; border-radius:8px; padding:12px; margin-bottom:12px; font-size:0.9rem;">
+          <p style="margin:0 0 4px 0; font-weight:600;" id="queueSuccessNoticeTitle">✅ บันทึกคิวลงระบบเรียบร้อยแล้ว</p>
+          <p style="margin:0;" id="queueSuccessNoticeDesc">ระบบได้ส่งอีเมลยืนยันรายการจัดคิวไปยังอีเมลของท่านเรียบร้อยแล้ว เพื่อใช้เป็นหลักฐานการบันทึกข้อมูล</p>
+        </div>
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
+          <label style="font-size:0.85rem; font-weight:600; color:#475569; margin-bottom:6px; display:block;">📋 ข้อความสำหรับส่งเข้ากลุ่ม LINE (Dispatch Notification):</label>
+          <textarea id="queueSuccessLineText" rows="7" readonly style="width:100%; font-family:monospace; font-size:0.88rem; border:1px solid #cbd5e1; border-radius:6px; padding:8px; background:#fff;"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer" style="display:flex; gap:8px;">
+        <button type="button" class="btn btn-secondary" onclick="closeQueueSuccessModal()">ปิด</button>
+        <button type="button" class="btn btn-primary" onclick="copyQueueSuccessText()" style="flex:1;">📋 คัดลอกข้อความ</button>
+        <a id="btnQueueSuccessLineShare" href="#" target="_blank" class="btn" style="background:#06C755; color:white; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; gap:6px; flex:1;">💬 เปิด LINE</a>
       </div>
     </div>
   </div>
@@ -2800,6 +2831,32 @@
           }
         }
 
+        // Real-time server rules check (fatigue, maintenance, leaves, availability)
+        try {
+          var avail = await apiCall('getQueueAvailability', {
+            date: queueData.date,
+            time_start: queueData.time_start,
+            time_end: queueData.time_end,
+            car_id: queueData.car_id,
+            driver_id: queueData.driver_id,
+            estimated_km: queueData.estimated_km || 0
+          });
+          if (avail && avail.success && avail.data) {
+            if (Array.isArray(avail.data.blockers)) {
+              avail.data.blockers.forEach(function (b) {
+                conflicts.push('🔴 ' + b);
+              });
+            }
+            if (Array.isArray(avail.data.warnings)) {
+              avail.data.warnings.forEach(function (w) {
+                passengerWarnings.push('🟠 ' + w);
+              });
+            }
+          }
+        } catch (e) {
+          console.error('Availability check error:', e);
+        }
+
         return {
           hasConflict: conflicts.length > 0,
           conflicts: conflicts,
@@ -2835,10 +2892,26 @@
       return start1 < end2 && start2 < end1;
     }
 
+    function toggleModalOverrideReason() {
+      var isOverride = document.getElementById('modal_emergency_override').checked;
+      var box = document.getElementById('modal_override_reason_box');
+      if (box) box.style.display = isOverride ? 'block' : 'none';
+      if (isOverride) {
+        var input = document.getElementById('modal_override_reason');
+        if (input) setTimeout(function(){ input.focus(); }, 150);
+      }
+    }
+
     function closeConflictModal() {
       document.getElementById('conflictModal').classList.remove('show');
       document.getElementById('modal_allow_flexible').checked = false;
       document.getElementById('modal_emergency_override').checked = false;
+      if (document.getElementById('modal_override_reason')) {
+        document.getElementById('modal_override_reason').value = '';
+      }
+      if (document.getElementById('modal_override_reason_box')) {
+        document.getElementById('modal_override_reason_box').style.display = 'none';
+      }
       pendingCreateData = null;
       pendingCreateDates = null;
       pendingEditData = null;
@@ -2851,18 +2924,27 @@
     }
 
     function confirmWithOptions() {
+      var emergencyOverride = document.getElementById('modal_emergency_override').checked;
+      var overrideReason = document.getElementById('modal_override_reason') ? document.getElementById('modal_override_reason').value.trim() : '';
+      if (emergencyOverride && !overrideReason) {
+        alert('กรุณาระบุเหตุผลความจำเป็นในการ Override ก่อนดำเนินการต่อ');
+        return;
+      }
+
       if (pendingCreateData && pendingCreateDates) {
         var allowFlexible = document.getElementById('modal_allow_flexible').checked;
-        var emergencyOverride = document.getElementById('modal_emergency_override').checked;
         pendingCreateData.allow_flexible = allowFlexible;
         pendingCreateData.emergency_override = emergencyOverride;
+        pendingCreateData.override = emergencyOverride;
+        pendingCreateData.override_reason = overrideReason;
         closeConflictModal();
         createQueues(pendingCreateDates, pendingCreateData);
       } else if (pendingEditData) {
         var allowFlexible = document.getElementById('modal_allow_flexible').checked;
-        var emergencyOverride = document.getElementById('modal_emergency_override').checked;
         pendingEditData.allow_flexible = allowFlexible;
         pendingEditData.emergency_override = emergencyOverride;
+        pendingEditData.override = emergencyOverride;
+        pendingEditData.override_reason = overrideReason;
         closeConflictModal();
         updateQueue(pendingEditData);
       }
@@ -2876,6 +2958,7 @@
       var successCount = 0;
       var failCount = 0;
       var total = dates.length;
+      var lastLineMessage = '';
 
       for (var i = 0; i < dates.length; i++) {
         var date = dates[i];
@@ -2889,6 +2972,9 @@
 
           if (result.success) {
             successCount++;
+            if (result.data && result.data.lineMessage && !lastLineMessage) {
+              lastLineMessage = result.data.lineMessage;
+            }
           } else {
             failCount++;
             console.error('Failed to create queue for ' + date + ': ' + result.message);
@@ -2904,9 +2990,14 @@
       }
 
       if (successCount === total) {
-        showAlert('สร้างคิวสำเร็จทั้งหมด ' + successCount + ' คิว', 'success');
         closeCreateModal();
         loadQueues();
+        var adminEmail = (currentUser && currentUser.email) ? currentUser.email : 'อีเมลของท่าน';
+        if (lastLineMessage) {
+          showQueueSuccessModal(lastLineMessage, 'ระบบได้ส่งอีเมลยืนยันรายการจัดคิวไปยัง ' + adminEmail + ' เรียบร้อยแล้ว เพื่อใช้เป็นหลักฐานการบันทึกข้อมูล');
+        } else {
+          showAlert('สร้างคิวสำเร็จทั้งหมด ' + successCount + ' คิว (ส่งอีเมลยืนยันเรียบร้อย)', 'success');
+        }
       } else if (successCount > 0) {
         showAlert('สร้างคิวสำเร็จ ' + successCount + ' คิว, ล้มเหลว ' + failCount + ' คิว', 'warning');
         submitBtn.disabled = false;
@@ -2916,6 +3007,27 @@
       }
 
       document.getElementById('createProgressContainer').style.display = 'none';
+    }
+
+    function showQueueSuccessModal(lineMsg, desc) {
+      document.getElementById('queueSuccessLineText').value = lineMsg;
+      if (desc) document.getElementById('queueSuccessNoticeDesc').textContent = desc;
+      var shareUrl = 'https://line.me/R/share?text=' + encodeURIComponent(lineMsg);
+      document.getElementById('btnQueueSuccessLineShare').href = shareUrl;
+      document.getElementById('queueSuccessModal').classList.add('show');
+    }
+
+    function closeQueueSuccessModal() {
+      document.getElementById('queueSuccessModal').classList.remove('show');
+    }
+
+    function copyQueueSuccessText() {
+      var txt = document.getElementById('queueSuccessLineText').value;
+      navigator.clipboard.writeText(txt).then(function () {
+        showAlert('คัดลอกข้อความสำหรับส่ง LINE เรียบร้อยแล้ว', 'success');
+      }).catch(function () {
+        alert('กรุณาคัดลอกข้อความด้วยตนเอง:\n' + txt);
+      });
     }
 
     // Edit Queue Functions

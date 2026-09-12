@@ -2,7 +2,8 @@
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, extractParam, writeAuditLog,
-  sendTelegramMessage, createNotification, notifyAllAdmins, sendLineMessage
+  sendTelegramMessage, createNotification, notifyAllAdmins, sendLineMessage,
+  formatQueueLineMessage, sendAdminManualQueueEmail
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
@@ -92,83 +93,191 @@ export async function onRequest(context) {
     const body = await parseBody(request);
     if (!body?.car_id || !body?.date) return error('กรุณาระบุยานพาหนะและวันที่');
 
-    // Validation: ตรวจสอบสถานะรถ (ห้ามจองรถที่อยู่ระหว่างซ่อม)
-    const carCheck = await dbFirst(env.DB, 'SELECT status FROM cars WHERE id = ?', [body.car_id]);
-    if (carCheck && carCheck.status === 'under_repair') return error('รถคันนี้อยู่ระหว่างซ่อม ไม่สามารถจองได้');
-
-    // Validation: ตรวจสอบใบขับขี่พนักงาน
-    if (body.driver_id) {
-      const driverCheck = await dbFirst(env.DB, 'SELECT license_expiry, status FROM drivers WHERE id = ?', [body.driver_id]);
-      if (driverCheck?.license_expiry && driverCheck.license_expiry < new Date().toISOString().substr(0,10)) return error('ใบขับขี่พนักงานขับรถหมดอายุ');
-      if (driverCheck?.status === 'inactive') return error('พนักงานขับรถถูกปิดใช้งาน');
-    }
-    // Validation: ตรวจสอบใบขับขี่พนักงานสำรอง
-    if (body.backup_driver_id) {
-      const backupCheck = await dbFirst(env.DB, 'SELECT license_expiry, status FROM drivers WHERE id = ?', [body.backup_driver_id]);
-      if (backupCheck?.license_expiry && backupCheck.license_expiry < new Date().toISOString().substr(0,10)) return error('ใบขับขี่พนักงานสำรองหมดอายุ');
-    }
-
-    // Backend conflict detection — prevent double-booking
+    const returnDate = body.return_date || body.date;
     const timeStart = body.time_start || body.departure_time || '00:00';
     const timeEnd = body.time_end || body.return_time || '23:59';
-    if (!body.allow_flexible && !body.emergency_override && !body.force_queue) {
+    const estKm = parseFloat(body.estimated_km) || 0;
+
+    const blockers = [];
+    const isOverride = !!(body.override || body.emergency_override);
+    const overrideReason = (body.override_reason || '').trim();
+
+    // 1. Validation: ตรวจสอบสถานะรถ
+    const carCheck = await dbFirst(env.DB, 'SELECT id, status, license_plate, brand, model FROM cars WHERE id = ?', [body.car_id]);
+    if (!carCheck) return error('ไม่พบข้อมูลยานพาหนะ');
+    if (carCheck.status === 'under_repair' || carCheck.status === 'maintenance') {
+      blockers.push(`🚗 รถทะเบียน ${carCheck.license_plate} อยู่ระหว่างซ่อมหรือเช็คระยะ`);
+    } else if (carCheck.status === 'inactive') {
+      blockers.push(`🚗 รถทะเบียน ${carCheck.license_plate} ถูกระงับการใช้งาน`);
+    }
+
+    // ตรวจสอบรายการแจ้งซ่อมค้าง
+    const activeRepair = await dbFirst(env.DB, `
+      SELECT id, issue_description, service_type FROM repair_log 
+      WHERE car_id = ? 
+      AND status IN ('requested', 'approved', 'inspected', 'documented', 'repairing')
+      AND date_reported <= ? AND (date_completed IS NULL OR date_completed >= ?)
+    `, [body.car_id, returnDate, body.date]);
+    if (activeRepair) {
+      blockers.push(`🚗 รถทะเบียน ${carCheck.license_plate} มีรายการแจ้งซ่อม/เช็คระยะค้างอยู่ (${activeRepair.issue_description || activeRepair.service_type || 'กำลังซ่อม'})`);
+    }
+
+    // 2. Validation: ตรวจสอบพนักงานขับรถ
+    let driverCheck = null;
+    if (body.driver_id) {
+      driverCheck = await dbFirst(env.DB, 'SELECT id, name, status, license_expiry, phone, line_id FROM drivers WHERE id = ?', [body.driver_id]);
+      if (!driverCheck) return error('ไม่พบข้อมูลพนักงานขับรถ');
+      if (driverCheck.status === 'inactive') {
+        blockers.push(`👤 พนักงานขับรถ '${driverCheck.name}' ถูกระงับการปฏิบัติงาน`);
+      } else if (driverCheck.status === 'on_leave') {
+        blockers.push(`👤 พนักงานขับรถ '${driverCheck.name}' อยู่ระหว่างการลา`);
+      }
+      if (driverCheck.license_expiry && driverCheck.license_expiry < new Date().toISOString().substr(0, 10)) {
+        blockers.push(`👤 ใบขับขี่พนักงานขับรถ '${driverCheck.name}' หมดอายุแล้ว (${driverCheck.license_expiry})`);
+      }
+
+      // ตรวจสอบตารางการลา (leaves)
+      const activeLeave = await dbFirst(env.DB, `
+        SELECT leave_type, start_date, end_date FROM leaves
+        WHERE driver_id = ? AND status IN ('approved', 'pending')
+        AND start_date <= ? AND end_date >= ?
+      `, [body.driver_id, returnDate, body.date]);
+      if (activeLeave) {
+        const ltype = activeLeave.leave_type === 'sick' ? 'ลาป่วย' : (activeLeave.leave_type === 'personal' ? 'ลากิจ' : (activeLeave.leave_type === 'vacation' ? 'ลาพักผ่อน' : 'ลา'));
+        blockers.push(`👤 พนักงานขับรถ '${driverCheck.name}' ลางาน (${ltype} วันที่ ${activeLeave.start_date} ถึง ${activeLeave.end_date})`);
+      }
+
+      // 3. กฎความล้า (Fatigue Rule): ขับสะสม >= 400 กม. ในวันก่อนหน้า
+      try {
+        const targetD = new Date(body.date + 'T00:00:00');
+        if (!isNaN(targetD.getTime())) {
+          const prevD = new Date(targetD);
+          prevD.setDate(prevD.getDate() - 1);
+          const prevDateStr = prevD.toISOString().substr(0, 10);
+
+          const prevQueues = await dbAll(env.DB, `
+            SELECT estimated_km FROM queue
+            WHERE driver_id = ? AND (date = ? OR return_date = ?) AND status NOT IN ('cancelled')
+          `, [body.driver_id, prevDateStr, prevDateStr]);
+
+          let totalPrevKm = 0;
+          for (const pq of prevQueues) totalPrevKm += (pq.estimated_km || 0);
+
+          if (totalPrevKm >= 400 && estKm > 100) {
+            blockers.push(`😴 [กฎความล้า] พนักงานขับรถ '${driverCheck.name}' ขับรถสะสมมากกว่า 400 กม. (${totalPrevKm} กม.) ในวันก่อนหน้า (${prevDateStr}) ไม่อนุญาตให้จัดคิวขับรถทางไกลในวันนี้ (ควรได้พัก หรือวิ่งงานระยะสั้นในพื้นที่เท่านั้น)`);
+          }
+        }
+      } catch (fatigueErr) {
+        console.error('Fatigue check error:', fatigueErr);
+      }
+    }
+
+    // 4. ตรวจสอบคิวซ้อนทับ (Conflict detection)
+    if (!body.allow_flexible && !isOverride && !body.force_queue) {
       const conflicts = await dbAll(env.DB,
-        `SELECT q.id, q.time_start, q.time_end, c.license_plate, d.name AS driver_name
+        `SELECT q.id, q.time_start, q.time_end, q.date, q.return_date, c.license_plate, d.name AS driver_name
          FROM queue q
          LEFT JOIN cars c ON q.car_id = c.id
          LEFT JOIN drivers d ON q.driver_id = d.id
-         WHERE q.date = ? AND q.status NOT IN ('cancelled','completed')
-         AND ((q.car_id = ?) OR (q.driver_id = ? AND ? IS NOT NULL))
-         AND q.time_start < ? AND q.time_end > ?`,
-        [body.date, body.car_id, body.driver_id || null, body.driver_id || null, timeEnd, timeStart]
+         WHERE q.status NOT IN ('cancelled','completed')
+         AND q.date <= ? AND COALESCE(q.return_date, q.date) >= ?
+         AND ((q.car_id = ?) OR (q.driver_id = ? AND ? IS NOT NULL))`,
+        [returnDate, body.date, body.car_id, body.driver_id || null, body.driver_id || null]
       );
-      if (conflicts.length > 0) {
-        const labels = conflicts.map(c => `${c.license_plate || ''} ${c.driver_name || ''} (${c.time_start}-${c.time_end})`).join(', ');
-        return error(`คิวซ้อนกัน: ${labels}`, 409);
+
+      for (const conf of conflicts) {
+        const isMulti = (body.date !== returnDate) || (conf.date !== (conf.return_date || conf.date));
+        if (isMulti || (conf.time_start < timeEnd && conf.time_end > timeStart)) {
+          blockers.push(`คิวซ้อนทับ: ${conf.license_plate || ''} ${conf.driver_name || ''} (${conf.date} เวลา ${conf.time_start}-${conf.time_end})`);
+        }
+      }
+    }
+
+    // ตรวจสอบเงื่อนไขข้อห้าม และการ Override
+    if (blockers.length > 0) {
+      if (!isOverride || !overrideReason) {
+        return error(`ไม่สามารถจัดคิวได้เนื่องจากติดเงื่อนไข:\n- ${blockers.join('\n- ')}\n(หากจำเป็นต้องจัดคิวเป็นกรณีพิเศษ กรุณากรอกเหตุผลและความจำเป็นในการ Override)`, 409, { blockers, can_override: true });
       }
     }
 
     const id = generateUUID();
     const ts = now();
+    const notesStr = overrideReason
+      ? `[Override เหตุผล: ${overrideReason}] ${body.notes || ''}`.trim()
+      : (body.notes || '');
+
     await dbRun(env.DB,
       `INSERT INTO queue (id, date, return_date, time_start, time_end, car_id, driver_id,
         requester_id, requested_by, mission, destination, passengers,
         status, notes, backup_driver_id, estimated_km, waypoints, estimated_fuel_cost,
-        travel_order_number, purpose_category,
+        travel_order_number, purpose_category, distance_justification,
         signed_vehicle_chief, signed_deputy_director, signed_director,
         created_by, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, body.date, body.return_date || body.date, timeStart, timeEnd,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, body.date, returnDate, timeStart, timeEnd,
        body.car_id, body.driver_id || null,
-       body.requester_id || user.id, body.requested_by || body.requester_name || user.displayName || '',
+       body.requester_id || user.id, body.requested_by || body.requester_name || user.displayName || user.username || '',
        body.mission || body.purpose || '', body.destination || '',
-       body.passengers || body.passenger_count || '',
-       body.notes || '', body.backup_driver_id || null, body.estimated_km || null, body.waypoints || null, body.estimated_fuel_cost || null,
-       body.travel_order_number || null, body.purpose_category || null,
+       body.passengers || body.passenger_count || 1,
+       notesStr, body.backup_driver_id || null, body.estimated_km || null, body.waypoints || null, body.estimated_fuel_cost || null,
+       body.travel_order_number || null, body.purpose_category || null, overrideReason || null,
        body.signed_vehicle_chief || null, body.signed_deputy_director || null, body.signed_director || null,
        user.id, ts, ts]
     );
 
-    // Resolve names for notifications
-    const car = await dbFirst(env.DB, 'SELECT license_plate, brand FROM cars WHERE id = ?', [body.car_id]);
-    const driver = body.driver_id ? await dbFirst(env.DB, 'SELECT name, line_id FROM drivers WHERE id = ?', [body.driver_id]) : null;
-    const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : body.car_id;
-    const driverLabel = driver ? driver.name : '-';
+    const carLabel = `${carCheck.license_plate} ${carCheck.brand || ''}`.trim();
+    const driverLabel = driverCheck ? driverCheck.name : '-';
     const mission = body.mission || body.purpose || '-';
 
-    await writeAuditLog(env.DB, user.id, user.displayName, 'create_queue', 'queue', id, { date: body.date, car: carLabel });
-    await notifyAllAdmins(env.DB, 'queue', 'สร้างคิวใหม่',
-      `${user.displayName} สร้างคิววันที่ ${body.date} | ${carLabel} | ${driverLabel} | ${mission}`);
-    // await sendTelegramMessage(env,
-    //   `🚐 <b>คิวใหม่</b>\n📅 ${body.date} (${timeStart}-${timeEnd})\n🚗 ${carLabel}\n👤 ${driverLabel}\n📋 ${mission}\n👨‍💼 สร้างโดย: ${user.displayName}`);
-
-    if (driver && driver.line_id) {
-      await sendLineMessage(env, driver.line_id, 
-        `🔔 มีคิวงานใหม่\n📅 ${body.date} (${timeStart}-${timeEnd})\n🚗 รถ: ${carLabel}\n📋 งาน: ${mission}\n📍 ปลายทาง: ${body.destination || '-'}`
-      );
+    // บันทึก Audit Log (กรณี Override บันทึกรายละเอียดอย่างชัดเจน)
+    if (isOverride && overrideReason) {
+      await writeAuditLog(env.DB, user.id, user.displayName || user.username, 'queue_override', 'queue', id, {
+        override_reason: overrideReason,
+        violations: blockers,
+        car: carLabel,
+        driver: driverLabel
+      });
+    } else {
+      await writeAuditLog(env.DB, user.id, user.displayName || user.username, 'create_queue', 'queue', id, { date: body.date, car: carLabel });
     }
 
-    return success({ id, message: 'สร้างคิวเรียบร้อย' }, 201);
+    await notifyAllAdmins(env.DB, 'queue', 'สร้างคิวใหม่',
+      `${user.displayName || user.username} สร้างคิววันที่ ${body.date} | ${carLabel} | ${driverLabel} | ${mission}`);
+
+    // ส่งอีเมลยืนยันไปยังแอดมินผู้จัดคิว (Manual / Walk-in Queue Confirmation)
+    if (user && user.email) {
+      try {
+        await sendAdminManualQueueEmail(env, {
+          date: body.date,
+          return_date: returnDate,
+          time_start: timeStart,
+          time_end: timeEnd,
+          car_id: carLabel,
+          requested_by: body.requested_by || body.requester_name || user.displayName || user.username,
+          destination: body.destination,
+          mission: mission,
+          passengers: body.passengers || 1
+        }, user, carCheck, driverCheck);
+      } catch (emailErr) {
+        console.error('Error sending admin manual queue email:', emailErr);
+      }
+    }
+
+    // สร้างรูปแบบข้อความสำหรับคัดลอกส่ง LINE
+    const lineMessage = formatQueueLineMessage({
+      driverName: driverCheck?.name,
+      driverPhone: driverCheck?.phone,
+      carLabel: carLabel,
+      requesterName: body.requested_by || body.requester_name || user.displayName || user.username,
+      requesterPhone: body.requester_phone || user.phone || '',
+      dates: body.date !== returnDate ? `${body.date} ถึง ${returnDate}` : body.date,
+      times: `${timeStart} - ${timeEnd} น.`,
+      destination: body.destination || '-',
+      purpose: mission,
+      passengers: body.passengers || 1
+    });
+
+    return success({ id, message: 'สร้างคิวเรียบร้อย', lineMessage }, 201);
   }
 
   // --- PUT /api/queue/:id ---
