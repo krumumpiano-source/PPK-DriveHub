@@ -157,7 +157,7 @@ export async function onRequest(context) {
 
           const prevQueues = await dbAll(env.DB, `
             SELECT estimated_km FROM queue
-            WHERE driver_id = ? AND (date = ? OR return_date = ?) AND status NOT IN ('cancelled')
+            WHERE driver_id = ? AND date <= ? AND COALESCE(return_date, date) >= ? AND status NOT IN ('cancelled')
           `, [body.driver_id, prevDateStr, prevDateStr]);
 
           let totalPrevKm = 0;

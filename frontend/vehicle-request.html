@@ -373,8 +373,10 @@
           <span style="align-self:center">-</span>
           <input type="date" id="filterApproveDateTo" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem" onchange="loadPendingRequests()">
           <select id="filterApproveStatus" onchange="loadPendingRequests()" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem">
-            <option value="pending">รออนุมัติ</option>
-            <option value="">ทั้งหมด</option>
+            <option value="pending">รออนุมัติทั้งหมด</option>
+            <option value="pending_supervisor">รอหัวหน้างาน</option>
+            <option value="pending_executive">รอจัดรถ/ผู้บริหาร</option>
+            <option value="">ทุกสถานะ</option>
             <option value="approved">จัดคิวแล้ว (รอเซ็น)</option>
             <option value="rejected">ไม่อนุมัติ</option>
           </select>
@@ -750,8 +752,9 @@
         h += '<div style="margin-top:8px;display:flex;gap:6px">';
         if (r.status === 'pending_supervisor') {
           h += '<button class="btn btn-primary btn-sm" onclick="approveSupervisor(\'' + r.id + '\')">✅ อนุมัติ (หัวหน้างาน)</button>';
+          h += '<button class="btn btn-outline btn-sm" onclick="openApproveModal(\'' + r.id + '\')" title="จัดรถและอนุมัติทันที (Fast-track)">⚡ จัดรถและอนุมัติ</button>';
           h += '<button class="btn btn-danger btn-sm" onclick="quickReject(\'' + r.id + '\')">❌ ไม่อนุมัติ</button>';
-        } else if (r.status === 'pending_executive') {
+        } else if (r.status === 'pending_executive' || r.status === 'pending') {
           h += '<button class="btn btn-primary btn-sm" onclick="openApproveModal(\'' + r.id + '\')">✅ จัดรถและอนุมัติ</button>';
           h += '<button class="btn btn-danger btn-sm" onclick="quickReject(\'' + r.id + '\')">❌ ไม่อนุมัติ</button>';
         }

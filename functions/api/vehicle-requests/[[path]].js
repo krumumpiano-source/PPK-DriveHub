@@ -25,7 +25,14 @@ export async function onRequest(context) {
     const needsSignature = url.searchParams.get('needs_signature');
     const where = [];
     const params = [];
-    if (status) { where.push('vr.status = ?'); params.push(status); }
+    if (status) {
+      if (status === 'pending') {
+        where.push("vr.status IN ('pending', 'pending_supervisor', 'pending_executive')");
+      } else {
+        where.push('vr.status = ?');
+        params.push(status);
+      }
+    }
     if (requesterId) { where.push('vr.requester_id = ?'); params.push(requesterId); }
     if (date) { where.push('vr.date = ?'); params.push(date); }
     if (dateFrom) { where.push('vr.date >= ?'); params.push(dateFrom); }
@@ -86,9 +93,12 @@ export async function onRequest(context) {
       SELECT COUNT(DISTINCT car_id) as used_cars 
       FROM queue 
       WHERE status NOT IN ('cancelled', 'completed')
-      AND date <= ? AND return_date >= ?
-      AND (time_start < ? AND time_end > ?)
-    `, [reqReturnDate, reqDate, timeEnd, timeStart]);
+      AND date <= ? AND COALESCE(return_date, date) >= ?
+      AND (
+        (date != COALESCE(return_date, date) OR ? != ?)
+        OR (time_start < ? AND time_end > ?)
+      )
+    `, [reqReturnDate, reqDate, reqDate, reqReturnDate, timeEnd, timeStart]);
 
     const totalCarsAvailable = (activeCarsCount ? activeCarsCount.count : 0) - (usedCarsCount ? usedCarsCount.used_cars : 0);
 
@@ -104,9 +114,12 @@ export async function onRequest(context) {
       FROM queue 
       WHERE status NOT IN ('cancelled', 'completed')
       AND driver_id IS NOT NULL
-      AND date <= ? AND return_date >= ?
-      AND (time_start < ? AND time_end > ?)
-    `, [reqReturnDate, reqDate, timeEnd, timeStart]);
+      AND date <= ? AND COALESCE(return_date, date) >= ?
+      AND (
+        (date != COALESCE(return_date, date) OR ? != ?)
+        OR (time_start < ? AND time_end > ?)
+      )
+    `, [reqReturnDate, reqDate, reqDate, reqReturnDate, timeEnd, timeStart]);
 
     const leaveDriversCount = await dbFirst(env.DB, `
       SELECT COUNT(DISTINCT driver_id) as leave_drivers
@@ -381,7 +394,7 @@ export async function onRequest(context) {
 
         const prevQueues = await dbAll(env.DB, `
           SELECT estimated_km FROM queue
-          WHERE driver_id = ? AND (date = ? OR return_date = ?) AND status NOT IN ('cancelled')
+          WHERE driver_id = ? AND date <= ? AND COALESCE(return_date, date) >= ? AND status NOT IN ('cancelled')
         `, [body.assigned_driver_id, prevDateStr, prevDateStr]);
 
         let totalPrevKm = 0;
