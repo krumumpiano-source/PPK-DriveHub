@@ -118,7 +118,7 @@ export async function onRequest(context) {
 
     // Calculate consumption rate
     let fuelConsumptionRate = body.fuel_consumption_rate || null;
-    const liters = parseFloat(body.liters) || 0;
+    const liters = Math.max(0, parseFloat(body.liters) || 0);
     if (mileageAfter > mileageBefore && mileageBefore > 0 && liters > 0) {
       fuelConsumptionRate = (mileageAfter - mileageBefore) / liters;
     }
@@ -136,7 +136,7 @@ export async function onRequest(context) {
       [id, dateStr, body.time || ts.substr(11, 5),
        body.car_id, body.driver_id || null,
        mileageBefore, mileageAfter,
-       liters, body.price_per_liter || 0, body.amount || 0,
+       liters, Math.max(0, parseFloat(body.price_per_liter) || 0), Math.max(0, parseFloat(body.amount) || 0),
        body.fuel_type || '', body.gas_station_name || body.station_name || '',
        body.gas_station_address || '', body.gas_station_tax_id || '',
        body.receipt_number || '', body.pump_meter_number || '',
