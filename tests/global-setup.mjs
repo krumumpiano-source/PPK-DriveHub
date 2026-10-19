@@ -72,6 +72,7 @@ export default async function globalSetup() {
     'migrations/054-fix-queue-driver-nullable-repair-invoice.sql',
     'migrations/055-add-user-department-and-onboarding.sql',
     'migrations/056-add-tracking-to-vehicle-requests.sql',
+    'migrations/057-flexible-fuel-type.sql',
   ];
 
   for (const mig of extraMigrations) {

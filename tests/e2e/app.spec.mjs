@@ -1,4 +1,4 @@
-﻿// ==============================================================
+// ==============================================================
 // PPK DriveHub — E2E Tests (Playwright)
 // ทดสอบหน้าเว็บแต่ละหน้าผ่าน Browser
 // ==============================================================
@@ -78,9 +78,8 @@ test.describe('หน้า Login', () => {
   test('แสดงฟอร์ม login ถูกต้อง', async ({ page }) => {
     await page.goto('/login.html');
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('#username')).toBeVisible();
-    await expect(page.locator('#password')).toBeVisible();
-    await expect(page.locator('#loginBtn')).toBeVisible();
+    await expect(page.locator('#identityInput, #username, input[autocomplete="username"]')).toBeVisible();
+    await expect(page.locator('#nextBtn, button:has-text("ถัดไป")')).toBeVisible();
     await expect(page).toHaveTitle(/เข้าสู่ระบบ|PPK DriveHub/);
   });
 
@@ -100,8 +99,10 @@ test.describe('หน้า Login', () => {
     }
     await page.goto('/login.html');
     await page.waitForLoadState('networkidle');
-    await page.fill('#username', ADMIN_USER);
-    await page.fill('#password', actualPass);
+    await page.fill('#identityInput, #username, input[autocomplete="username"]', ADMIN_USER);
+    await page.click('#nextBtn, button:has-text("ถัดไป")');
+    await page.waitForSelector('#loginPassword, #password, input[type="password"]', { state: 'visible', timeout: 5000 });
+    await page.fill('#loginPassword, #password, input[type="password"]', actualPass);
     await page.click('#loginBtn');
 
     // Should navigate to dashboard (wrangler strips .html)
@@ -113,8 +114,10 @@ test.describe('หน้า Login', () => {
     clearRateLimits();
     await page.goto('/login.html');
     await page.waitForLoadState('networkidle');
-    await page.fill('#username', 'wrong');
-    await page.fill('#password', 'wrong');
+    await page.fill('#identityInput, #username, input[autocomplete="username"]', 'admin');
+    await page.click('#nextBtn, button:has-text("ถัดไป")');
+    await page.waitForSelector('#loginPassword, #password, input[type="password"]', { state: 'visible', timeout: 5000 });
+    await page.fill('#loginPassword, #password, input[type="password"]', 'wrong');
 
     // Intercept login API response
     const [response] = await Promise.all([
@@ -144,6 +147,9 @@ test.describe('หน้า Login', () => {
   test('ลิงก์ไปหน้า forgot-password', async ({ page }) => {
     await page.goto('/login.html');
     await page.waitForLoadState('networkidle');
+    await page.fill('#identityInput, #username, input[autocomplete="username"]', 'admin');
+    await page.click('#nextBtn, button:has-text("ถัดไป")');
+    await page.waitForSelector('a[href*="forgot"]', { state: 'visible', timeout: 5000 });
     const forgotLink = page.locator('a[href*="forgot"]');
     if (await forgotLink.count() > 0) {
       await forgotLink.click();
@@ -994,8 +1000,10 @@ test.describe('Navigation Flow', () => {
     }
     await page.goto('/login.html');
     await page.waitForLoadState('networkidle');
-    await page.fill('#username', ADMIN_USER);
-    await page.fill('#password', navPass);
+    await page.fill('#identityInput, #username, input[autocomplete="username"]', ADMIN_USER);
+    await page.click('#nextBtn, button:has-text("ถัดไป")');
+    await page.waitForSelector('#loginPassword, #password, input[type="password"]', { state: 'visible', timeout: 5000 });
+    await page.fill('#loginPassword, #password, input[type="password"]', navPass);
     await page.click('#loginBtn');
     await page.waitForURL(/\/dashboard/, { timeout: 10000 });
 
@@ -1007,9 +1015,12 @@ test.describe('Navigation Flow', () => {
     await expect(sidebar).toBeVisible({ timeout: 10000 });
 
     // Navigate to vehicles
+    await page.evaluate(() => {
+      document.querySelectorAll('.sidebar-group').forEach(g => g.classList.add('active'));
+    });
     const vehiclesLink = sidebar.locator('[data-page="vehicles"]');
     if (await vehiclesLink.count() > 0) {
-      await vehiclesLink.click();
+      await vehiclesLink.first().click();
       await page.waitForURL(/\/vehicles/, { timeout: 5000 });
       await page.waitForLoadState('networkidle');
     }
@@ -1017,16 +1028,19 @@ test.describe('Navigation Flow', () => {
     // Navigate to queue
     await page.goto('/dashboard.html');
     await page.waitForLoadState('networkidle');
+    await page.evaluate(() => {
+      document.querySelectorAll('.sidebar-group').forEach(g => g.classList.add('active'));
+    });
     const queueLink = page.locator('#sidebar [data-page="queue"], .sidebar [data-page="queue"]');
     if (await queueLink.count() > 0) {
-      await queueLink.click();
+      await queueLink.first().click();
       await page.waitForURL(/\/queue-manage/, { timeout: 5000 });
     }
 
     // 4. Logout
     const logoutLink = page.locator('[data-page="logout"], .logout-btn, a[href*="logout"]');
     if (await logoutLink.count() > 0) {
-      await logoutLink.first().click();
+      await logoutLink.first().click({ force: true });
       await page.waitForURL(/\/login/, { timeout: 5000 });
     }
   });
@@ -1071,8 +1085,8 @@ test.describe('Responsive Mobile View', () => {
   test('Login หน้ามือถือ — ฟอร์มแสดงถูกต้อง', async ({ page }) => {
     await page.goto('/login.html');
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('#username')).toBeVisible();
-    await expect(page.locator('#loginBtn')).toBeVisible();
+    await expect(page.locator('#identityInput, #username, input[autocomplete="username"]')).toBeVisible();
+    await expect(page.locator('#nextBtn, button:has-text("ถัดไป")')).toBeVisible();
   });
 
   test('Dashboard หน้ามือถือ — มี hamburger menu', async ({ page }) => {

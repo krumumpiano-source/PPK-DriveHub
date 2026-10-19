@@ -34,8 +34,8 @@ async function notifyTelegramDriverUsage(env, recordData, user = null) {
     if (!isDriver && driver_name_manual && driver_name_manual.trim()) {
       const trimmed = driver_name_manual.trim();
       const dRow = await dbFirst(env.DB,
-        `SELECT id, name, first_name, last_name FROM drivers WHERE name = ? OR name LIKE ? LIMIT 1`,
-        [trimmed, `%${trimmed}%`]
+        `SELECT id, name, first_name, last_name FROM drivers WHERE name = ? OR instr(name, ?) > 0 LIMIT 1`,
+        [trimmed, trimmed]
       );
       if (dRow) {
         driverName = dRow.name || `${dRow.first_name || ''} ${dRow.last_name || ''}`.trim();

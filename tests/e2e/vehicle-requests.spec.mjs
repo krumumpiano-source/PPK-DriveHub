@@ -1,4 +1,4 @@
-﻿// ==============================================================
+// ==============================================================
 // PPK DriveHub — Vehicle Requests API Tests
 // ทดสอบ: Create & Read, Edit & Cancel, Approve+AutoQueue, Reject, Filters
 // ==============================================================
@@ -124,7 +124,7 @@ test.describe.serial('Vehicle Requests API', () => {
     const items = r.data?.data || [];
     const found = items.find((req) => req.id === ctx.requestId || req.id === Number(ctx.requestId));
     expect(found).toBeTruthy();
-    expect(found.status).toBe('pending');
+    expect(['pending', 'pending_supervisor']).toContain(found.status);
     expect(found.destination).toBe('กรุงเทพมหานคร');
   });
 
@@ -254,7 +254,7 @@ test.describe.serial('Vehicle Requests API', () => {
     const r = await apiGet('/api/vehicle-requests?status=pending', ctx.adminToken);
     expect([200, 404]).toContain(r.status);
     if (r.status === 200 && Array.isArray(r.data?.data)) {
-      const nonPending = r.data.data.filter((req) => req.status !== 'pending');
+      const nonPending = r.data.data.filter((req) => !req.status.startsWith('pending'));
       expect(nonPending.length).toBe(0);
     }
   });

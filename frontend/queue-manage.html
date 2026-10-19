@@ -983,22 +983,7 @@
         </a>
       </div>
 
-      <!-- Tab: Gantt Chart -->
-      <div id="ganttTab" class="tab-content" style="display:none;">
-        <div class="actions-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <button class="btn btn-secondary" onclick="changeGanttDate(-1)">‹ วันก่อนหน้า</button>
-            <input type="date" id="ganttDate" class="form-control" style="width:150px; text-align:center;" onchange="loadGantt()">
-            <button class="btn btn-secondary" onclick="changeGanttDate(1)">วันถัดไป ›</button>
-          </div>
-          <button class="btn btn-success" onclick="openCreateModal()">➕ เพิ่มคิว</button>
-        </div>
-        <div style="overflow-x:auto; background:white; border:1px solid #eee; border-radius:8px;">
-          <div id="ganttChart" style="min-width:800px; padding:20px;">
-            <p style="text-align:center; color:#999;">กำลังโหลด...</p>
-          </div>
-        </div>
-      </div>
+      <!-- Tab: Calendar -->
       <div id="calendarTab" class="tab-content active" style="display:block;">
 
       <!-- Actions Bar -->
@@ -1010,7 +995,7 @@
         </div>
         <div class="calendar-month-year" id="monthYear"></div>
         <div style="display: flex; gap: 10px;">
-          <button class="btn btn-success" onclick="openCreateModal()">➕ เพิ่มคิว</button>
+          <button class="btn btn-success" id="addQueueBtn" onclick="openCreateModal()">➕ เพิ่มคิว</button>
           <button class="btn btn-secondary" onclick="loadQueues()">🔄 รีเฟรช</button>
         </div>
       </div>
@@ -1041,6 +1026,23 @@
         <div class="calendar-grid" id="calendarGrid"></div>
       </div>
     </div>
+
+      <!-- Tab: Gantt Chart -->
+      <div id="ganttTab" class="tab-content" style="display:none;">
+        <div class="actions-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <button class="btn btn-secondary" onclick="changeGanttDate(-1)">‹ วันก่อนหน้า</button>
+            <input type="date" id="ganttDate" class="form-control" style="width:150px; text-align:center;" onchange="loadGantt()">
+            <button class="btn btn-secondary" onclick="changeGanttDate(1)">วันถัดไป ›</button>
+          </div>
+          <button class="btn btn-success" onclick="openCreateModal()">➕ เพิ่มคิว</button>
+        </div>
+        <div style="overflow-x:auto; background:white; border:1px solid #eee; border-radius:8px;">
+          <div id="ganttChart" style="min-width:800px; padding:20px;">
+            <p style="text-align:center; color:#999;">กำลังโหลด...</p>
+          </div>
+        </div>
+      </div>
   </div>
 
   <!-- Create Queue Modal -->

@@ -1,4 +1,4 @@
-﻿// ==============================================================
+// ==============================================================
 // PPK DriveHub — Driver Role E2E Tests
 // ทดสอบการใช้งานในบทบาทพนักงานขับรถ ทุกมิติ
 // ครอบคลุม: API, UI, สิทธิ์, ขอบเขตการเข้าถึง
@@ -330,9 +330,9 @@ test.describe('2. ขอใช้รถ — Vehicle Requests', () => {
 
   test('ยกเลิกคำขอของตัวเองได้', async () => {
     // สร้างคำขอใหม่เพื่อยกเลิก (ไม่ใช้ vehicleRequestId หลัก)
-    const today = new Date().toISOString().slice(0, 10);
+    const targetDate = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10);
     const createRes = await apiPost('/api/vehicle-requests', {
-      date: today,
+      date: targetDate,
       destination: 'ทดสอบยกเลิก',
       purpose: 'E2E cancel test',
     }, ctx.driverToken);

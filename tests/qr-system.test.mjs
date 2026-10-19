@@ -1,4 +1,4 @@
-﻿// ==============================================================
+// ==============================================================
 // PPK DriveHub — QR System Integration Tests
 // ทดสอบระบบ QR Code + Dual-mode (logged-in vs guest) ทุกฟังก์ชัน
 // ==============================================================
@@ -237,9 +237,15 @@ test.describe.serial('0. Bootstrap Test Data', () => {
         if (!login.data.data.driver_id && spec.ref.driverId) {
           await put(`/api/admin/users/${login.data.data.user_id}`, {
             driver_id: spec.ref.driverId,
+            role: 'driver',
+            permissions: { usage: 'create', fuel: 'create', check: 'create', repair: 'create' },
           }, adminToken);
         } else if (login.data.data.driver_id) {
           spec.ref.driverId = login.data.data.driver_id;
+          await put(`/api/admin/users/${login.data.data.user_id}`, {
+            role: 'driver',
+            permissions: { usage: 'create', fuel: 'create', check: 'create', repair: 'create' },
+          }, adminToken);
         }
       }
       console.log(`   Login ${spec.email}: ${login.status} ${login.data?.data?.token ? 'OK' : login.data?.error || 'FAIL'}`);

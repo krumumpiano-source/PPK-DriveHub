@@ -118,11 +118,11 @@ export async function onRequest(context) {
     const activeRepair = await dbFirst(env.DB, `
       SELECT id, issue_description, service_type FROM repair_log 
       WHERE car_id = ? 
-      AND status IN ('requested', 'approved', 'inspected', 'documented', 'repairing')
+      AND status IN ('repairing')
       AND date_reported <= ? AND (date_completed IS NULL OR date_completed >= ?)
     `, [body.car_id, returnDate, body.date]);
     if (activeRepair) {
-      blockers.push(`🚗 รถทะเบียน ${carCheck.license_plate} มีรายการแจ้งซ่อม/เช็คระยะค้างอยู่ (${activeRepair.issue_description || activeRepair.service_type || 'กำลังซ่อม'})`);
+      blockers.push(`🚗 รถทะเบียน ${carCheck.license_plate} อยู่ระหว่างการซ่อม/เช็คระยะ (${activeRepair.issue_description || activeRepair.service_type || 'กำลังซ่อม'})`);
     }
 
     // 2. Validation: ตรวจสอบพนักงานขับรถ
@@ -131,7 +131,7 @@ export async function onRequest(context) {
       driverCheck = await dbFirst(env.DB, 'SELECT id, name, status, license_expiry, phone, line_id FROM drivers WHERE id = ?', [body.driver_id]);
       if (!driverCheck) return error('ไม่พบข้อมูลพนักงานขับรถ');
       if (driverCheck.status === 'inactive') {
-        blockers.push(`👤 พนักงานขับรถ '${driverCheck.name}' ถูกระงับการปฏิบัติงาน`);
+        blockers.push(`👤 พนักงานขับรถ '${driverCheck.name}' ปิดใช้งาน (ถูกระงับการปฏิบัติงาน)`);
       } else if (driverCheck.status === 'on_leave') {
         blockers.push(`👤 พนักงานขับรถ '${driverCheck.name}' อยู่ระหว่างการลา`);
       }

@@ -323,7 +323,25 @@
     var currentLeaveDriverId = null;
 
     document.addEventListener('DOMContentLoaded', function () {
-      initNavigation();
+      if (typeof checkAuth === 'function' && !checkAuth()) {
+        if (typeof redirectToLogin === 'function') redirectToLogin();
+        else window.location.href = 'login.html';
+        return;
+      }
+      var u = typeof getCurrentUser === 'function' ? getCurrentUser() : ((typeof API !== 'undefined' && API.getUser) ? API.getUser() : null);
+      var isAdmin = u && (u.role === 'admin' || u.role === 'super_admin');
+      var canViewDrivers = isAdmin || (typeof hasModulePermission === 'function' && hasModulePermission('drivers', 'view'));
+      if (!canViewDrivers) {
+        var container = document.getElementById('driversContainer');
+        if (container) container.style.display = 'block';
+        var grid = document.getElementById('driversGrid');
+        if (grid) grid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🚫</div><p>ไม่มีสิทธิ์เข้าถึงข้อมูลพนักงานขับรถ (Access Denied)</p></div>';
+        var loading = document.getElementById('loading');
+        if (loading) loading.style.display = 'none';
+        window.location.href = 'dashboard.html';
+        return;
+      }
+      if (typeof initNavigation === 'function') initNavigation();
       initTabs();
       initActions();
       loadDrivers();
@@ -402,8 +420,13 @@
         }
       } catch (error) {
         console.error('Error loading drivers:', error);
+        var errStr = String(error?.message || error || '');
+        if (errStr.includes('ไม่มีสิทธิ์') || errStr.includes('403') || error?.status === 403) {
+          document.getElementById('driversGrid').innerHTML = '<div class="empty-state"><div class="empty-state-icon">🚫</div><p>ไม่มีสิทธิ์เข้าถึงข้อมูลพนักงานขับรถ (Access Denied)</p></div>';
+        } else {
+          document.getElementById('driversGrid').innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>เกิดข้อผิดพลาดในการโหลดข้อมูล</p></div>';
+        }
         showAlert(handleError(error), 'error');
-        document.getElementById('driversGrid').innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>เกิดข้อผิดพลาดในการโหลดข้อมูล</p></div>';
         document.getElementById('driversContainer').style.display = 'block';
       } finally {
         var loadingEl = document.getElementById('loading');
