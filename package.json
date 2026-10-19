@@ -5,7 +5,7 @@
   "type": "module",
   "description": "PPK DriveHub — ระบบจัดการยานพาหนะโรงเรียนพะเยาพิทยาคม",
   "scripts": {
-    "dev": "npx wrangler pages dev ./frontend --d1 DB=REPLACE_WITH_YOUR_D1_ID",
+    "dev": "npx wrangler pages dev ./frontend",
     "lint": "npx eslint functions/",
     "lint:fix": "npx eslint functions/ --fix",
     "deploy": "npm run lint && npx wrangler pages deploy ./frontend",

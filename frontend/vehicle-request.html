@@ -107,7 +107,8 @@
     @media(max-width:640px){
       .avail-cal-grid { gap: 4px; }
       .avail-cal-day { min-height: 58px!important; padding: 4px 2px!important; }
-      .cal-dot { font-size: 0.65rem!important; padding: 2px 4px!important; }
+      .cal-dot { font-size: 0.75rem!important; padding: 2px 4px!important; font-weight: 600; }
+      .avail-cal-nav .btn { padding: 6px 12px!important; font-size: 0.85rem!important; }
     }
     .avail-cal-dow {
       text-align: center;
@@ -268,6 +269,12 @@
                 <label>เบอร์โทรศัพท์ติดต่อผู้ขอ <span style="color:var(--color-danger)">*</span></label>
                 <input type="tel" id="fRequesterPhone" class="form-control" placeholder="เช่น 081-234-5678" required>
               </div>
+              <div class="form-group" style="grid-column:1/-1; margin: -2px 0 4px 0;">
+                <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; color:var(--color-primary); background:#eff6ff; padding:8px 12px; border-radius:var(--radius-md); border:1px solid #bfdbfe; user-select:none;">
+                  <input type="checkbox" id="fSameDayTrip" checked onchange="toggleSameDayTrip(this.checked)" style="width:18px; height:18px; accent-color:var(--color-primary); cursor:pointer;">
+                  <span>🚗 เดินทางไป-กลับในวันเดียว (Same-Day Trip)</span>
+                </label>
+              </div>
               <div class="form-group">
                 <label>วันที่ออกเดินทาง <span style="color:var(--color-danger)">*</span></label>
                 <input type="text" id="fDate" class="form-control" placeholder="เลือกวันที่" required>
@@ -280,11 +287,11 @@
                 </div>
               </div>
 
-              <div class="form-group">
+              <div class="form-group" id="groupReturnDate" style="display:none;">
                 <label>วันที่กลับ <span style="color:var(--color-danger)">*</span></label>
                 <input type="text" id="fReturnDate" class="form-control" placeholder="เลือกวันที่" required>
               </div>
-              <div class="form-group">
+              <div class="form-group" id="groupReturnTime">
                 <label>เวลากลับถึงโรงเรียน <span style="color:var(--color-danger)">*</span></label>
                 <div style="position:relative">
                   <input type="text" id="fTimeEnd" class="form-control" placeholder="เลือกเวลา" value="16:30" style="background:#fff; cursor:pointer; padding-right:36px;" required>
@@ -334,18 +341,33 @@
                 </div>
               </div>
               <div class="form-group" style="grid-column:1/-1">
-                <label>รายชื่อผู้ร่วมเดินทาง</label>
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+                  <label style="margin:0; font-weight:600;">รายชื่อผู้ร่วมเดินทาง</label>
+                  <div style="display:flex; gap:6px;">
+                    <button type="button" id="btnAddPassenger" class="btn btn-sm btn-outline" onclick="addPassengerRow()" style="font-size:.82rem; padding:6px 12px;">➕ เพิ่มทีละคน</button>
+                    <button type="button" class="btn btn-sm" onclick="toggleBulkPassengerModal()" style="font-size:.82rem; padding:6px 12px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:500;">📋 วางรายชื่อหลายคน</button>
+                  </div>
+                </div>
+                <div id="bulkPassengerBox" style="display:none; background:#f8fafc; border:1px solid #cbd5e1; border-radius:var(--radius-md); padding:12px; margin-bottom:10px;">
+                  <div style="font-size:0.85rem; font-weight:600; color:#334155; margin-bottom:6px;">
+                    วางรายชื่อจาก Excel หรือ Word (1 บรรทัด ต่อ 1 คน):
+                  </div>
+                  <textarea id="bulkPassengerText" class="form-control" rows="4" placeholder="นายสมชาย ใจดี&#10;นางสาวสมศรี มีสุข&#10;เด็กชายรักเรียน เพียรดี"></textarea>
+                  <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
+                    <button type="button" class="btn btn-sm btn-outline" onclick="toggleBulkPassengerModal()">ยกเลิก</button>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="applyBulkPassengers()">📥 นำเข้ารายชื่อ</button>
+                  </div>
+                </div>
                 <div id="passengerList"></div>
-                <button type="button" id="btnAddPassenger" class="btn btn-sm" onclick="addPassengerRow()" style="margin-top:4px;font-size:.82rem;padding:8px 16px">➕ เพิ่มชื่อ</button>
               </div>
               <div class="form-group" style="grid-column:1/-1">
                 <label>หมายเหตุ</label>
                 <textarea id="fNotes" class="form-control" rows="2"></textarea>
               </div>
             </div>
-            <div style="display:flex;gap:8px;margin-top:1rem" class="vr-submit-row">
-              <button type="submit" id="btnSubmitRequest" class="btn btn-primary" style="flex:1">📤 ส่งคำขอใช้รถ</button>
-              <button type="button" class="btn btn-outline" onclick="printRequest()" style="flex:1">🖨️ พิมพ์แบบฟอร์ม</button>
+            <div style="display:flex;gap:12px;margin-top:1.25rem;align-items:center" class="vr-submit-row">
+              <button type="submit" id="btnSubmitRequest" class="btn btn-primary" style="flex:2; padding:12px 20px; font-size:1.02rem; font-weight:700; box-shadow:0 4px 12px rgba(79,70,229,0.2);">📤 ส่งคำขอใช้รถ</button>
+              <button type="button" class="btn btn-outline" onclick="printRequest()" style="flex:1; padding:12px 16px; font-size:.92rem;">🖨️ พิมพ์แบบฟอร์ม</button>
             </div>
           </form>
         </div>
@@ -591,11 +613,62 @@
       if (tab === 'manager') loadManagerRequests();
     }
 
+    function toggleSameDayTrip(isSameDay) {
+      var grp = document.getElementById('groupReturnDate');
+      var fDateEl = document.getElementById('fDate');
+      var fReturnEl = document.getElementById('fReturnDate');
+      if (isSameDay) {
+        if (grp) grp.style.display = 'none';
+        if (fDateEl && fReturnEl && fDateEl.value) {
+          fReturnEl.value = fDateEl.value;
+          if (fReturnDateFlatpickr) fReturnDateFlatpickr.setDate(fDateEl.value);
+        }
+      } else {
+        if (grp) grp.style.display = 'block';
+        if (fReturnEl && !fReturnEl.value && fDateEl && fDateEl.value) {
+          fReturnEl.value = fDateEl.value;
+          if (fReturnDateFlatpickr) fReturnDateFlatpickr.setDate(fDateEl.value);
+        }
+      }
+      checkAvailabilityLive();
+    }
+
+    function toggleBulkPassengerModal() {
+      var box = document.getElementById('bulkPassengerBox');
+      if (!box) return;
+      var isHidden = box.style.display === 'none';
+      box.style.display = isHidden ? 'block' : 'none';
+      if (isHidden) {
+        var ta = document.getElementById('bulkPassengerText');
+        if (ta) { ta.value = ''; ta.focus(); }
+      }
+    }
+
+    function applyBulkPassengers() {
+      var ta = document.getElementById('bulkPassengerText');
+      if (!ta) return;
+      var lines = ta.value.split(/\r?\n/).map(function(s){ return s.trim(); }).filter(function(s){ return s.length > 0; });
+      if (lines.length === 0) {
+        showAlert('กรุณาวางรายชื่ออย่างน้อย 1 คน', 'warning');
+        return;
+      }
+      lines.forEach(function(name) {
+        addPassengerRow(name);
+      });
+      toggleBulkPassengerModal();
+      showAlert('เพิ่มรายชื่อผู้ร่วมเดินทาง ' + lines.length + ' คนเรียบร้อยแล้ว', 'success');
+    }
+
     function addPassengerRow(name) {
       var div = document.getElementById('passengerList');
       var row = document.createElement('div');
       row.className = 'passenger-row';
-      row.innerHTML = '<input type="text" class="form-control passenger-name" placeholder="ชื่อ-สกุล" value="' + (name || '') + '"><button type="button" onclick="this.parentElement.remove(); document.getElementById(\'fPassengers\').value = document.getElementById(\'passengerList\').children.length || 1" style="background:none;border:none;cursor:pointer;font-size:1.1rem">🗑️</button>';
+      row.style.display = 'flex';
+      row.style.gap = '8px';
+      row.style.marginBottom = '8px';
+      row.style.alignItems = 'center';
+      row.innerHTML = '<input type="text" class="form-control passenger-name" placeholder="ชื่อ-สกุล ผู้ร่วมเดินทาง" value="' + (name ? htmlEsc(name) : '') + '">' +
+        '<button type="button" onclick="this.parentElement.remove(); document.getElementById(\'fPassengers\').value = document.getElementById(\'passengerList\').children.length || 1" title="ลบรายชื่อ" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:6px;cursor:pointer;padding:6px 12px;font-size:0.95rem;min-width:40px;min-height:38px;display:flex;align-items:center;justify-content:center;">🗑️</button>';
       div.appendChild(row);
       document.getElementById('fPassengers').value = div.children.length || 1;
     }
@@ -634,12 +707,14 @@
          finalDest += ', ' + searchVal;
       }
       var reqPhone = document.getElementById('fRequesterPhone') ? document.getElementById('fRequesterPhone').value.trim() : '';
+      var sameDay = document.getElementById('fSameDayTrip');
+      var returnDateVal = (sameDay && sameDay.checked) ? document.getElementById('fDate').value : (document.getElementById('fReturnDate').value || document.getElementById('fDate').value);
       var data = {
         requester_name: document.getElementById('fRequesterName').value.trim(),
         department: document.getElementById('fDepartment').value.trim(),
         requester_phone: reqPhone,
         date: document.getElementById('fDate').value,
-        return_date: document.getElementById('fReturnDate').value,
+        return_date: returnDateVal,
         time_start: document.getElementById('fTimeStart').value || null,
         time_end: document.getElementById('fTimeEnd').value || null,
         destination: finalDest,
@@ -664,6 +739,10 @@
           if (reqPhone) localStorage.setItem('last_phone', reqPhone);
           
           document.getElementById('requestForm').reset();
+          if (sameDay) {
+            sameDay.checked = true;
+            toggleSameDayTrip(true);
+          }
           document.getElementById('passengerList').innerHTML = '';
           if (typeof clearWaypoints === 'function') clearWaypoints();
           document.getElementById('destListContainer').innerHTML = '';
@@ -1412,7 +1491,7 @@ ${dateLine}
           if (icon) icon.style.transform = 'rotate(-90deg)';
         }
       }
-      map = L.map('map').setView([SCHOOL_LAT, SCHOOL_LNG], 13);
+      map = L.map('map', { scrollWheelZoom: false }).setView([SCHOOL_LAT, SCHOOL_LNG], 13);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
       }).addTo(map);
@@ -1619,13 +1698,17 @@ ${dateLine}
       calSelectedDate = dateStr;
       var fDateEl = document.getElementById('fDate');
       var fReturnEl = document.getElementById('fReturnDate');
+      var sameDay = document.getElementById('fSameDayTrip');
       if (fDateEl) {
         fDateEl.value = dateStr;
         if (fDateFlatpickr) fDateFlatpickr.setDate(dateStr);
       }
-      if (fReturnEl) {
+      if (fReturnEl && (!sameDay || sameDay.checked || !fReturnEl.value)) {
         fReturnEl.value = dateStr;
         if (fReturnDateFlatpickr) fReturnDateFlatpickr.setDate(dateStr);
+      }
+      if (fReturnDateFlatpickr) {
+        fReturnDateFlatpickr.set('minDate', dateStr || 'today');
       }
       renderAvailabilityCalendar();
       checkAvailabilityLive();
@@ -1776,10 +1859,21 @@ ${dateLine}
           minDate: 'today',
           onChange: function(selectedDates, dateStr, instance) {
             calSelectedDate = dateStr;
-            // Auto set return date if it's empty
-            var returnInput = document.getElementById('fReturnDate').value;
-            if (!returnInput && dateStr && fReturnDateFlatpickr) {
-              fReturnDateFlatpickr.setDate(dateStr);
+            var sameDay = document.getElementById('fSameDayTrip');
+            if (sameDay && sameDay.checked) {
+              var fReturnEl = document.getElementById('fReturnDate');
+              if (fReturnEl) {
+                fReturnEl.value = dateStr;
+                if (fReturnDateFlatpickr) fReturnDateFlatpickr.setDate(dateStr);
+              }
+            } else {
+              var returnInput = document.getElementById('fReturnDate').value;
+              if (!returnInput && dateStr && fReturnDateFlatpickr) {
+                fReturnDateFlatpickr.setDate(dateStr);
+              }
+            }
+            if (fReturnDateFlatpickr) {
+              fReturnDateFlatpickr.set('minDate', dateStr || 'today');
             }
             checkAvailabilityLive();
             renderAvailabilityCalendar();
