@@ -94,6 +94,9 @@ export async function onRequest(context) {
     if (!body?.car_id || !body?.date) return error('กรุณาระบุยานพาหนะและวันที่');
 
     const returnDate = body.return_date || body.date;
+    if (returnDate < body.date) {
+      return error('วันที่สิ้นสุดการเดินทางต้องไม่ก่อนวันที่เริ่มต้นเดินทาง', 400);
+    }
     const timeStart = body.time_start || body.departure_time || '00:00';
     const timeEnd = body.time_end || body.return_time || '23:59';
     const estKm = parseFloat(body.estimated_km) || 0;

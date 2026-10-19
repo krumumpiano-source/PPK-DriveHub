@@ -87,6 +87,13 @@ export async function onRequest(context) {
     const timeStart = body.time_start || '00:00';
     const timeEnd = body.time_end || '23:59';
 
+    if (reqReturnDate < reqDate) {
+      return error('วันที่สิ้นสุดการเดินทางต้องไม่ก่อนวันที่เริ่มต้นเดินทาง', 400);
+    }
+    if (reqDate === reqReturnDate && body.time_start && body.time_end && timeEnd <= timeStart) {
+      return error('เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้นเดินทาง', 400);
+    }
+
     // 1. Check available cars count during the period
     const activeCarsCount = await dbFirst(env.DB, "SELECT COUNT(*) as count FROM cars WHERE status NOT IN ('under_repair', 'retired', 'inactive')");
     const usedCarsCount = await dbFirst(env.DB, `

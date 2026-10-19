@@ -2868,6 +2868,7 @@
         try {
           var avail = await apiCall('getQueueAvailability', {
             date: queueData.date,
+            return_date: queueData.return_date || queueData.date,
             time_start: queueData.time_start,
             time_end: queueData.time_end,
             car_id: queueData.car_id,

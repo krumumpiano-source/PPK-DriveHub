@@ -588,9 +588,14 @@
       if (btn) btn.innerHTML = '⏳ กำลังคำนวณ...';
       
       var reqDate = document.getElementById('fModalReqDate').value;
-      // In practice, time_start and time_end should be passed if available. For simplicity, we just pass date.
+      var url = '/api/queue/suggest?date=' + encodeURIComponent(reqDate);
+      if (typeof currentApproveReqObj !== 'undefined' && currentApproveReqObj) {
+        if (currentApproveReqObj.return_date) url += '&return_date=' + encodeURIComponent(currentApproveReqObj.return_date);
+        if (currentApproveReqObj.time_start) url += '&time_start=' + encodeURIComponent(currentApproveReqObj.time_start);
+        if (currentApproveReqObj.time_end) url += '&time_end=' + encodeURIComponent(currentApproveReqObj.time_end);
+      }
       try {
-        var res = await API.get('/api/queue/suggest?date=' + reqDate);
+        var res = await API.get(url);
         if (res.success && res.data) {
           if (res.data.best_car) {
             document.getElementById('mAssignCar').value = res.data.best_car.id;
@@ -1213,7 +1218,7 @@ ${dateLine}
       }
 
       try {
-        var res = await API.get('/api/queue/suggest?date=' + encodeURIComponent(date) + '&time_start=' + encodeURIComponent(timeStart) + '&time_end=' + encodeURIComponent(timeEnd));
+        var res = await API.get('/api/queue/suggest?date=' + encodeURIComponent(date) + '&return_date=' + encodeURIComponent(returnDate) + '&time_start=' + encodeURIComponent(timeStart) + '&time_end=' + encodeURIComponent(timeEnd));
         if (res && res.success) {
           var carsAvailable = res.data.available_cars_count || 0;
           var driversAvailable = res.data.available_drivers_count || 0;

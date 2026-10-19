@@ -12,28 +12,33 @@ export async function onRequest(context) {
       // All authenticated users can check availability (needed for requester dashboard)
 
       const date = url.searchParams.get('date');
+      const returnDate = url.searchParams.get('return_date') || date;
       const timeStart = url.searchParams.get('time_start') || '00:00';
       const timeEnd   = url.searchParams.get('time_end')   || '23:59';
 
       if (!date) return error('กรุณาระบุวันที่');
+      if (returnDate < date) return error('วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่มต้น');
 
       // ── ขั้นตอนที่ 1: รวบรวม car_id / driver_id ที่ "ไม่ว่าง" ──────────────
       //
-      // Source A: คิวในวันเดียวกัน ที่ยังไม่ cancelled/completed
+      // Source A: คิวในช่วงวันที่ ที่ยังไม่ cancelled/completed
       //   → ใช้ time-overlap ถ้ามีเวลา, ถ้า NULL time = ครอบทั้งวัน (ถือว่าชนเสมอ)
       //   → status = 'ongoing' หมายถึงออกไปแล้วจริง → ชนทุกกรณี
       //
       // Source B: usage_records — รถที่สแกน QR ออกแล้วยังไม่มี return (ข้ามวัน)
       //   → ดึงจาก /api/usage/cars-out pattern: departure ไม่มี return ที่ match
+      //
+      // Source C: repair_log — รถที่มีรายการแจ้งซ่อมหรือเช็คระยะค้างอยู่
 
       const queryStart = `${date} ${timeStart}`;
-      const queryEnd   = `${date} ${timeEnd}`;
+      const queryEnd   = `${returnDate} ${timeEnd}`;
 
       // ── ขั้นตอนที่ 1 & 2: รวบรวมข้อมูลแบบ Parallel ด้วย Promise.all ──────────────
       const [
         busyCarsFromQueue,
         busyDriversFromQueue,
         carsPhysicallyOut,
+        carsUnderRepair,
         allCars,
         leaveDriverIds,
         allDrivers
@@ -78,7 +83,15 @@ export async function onRequest(context) {
                 AND ret.record_type = 'return'
                 AND ret.datetime   >= dep.datetime
             )
-        `, [date + ' 23:59:59']),
+        `, [returnDate + ' 23:59:59']),
+
+        // Source C: รถที่มีรายการแจ้งซ่อมค้างอยู่
+        dbAll(env.DB, `
+          SELECT DISTINCT car_id FROM repair_log
+          WHERE car_id IS NOT NULL
+            AND status IN ('requested', 'approved', 'inspected', 'documented', 'repairing')
+            AND date_reported <= ? AND (date_completed IS NULL OR date_completed >= ?)
+        `, [returnDate, date]),
 
         // รถทุกคันที่ active (primary)
         dbAll(env.DB, `
@@ -89,11 +102,11 @@ export async function onRequest(context) {
           ORDER BY current_mileage ASC
         `, []),
 
-        // คนขับที่ลาพักอนุมัติ
+        // คนขับที่ลาพักอนุมัติ (ครอบคลุมช่วงทริปทั้งหมด)
         dbAll(env.DB, `
           SELECT DISTINCT driver_id FROM leaves
           WHERE status = 'approved' AND start_date <= ? AND end_date >= ?
-        `, [date, date]),
+        `, [returnDate, date]),
 
         // คนขับทุกคนที่ active (primary)
         dbAll(env.DB, `
@@ -108,7 +121,8 @@ export async function onRequest(context) {
       // รวม set ที่ "ไม่ว่าง"
       const busyCarIds    = new Set([
         ...busyCarsFromQueue.map(r => r.car_id).filter(Boolean),
-        ...carsPhysicallyOut.map(r => r.car_id).filter(Boolean)
+        ...carsPhysicallyOut.map(r => r.car_id).filter(Boolean),
+        ...carsUnderRepair.map(r => r.car_id).filter(Boolean)
       ]);
       const busyDriverIds = new Set(
         busyDriversFromQueue.map(r => r.driver_id).filter(Boolean)
