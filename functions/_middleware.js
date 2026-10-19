@@ -27,6 +27,10 @@ const RATE_LIMITS = {
   '/api/auth/login': { max: 5, windowMs: 15 * 60 * 1000 },           // 5 per 15 min
   '/api/auth/forgot-password': { max: 3, windowMs: 15 * 60 * 1000 }, // 3 per 15 min
   '/api/auth/register': { max: 5, windowMs: 60 * 60 * 1000 },        // 5 per hour
+  '/api/usage/record': { max: 30, windowMs: 60 * 1000 },              // 30 per min (QR usage record)
+  '/api/fuel/record': { max: 20, windowMs: 60 * 1000 },               // 20 per min (QR fuel record)
+  '/api/check/daily': { max: 20, windowMs: 60 * 1000 },               // 20 per min (QR inspection)
+  '/api/survey/submit': { max: 15, windowMs: 60 * 1000 }              // 15 per min (Trip survey)
 };
 
 const ALLOWED_ORIGINS = [

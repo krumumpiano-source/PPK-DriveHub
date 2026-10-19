@@ -237,9 +237,14 @@ export async function notifyAllAdmins(db, type, title, message) {
     const admins = await dbAll(db,
       "SELECT id FROM users WHERE role IN ('admin','super_admin') AND active = 1"
     );
-    for (const admin of admins) {
-      await createNotification(db, admin.id, type, title, message);
-    }
+    if (!admins || admins.length === 0) return;
+    const stmts = admins.map(admin =>
+      db.prepare(
+        `INSERT INTO notifications (id, user_id, type, title, message, read, created_at)
+         VALUES (?, ?, ?, ?, ?, 0, ?)`
+      ).bind(generateUUID(), admin.id, type, title, message, now())
+    );
+    await db.batch(stmts);
   } catch { /* non-critical */ }
 }
 

@@ -1,4 +1,4 @@
-import { dbAll, dbFirst, success, error } from '../../_helpers.js';
+import { dbAll, success, error } from '../../_helpers.js';
 
 export async function onRequest(context) {
   try {
@@ -26,45 +26,81 @@ export async function onRequest(context) {
       // Source B: usage_records — รถที่สแกน QR ออกแล้วยังไม่มี return (ข้ามวัน)
       //   → ดึงจาก /api/usage/cars-out pattern: departure ไม่มี return ที่ match
 
-      const busyCarsFromQueue = await dbAll(env.DB, `
-        SELECT DISTINCT car_id FROM queue
-        WHERE date = ?
-          AND car_id IS NOT NULL
-          AND status NOT IN ('cancelled', 'completed')
-          AND (
-            status = 'ongoing'
-            OR time_start IS NULL
-            OR time_end   IS NULL
-            OR (time_start < ? AND time_end > ?)
-          )
-      `, [date, timeEnd, timeStart]);
+      // ── ขั้นตอนที่ 1 & 2: รวบรวมข้อมูลแบบ Parallel ด้วย Promise.all ──────────────
+      const [
+        busyCarsFromQueue,
+        busyDriversFromQueue,
+        carsPhysicallyOut,
+        allCars,
+        leaveDriverIds,
+        allDrivers
+      ] = await Promise.all([
+        // Source A1: รถที่ติดคิวในวันเดียวกัน
+        dbAll(env.DB, `
+          SELECT DISTINCT car_id FROM queue
+          WHERE date = ?
+            AND car_id IS NOT NULL
+            AND status NOT IN ('cancelled', 'completed')
+            AND (
+              status = 'ongoing'
+              OR time_start IS NULL
+              OR time_end   IS NULL
+              OR (time_start < ? AND time_end > ?)
+            )
+        `, [date, timeEnd, timeStart]),
 
-      const busyDriversFromQueue = await dbAll(env.DB, `
-        SELECT DISTINCT driver_id FROM queue
-        WHERE date = ?
-          AND driver_id IS NOT NULL
-          AND status NOT IN ('cancelled', 'completed')
-          AND (
-            status = 'ongoing'
-            OR time_start IS NULL
-            OR time_end   IS NULL
-            OR (time_start < ? AND time_end > ?)
-          )
-      `, [date, timeEnd, timeStart]);
+        // Source A2: คนขับที่ติดคิวในวันเดียวกัน
+        dbAll(env.DB, `
+          SELECT DISTINCT driver_id FROM queue
+          WHERE date = ?
+            AND driver_id IS NOT NULL
+            AND status NOT IN ('cancelled', 'completed')
+            AND (
+              status = 'ongoing'
+              OR time_start IS NULL
+              OR time_end   IS NULL
+              OR (time_start < ? AND time_end > ?)
+            )
+        `, [date, timeEnd, timeStart]),
 
-      // Source B: รถที่ออกไปแล้ว (departure scan) และยังไม่มี return scan ← ข้ามวัน
-      const carsPhysicallyOut = await dbAll(env.DB, `
-        SELECT DISTINCT dep.car_id
-        FROM usage_records dep
-        WHERE dep.record_type = 'departure'
-          AND dep.datetime < ?
-          AND NOT EXISTS (
-            SELECT 1 FROM usage_records ret
-            WHERE ret.car_id    = dep.car_id
-              AND ret.record_type = 'return'
-              AND ret.datetime   >= dep.datetime
-          )
-      `, [date + ' 23:59:59']);
+        // Source B: รถที่ออกไปแล้ว (departure scan) และยังไม่มี return scan ← ข้ามวัน
+        dbAll(env.DB, `
+          SELECT DISTINCT dep.car_id
+          FROM usage_records dep
+          WHERE dep.record_type = 'departure'
+            AND dep.datetime < ?
+            AND NOT EXISTS (
+              SELECT 1 FROM usage_records ret
+              WHERE ret.car_id    = dep.car_id
+                AND ret.record_type = 'return'
+                AND ret.datetime   >= dep.datetime
+            )
+        `, [date + ' 23:59:59']),
+
+        // รถทุกคันที่ active (primary)
+        dbAll(env.DB, `
+          SELECT id, license_plate, brand, model, vehicle_type, current_mileage
+          FROM cars
+          WHERE status NOT IN ('under_repair', 'retired', 'inactive')
+            AND (vehicle_category = 'primary' OR vehicle_category IS NULL OR vehicle_category = '')
+          ORDER BY current_mileage ASC
+        `, []),
+
+        // คนขับที่ลาพักอนุมัติ
+        dbAll(env.DB, `
+          SELECT DISTINCT driver_id FROM leaves
+          WHERE status = 'approved' AND start_date <= ? AND end_date >= ?
+        `, [date, date]),
+
+        // คนขับทุกคนที่ active (primary)
+        dbAll(env.DB, `
+          SELECT id, name, phone, fatigue_flag, discipline_score, license_expiry
+          FROM drivers
+          WHERE status = 'active'
+            AND (assignment_type = 'primary' OR assignment_type IS NULL OR assignment_type = '')
+          ORDER BY fatigue_flag ASC, discipline_score DESC
+        `, [])
+      ]);
 
       // รวม set ที่ "ไม่ว่าง"
       const busyCarIds    = new Set([
@@ -75,33 +111,8 @@ export async function onRequest(context) {
         busyDriversFromQueue.map(r => r.driver_id).filter(Boolean)
       );
 
-      // ── ขั้นตอนที่ 2: ดึงรถ/คนขับที่ active แล้ว filter ออก ──────────────
-
-      // รถทุกคันที่ active (primary) — filter busy ด้วย JS Set (ไม่ใช้ SQL subquery เพื่อหลีกเลี่ยง NULL bug)
-      const allCars = await dbAll(env.DB, `
-        SELECT id, license_plate, brand, model, vehicle_type, current_mileage
-        FROM cars
-        WHERE status NOT IN ('under_repair', 'retired', 'inactive')
-          AND (vehicle_category = 'primary' OR vehicle_category IS NULL OR vehicle_category = '')
-        ORDER BY current_mileage ASC
-      `, []);
-
       const cars = allCars.filter(c => !busyCarIds.has(c.id));
-
-      // คนขับทุกคนที่ active (primary) — filter busy + ลาพักอนุมัติ + ใบขับขี่หมด
-      const leaveDriverIds = await dbAll(env.DB, `
-        SELECT DISTINCT driver_id FROM leaves
-        WHERE status = 'approved' AND start_date <= ? AND end_date >= ?
-      `, [date, date]);
       const onLeaveSet = new Set(leaveDriverIds.map(r => r.driver_id).filter(Boolean));
-
-      const allDrivers = await dbAll(env.DB, `
-        SELECT id, name, phone, fatigue_flag, discipline_score, license_expiry
-        FROM drivers
-        WHERE status = 'active'
-          AND (assignment_type = 'primary' OR assignment_type IS NULL OR assignment_type = '')
-        ORDER BY fatigue_flag ASC, discipline_score DESC
-      `, []);
 
       const drivers = allDrivers.filter(d => {
         if (busyDriverIds.has(d.id)) return false;
