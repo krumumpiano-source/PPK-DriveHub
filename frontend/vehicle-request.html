@@ -304,6 +304,14 @@
                   <input type="text" id="fDestSearch" class="form-control" placeholder="พิมพ์ค้นหาสถานที่ หรือคลิกบนแผนที่เพื่อปักหมุด" oninput="debounceSearch()" style="width: 100%;">
                   <div id="autocomplete-list" class="autocomplete-items"></div>
                 </div>
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+                  <span style="font-size:0.8rem; color:var(--color-text-muted); font-weight:600;">ปลายทางบ่อย:</span>
+                  <button type="button" class="btn btn-sm btn-outline" onclick="setQuickDest('สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาพะเยา (สพม.พะเยา)')" style="font-size:0.8rem; padding:4px 10px; background:#f8fafc;">สพม.พะเยา</button>
+                  <button type="button" class="btn btn-sm btn-outline" onclick="setQuickDest('ศาลากลางจังหวัดพะเยา')" style="font-size:0.8rem; padding:4px 10px; background:#f8fafc;">ศาลากลาง จ.พะเยา</button>
+                  <button type="button" class="btn btn-sm btn-outline" onclick="setQuickDest('มหาวิทยาลัยพะเยา')" style="font-size:0.8rem; padding:4px 10px; background:#f8fafc;">ม.พะเยา</button>
+                  <button type="button" class="btn btn-sm btn-outline" onclick="setQuickDest('ท่าอากาศยานแม่ฟ้าหลวง เชียงราย')" style="font-size:0.8rem; padding:4px 10px; background:#f8fafc;">สนามบินเชียงราย</button>
+                  <button type="button" class="btn btn-sm btn-outline" onclick="setQuickDest('สนามกีฬาองค์การบริหารส่วนจังหวัดพะเยา')" style="font-size:0.8rem; padding:4px 10px; background:#f8fafc;">สนามกีฬา อบจ.</button>
+                </div>
                 <div id="destListContainer" style="margin-bottom:8px;"></div>
                 <input type="hidden" id="fDestination">
 
@@ -707,6 +715,13 @@
          finalDest += ', ' + searchVal;
       }
       var reqPhone = document.getElementById('fRequesterPhone') ? document.getElementById('fRequesterPhone').value.trim() : '';
+
+      var cleanPhone = reqPhone.replace(/\D/g, '');
+      if (cleanPhone.length < 9 || cleanPhone.length > 10 || !cleanPhone.startsWith('0')) {
+        showAlert('กรุณาระบุหมายเลขโทรศัพท์ให้ถูกต้อง (เช่น 081-234-5678 หรือ 054-481-744)', 'warning');
+        return;
+      }
+
       var sameDay = document.getElementById('fSameDayTrip');
       var returnDateVal = (sameDay && sameDay.checked) ? document.getElementById('fDate').value : (document.getElementById('fReturnDate').value || document.getElementById('fDate').value);
       var data = {
@@ -729,6 +744,15 @@
         estimated_km: parseFloat(document.getElementById('fEstimatedKm').value) || null
       };
       if (!data.date || !data.destination) { showAlert('กรุณากรอกวันที่และสถานที่ปลายทาง', 'danger'); return; }
+
+      var btn = document.getElementById('btnSubmitRequest');
+      if (btn && btn.disabled) return;
+      var originalHtml = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ กำลังบันทึกคำขอ...';
+      }
+
       try {
         var res = await apiCall('createVehicleRequest', data);
         if (res && res.success) {
@@ -751,7 +775,14 @@
         } else {
           showAlert((res && res.error) || 'เกิดข้อผิดพลาด', 'danger');
         }
-      } catch (err) { showAlert('เกิดข้อผิดพลาด: ' + err.message, 'danger'); }
+      } catch (err) {
+        showAlert('เกิดข้อผิดพลาด: ' + err.message, 'danger');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
+        }
+      }
     }
 
     function printRequest() {
@@ -1653,6 +1684,25 @@ ${dateLine}
       document.getElementById('autocomplete-list').innerHTML = ''; // close dropdown
       map.setView([lat, lng], 13);
       addWaypointPin(lat, lng, name);
+    }
+
+    var PRESET_DESTINATIONS = {
+      'สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาพะเยา (สพม.พะเยา)': { lat: 19.1605, lng: 99.9118 },
+      'ศาลากลางจังหวัดพะเยา': { lat: 19.2612, lng: 99.8804 },
+      'มหาวิทยาลัยพะเยา': { lat: 19.0286, lng: 99.8970 },
+      'ท่าอากาศยานแม่ฟ้าหลวง เชียงราย': { lat: 19.9525, lng: 99.8828 },
+      'สนามกีฬาองค์การบริหารส่วนจังหวัดพะเยา': { lat: 19.1820, lng: 99.9015 }
+    };
+
+    function setQuickDest(name) {
+      var s = document.getElementById('fDestSearch');
+      if (s) s.value = name;
+      if (PRESET_DESTINATIONS[name] && typeof map !== 'undefined' && map) {
+        var p = PRESET_DESTINATIONS[name];
+        selectLocation(p.lat, p.lng, name);
+      } else {
+        debounceSearch();
+      }
     }
     
     // Close dropdown when clicking outside

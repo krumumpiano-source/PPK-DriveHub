@@ -26,6 +26,9 @@ export async function onRequest(context) {
       // Source B: usage_records — รถที่สแกน QR ออกแล้วยังไม่มี return (ข้ามวัน)
       //   → ดึงจาก /api/usage/cars-out pattern: departure ไม่มี return ที่ match
 
+      const queryStart = `${date} ${timeStart}`;
+      const queryEnd   = `${date} ${timeEnd}`;
+
       // ── ขั้นตอนที่ 1 & 2: รวบรวมข้อมูลแบบ Parallel ด้วย Promise.all ──────────────
       const [
         busyCarsFromQueue,
@@ -35,33 +38,33 @@ export async function onRequest(context) {
         leaveDriverIds,
         allDrivers
       ] = await Promise.all([
-        // Source A1: รถที่ติดคิวในวันเดียวกัน
+        // Source A1: รถที่ติดคิว (ครอบคลุมทั้งทริปวันเดียว และทริปค้างคืนหลายวัน)
         dbAll(env.DB, `
           SELECT DISTINCT car_id FROM queue
-          WHERE date = ?
-            AND car_id IS NOT NULL
+          WHERE car_id IS NOT NULL
             AND status NOT IN ('cancelled', 'completed')
             AND (
               status = 'ongoing'
-              OR time_start IS NULL
-              OR time_end   IS NULL
-              OR (time_start < ? AND time_end > ?)
+              OR (
+                (date || ' ' || COALESCE(time_start, '00:00')) < ?
+                AND (COALESCE(return_date, date) || ' ' || COALESCE(time_end, '23:59')) > ?
+              )
             )
-        `, [date, timeEnd, timeStart]),
+        `, [queryEnd, queryStart]),
 
-        // Source A2: คนขับที่ติดคิวในวันเดียวกัน
+        // Source A2: คนขับที่ติดคิว (ครอบคลุมทั้งทริปวันเดียว และทริปค้างคืนหลายวัน)
         dbAll(env.DB, `
           SELECT DISTINCT driver_id FROM queue
-          WHERE date = ?
-            AND driver_id IS NOT NULL
+          WHERE driver_id IS NOT NULL
             AND status NOT IN ('cancelled', 'completed')
             AND (
               status = 'ongoing'
-              OR time_start IS NULL
-              OR time_end   IS NULL
-              OR (time_start < ? AND time_end > ?)
+              OR (
+                (date || ' ' || COALESCE(time_start, '00:00')) < ?
+                AND (COALESCE(return_date, date) || ' ' || COALESCE(time_end, '23:59')) > ?
+              )
             )
-        `, [date, timeEnd, timeStart]),
+        `, [queryEnd, queryStart]),
 
         // Source B: รถที่ออกไปแล้ว (departure scan) และยังไม่มี return scan ← ข้ามวัน
         dbAll(env.DB, `
