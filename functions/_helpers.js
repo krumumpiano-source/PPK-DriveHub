@@ -374,7 +374,7 @@ function emailCardWrapper(title, contentHtml) {
       ${contentHtml}
     </div>
     <div class="footer">
-      งานยานพาหนะ กลุ่มบริหารทั่วไป โรงเรียนพะเยาพิทยาคม<br>
+      งานยานพาหนะ กลุ่มงานบริหารบุคคล โรงเรียนพะเยาพิทยาคม<br>
       อีเมลนี้เป็นการแจ้งเตือนอัตโนมัติจากระบบ PPK DriveHub
     </div>
   </div>

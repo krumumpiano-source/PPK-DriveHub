@@ -1073,9 +1073,9 @@
     var ZONE_TH   = 'สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาพะเยา';
     var FY_FROM = '2024-10-01', FY_TO = '2025-09-30';
     var AY_FROM = '2025-05-01', AY_TO   = '2026-04-30';
-    var P_AUTHOR   = {name:'นายพงศธร โพธิแก้ว',    pos:'รองหัวหน้างานยานพาหนะ'};
+    var P_AUTHOR   = {name:'นายพงศธร โพธิแก้ว',    pos:'รองหัวหน้างานยานพาหนะ กลุ่มงานบริหารบุคคล'};
     var P_PURCHASE = {name:'นายสงกรานต์ แก้วสา',    pos:'หัวหน้างานพัสดุ'};
-    var P_CHIEF    = {name:'นางจีรพา กันทา',         pos:'หัวหน้างานยานพาหนะ'};
+    var P_CHIEF    = {name:'นางจีรพา กันทา',         pos:'หัวหน้างานยานพาหนะ กลุ่มงานบริหารบุคคล'};
     var P_DIRECTOR = {name:'ว่าที่ร้อยตรีญาณบดินทร์ อินเตชะ', pos:'ผู้อำนวยการโรงเรียนพะเยาพิทยาคม'};
     var VEH_TYPE_TH = {car:'รถยนต์',pickup:'รถกระบะ',van:'รถตู้',bus:'รถโดยสาร',motorcycle:'รถจักรยานยนต์',truck:'รถบรรทุก'};
     var FUEL_TYPE_TH = {gasoline:'เบนซิน',diesel:'ดีเซล',e20:'E20',e85:'E85',lpg:'LPG',ev:'EV'};
@@ -1454,11 +1454,11 @@
         }
         var secMemo=[];
         secMemo.push(ppc('บันทึกข้อความ',{size:_ST,bold:true,sp:{before:0,after:120}}));
-        secMemo.push(ppl('ส่วนราชการ  งานยานพาหนะ '+SCHOOL_TH+'  '+ZONE_TH,{size:_SB,sp:{before:0,after:60}}));
+        secMemo.push(ppl('ส่วนราชการ  งานยานพาหนะ กลุ่มงานบริหารบุคคล '+SCHOOL_TH+'  '+ZONE_TH,{size:_SB,sp:{before:0,after:60}}));
         secMemo.push(ppR([tr('ที่ ................/................',{size:_SB}),tr('                    วันที่ '+genDateTH,{size:_SB})],{sp:{before:0,after:60}}));
         secMemo.push(ppl('เรื่อง  รายงานผลการใช้รถราชการ ประจำ'+periodLabel,{size:_SB,bold:true,sp:{before:0,after:60}}));
         secMemo.push(ppl('เรียน  '+P_DIRECTOR.pos,{size:_SB,sp:{before:0,after:80}}));
-        secMemo.push(ppl('          ตามที่งานยานพาหนะ '+SCHOOL_TH+' ได้ให้บริการรถยนต์ราชการแก่บุคลากรของโรงเรียนในช่วง'+periodLabel+' นั้น บัดนี้ งานยานพาหนะได้รวบรวมและสรุปผลการดำเนินงานเรียบร้อยแล้ว โดยในช่วงดังกล่าวมีการใช้รถจำนวน '+nf(tripRecs.length)+' เที่ยว ระยะทางรวม '+nf(totKmSum)+' กิโลเมตร มีการเติมน้ำมันเชื้อเพลิง '+nf(fuelRecs.length)+' ครั้ง เป็นเงิน '+bf(totFA)+' บาท และมีการซ่อมบำรุงยานพาหนะ '+nf(repRecs.length)+' รายการ เป็นเงิน '+bf(totRA)+' บาท รายละเอียดปรากฏตามเอกสารแนบท้ายบันทึกฉบับนี้',{size:_SB,sp:{before:0,after:40}}));
+        secMemo.push(ppl('          ตามที่งานยานพาหนะ กลุ่มงานบริหารบุคคล '+SCHOOL_TH+' ได้ให้บริการรถยนต์ราชการแก่บุคลากรของโรงเรียนในช่วง'+periodLabel+' นั้น บัดนี้ งานยานพาหนะได้รวบรวมและสรุปผลการดำเนินงานเรียบร้อยแล้ว โดยในช่วงดังกล่าวมีการใช้รถจำนวน '+nf(tripRecs.length)+' เที่ยว ระยะทางรวม '+nf(totKmSum)+' กิโลเมตร มีการเติมน้ำมันเชื้อเพลิง '+nf(fuelRecs.length)+' ครั้ง เป็นเงิน '+bf(totFA)+' บาท และมีการซ่อมบำรุงยานพาหนะ '+nf(repRecs.length)+' รายการ เป็นเงิน '+bf(totRA)+' บาท รายละเอียดปรากฏตามเอกสารแนบท้ายบันทึกฉบับนี้',{size:_SB,sp:{before:0,after:40}}));
         secMemo.push(ppl('          จึงเรียนมาเพื่อโปรดทราบและพิจารณา',{size:_SB,sp:{before:0,after:160}}));
         secMemo.push(...sigRight(P_AUTHOR.name,P_AUTHOR.pos));
         secMemo.push(...el(1));
@@ -1493,10 +1493,10 @@
         // ── คำนำ ──
         var secIntro=[];
         secIntro.push(ppc('คำนำ',{size:_ST,bold:true,sp:{before:0,after:160}}));
-        secIntro.push(ppl('          รายงานผลการใช้รถราชการฉบับนี้ จัดทำขึ้นโดยงานยานพาหนะ '+SCHOOL_TH+' เพื่อรายงานและสรุปผลการให้บริการรถยนต์ราชการในรอบ'+periodLabel+' ประกอบด้วยข้อมูลการใช้รถ การเบิกจ่ายน้ำมันเชื้อเพลิง การซ่อมบำรุงยานพาหนะ ตลอดจนสถิติการใช้งานรายคันและรายบุคคล',{size:_SB,sp:{before:0,after:80}}));
+        secIntro.push(ppl('          รายงานผลการใช้รถราชการฉบับนี้ จัดทำขึ้นโดยงานยานพาหนะ กลุ่มงานบริหารบุคคล '+SCHOOL_TH+' เพื่อรายงานและสรุปผลการให้บริการรถยนต์ราชการในรอบ'+periodLabel+' ประกอบด้วยข้อมูลการใช้รถ การเบิกจ่ายน้ำมันเชื้อเพลิง การซ่อมบำรุงยานพาหนะ ตลอดจนสถิติการใช้งานรายคันและรายบุคคล',{size:_SB,sp:{before:0,after:80}}));
         secIntro.push(ppl('          ข้อมูลทั้งหมดประมวลผลจากระบบบริหารจัดการยานพาหนะ PPK-DriveHub ซึ่งบันทึกโดยพนักงานขับรถและผู้ขอใช้รถผ่านระบบดิจิทัล เพื่อให้การบริหารจัดการยานพาหนะเป็นไปอย่างโปร่งใส ตรวจสอบได้ และเกิดประโยชน์สูงสุดต่อทางราชการ',{size:_SB,sp:{before:0,after:80}}));
         secIntro.push(ppl('          งานยานพาหนะหวังเป็นอย่างยิ่งว่ารายงานฉบับนี้จะเป็นประโยชน์ต่อการวางแผนและการตัดสินใจของผู้บริหาร ตลอดจนการพัฒนาการให้บริการยานพาหนะให้มีประสิทธิภาพยิ่งขึ้นต่อไป',{size:_SB,sp:{before:0,after:120}}));
-        secIntro.push(ppR([tr('งานยานพาหนะ',{size:_SB})],{align:d.AlignmentType.RIGHT,sp:{before:80,after:0}}));
+        secIntro.push(ppR([tr('งานยานพาหนะ กลุ่มงานบริหารบุคคล',{size:_SB})],{align:d.AlignmentType.RIGHT,sp:{before:80,after:0}}));
         secIntro.push(ppR([tr(SCHOOL_TH,{size:_SB})],{align:d.AlignmentType.RIGHT,sp:{before:0,after:0}}));
 
         // ── สารบัญ (สร้างเลขหน้าอัตโนมัติจากหัวข้อ) ──
@@ -2143,7 +2143,7 @@
       h+='</style></head><body>';
       // header
       h+='<div class="hdr"><table><tr>';
-      h+='<td><b>ส่วนราชการ:</b> งานยานพาหนะ โรงเรียนพะเยาพิทยาคม</td>';
+      h+='<td><b>ส่วนราชการ:</b> งานยานพาหนะ กลุ่มงานบริหารบุคคล โรงเรียนพะเยาพิทยาคม</td>';
       h+='<td style="text-align:right;white-space:nowrap;"><b>เลขที่:</b> '+htmlEsc(sigs.docNumber)+'</td>';
       h+='</tr><tr>';
       h+='<td><b>เรื่อง:</b> รายงาน'+tn+' ช่วงเวลา '+htmlEsc(rl)+'</td>';
@@ -2455,7 +2455,7 @@
   </script>
 
   <div style="background:var(--color-bg-light);padding:16px 20px;text-align:center;color:var(--color-text-muted);font-size:.85em;margin-top:20px">
-    <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะโรงเรียนพะเยาพิทยาคม 2569</p>
+    <p>ออกแบบและพัฒนาโดย ครูพงศธร โพธิแก้ว งานยานพาหนะ กลุ่มงานบริหารบุคคล โรงเรียนพะเยาพิทยาคม 2569</p>
   </div>
 
   <!-- ═══ Signature Modal ═══ -->
