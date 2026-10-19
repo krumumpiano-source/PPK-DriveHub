@@ -5,13 +5,13 @@ import {
 } from '../../_helpers.js';
 
 const BACKUP_TABLES = [
-  'users', 'cars', 'drivers', 'queue', 'usage_records',
+  'users', 'cars', 'drivers', 'queue', 'vehicle_requests', 'usage_records',
   'fuel_log', 'repair_log', 'tax_records', 'insurance_records',
   'check_log', 'vehicle_maintenance', 'leaves', 'maintenance_settings'
 ];
 
 const RESTORABLE_TABLES = [
-  'cars', 'drivers', 'queue', 'usage_records', 'fuel_log',
+  'cars', 'drivers', 'queue', 'vehicle_requests', 'usage_records', 'fuel_log',
   'repair_log', 'tax_records', 'insurance_records', 'check_log',
   'vehicle_maintenance', 'leaves'
 ];
