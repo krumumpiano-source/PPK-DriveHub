@@ -122,16 +122,23 @@ export async function onRequest(context) {
   // --- Fatigue Reporting ---
   if (path === '/api/drivers/fatigue/report' && method === 'POST') {
     const body = await parseBody(request);
-    if (!body?.driver_id) return error('กรุณาระบุ driver_id');
+    let driverId = body?.driver_id;
+    if (user.role === 'driver') {
+      driverId = user.driver_id || driverId;
+    }
+    if (!driverId) return error('กรุณาระบุ driver_id');
+    if (user.role === 'driver' && user.driver_id && driverId !== user.driver_id) {
+      return error('คุณสามารถรายงานความเหนื่อยล้าเฉพาะของตนเองเท่านั้น', 403);
+    }
     const id = generateUUID();
     const ts = now();
     await dbRun(env.DB,
       `INSERT INTO self_reported_fatigue (id, driver_id, reason, reported_at)
        VALUES (?, ?, ?, ?)`,
-      [id, body.driver_id, body.reason || '', ts]
+      [id, driverId, body.reason || '', ts]
     );
     // Flag driver
-    await dbRun(env.DB, 'UPDATE drivers SET fatigue_flag = 1, updated_at = ? WHERE id = ?', [ts, body.driver_id]);
+    await dbRun(env.DB, 'UPDATE drivers SET fatigue_flag = 1, updated_at = ? WHERE id = ?', [ts, driverId]);
     return success({ id, message: 'บันทึกรายงานความเหนื่อยล้าเรียบร้อย' }, 201);
   }
 

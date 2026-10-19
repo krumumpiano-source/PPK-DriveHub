@@ -120,7 +120,7 @@ export async function onRequest(context) {
         `SELECT s.id AS session_id, s.token, s.user_id, s.expires_at,
                 s.is_impersonated, s.impersonator_id,
                 u.role, u.display_name, u.first_name, u.last_name,
-                u.active, u.permissions, u.must_change_password
+                u.active, u.permissions, u.must_change_password, u.driver_id
          FROM sessions s
          JOIN users u ON s.user_id = u.id
          WHERE s.token = ? AND s.expires_at > ?`,
@@ -143,11 +143,25 @@ export async function onRequest(context) {
         permissions: session.permissions || '{}',
         mustChangePassword: session.must_change_password === 1,
         isImpersonated: session.is_impersonated === 1,
-        impersonatorId: session.impersonator_id || null
+        impersonatorId: session.impersonator_id || null,
+        driver_id: session.driver_id || null
       };
     } catch (e) {
       console.error('Session verification error:', e);
       return addCors(error('เกิดข้อผิดพลาดในการตรวจสอบ session', 500), request);
+    }
+  }
+
+  // Enforce password change before accessing any system features
+  if (env.user?.mustChangePassword) {
+    const ALLOWED_PWD_PATHS = [
+      '/api/auth/change-password',
+      '/api/auth/me',
+      '/api/auth/logout',
+      '/api/auth/complete-onboarding'
+    ];
+    if (!ALLOWED_PWD_PATHS.some(p => url.pathname === p || url.pathname.startsWith(p + '/'))) {
+      return addCors(error('กรุณาเปลี่ยนรหัสผ่านเริ่มต้นก่อนเข้าใช้งานระบบ', 403, { must_change_password: true }), request);
     }
   }
 

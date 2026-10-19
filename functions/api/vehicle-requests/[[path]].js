@@ -33,7 +33,15 @@ export async function onRequest(context) {
         params.push(status);
       }
     }
-    if (requesterId) { where.push('vr.requester_id = ?'); params.push(requesterId); }
+    const isPrivileged = ['admin', 'super_admin', 'manager'].includes(user.role) || (typeof user.permissions === 'string' && user.permissions.includes('"queue"'));
+    if (!isPrivileged) {
+      // Normal staff / drivers / viewers can ONLY view their own requests
+      where.push('vr.requester_id = ?');
+      params.push(user.id);
+    } else if (requesterId) {
+      where.push('vr.requester_id = ?');
+      params.push(requesterId);
+    }
     if (date) { where.push('vr.date = ?'); params.push(date); }
     if (dateFrom) { where.push('vr.date >= ?'); params.push(dateFrom); }
     if (dateTo) { where.push('vr.date <= ?'); params.push(dateTo); }
@@ -74,6 +82,10 @@ export async function onRequest(context) {
        LEFT JOIN users uc ON vr.requester_id = uc.id
        WHERE vr.id = ?`, [id]);
     if (!row) return error('ไม่พบคำขอใช้รถ', 404);
+    const isPrivileged = ['admin', 'super_admin', 'manager'].includes(user.role) || (typeof user.permissions === 'string' && user.permissions.includes('"queue"'));
+    if (!isPrivileged && row.requester_id !== user.id) {
+      return error('ไม่มีสิทธิ์เข้าถึงคำขอนี้', 403);
+    }
     return success(row);
   }
 
@@ -316,6 +328,9 @@ export async function onRequest(context) {
     // Authorization: Must have manager, admin, or super_admin role
     if (user.role !== 'manager' && user.role !== 'admin' && user.role !== 'super_admin') {
       return error('ไม่มีสิทธิ์หัวหน้างาน', 403);
+    }
+    if (row.requester_id === user.id && user.role !== 'super_admin') {
+      return error('ไม่สามารถอนุมัติคำขอของตนเองได้ ต้องให้หัวหน้างานท่านอื่นหรือผู้บริหารเป็นผู้อนุมัติ', 403);
     }
     
     const ts = now();
