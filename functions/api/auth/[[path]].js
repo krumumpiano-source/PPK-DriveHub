@@ -56,7 +56,7 @@ export async function onRequest(context) {
         
         await dbRun(env.DB,
           `INSERT INTO users (id, username, email, phone, password_hash, salt, role, permissions, first_name, last_name, display_name, active, pdpa_accepted, must_change_password, onboarding_completed, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, 'staff', ?, ?, '', ?, 1, 0, 0, 0, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, 'staff', ?, ?, '', ?, 1, 0, 1, 0, ?, ?)`,
           [userId, inputUsername, inputUsername, cleanPhone, pwHash, pwSalt, defaultPerms, generatedUsername, generatedUsername, ts, ts]
         );
         

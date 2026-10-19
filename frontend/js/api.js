@@ -89,6 +89,13 @@ const API = (() => {
     delete: (path) => request(path, { method: 'DELETE' }),
     checkIdentity: (identity) => request('/api/auth/check-identity', { method: 'POST', body: { identity } }),
     completeOnboarding: (data) => request('/api/auth/complete-onboarding', { method: 'POST', body: data }),
+    getFileUrl: (path) => {
+      if (!path) return '';
+      if (path.startsWith('data:') || path.startsWith('blob:') || path.startsWith('http')) return path;
+      const token = getToken();
+      const separator = path.includes('?') ? '&' : '?';
+      return token ? `${path}${separator}token=${encodeURIComponent(token)}` : path;
+    }
   };
 })();
 

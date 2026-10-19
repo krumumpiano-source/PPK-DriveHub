@@ -19,6 +19,7 @@ const PUBLIC_PATHS = [
   '/api/survey/car-info',       // QR ข้อมูลรถสำหรับแบบประเมิน
   '/api/survey/drivers',        // รายชื่อคนขับสำหรับแบบประเมิน (ไม่ต้อง login)
   '/api/cron/sync-google-forms', // Cron token auth (X-Cron-Token header)
+  '/api/cron/cleanup',          // Cron token auth (X-Cron-Token header)
   '/api/maps'                   // Map proxy endpoints
 ];
 
@@ -103,12 +104,17 @@ export async function onRequest(context) {
   );
 
   if (!isPublic) {
+    let token = null;
     const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return addCors(error('กรุณาเข้าสู่ระบบ', 401), request);
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.slice(7);
+    } else if (url.pathname.startsWith('/api/files/')) {
+      token = url.searchParams.get('token');
     }
 
-    const token = authHeader.slice(7);
+    if (!token) {
+      return addCors(error('กรุณาเข้าสู่ระบบ', 401), request);
+    }
     try {
       const session = await dbFirst(env.DB,
         `SELECT s.id AS session_id, s.token, s.user_id, s.expires_at,
