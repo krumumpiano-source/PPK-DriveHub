@@ -81,7 +81,7 @@ async function findDriverByName(db, rawName) {
   return null;
 }
 
-async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report, env, allDrivers, allCars) {
+async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report, env, allDrivers, allCars, isCron = false) {
   const normPlate = normalizeName(licensePlate).replace(/\s+/g, '');
   const car = allCars.find(c => 
     c.license_plate === licensePlate || 
@@ -135,7 +135,8 @@ async function syncOneSheet(db, accessToken, licensePlate, spreadsheetId, report
     return null;
   }
 
-  for (const r of rows) {
+  const rowsToProcess = (isCron && rows.length > 80) ? rows.slice(-80) : rows;
+  for (const r of rowsToProcess) {
     if (!r || r.length === 0) continue;
     const tsRaw = r[COL.TS];
     if (!tsRaw) continue;
@@ -292,9 +293,10 @@ export async function runGoogleFormSync(env, triggerSource, triggeredBy) {
       dbAll(env.DB, `SELECT id, name, COALESCE(title,'') AS title, COALESCE(first_name,'') AS first_name, COALESCE(last_name,'') AS last_name FROM drivers WHERE deactivated_at IS NULL`, [])
     ]);
 
+    const isCron = triggerSource === 'cron';
     for (const [licensePlate, spreadsheetId] of Object.entries(sheetMap)) {
       const report = { fetched: 0, inserted: 0, skipped: 0, failed: 0 };
-      try { await syncOneSheet(env.DB, accessToken, licensePlate, spreadsheetId, report, env, allDrivers, allCars); }
+      try { await syncOneSheet(env.DB, accessToken, licensePlate, spreadsheetId, report, env, allDrivers, allCars, isCron); }
       catch (e) { report.error = e.message; }
       summary.sheets_processed++;
       summary.rows_fetched += report.fetched;

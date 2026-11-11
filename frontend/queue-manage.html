@@ -1613,14 +1613,18 @@
       updateRequesterSuggestions(history);
 
       try {
-        var result = await apiCall('getUsers', {});
-        var users = (result && result.success && result.data)
-          ? (result.data.users || (Array.isArray(result.data) ? result.data : []))
-          : [];
-        var names = users.map(buildUserDisplayName).filter(Boolean);
-        updateRequesterSuggestions(names);
+        var result = await API.get('/api/usage/staff-names');
+        if (result && result.success && Array.isArray(result.data)) {
+          var combined = history.concat(result.data);
+          var unique = [];
+          var seen = {};
+          combined.forEach(function(n) {
+            if (n && !seen[n]) { seen[n] = true; unique.push(n); }
+          });
+          updateRequesterSuggestions(unique);
+        }
       } catch (e) {
-        // Non-admin users may not have access to /api/admin/users
+        // Fallback to history
       }
     }
 

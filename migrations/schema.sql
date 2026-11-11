@@ -945,4 +945,5 @@ CREATE INDEX IF NOT EXISTS idx_vr_status_date ON vehicle_requests(status, date);
 CREATE INDEX IF NOT EXISTS idx_vr_date_status ON vehicle_requests(date, status);
 CREATE INDEX IF NOT EXISTS idx_queue_conflict_check ON queue(date, status, time_start, time_end);
 CREATE INDEX IF NOT EXISTS idx_fuel_invoices_lookup ON fuel_station_invoices(station_name, date_from, date_to);
-CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, read, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, read, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_gform_sync_log_started_at ON gform_sync_log(started_at DESC);

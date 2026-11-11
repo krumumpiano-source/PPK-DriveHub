@@ -68,8 +68,79 @@ export async function onRequest(context) {
     return success({ rules });
   }
 
+  // --- GET /api/queue/suggest (check availability of cars & drivers) ---
+  if (path === '/api/queue/suggest' && method === 'GET') {
+    const qDate = url.searchParams.get('date') || now().substring(0, 10);
+    const qReturnDate = url.searchParams.get('return_date') || qDate;
+    const qTimeStart = url.searchParams.get('time_start') || '00:00';
+    const qTimeEnd = url.searchParams.get('time_end') || '23:59';
+
+    // 1. Get all active cars
+    const allCars = await dbAll(env.DB,
+      `SELECT id, license_plate, brand, model, color, seat_count, fuel_type, status, current_mileage
+       FROM cars WHERE status = 'active' ORDER BY license_plate ASC`, []
+    );
+
+    // 2. Get all active drivers
+    const allDrivers = await dbAll(env.DB,
+      `SELECT id, name, title, first_name, last_name, phone, line_id, status, assignment_type
+       FROM drivers WHERE status = 'active' ORDER BY name ASC`, []
+    );
+
+    // 3. Find busy cars and drivers from overlapping queues
+    const busyQueues = await dbAll(env.DB,
+      `SELECT car_id, driver_id, backup_driver_id
+       FROM queue
+       WHERE status NOT IN ('cancelled', 'completed')
+         AND COALESCE(return_date, date) >= ?
+         AND date <= ?
+         AND (time_start <= ? AND time_end >= ?)`,
+      [qDate, qReturnDate, qTimeEnd, qTimeStart]
+    );
+
+    const busyCarIds = new Set();
+    const busyDriverIds = new Set();
+    for (const bq of busyQueues) {
+      if (bq.car_id) busyCarIds.add(bq.car_id);
+      if (bq.driver_id) busyDriverIds.add(bq.driver_id);
+      if (bq.backup_driver_id) busyDriverIds.add(bq.backup_driver_id);
+    }
+
+    // 4. If checking for today, also check cars currently checked out via usage_records
+    const today = now().substring(0, 10);
+    if (qDate <= today && qReturnDate >= today) {
+      try {
+        const activeCheckouts = await dbAll(env.DB,
+          `SELECT DISTINCT car_id, driver_id FROM usage_records
+           WHERE datetime >= datetime('now', '-2 days')
+             AND record_type = 'departure'
+             AND car_id NOT IN (
+               SELECT DISTINCT car_id FROM usage_records
+               WHERE datetime >= datetime('now', '-2 days') AND record_type = 'return'
+             )`, []
+        );
+        for (const co of activeCheckouts) {
+          if (co.car_id) busyCarIds.add(co.car_id);
+          if (co.driver_id) busyDriverIds.add(co.driver_id);
+        }
+      } catch (_e) {}
+    }
+
+    const availableCars = allCars.filter(c => !busyCarIds.has(c.id));
+    const availableDrivers = allDrivers.filter(d => !busyDriverIds.has(d.id));
+
+    return success({
+      available_cars: availableCars,
+      available_drivers: availableDrivers,
+      available_cars_count: availableCars.length,
+      available_drivers_count: availableDrivers.length,
+      busy_cars_count: busyCarIds.size,
+      busy_drivers_count: busyDriverIds.size
+    });
+  }
+
   // --- GET /api/queue/:id ---
-  if (path.match(/^\/api\/queue\/[^/]+$/) && !path.includes('/freeze') && !path.includes('/cancel') && !path.includes('/complete') && !path.includes('/rules') && method === 'GET') {
+  if (path.match(/^\/api\/queue\/[^/]+$/) && !path.includes('/freeze') && !path.includes('/cancel') && !path.includes('/complete') && !path.includes('/rules') && !path.includes('/suggest') && method === 'GET') {
     try { requirePermission(user, 'queue', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = extractParam(path, '/api/queue/');
     const row = await dbFirst(env.DB,
