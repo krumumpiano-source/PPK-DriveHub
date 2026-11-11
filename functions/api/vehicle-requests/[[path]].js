@@ -2,7 +2,7 @@
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, writeAuditLog,
-  sendTelegramMessage, createNotification, notifyAllAdmins, sendLineMessage, uploadToR2, sendEmailViaGAS,
+  createNotification, sendLineMessage, uploadToR2, sendEmailViaGAS,
   sendRequestCreatedEmail, sendRequestCancelledEmail, sendRequestApprovedEmail
 } from '../../_helpers.js';
 
@@ -51,7 +51,7 @@ export async function onRequest(context) {
        d.name AS driver_name, d.line_id AS driver_line_id, d.phone AS driver_phone,
        u.display_name AS approved_by_name,
        uc.display_name AS requester_display_name,
-       COALESCE(u.phone, uc.phone) AS requester_phone,
+       uc.phone AS requester_phone,
        uc.display_name AS created_by_name
        FROM vehicle_requests vr
        LEFT JOIN cars c ON vr.assigned_car_id = c.id
@@ -73,7 +73,7 @@ export async function onRequest(context) {
        d.name AS driver_name, d.line_id AS driver_line_id, d.phone AS driver_phone,
        u.display_name AS approved_by_name,
        uc.display_name AS requester_display_name,
-       COALESCE(u.phone, uc.phone) AS requester_phone,
+       uc.phone AS requester_phone,
        uc.display_name AS created_by_name
        FROM vehicle_requests vr
        LEFT JOIN cars c ON vr.assigned_car_id = c.id
@@ -106,20 +106,35 @@ export async function onRequest(context) {
       return error('เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้นเดินทาง', 400);
     }
 
+    const queryStart = `${reqDate} ${timeStart}`;
+    const queryEnd = `${reqReturnDate} ${timeEnd}`;
+
     // 1. Check available cars count during the period
     const activeCarsCount = await dbFirst(env.DB, "SELECT COUNT(*) as count FROM cars WHERE status NOT IN ('under_repair', 'retired', 'inactive')");
-    const usedCarsCount = await dbFirst(env.DB, `
-      SELECT COUNT(DISTINCT car_id) as used_cars 
-      FROM queue 
-      WHERE status NOT IN ('cancelled', 'completed')
-      AND date <= ? AND COALESCE(return_date, date) >= ?
-      AND (
-        (date != COALESCE(return_date, date) OR ? != ?)
-        OR (time_start < ? AND time_end > ?)
-      )
-    `, [reqReturnDate, reqDate, reqDate, reqReturnDate, timeEnd, timeStart]);
+    
+    // Check cars currently under repair from repair_log
+    const repairingCars = await dbAll(env.DB, `
+      SELECT DISTINCT car_id FROM repair_log 
+      WHERE status IN ('requested', 'approved', 'inspected', 'documented', 'repairing')
+      AND date_reported <= ? AND (date_completed IS NULL OR date_completed >= ?)
+    `, [reqReturnDate, reqDate]);
+    const busyCarIds = new Set(repairingCars.map(r => r.car_id));
 
-    const totalCarsAvailable = (activeCarsCount ? activeCarsCount.count : 0) - (usedCarsCount ? usedCarsCount.used_cars : 0);
+    const usedCars = await dbAll(env.DB, `
+      SELECT DISTINCT car_id FROM queue 
+      WHERE car_id IS NOT NULL
+        AND status NOT IN ('cancelled', 'completed')
+        AND (
+          status = 'ongoing'
+          OR (
+            (date || ' ' || COALESCE(time_start, '00:00')) < ?
+            AND (COALESCE(return_date, date) || ' ' || COALESCE(time_end, '23:59')) > ?
+          )
+        )
+    `, [queryEnd, queryStart]);
+    for (const c of usedCars) busyCarIds.add(c.car_id);
+
+    const totalCarsAvailable = Math.max(0, (activeCarsCount ? activeCarsCount.count : 0) - busyCarIds.size);
 
     // 2. Check available drivers count during the period
     const activeDriversCount = await dbFirst(env.DB, `
@@ -128,25 +143,28 @@ export async function onRequest(context) {
       AND (license_expiry IS NULL OR license_expiry >= ?)
     `, [reqDate]);
 
-    const usedDriversCount = await dbFirst(env.DB, `
-      SELECT COUNT(DISTINCT driver_id) as used_drivers 
-      FROM queue 
-      WHERE status NOT IN ('cancelled', 'completed')
-      AND driver_id IS NOT NULL
-      AND date <= ? AND COALESCE(return_date, date) >= ?
-      AND (
-        (date != COALESCE(return_date, date) OR ? != ?)
-        OR (time_start < ? AND time_end > ?)
-      )
-    `, [reqReturnDate, reqDate, reqDate, reqReturnDate, timeEnd, timeStart]);
+    const busyDriverIds = new Set();
+    const usedDrivers = await dbAll(env.DB, `
+      SELECT DISTINCT driver_id FROM queue 
+      WHERE driver_id IS NOT NULL
+        AND status NOT IN ('cancelled', 'completed')
+        AND (
+          status = 'ongoing'
+          OR (
+            (date || ' ' || COALESCE(time_start, '00:00')) < ?
+            AND (COALESCE(return_date, date) || ' ' || COALESCE(time_end, '23:59')) > ?
+          )
+        )
+    `, [queryEnd, queryStart]);
+    for (const d of usedDrivers) busyDriverIds.add(d.driver_id);
 
-    const leaveDriversCount = await dbFirst(env.DB, `
-      SELECT COUNT(DISTINCT driver_id) as leave_drivers
-      FROM leaves
-      WHERE status = 'approved' AND start_date <= ? AND end_date >= ?
+    const leaveDrivers = await dbAll(env.DB, `
+      SELECT DISTINCT driver_id FROM leaves
+      WHERE status IN ('approved', 'pending') AND start_date <= ? AND end_date >= ?
     `, [reqReturnDate, reqDate]);
+    for (const l of leaveDrivers) busyDriverIds.add(l.driver_id);
 
-    const totalDriversAvailable = (activeDriversCount ? activeDriversCount.count : 0) - (usedDriversCount ? usedDriversCount.used_drivers : 0) - (leaveDriversCount ? leaveDriversCount.leave_drivers : 0);
+    const totalDriversAvailable = Math.max(0, (activeDriversCount ? activeDriversCount.count : 0) - busyDriverIds.size);
 
     if (totalCarsAvailable <= 0 || totalDriversAvailable <= 0) {
       let reason = [];
@@ -170,26 +188,33 @@ export async function onRequest(context) {
       }
     }
     const requestNo = `พค.(ยพ.) ${nextNum.toString().padStart(4, '0')}/${yearBE}`;
+    const reqDept = body.requester_department || body.department || '';
 
     await dbRun(env.DB,
       `INSERT INTO vehicle_requests (id, request_no, requester_id, requester_name, requester_department,
         date, return_date, time_start, time_end, destination, route, purpose,
         passengers, passenger_names, priority, is_urgent,
-        status, notes, waypoints, dest_lat, dest_lng, estimated_km, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_supervisor', ?, ?, ?, ?, ?, ?, ?)`,
+        status, notes, waypoints, dest_lat, dest_lng, estimated_km, created_by, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_supervisor', ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, requestNo, user.id, body.requester_name || user.display_name || '',
-       body.requester_department || body.department || '',
+       reqDept,
        body.date, body.return_date || body.date, body.time_start || null, body.time_end || null,
        body.destination, body.route || '',
        body.purpose || '', body.passengers || 1,
        JSON.stringify(body.passenger_names || []),
        body.priority || 'general', body.is_urgent ? 1 : 0,
-       body.notes || '', body.waypoints || null, body.dest_lat || null, body.dest_lng || null, body.estimated_km || null, ts, ts]
+       body.notes || '', body.waypoints || null, body.dest_lat || null, body.dest_lng || null, body.estimated_km || null, user.id, ts, ts]
     );
 
-    // Update user's display_name if provided to remember it for next time
+    // Sync user's display_name, phone, and department to profile
     if (body.requester_name && body.requester_name !== user.display_name) {
       await dbRun(env.DB, 'UPDATE users SET display_name = ? WHERE id = ?', [body.requester_name, user.id]);
+    }
+    if (body.requester_phone || body.phone) {
+      await dbRun(env.DB, 'UPDATE users SET phone = ? WHERE id = ?', [body.requester_phone || body.phone, user.id]);
+    }
+    if (reqDept) {
+      await dbRun(env.DB, 'UPDATE users SET department = ? WHERE id = ?', [reqDept, user.id]);
     }
 
     await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'create_vehicle_request', 'vehicle_request', id, { date: body.date, destination: body.destination });
@@ -243,9 +268,11 @@ export async function onRequest(context) {
     return success({ message: 'แก้ไขคำขอเรียบร้อย' });
   }
 
-  // --- DELETE /api/vehicle-requests/:id --- ยกเลิกคำขอ (ต้องล่วงหน้าอย่างน้อย 3 วัน)
-  if (path.match(/^\/api\/vehicle-requests\/[^/]+$/) && method === 'DELETE') {
-    const id = path.split('/').pop();
+  // --- DELETE or PUT/POST /cancel /api/vehicle-requests/:id --- ยกเลิกคำขอ (ต้องล่วงหน้าอย่างน้อย 3 วัน)
+  const isCancelSubpath = path.match(/^\/api\/vehicle-requests\/([^/]+)\/cancel$/);
+  const isDirectCancelDelete = path.match(/^\/api\/vehicle-requests\/([^/]+)$/) && method === 'DELETE';
+  if (isDirectCancelDelete || (isCancelSubpath && (method === 'PUT' || method === 'POST' || method === 'DELETE'))) {
+    const id = isCancelSubpath ? isCancelSubpath[1] : path.split('/').pop();
     const row = await dbFirst(env.DB, 'SELECT * FROM vehicle_requests WHERE id = ?', [id]);
     if (!row) return error('ไม่พบคำขอใช้รถ', 404);
     if (row.requester_id !== user.id && user.role !== 'admin' && user.role !== 'super_admin' && user.role !== 'manager')
@@ -313,7 +340,7 @@ export async function onRequest(context) {
         [signatureImagePath, user.id, ts, id]
       );
       // We don't update queue status here, just add signature.
-      await writeAuditLog(env.DB, user.id, user.displayName, 'bulk_approve_vehicle_request', 'vehicle_request', id, { signature_image: signatureImagePath });
+      await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'bulk_approve_vehicle_request', 'vehicle_request', id, { signature_image: signatureImagePath });
     }
     return success({ message: 'อนุมัติเรียบร้อย' });
   }
@@ -492,10 +519,10 @@ export async function onRequest(context) {
     );
 
     if (isOverride && overrideReason) {
-      await writeAuditLog(env.DB, user.id, user.displayName || user.username, 'approve_vehicle_request_override', 'vehicle_request', id,
+      await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'approve_vehicle_request_override', 'vehicle_request', id,
         { car: carLabel, driver: driverCheck.name, queue_id: queueId, override_reason: overrideReason, violations: blockers });
     } else {
-      await writeAuditLog(env.DB, user.id, user.displayName || user.username, 'approve_vehicle_request', 'vehicle_request', id,
+      await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'approve_vehicle_request', 'vehicle_request', id,
         { car: carLabel, driver: driverCheck.name, queue_id: queueId });
     }
 
@@ -581,7 +608,7 @@ ${dateLine}
     const id = path.split('/').slice(-2, -1)[0];
     const row = await dbFirst(env.DB, 'SELECT * FROM vehicle_requests WHERE id = ?', [id]);
     if (!row) return error('ไม่พบคำขอใช้รถ', 404);
-    if (row.status !== 'pending') return error(`ไม่สามารถปฏิเสธได้ สถานะปัจจุบัน: ${row.status}`);
+    if (!row.status || !row.status.startsWith('pending')) return error(`ไม่สามารถปฏิเสธได้ สถานะปัจจุบัน: ${row.status}`);
 
     const body = await parseBody(request);
     const ts = now();
@@ -589,7 +616,7 @@ ${dateLine}
       `UPDATE vehicle_requests SET status = 'rejected', rejection_reason = ?, approved_by = ?, approved_at = ?, updated_by = ?, updated_at = ? WHERE id = ?`,
       [body?.reason || '', user.id, ts, user.id, ts, id]
     );
-    await writeAuditLog(env.DB, user.id, user.displayName, 'reject_vehicle_request', 'vehicle_request', id, { reason: body?.reason });
+    await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'reject_vehicle_request', 'vehicle_request', id, { reason: body?.reason });
     await createNotification(env.DB, row.requester_id, 'vehicle_request', 'คำขอใช้รถไม่ได้รับอนุมัติ',
       `คำขอวันที่ ${row.date} ไป${row.destination} ไม่อนุมัติ: ${body?.reason || '-'}`);
     // await sendTelegramMessage(env,

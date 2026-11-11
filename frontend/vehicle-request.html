@@ -767,8 +767,10 @@
         var res = await apiCall('createVehicleRequest', data);
         if (res && res.success) {
           showAlert('ส่งคำขอใช้รถเรียบร้อยแล้ว (ระบบได้ส่งอีเมลยืนยันไปยังอีเมลของคุณ)', 'success');
-          // Save department and phone for next time
+          // Save name, department and phone for next time
+          var reqName = document.getElementById('fRequesterName').value.trim();
           var dept = document.getElementById('fDepartment').value.trim();
+          if (reqName) localStorage.setItem('last_requester_name', reqName);
           if (dept) localStorage.setItem('last_department', dept);
           if (reqPhone) localStorage.setItem('last_phone', reqPhone);
           
@@ -799,6 +801,9 @@
       var name = document.getElementById('fRequesterName').value || '-';
       var dept = document.getElementById('fDepartment').value || '-';
       var date = document.getElementById('fDate').value || '-';
+      var sameDay = document.getElementById('fSameDayTrip');
+      var returnDate = (sameDay && sameDay.checked) ? date : (document.getElementById('fReturnDate').value || date);
+      var dateDisplay = (returnDate && returnDate !== date) ? (date + ' ถึง ' + returnDate) : date;
       var dest = document.getElementById('fDestination').value || document.getElementById('fDestSearch').value || '-';
       var route = '-';
       var purpose = document.getElementById('fPurpose').value || '-';
@@ -806,14 +811,14 @@
       var timeS = document.getElementById('fTimeStart').value || '-';
       var timeE = document.getElementById('fTimeEnd').value || '-';
       var w = window.open('', '_blank', 'width=800,height=600');
-      w.document.write('<html><head><title>แบบฟอร์มขอใช้รถ</title><style>body{font-family:Sarabun,sans-serif;padding:40px;font-size:14px}h2{text-align:center}table{width:100%;border-collapse:collapse;margin-top:20px}td{padding:6px 8px;border:1px solid #ccc}.sig{margin-top:60px;display:flex;justify-content:space-around}.sig div{text-align:center;width:200px}.sig .line{border-bottom:1px solid #333;margin-bottom:8px;height:40px}</style></head><body>');
+      w.document.write('<html><head><title>แบบฟอร์มขอใช้รถ</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap"><style>body{font-family:Sarabun,sans-serif;padding:40px;font-size:14px;color:#1e293b}h2{text-align:center;margin-bottom:4px}p.sub{text-align:center;color:#64748b;margin-top:0}table{width:100%;border-collapse:collapse;margin-top:20px}td{padding:8px 10px;border:1px solid #cbd5e1}.sig{margin-top:50px;display:flex;justify-content:space-around}.sig div{text-align:center;width:200px}.sig .line{border-bottom:1px solid #333;margin-bottom:8px;height:40px}</style></head><body>');
       var reqNo = document.getElementById('fRequestNo') ? document.getElementById('fRequestNo').value : '-';
-      w.document.write('<h2>แบบฟอร์มขอใช้รถราชการ</h2><p style="text-align:center">งานยานพาหนะ กลุ่มงานบริหารบุคคล โรงเรียนพะเยาพิทยาคม</p>');
+      w.document.write('<h2>แบบฟอร์มขอใช้รถราชการ</h2><p class="sub">งานยานพาหนะ กลุ่มงานบริหารบุคคล โรงเรียนพะเยาพิทยาคม</p>');
       if (reqNo && reqNo !== '-') w.document.write('<p style="text-align:right"><strong>เลขที่:</strong> ' + reqNo + '</p>');
       w.document.write('<table><tr><td style="width:30%"><strong>ผู้ขอใช้รถ</strong></td><td>' + name + '</td></tr>');
       w.document.write('<tr><td><strong>กลุ่มสาระ/หน่วยงาน</strong></td><td>' + dept + '</td></tr>');
-      w.document.write('<tr><td><strong>วันที่</strong></td><td>' + date + '</td></tr>');
-      w.document.write('<tr><td><strong>เวลา</strong></td><td>' + timeS + ' - ' + timeE + '</td></tr>');
+      w.document.write('<tr><td><strong>วันที่เดินทาง</strong></td><td>' + dateDisplay + '</td></tr>');
+      w.document.write('<tr><td><strong>เวลา</strong></td><td>' + timeS + ' - ' + timeE + ' น.</td></tr>');
       w.document.write('<tr><td><strong>สถานที่ปลายทาง</strong></td><td>' + dest + '</td></tr>');
 
       w.document.write('<tr><td><strong>วัตถุประสงค์</strong></td><td>' + purpose + '</td></tr>');
@@ -822,6 +827,51 @@
       w.document.write('</body></html>');
       w.document.close();
       w.print();
+    }
+
+    async function printRequestById(id) {
+      try {
+        var res = await apiCall('getVehicleRequest', { id: id });
+        if (!res || !res.success || !res.data) {
+          showAlert('ไม่พบข้อมูลคำขอ', 'danger');
+          return;
+        }
+        var r = res.data;
+        var name = r.requester_name || '-';
+        var dept = r.requester_department || '-';
+        var date = r.date || '-';
+        var returnDate = r.return_date || date;
+        var dateDisplay = (returnDate && returnDate !== date) ? (date + ' ถึง ' + returnDate) : date;
+        var dest = r.destination || '-';
+        var purpose = r.purpose || '-';
+        var passengers = '';
+        try { passengers = JSON.parse(r.passenger_names || '[]').join(', '); } catch(e){}
+        var timeS = r.time_start || '-';
+        var timeE = r.time_end || '-';
+        var w = window.open('', '_blank', 'width=800,height=600');
+        w.document.write('<html><head><title>แบบฟอร์มขอใช้รถ</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap"><style>body{font-family:Sarabun,sans-serif;padding:40px;font-size:14px;color:#1e293b}h2{text-align:center;margin-bottom:4px}p.sub{text-align:center;color:#64748b;margin-top:0}table{width:100%;border-collapse:collapse;margin-top:20px}td{padding:8px 10px;border:1px solid #cbd5e1}.sig{margin-top:50px;display:flex;justify-content:space-around}.sig div{text-align:center;width:200px}.sig .line{border-bottom:1px solid #333;margin-bottom:8px;height:40px}</style></head><body>');
+        if (r.request_no) w.document.write('<p style="text-align:right"><strong>เลขที่:</strong> ' + r.request_no + '</p>');
+        w.document.write('<h2>แบบฟอร์มขอใช้รถราชการ</h2><p class="sub">งานยานพาหนะ กลุ่มงานบริหารบุคคล โรงเรียนพะเยาพิทยาคม</p>');
+        w.document.write('<table><tr><td style="width:30%"><strong>ผู้ขอใช้รถ</strong></td><td>' + name + '</td></tr>');
+        w.document.write('<tr><td><strong>กลุ่มสาระ/หน่วยงาน</strong></td><td>' + dept + '</td></tr>');
+        w.document.write('<tr><td><strong>วันที่เดินทาง</strong></td><td>' + dateDisplay + '</td></tr>');
+        w.document.write('<tr><td><strong>เวลา</strong></td><td>' + timeS + ' - ' + timeE + ' น.</td></tr>');
+        w.document.write('<tr><td><strong>สถานที่ปลายทาง</strong></td><td>' + dest + '</td></tr>');
+        w.document.write('<tr><td><strong>วัตถุประสงค์</strong></td><td>' + purpose + '</td></tr>');
+        w.document.write('<tr><td><strong>ผู้ร่วมเดินทาง</strong></td><td>' + (passengers || '-') + '</td></tr>');
+        if (r.status === 'approved') {
+          w.document.write('<tr><td colspan="2" style="background:#f1f5f9;text-align:center"><strong>-- ผลการจัดคิวยานพาหนะ --</strong></td></tr>');
+          w.document.write('<tr><td><strong>รถยนต์ที่จัดให้</strong></td><td>' + (r.license_plate || '-') + ' ' + (r.car_brand || '') + '</td></tr>');
+          w.document.write('<tr><td><strong>พนักงานขับรถ</strong></td><td>' + (r.driver_name || '-') + '</td></tr>');
+        }
+        w.document.write('</table>');
+        w.document.write('<div class="sig"><div><div class="line"></div>(ผู้ขอใช้รถ)</div><div><div class="line"></div>(หัวหน้างานยานพาหนะ/ผู้จัดคิว)</div><div><div class="line"></div>(ผู้อนุมัติ)</div></div>');
+        w.document.write('</body></html>');
+        w.document.close();
+        w.print();
+      } catch(e) {
+        showAlert('เกิดข้อผิดพลาดในการพิมพ์', 'danger');
+      }
     }
 
     var statusLabel = { pending_supervisor: '🟡 รอหัวหน้างานอนุมัติ', pending_executive: '🟡 รอผู้บริหารอนุมัติ', approved: '🟢 จัดคิวแล้ว', rejected: '🔴 ไม่อนุมัติ', cancelled: '⚪ ยกเลิก' };
@@ -869,7 +919,7 @@
       h += '</div>';
       if (typeof renderAuditMeta === 'function') h += renderAuditMeta(r);
       if (showActions) {
-        h += '<div style="margin-top:8px;display:flex;gap:6px">';
+        h += '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">';
         if (r.status === 'pending_supervisor') {
           h += '<button class="btn btn-primary btn-sm" onclick="approveSupervisor(\'' + r.id + '\')">✅ อนุมัติ (หัวหน้างาน)</button>';
           h += '<button class="btn btn-outline btn-sm" onclick="openApproveModal(\'' + r.id + '\')" title="จัดรถและอนุมัติทันที (Fast-track)">⚡ จัดรถและอนุมัติ</button>';
@@ -878,17 +928,21 @@
           h += '<button class="btn btn-primary btn-sm" onclick="openApproveModal(\'' + r.id + '\')">✅ จัดรถและอนุมัติ</button>';
           h += '<button class="btn btn-danger btn-sm" onclick="quickReject(\'' + r.id + '\')">❌ ไม่อนุมัติ</button>';
         }
+        h += '<button class="btn btn-outline btn-sm" onclick="printRequestById(\'' + r.id + '\')" title="พิมพ์แบบฟอร์ม">🖨️ พิมพ์</button>';
         h += '</div>';
       }
-      if (!showActions && (r.status === 'pending_supervisor' || r.status === 'pending_executive')) {
-        h += '<div style="margin-top:8px">';
-        if (canCancel) {
-          h += '<button class="btn btn-outline btn-sm" onclick="cancelRequest(\'' + r.id + '\')" style="color:var(--color-danger);border-color:var(--color-danger)">🗑️ ยกเลิกคำขอ (ล่วงหน้า ' + diffDays + ' วัน)</button>';
-        } else {
-          h += '<div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:10px 12px; font-size:0.88rem; color:#9a3412;">';
-          h += '<div>⚠️ <strong>พ้นกำหนดเวลายกเลิกผ่านระบบออนไลน์:</strong> ต้องยกเลิกล่วงหน้าอย่างน้อย 3 วันก่อนวันเดินทาง (เหลือ ' + Math.max(0, diffDays) + ' วัน) หากมีความจำเป็นเร่งด่วน กรุณาติดต่อผู้จัดคิวโดยตรง</div>';
-          h += '<div style="margin-top:6px;"><a href="tel:054481744" class="btn btn-sm btn-outline" style="text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:0.82rem; padding:4px 10px; background:#fff; color:#c2410c; border-color:#fed7aa;">📞 โทรติดต่อผู้จัดคิว (054-481-744)</a></div>';
-          h += '</div>';
+      if (!showActions) {
+        h += '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">';
+        h += '<button class="btn btn-outline btn-sm" onclick="printRequestById(\'' + r.id + '\')" title="พิมพ์แบบฟอร์มขอใช้รถ">🖨️ พิมพ์ใบคำขอ</button>';
+        if (r.status === 'pending_supervisor' || r.status === 'pending_executive') {
+          if (canCancel) {
+            h += '<button class="btn btn-outline btn-sm" onclick="cancelRequest(\'' + r.id + '\')" style="color:var(--color-danger);border-color:var(--color-danger)">🗑️ ยกเลิกคำขอ (ล่วงหน้า ' + diffDays + ' วัน)</button>';
+          } else {
+            h += '<div style="width:100%;margin-top:4px;background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:10px 12px; font-size:0.88rem; color:#9a3412;">';
+            h += '<div>⚠️ <strong>พ้นกำหนดเวลายกเลิกผ่านระบบออนไลน์:</strong> ต้องยกเลิกล่วงหน้าอย่างน้อย 3 วันก่อนวันเดินทาง (เหลือ ' + Math.max(0, diffDays) + ' วัน) หากมีความจำเป็นเร่งด่วน กรุณาติดต่อผู้จัดคิวโดยตรง</div>';
+            h += '<div style="margin-top:6px;"><a href="tel:054481744" class="btn btn-sm btn-outline" style="text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:0.82rem; padding:4px 10px; background:#fff; color:#c2410c; border-color:#fed7aa;">📞 โทรติดต่อผู้จัดคิว (054-481-744)</a></div>';
+            h += '</div>';
+          }
         }
         h += '</div>';
       }
@@ -1069,6 +1123,9 @@ ${dateLine}
       // Change approve button action
       var btnApp = document.getElementById('btnApprove');
       btnApp.onclick = submitBulkApprove;
+      btnApp.innerText = '✍️ ยืนยันลงนามอนุมัติ';
+      var btnRej = document.getElementById('btnReject');
+      if (btnRej) btnRej.style.display = 'none';
       
       document.getElementById('approveModal').style.display = 'flex';
       setTimeout(function() {
@@ -1100,21 +1157,27 @@ ${dateLine}
       }
     }
 
-    async function cancelRequest(id) {
-      if (!confirm('ยืนยันยกเลิกคำขอนี้?')) return;
-      try {
-        var res = await apiCall('cancelVehicleRequest', { id: id });
-        if (res && res.success) {
-          showAlert('ยกเลิกคำขอเรียบร้อย', 'success');
-          loadMyRequests();
-        } else { showAlert((res && res.error) || 'เกิดข้อผิดพลาด', 'danger'); }
-      } catch (err) { showAlert('เกิดข้อผิดพลาด', 'danger'); }
-    }
-
     var currentApproveReqObj = null;
 
     async function openApproveModal(id) {
       currentApproveId = id;
+      
+      // Restore modal state from possible bulk approve view
+      document.getElementById('approveModalTitle').innerText = 'จัดรถและอนุมัติคำขอ';
+      document.getElementById('mAssignCar').parentElement.style.display = 'block';
+      document.getElementById('mAssignDriver').parentElement.style.display = 'block';
+      document.getElementById('mNotes').parentElement.style.display = 'block';
+      document.getElementById('fModalEstimatedFuel').parentElement.style.display = 'block';
+      var suggestBtn = document.querySelector('button[onclick="suggestDispatch()"]');
+      if (suggestBtn) suggestBtn.style.display = 'inline-block';
+      var btnRej = document.getElementById('btnReject');
+      if (btnRej) btnRej.style.display = 'inline-block';
+      var btnApp = document.getElementById('btnApprove');
+      if (btnApp) {
+        btnApp.onclick = () => doApprove();
+        btnApp.innerText = '✅ เสนออนุมัติและจัดคิว';
+      }
+
       var overrideCheck = document.getElementById('mOverrideCheck');
       if (overrideCheck) overrideCheck.checked = false;
       var overrideReason = document.getElementById('mOverrideReason');
@@ -1829,9 +1892,10 @@ ${dateLine}
         var isPast = (dateStr < todayStr);
         var isSelected = (dateStr === calSelectedDate);
 
-        // Count cars used on this day
+        // Count cars used on this day (handles single-day and multi-day trips)
         var dayQueues = calQueues.filter(function(q) {
-          return q.date === dateStr && q.status !== 'cancelled' && q.status !== 'rejected';
+          var retDate = q.return_date || q.date;
+          return q.date <= dateStr && retDate >= dateStr && q.status !== 'cancelled' && q.status !== 'rejected';
         });
         var bookedCars = new Set();
         dayQueues.forEach(function(q){ if (q.car_id) bookedCars.add(q.car_id); });
@@ -1875,9 +1939,9 @@ ${dateLine}
       if (typeof requireAuth === 'function') { if (!requireAuth()) { window.location.href = 'login.html'; return; } }
       var user = getCurrentUser() || {};
       // Prefill requester name
-      var defaultName = user.full_name || user.display_name || user.name || user.username || '';
+      var defaultName = user.full_name || user.display_name || localStorage.getItem('last_requester_name') || user.name || user.username || '';
       if (/^[a-zA-Z0-9._]+$/.test(defaultName) && !user.full_name) {
-        defaultName = ''; // Force them to type their real Thai name on first use
+        defaultName = localStorage.getItem('last_requester_name') || ''; // Use saved real Thai name if available
       }
       document.getElementById('fRequesterName').value = defaultName;
       
