@@ -1228,13 +1228,15 @@ ${dateLine}
       if (allCars.length === 0) {
         try {
           var cRes = await apiCall('getVehicles');
-          allCars = (cRes && cRes.success && Array.isArray(cRes.data)) ? cRes.data.filter(function(c){ return c.status === 'active'; }) : [];
+          var rawCars = (cRes && cRes.success && cRes.data) ? (cRes.data.vehicles || (Array.isArray(cRes.data) ? cRes.data : [])) : [];
+          allCars = rawCars.filter(function(c){ return c.status === 'active'; });
         } catch(e) {}
       }
       if (allDrivers.length === 0) {
         try {
           var dRes = await apiCall('getDrivers');
-          allDrivers = (dRes && dRes.success && Array.isArray(dRes.data)) ? dRes.data.filter(function(d){ return d.status === 'active'; }) : [];
+          var rawDrivers = (dRes && dRes.success && dRes.data) ? (dRes.data.drivers || (Array.isArray(dRes.data) ? dRes.data : [])) : [];
+          allDrivers = rawDrivers.filter(function(d){ return d.status === 'active'; });
         } catch(e) {}
       }
       var carSel = '<option value="">-- เลือกรถ --</option>';
@@ -1854,7 +1856,8 @@ ${dateLine}
       if (allCars.length === 0) {
         try {
           var cRes = await apiCall('getVehicles');
-          allCars = (cRes && cRes.success && Array.isArray(cRes.data)) ? cRes.data.filter(function(c){ return c.status === 'active'; }) : [];
+          var rawCars = (cRes && cRes.success && cRes.data) ? (cRes.data.vehicles || (Array.isArray(cRes.data) ? cRes.data : [])) : [];
+          allCars = rawCars.filter(function(c){ return c.status === 'active'; });
         } catch(e) {}
       }
       var totalActiveCars = allCars.length || 4;

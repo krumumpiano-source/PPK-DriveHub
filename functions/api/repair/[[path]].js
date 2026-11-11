@@ -2,7 +2,7 @@
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, writeAuditLog,
-  sendTelegramMessage, createNotification, notifyAllAdmins
+  createNotification, notifyAllAdmins
 } from '../../_helpers.js';
 
 function parseMaintenanceSyncItems(repairItemsInput) {
@@ -200,10 +200,8 @@ export async function onRequest(context) {
 
   // --- GET /api/repair/log ---
   if (path === '/api/repair/log' && method === 'GET') {
-    const isDriver = user.role === 'driver';
-    if (!isDriver) {
-      try { requirePermission(user, 'repair', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
-    }
+    const isPrivileged = ['admin', 'super_admin', 'manager'].includes(user.role) ||
+      (typeof user.permissions === 'string' && user.permissions.includes('"repair"'));
 
     const carId = url.searchParams.get('car_id');
     const status = url.searchParams.get('status');
@@ -211,10 +209,10 @@ export async function onRequest(context) {
     const where = [];
     const params = [];
 
-    // Driver role: limit to own repair requests
-    if (isDriver) {
-      where.push('(rl.reporter_id = ? OR rl.requested_by_driver_id = ?)');
-      params.push(user.id, user.driver_id || user.id);
+    // Non-privileged users (teachers/staff/drivers): limit to own repair requests
+    if (!isPrivileged) {
+      where.push('(rl.reporter_id = ? OR rl.requested_by_driver_id = ? OR rl.created_by = ?)');
+      params.push(user.id, user.driver_id || user.id, user.id);
     }
 
     if (carId) { where.push('rl.car_id = ?'); params.push(carId); }
@@ -239,7 +237,6 @@ export async function onRequest(context) {
 
   // --- GET /api/repair/log/:id ---
   if (path.match(/^\/api\/repair\/log\/[^/]+$/) && method === 'GET') {
-    try { requirePermission(user, 'repair', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/').pop();
     const row = await dbFirst(env.DB,
       `SELECT rl.*, c.license_plate, c.brand, c.model,
@@ -251,6 +248,11 @@ export async function onRequest(context) {
        LEFT JOIN users uu ON rl.updated_by = uu.id
        WHERE rl.id = ?`, [id]);
     if (!row) return error('ไม่พบข้อมูลซ่อม', 404);
+    const isPrivileged = ['admin', 'super_admin', 'manager'].includes(user.role) ||
+      (typeof user.permissions === 'string' && user.permissions.includes('"repair"'));
+    if (!isPrivileged && row.reporter_id !== user.id && row.created_by !== user.id && row.requested_by_driver_id !== (user.driver_id || user.id)) {
+      return error('ไม่มีสิทธิ์เข้าถึงข้อมูลซ่อมนี้', 403);
+    }
     // Attach itemized parts
     const items = await dbAll(env.DB,
       `SELECT * FROM repair_items WHERE repair_id = ? ORDER BY sort_order, created_at`, [id]);
@@ -324,9 +326,9 @@ export async function onRequest(context) {
 
     const car = await dbFirst(env.DB, 'SELECT license_plate, brand FROM cars WHERE id = ?', [body.car_id]);
     const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : body.car_id;
-    await writeAuditLog(env.DB, user.id, user.displayName, 'create_repair', 'repair', id, { car: carLabel });
+    await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'create_repair', 'repair', id, { car: carLabel });
     await notifyAllAdmins(env.DB, 'repair', 'แจ้งซ่อม',
-      `${user.displayName} แจ้งซ่อม ${carLabel} — ${body.issue_description || body.description || '-'}`);
+      `${user.display_name || user.username} แจ้งซ่อม ${carLabel} — ${body.issue_description || body.description || '-'}`);
     // await sendTelegramMessage(env,
     //   `🔧 <b>แจ้งซ่อมใหม่</b>\n🚗 ${carLabel}\n📝 ${body.issue_description || body.description || '-'}\n👨‍💼 โดย: ${user.displayName}`);
 
@@ -412,22 +414,23 @@ export async function onRequest(context) {
     if (!row) return error('ไม่พบข้อมูลซ่อม', 404);
     if (row.status !== 'requested') return error(`ไม่สามารถอนุมัติได้ สถานะปัจจุบัน: ${row.status}`);
     const ts = now();
+    const gName = body?.garage_name ? body.garage_name.trim() : null;
     await dbRun(env.DB,
       `UPDATE repair_log SET status = 'approved', approved_by = ?, approved_at = ?, updated_by = ?, updated_at = ?, garage_name = COALESCE(?, garage_name) WHERE id = ?`,
-      [user.id, ts, user.id, ts, body?.garage_name || null, id]
+      [user.id, ts, user.id, ts, gName, id]
     );
     const car = await dbFirst(env.DB, 'SELECT license_plate, brand FROM cars WHERE id = ?', [row.car_id]);
     const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : row.car_id;
-    await writeAuditLog(env.DB, user.id, user.displayName, 'approve_repair', 'repair', id, { car: carLabel, garage_name: body?.garage_name });
+    await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'approve_repair', 'repair', id, { car: carLabel, garage_name: body?.garage_name });
     
     let notifyMsg = `แจ้งซ่อม ${carLabel} ได้รับอนุมัติแล้ว`;
     if (body?.garage_name) notifyMsg += ` (กำหนดให้ซ่อมที่: ${body.garage_name})`;
     await createNotification(env.DB, row.created_by, 'repair', 'อนุมัติแจ้งซ่อม', notifyMsg);
     
-    let teleMsg = `✅ <b>อนุมัติแจ้งซ่อม</b>\n🚗 ${carLabel}`;
-    if (body?.garage_name) teleMsg += `\n🏪 กำหนดซ่อมที่: ${body.garage_name}`;
-    teleMsg += `\n👨‍💼 อนุมัติโดย: ${user.displayName}`;
-    // await sendTelegramMessage(env, teleMsg);
+    let _teleMsg = `✅ <b>อนุมัติแจ้งซ่อม</b>\n🚗 ${carLabel}`;
+    if (body?.garage_name) _teleMsg += `\n🏪 กำหนดซ่อมที่: ${body.garage_name}`;
+    _teleMsg += `\n👨‍💼 อนุมัติโดย: ${user.display_name || user.username}`;
+    // await sendTelegramMessage(env, _teleMsg);
     return success({ message: 'อนุมัติแจ้งซ่อมเรียบร้อย' });
   }
 
@@ -446,9 +449,9 @@ export async function onRequest(context) {
     );
     const car = await dbFirst(env.DB, 'SELECT license_plate, brand FROM cars WHERE id = ?', [row.car_id]);
     const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : row.car_id;
-    await writeAuditLog(env.DB, user.id, user.displayName, 'reject_repair', 'repair', id, { car: carLabel, reason: body?.reason });
+    await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'reject_repair', 'repair', id, { car: carLabel, reason: body?.reason });
     await createNotification(env.DB, row.created_by, 'repair', 'ไม่อนุมัติแจ้งซ่อม', `แจ้งซ่อม ${carLabel} ไม่ได้รับอนุมัติ: ${body?.reason || '-'}`);
-    // await sendTelegramMessage(env, `❌ <b>ไม่อนุมัติแจ้งซ่อม</b>\n🚗 ${carLabel}\n📝 เหตุผล: ${body?.reason || '-'}\n👨‍💼 โดย: ${user.displayName}`);
+    // await sendTelegramMessage(env, `❌ <b>ไม่อนุมัติแจ้งซ่อม</b>\n🚗 ${carLabel}\n📝 เหตุผล: ${body?.reason || '-'}\n👨‍💼 โดย: ${user.display_name || user.username}`);
     return success({ message: 'ปฏิเสธแจ้งซ่อมเรียบร้อย' });
   }
 
@@ -461,18 +464,19 @@ export async function onRequest(context) {
     if (!row) return error('ไม่พบข้อมูลซ่อม', 404);
     if (row.status !== 'approved') return error(`ไม่สามารถบันทึกตรวจสภาพได้ สถานะปัจจุบัน: ${row.status}`);
     const ts = now();
+    const gName = body?.garage_name ? body.garage_name.trim() : null;
     await dbRun(env.DB,
       `UPDATE repair_log SET status = 'inspected', inspection_date = ?, inspection_notes = ?,
        quotation_documents = ?, garage_name = COALESCE(?, garage_name), updated_by = ?, updated_at = ? WHERE id = ?`,
       [body?.inspection_date || ts.substr(0,10), body?.inspection_notes || '',
        JSON.stringify(body?.quotation_documents || []),
-       body?.garage_name || null, user.id, ts, id]
+       gName, user.id, ts, id]
     );
     const car = await dbFirst(env.DB, 'SELECT license_plate, brand FROM cars WHERE id = ?', [row.car_id]);
     const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : row.car_id;
-    await writeAuditLog(env.DB, user.id, user.displayName, 'inspect_repair', 'repair', id, { car: carLabel });
+    await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'inspect_repair', 'repair', id, { car: carLabel });
     await notifyAllAdmins(env.DB, 'repair', 'ตรวจสภาพเสร็จ', `ตรวจสภาพ ${carLabel} เรียบร้อย — รอทำบันทึกข้อความ`);
-    // await sendTelegramMessage(env, `🔍 <b>ตรวจสภาพเสร็จ</b>\n🚗 ${carLabel}\n📝 ${body?.inspection_notes || '-'}\n👨‍💼 โดย: ${user.displayName}`);
+    // await sendTelegramMessage(env, `🔍 <b>ตรวจสภาพเสร็จ</b>\n🚗 ${carLabel}\n📝 ${body?.inspection_notes || '-'}\n👨‍💼 โดย: ${user.display_name || user.username}`);
     return success({ message: 'บันทึกตรวจสภาพเรียบร้อย' });
   }
 
@@ -491,9 +495,9 @@ export async function onRequest(context) {
     );
     const car = await dbFirst(env.DB, 'SELECT license_plate, brand FROM cars WHERE id = ?', [row.car_id]);
     const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : row.car_id;
-    await writeAuditLog(env.DB, user.id, user.displayName, 'document_repair', 'repair', id, { car: carLabel });
+    await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'document_repair', 'repair', id, { car: carLabel });
     await notifyAllAdmins(env.DB, 'repair', 'บันทึกข้อความเสร็จ', `ทำบันทึกข้อความซ่อม ${carLabel} เรียบร้อย — รอดำเนินการซ่อม`);
-    // await sendTelegramMessage(env, `📄 <b>บันทึกข้อความเสร็จ</b>\n🚗 ${carLabel}\n📝 ${body?.memo_notes || '-'}\n👨‍💼 โดย: ${user.displayName}`);
+    // await sendTelegramMessage(env, `📄 <b>บันทึกข้อความเสร็จ</b>\n🚗 ${carLabel}\n📝 ${body?.memo_notes || '-'}\n👨‍💼 โดย: ${user.display_name || user.username}`);
     return success({ message: 'ทำบันทึกข้อความเรียบร้อย' });
   }
 
@@ -506,18 +510,20 @@ export async function onRequest(context) {
     if (!row) return error('ไม่พบข้อมูลซ่อม', 404);
     if (row.status !== 'documented') return error(`ไม่สามารถเริ่มซ่อมได้ สถานะปัจจุบัน: ${row.status}`);
     const ts = now();
+    const gName = body?.garage_name ? body.garage_name.trim() : null;
+    const cost = (body?.cost !== undefined && body?.cost !== null && body?.cost !== '') ? parseFloat(body.cost) : null;
     await dbRun(env.DB,
       `UPDATE repair_log SET status = 'repairing', date_started = ?, garage_name = COALESCE(?, garage_name),
        cost = COALESCE(?, cost), updated_by = ?, updated_at = ? WHERE id = ?`,
-      [body?.date_started || ts.substr(0,10), body?.garage_name || null, body?.cost || null, user.id, ts, id]
+      [body?.date_started || ts.substr(0,10), gName, cost, user.id, ts, id]
     );
     // อัปเดตสถานะรถเป็น under_repair
     await dbRun(env.DB, `UPDATE cars SET status = 'under_repair', updated_at = ? WHERE id = ?`, [ts, row.car_id]);
     const car = await dbFirst(env.DB, 'SELECT license_plate, brand FROM cars WHERE id = ?', [row.car_id]);
     const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : row.car_id;
-    await writeAuditLog(env.DB, user.id, user.displayName, 'start_repair', 'repair', id, { car: carLabel });
+    await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'start_repair', 'repair', id, { car: carLabel });
     await notifyAllAdmins(env.DB, 'repair', 'เริ่มซ่อม', `เริ่มดำเนินการซ่อม ${carLabel} แล้ว`);
-    // await sendTelegramMessage(env, `🔨 <b>เริ่มซ่อม</b>\n🚗 ${carLabel}\n🏪 ${body?.garage_name || row.garage_name || '-'}\n💰 ${body?.cost || row.cost || 0} บาท\n👨‍💼 โดย: ${user.displayName}`);
+    // await sendTelegramMessage(env, `🔨 <b>เริ่มซ่อม</b>\n🚗 ${carLabel}\n🏪 ${body?.garage_name || row.garage_name || '-'}\n💰 ${body?.cost || row.cost || 0} บาท\n👨‍💼 โดย: ${user.display_name || user.username}`);
     return success({ message: 'เริ่มดำเนินการซ่อมเรียบร้อย' });
   }
 
@@ -572,11 +578,16 @@ export async function onRequest(context) {
         );
       }
     }
-    // อัปเดตสถานะรถกลับเป็น active
-    await dbRun(env.DB, `UPDATE cars SET status = 'active', updated_at = ? WHERE id = ?`, [ts, row.car_id]);
+    // อัปเดตสถานะรถกลับเป็น active (เฉพาะเมื่อไม่มีงานซ่อมอื่นค้างอยู่)
+    const otherRepairs = await dbFirst(env.DB, `
+      SELECT id FROM repair_log WHERE car_id = ? AND status = 'repairing' AND id != ?
+    `, [row.car_id, id]);
+    if (!otherRepairs) {
+      await dbRun(env.DB, `UPDATE cars SET status = 'active', updated_at = ? WHERE id = ? AND status = 'under_repair'`, [ts, row.car_id]);
+    }
     const car = await dbFirst(env.DB, 'SELECT license_plate, brand FROM cars WHERE id = ?', [row.car_id]);
     const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : row.car_id;
-    await writeAuditLog(env.DB, user.id, user.displayName, 'complete_repair', 'repair', id, { car: carLabel, cost: body?.cost || row.cost });
+    await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'complete_repair', 'repair', id, { car: carLabel, cost: body?.cost || row.cost });
     if (row.created_by) await createNotification(env.DB, row.created_by, 'repair', 'ซ่อมเสร็จ', `ซ่อม ${carLabel} เสร็จเรียบร้อยแล้ว`);
     if (row.requested_by_driver_id) {
       const driverUser = await dbFirst(env.DB, 'SELECT id FROM users WHERE driver_id = ?', [row.requested_by_driver_id]);
