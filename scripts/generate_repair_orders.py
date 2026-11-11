@@ -115,7 +115,7 @@ def create_repair_order_docx(data, output_filepath):
         r_img.add_picture(GARUDA_PATH, width=Cm(1.8))
 
     add_p(doc, "แบบขออนุมัติส่งยานพาหนะเข้าตรวจซ่อมบำรุง / ใบส่งซ่อม", size=15, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_before=1, space_after=1)
-    add_p(doc, "งานยานพาหนะ กลุ่มบริหารทั่วไป โรงเรียนพะเยาพิทยาคม", size=13, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=1)
+    add_p(doc, "งานยานพาหนะ กลุ่มบริหารงานบุคคล โรงเรียนพะเยาพิทยาคม", size=13, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=1)
     add_p(doc, "สังกัดสำนักงานเขตพื้นที่การศึกษามัธยมศึกษาพะเยา  เลขที่ ๒๔๔ ถนนพหลโยธิน ตำบลเวียง อำเภอเมืองพะเยา จังหวัดพะเยา ๕๖๐๐๐ โทรศัพท์ ๐๕๔-๔๓๑๘๗๑", size=11, align=WD_ALIGN_PARAGRAPH.CENTER, color=RGBColor(71, 85, 105), space_after=3)
 
     # Document Reference & Date Row
@@ -309,7 +309,7 @@ def create_repair_order_docx(data, output_filepath):
     add_p(b4, "๔. ผู้อนุมัติการส่งตรวจซ่อมบำรุง", size=11, bold=True, color=RGBColor(71, 85, 105), space_after=8)
     add_p(b4, "ลงชื่อ ................................................................", size=11.5, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=1)
     add_p(b4, "(................................................................)", size=11.5, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=1)
-    add_p(b4, "หัวหน้างานยานพาหนะ / รองผู้อำนวยการกลุ่มบริหารทั่วไป", size=10.5, color=RGBColor(71, 85, 105), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=1)
+    add_p(b4, "หัวหน้างานยานพาหนะ / รองผู้อำนวยการกลุ่มบริหารงานบุคคล", size=10.5, color=RGBColor(71, 85, 105), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=1)
     add_p(b4, "ความเห็น: [✓] อนุมัติส่งตรวจสภาพและขอใบเสนอราคา", size=10.5, bold=True, color=RGBColor(16, 185, 129), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
 
     # 7. Acceptance Footer (One-line compact)
@@ -628,7 +628,7 @@ def create_repair_order_html(data, output_filepath):
     <div class="header-center">
       <img src="{garuda_b64}" class="garuda-img" alt="ตราครุฑ"><br>
       <div class="doc-main-title">แบบขออนุมัติส่งยานพาหนะเข้าตรวจซ่อมบำรุง / ใบส่งซ่อม</div>
-      <div class="org-title">งานยานพาหนะ กลุ่มบริหารทั่วไป โรงเรียนพะเยาพิทยาคม</div>
+      <div class="org-title">งานยานพาหนะ กลุ่มบริหารงานบุคคล โรงเรียนพะเยาพิทยาคม</div>
       <div class="org-subtitle">
         สังกัดสำนักงานเขตพื้นที่การศึกษามัธยมศึกษาพะเยา &bull; เลขที่ ๒๔๔ ถนนพหลโยธิน ตำบลเวียง อำเภอเมืองพะเยา จังหวัดพะเยา ๕๖๐๐๐ &bull; โทร. ๐๕๔-๔๓๑๘๗๑
       </div>
@@ -739,7 +739,7 @@ def create_repair_order_html(data, output_filepath):
         <div class="sig-title">๔. ผู้อนุมัติการส่งตรวจซ่อมบำรุง</div>
         <div class="sig-line">ลงชื่อ ................................................................</div>
         <div class="sig-name">(................................................................)</div>
-        <div class="sig-pos">หัวหน้างานยานพาหนะ / รองผู้อำนวยการกลุ่มบริหารทั่วไป</div>
+        <div class="sig-pos">หัวหน้างานยานพาหนะ / รองผู้อำนวยการกลุ่มบริหารงานบุคคล</div>
         <div class="sig-pos" style="color:#059669; font-weight:600;">[ &#10003; ] อนุมัติส่งตรวจสภาพและขอเสนอราคา</div>
       </div>
     </div>
@@ -803,7 +803,7 @@ def main():
             }
         ],
         "coordinator_name": "นายพงศธร โพธิแก้ว",
-        "coordinator_title": "รองหัวหน้างานยานพาหนะ โรงเรียนพะเยาพิทยาคม",
+        "coordinator_title": "รองหัวหน้างานยานพาหนะ กลุ่มบริหารงานบุคคล",
         "coordinator_phone": "๐๙๕-๖๙๖-๑๖๐๖"
     }
 
@@ -844,7 +844,7 @@ def main():
             }
         ],
         "coordinator_name": "นายพงศธร โพธิแก้ว",
-        "coordinator_title": "รองหัวหน้างานยานพาหนะ โรงเรียนพะเยาพิทยาคม",
+        "coordinator_title": "รองหัวหน้างานยานพาหนะ กลุ่มบริหารงานบุคคล",
         "coordinator_phone": "๐๙๕-๖๙๖-๑๖๐๖"
     }
 
