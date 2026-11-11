@@ -400,29 +400,21 @@ export async function onRequest(context) {
   if (path === '/api/usage/cars-out' && method === 'GET') {
     if (!env.user) return error('Unauthorized', 401);
     const rows = await dbAll(env.DB,
-      `SELECT ur.car_id, ur.datetime AS last_departure, ur.driver_id,
+      `WITH latest_per_car AS (
+         SELECT car_id, MAX(datetime) AS max_dt
+         FROM usage_records
+         WHERE data_quality NOT IN ('gap_record', 'auto_departure')
+         GROUP BY car_id
+       )
+       SELECT ur.car_id, ur.datetime AS last_departure, ur.driver_id,
               ur.driver_name_manual, ur.queue_id, ur.destination,
               c.license_plate, c.brand, c.model,
               COALESCE(d.name, ur.driver_name_manual) AS driver_name
-       FROM usage_records ur
+       FROM latest_per_car lpc
+       JOIN usage_records ur ON ur.car_id = lpc.car_id AND ur.datetime = lpc.max_dt
        JOIN cars c ON ur.car_id = c.id
        LEFT JOIN drivers d ON ur.driver_id = d.id
        WHERE ur.record_type = 'departure'
-         AND ur.data_quality NOT IN ('gap_record','auto_departure')
-         AND NOT EXISTS (
-           SELECT 1 FROM usage_records ur2
-           WHERE ur2.car_id = ur.car_id
-             AND ur2.record_type = 'return'
-             AND ur2.datetime >= ur.datetime
-             AND ur2.data_quality != 'gap_record'
-         )
-         AND ur.datetime = (
-           SELECT MAX(ur3.datetime) FROM usage_records ur3
-           WHERE ur3.car_id = ur.car_id
-             AND ur3.record_type = 'departure'
-             AND ur3.data_quality NOT IN ('gap_record','auto_departure')
-         )
-       GROUP BY ur.car_id
        ORDER BY ur.datetime ASC`,
       []
     );
@@ -789,7 +781,7 @@ export async function onRequest(context) {
     let created = 0, skipped = 0;
     const details = [];
 
-    // หา departure records ทั้งหมดที่ไม่มี queue_id
+    // หา departure records ทั้งหมดที่ไม่มี queue_id (จำกัดทีละ batch 30 รายการเพื่อไม่ให้กิน resource เกินกำหนด)
     const depRecords = await dbAll(env.DB,
       `SELECT ur.id, ur.car_id, ur.driver_id, ur.driver_name_manual,
               ur.datetime, ur.destination, ur.purpose, ur.mileage,
@@ -798,7 +790,8 @@ export async function onRequest(context) {
        LEFT JOIN cars c ON ur.car_id = c.id
        WHERE ur.record_type = 'departure' AND ur.queue_id IS NULL
          AND ur.data_quality NOT IN ('gap_record','auto_departure')
-       ORDER BY ur.datetime ASC`,
+       ORDER BY ur.datetime ASC
+       LIMIT 30`,
       []
     );
 

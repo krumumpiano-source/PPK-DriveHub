@@ -73,17 +73,17 @@ export async function onRequest(context) {
 
         // Source B: รถที่ออกไปแล้ว (departure scan) และยังไม่มี return scan ← ข้ามวัน
         dbAll(env.DB, `
-          SELECT DISTINCT dep.car_id
-          FROM usage_records dep
-          WHERE dep.record_type = 'departure'
-            AND dep.datetime < ?
-            AND NOT EXISTS (
-              SELECT 1 FROM usage_records ret
-              WHERE ret.car_id    = dep.car_id
-                AND ret.record_type = 'return'
-                AND ret.datetime   >= dep.datetime
-            )
-        `, [returnDate + ' 23:59:59']),
+          WITH latest_per_car AS (
+            SELECT car_id, MAX(datetime) AS max_dt
+            FROM usage_records
+            WHERE data_quality NOT IN ('gap_record', 'auto_departure')
+            GROUP BY car_id
+          )
+          SELECT lpc.car_id
+          FROM latest_per_car lpc
+          JOIN usage_records ur ON ur.car_id = lpc.car_id AND ur.datetime = lpc.max_dt
+          WHERE ur.record_type = 'departure'
+        `, []),
 
         // Source C: รถที่มีรายการแจ้งซ่อมค้างอยู่
         dbAll(env.DB, `
