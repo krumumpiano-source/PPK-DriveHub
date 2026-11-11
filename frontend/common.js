@@ -35,6 +35,12 @@ function checkAuth() {
                 return false;
             }
         }
+        if (currentUser && (currentUser.must_change_password === true || currentUser.mustChangePassword === true)) {
+            if (typeof window !== 'undefined' && window.location && !window.location.pathname.includes('change-password.html') && !window.location.pathname.includes('login.html')) {
+                window.location.href = 'change-password.html';
+                return false;
+            }
+        }
         return !!API.getToken();
     }
     return false;
@@ -66,8 +72,11 @@ function hasModulePermission(module, level) {
 }
 
 function validatePasswordPolicy(password) {
-    if (!password || password.length < 8) return 'รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร';
-    if (!/[a-zA-Z]/.test(password)) return 'รหัสผ่านต้องมีตัวอักษรภาษาอังกฤษอย่างน้อย 1 ตัว';
+    if (!password) return 'กรุณาระบุรหัส PIN หรือรหัสผ่าน';
+    // Allow numeric PIN 6-8 digits
+    if (/^\d{6,8}$/.test(password)) return null;
+    if (password.length < 8) return 'รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร (หรือ PIN ตัวเลข 6-8 หลัก)';
+    if (!/[a-zA-Z]/.test(password)) return 'รหัสผ่านต้องมีตัวอักษรภาษาอังกฤษอย่างน้อย 1 ตัว (หรือใช้ PIN ตัวเลข 6-8 หลัก)';
     if (!/[0-9]/.test(password)) return 'รหัสผ่านต้องมีตัวเลขอย่างน้อย 1 ตัว';
     return null;
 }
@@ -154,8 +163,8 @@ function renderNavigation() {
     var user = getCurrentUser();
     if (!user) return '';
 
-    var roleLabel = { super_admin: 'ผู้ดูแลสูงสุด', admin: 'ผู้ดูแลระบบ', manager: 'ผู้จัดการ', driver: 'พนักงานขับรถ', staff: 'เจ้าหน้าที่', requester: 'ผู้ขอใช้รถ' };
-    var initials = (user.full_name || user.username || '?').charAt(0).toUpperCase();
+    var roleLabel = { super_admin: 'ผู้ดูแลสูงสุด', admin: 'ผู้ดูแลระบบ', manager: 'ผู้จัดการ', vehicle: 'หัวหน้างานยานพาหนะ', driver: 'พนักงานขับรถ', staff: 'เจ้าหน้าที่', requester: 'ผู้ขอใช้รถ' };
+    var initials = (user.display_name || user.full_name || user.username || '?').charAt(0).toUpperCase();
 
     var nav = '';
     // Brand
@@ -170,7 +179,7 @@ function renderNavigation() {
     nav += '<div class="sidebar-user">' +
         '<div class="sidebar-user-avatar">' + initials + '</div>' +
         '<div class="sidebar-user-info">' +
-        '<div class="sidebar-user-name">' + (user.full_name || user.username || '') + '</div>' +
+        '<div class="sidebar-user-name">' + (user.display_name || user.full_name || user.username || '') + '</div>' +
         '<div class="sidebar-user-role">' + (roleLabel[user.role] || user.role || '') + '</div>' +
         '</div></div>';
 
@@ -241,6 +250,18 @@ function renderNavigation() {
         nav += _sidebarGroupEnd();
     }
 
+    // ── ข้อมูลยานพาหนะและพนักงานขับรถ ──
+    var hasVehicles = hasModulePermission('vehicles', 'view') || hasPermission(['admin']);
+    var hasDrivers = hasModulePermission('drivers', 'view') || hasPermission(['admin']);
+    if (hasVehicles || hasDrivers) {
+        nav += _sidebarGroupBegin('fleet', 'ยานพาหนะและคนขับ', '🚙');
+        if (hasVehicles) nav += _sidebarItem('vehicles.html', 'vehicles', '🚙', 'ข้อมูลรถ');
+        if (hasDrivers) nav += _sidebarItem('drivers.html', 'drivers', '👷', 'ข้อมูลพนักงานขับรถ');
+        if (hasVehicles) nav += _sidebarItem('tax-insurance.html', 'tax-insurance', '📄', 'ภาษี/ประกัน/ตรอ.');
+        if (hasVehicles) nav += _sidebarItem('qr-manage.html', 'qr-manage', '📱', 'จัดการ QR Code');
+        nav += _sidebarGroupEnd();
+    }
+
     // ── 6. ตั้งค่าส่วนตัว ──
     nav += _sidebarGroupBegin('profile', 'ตั้งค่าส่วนตัว', '👤');
     nav += _sidebarItem('profile.html', 'profile', '👤', 'โปรไฟล์ของฉัน');
@@ -248,16 +269,10 @@ function renderNavigation() {
     nav += _sidebarItem('change-password.html', 'change-password', '🔑', 'เปลี่ยนรหัสผ่าน');
     nav += _sidebarGroupEnd();
 
-    // ── 6. ผู้ดูแลระบบ ──
+    // ── 7. ผู้ดูแลระบบ ──
     if (hasPermission(['admin', 'super_admin'])) {
         nav += _sidebarGroupBegin('admin', 'ผู้ดูแลระบบ', '🛡️');
         
-        nav += '<div class="sidebar-sub-label" style="padding-left: 20px;">ยานพาหนะ</div>';
-        nav += _sidebarItem('vehicles.html', 'vehicles', '🚙', 'จัดการข้อมูลรถ');
-        nav += _sidebarItem('drivers.html', 'drivers', '👷', 'จัดการพนักงานขับรถ');
-        nav += _sidebarItem('tax-insurance.html', 'tax-insurance', '📄', 'ภาษี/ประกัน/ตรอ.');
-        nav += _sidebarItem('qr-manage.html', 'qr-manage', '📱', 'จัดการ QR Code');
-
         nav += '<div class="sidebar-sub-label" style="padding-left: 20px;">ผู้ใช้งาน</div>';
         nav += _sidebarItem('user-management.html', 'user-management', '👥', 'จัดการผู้ใช้');
 
@@ -405,7 +420,7 @@ function renderImpersonationBanner() {
     var user = getCurrentUser();
     if (!user) return;
 
-    var roleLabel = { super_admin: 'ผู้ดูแลสูงสุด', admin: 'ผู้ดูแลระบบ', manager: 'ผู้จัดการ', driver: 'พนักงานขับรถ', staff: 'เจ้าหน้าที่', requester: 'ผู้ขอใช้รถ' };
+    var roleLabel = { super_admin: 'ผู้ดูแลสูงสุด', admin: 'ผู้ดูแลระบบ', manager: 'ผู้จัดการ', vehicle: 'หัวหน้างานยานพาหนะ', driver: 'พนักงานขับรถ', staff: 'เจ้าหน้าที่', requester: 'ผู้ขอใช้รถ' };
     var name = user.full_name || user.display_name || user.username || '';
     var role = roleLabel[user.role] || user.role || '';
 

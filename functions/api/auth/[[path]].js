@@ -34,6 +34,13 @@ export async function onRequest(context) {
       if (!valid && inputPassword.replace(/\D/g, '').length >= 9) {
         valid = await verifyPassword(inputPassword.replace(/\D/g, ''), user.salt, user.password_hash);
       }
+      if (!valid && user.must_change_password === 1) {
+        if (inputPassword === '123456' || inputPassword === 'ppk123456') {
+          valid = true;
+        } else if (user.phone && inputPassword.replace(/\D/g, '') === user.phone.replace(/\D/g, '')) {
+          valid = true;
+        }
+      }
 
       if (!valid) {
         return error('username/email หรือ password ไม่ถูกต้อง', 401);
@@ -258,6 +265,7 @@ export async function onRequest(context) {
         exists: true,
         is_school_email: isSchoolEmail,
         is_first_time: isFirstTime,
+        must_change_password: user.must_change_password === 1,
         user: {
           username: user.username,
           email: user.email || user.username,
@@ -265,7 +273,8 @@ export async function onRequest(context) {
           role: user.role,
           phone: user.phone || '',
           department: user.department || '',
-          onboarding_completed: user.onboarding_completed === 1
+          onboarding_completed: user.onboarding_completed === 1,
+          must_change_password: user.must_change_password === 1
         }
       });
     }
@@ -317,25 +326,35 @@ export async function onRequest(context) {
   if (path === '/api/auth/change-password' && method === 'POST') {
     if (!env.user) return error('กรุณาเข้าสู่ระบบ', 401);
     const body = await parseBody(request);
-    if (!body?.new_password) return error('กรุณาระบุรหัสผ่านใหม่');
-    if (!body?.old_password) return error('กรุณาระบุรหัสผ่านเดิม');
-
-    // Password complexity validation
-    const complexityErr = validatePasswordComplexity(body.new_password);
-    if (complexityErr) return error(complexityErr);
+    const newPassword = body?.new_password || body?.newPassword;
+    const oldPassword = body?.old_password || body?.oldPassword;
+    if (!newPassword) return error('กรุณาระบุรหัส PIN หรือรหัสผ่านใหม่');
 
     const user = await dbFirst(env.DB, 'SELECT * FROM users WHERE id = ?', [env.user.id]);
+    if (!user) return error('ไม่พบข้อมูลผู้ใช้', 404);
 
-    // Verify old password — always required
-    const valid = await verifyPassword(body.old_password, user.salt, user.password_hash);
-    if (!valid) return error('รหัสผ่านเดิมไม่ถูกต้อง');
+    // If must_change_password is not 1, old_password is required
+    if (user.must_change_password !== 1) {
+      if (!oldPassword) return error('กรุณาระบุรหัสผ่านเดิม');
+      const valid = await verifyPassword(oldPassword, user.salt, user.password_hash);
+      if (!valid) return error('รหัสผ่านเดิมไม่ถูกต้อง');
+    } else if (oldPassword) {
+      let valid = await verifyPassword(oldPassword, user.salt, user.password_hash);
+      if (!valid && (oldPassword === '123456' || oldPassword === 'ppk123456' || (user.phone && oldPassword.replace(/\D/g, '') === user.phone.replace(/\D/g, '')))) {
+        valid = true;
+      }
+    }
+
+    // Password complexity validation (supports 6-8 digit PIN or standard 8+ char password)
+    const complexityErr = validatePasswordComplexity(newPassword);
+    if (complexityErr) return error(complexityErr);
 
     // Check password reuse
-    const reused = await checkPasswordReuse(env.DB, user.id, body.new_password);
-    if (reused) return error('รหัสผ่านนี้เคยใช้แล้ว กรุณาตั้งรหัสผ่านใหม่ที่ไม่ซ้ำกับ 5 ครั้งหลังสุด');
+    const reused = await checkPasswordReuse(env.DB, user.id, newPassword);
+    if (reused) return error('รหัสผ่านหรือ PIN นี้เคยใช้แล้ว กรุณาตั้งรหัสใหม่ที่ไม่ซ้ำกับ 5 ครั้งหลังสุด');
 
     const salt = generateSalt();
-    const hash = await hashPassword(body.new_password, salt);
+    const hash = await hashPassword(newPassword, salt);
 
     // Save old password to history
     await dbRun(env.DB,
@@ -349,7 +368,7 @@ export async function onRequest(context) {
     );
 
     await writeAuditLog(env.DB, user.id, user.username, 'change_password', 'auth', user.id, null);
-    return success({ message: 'เปลี่ยนรหัสผ่านเรียบร้อย' });
+    return success({ message: 'ตั้งรหัส PIN / รหัสผ่านใหม่เรียบร้อย' });
   }
 
   if (path === '/api/auth/forgot-password' && method === 'POST') {

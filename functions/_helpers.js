@@ -249,8 +249,11 @@ export async function notifyAllAdmins(db, type, title, message) {
 }
 
 export function validatePasswordComplexity(password) {
-  if (!password || password.length < 8) return 'รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร';
-  if (!/[a-zA-Z]/.test(password)) return 'รหัสผ่านต้องมีตัวอักษรภาษาอังกฤษอย่างน้อย 1 ตัว';
+  if (!password) return 'กรุณาระบุรหัส PIN หรือรหัสผ่าน';
+  // Allow numeric PIN 6-8 digits
+  if (/^\d{6,8}$/.test(password)) return null;
+  if (password.length < 8) return 'รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร (หรือ PIN ตัวเลข 6-8 หลัก)';
+  if (!/[a-zA-Z]/.test(password)) return 'รหัสผ่านต้องมีตัวอักษรภาษาอังกฤษอย่างน้อย 1 ตัว (หรือใช้ PIN ตัวเลข 6-8 หลัก)';
   if (!/[0-9]/.test(password)) return 'รหัสผ่านต้องมีตัวเลขอย่างน้อย 1 ตัว';
   return null;
 }

@@ -531,7 +531,27 @@
 
           pwInput.value = '';
 
-          if (res.data.is_first_time) {
+          if (res.data.must_change_password || (res.data.user && res.data.user.must_change_password)) {
+            // CASE: User flagged to change password / set PIN on first login
+            var u = res.data.user || {};
+            document.getElementById('userDisplayName').textContent = u.display_name || u.username || inputVal;
+            document.getElementById('userDisplayEmail').textContent = u.email || u.username || inputVal;
+
+            firstTimeNotice.style.display = 'flex';
+            firstTimeNotice.innerHTML = '<span>🔐</span><div><strong>เข้าใช้งานครั้งแรก:</strong> กรุณากรอกรหัสผ่านเริ่มต้น <code>123456</code> ระบบจะนำท่านไปตั้งรหัส PIN 6 หลักทันที</div>';
+            pwLabel.textContent = 'รหัสผ่านเริ่มต้น (123456)';
+            pwInput.type = 'password';
+            pwInput.placeholder = 'กรอก 123456';
+            pwInput.value = '123456';
+            pwInput.removeAttribute('maxLength');
+            pwInput.removeAttribute('pattern');
+            pwHelp.style.display = 'none';
+            toggleBtn.style.display = 'block';
+            toggleBtn.textContent = '👁️';
+            forgotLink.style.display = 'none';
+            loginBtnText.textContent = 'เข้าสู่ระบบเพื่อตั้งรหัส PIN';
+            pwInput.focus();
+          } else if (res.data.is_first_time) {
             // CASE: First-time @ppk.ac.th user -> Phone number login!
             var displayName = res.data.user ? (res.data.user.display_name || res.data.user.username) : (res.data.suggested_name || inputVal);
             document.getElementById('userDisplayName').textContent = displayName;

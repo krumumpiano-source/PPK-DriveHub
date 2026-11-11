@@ -1,4 +1,4 @@
-﻿// Vehicle CRUD, health scores, images
+// Vehicle CRUD, health scores, images
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, requirePermission, extractParam, writeAuditLog, uploadToR2
