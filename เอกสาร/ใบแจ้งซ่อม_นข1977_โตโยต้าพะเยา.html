@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>ใบส่งรถเข้าซ่อมบำรุง - นข 1977 พะเยา</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 12mm 15mm;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    body {
+      font-family: 'Sarabun', 'TH Sarabun New', Tahoma, sans-serif;
+      font-size: 14px;
+      line-height: 1.35;
+      color: #0f172a;
+      background: #f1f5f9;
+      margin: 0;
+      padding: 20px;
+    }
+    .print-sheet {
+      background: #ffffff;
+      width: 210mm;
+      min-height: 297mm;
+      padding: 16mm 18mm;
+      margin: 0 auto 20px auto;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      position: relative;
+    }
+    @media print {
+      body {
+        background: transparent;
+        padding: 0;
+      }
+      .print-sheet {
+        width: 100%;
+        min-height: auto;
+        padding: 0;
+        margin: 0;
+        box-shadow: none;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid #0284c7;
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+    }
+    .org-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0369a1;
+      margin-bottom: 2px;
+    }
+    .doc-main-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 2px;
+    }
+    .doc-subtitle {
+      font-size: 12px;
+      color: #64748b;
+    }
+    .doc-meta {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 8px 12px;
+      text-align: right;
+      font-size: 12px;
+    }
+    .doc-meta .no {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0284c7;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .card-box {
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .card-box-header {
+      background: #f1f5f9;
+      padding: 6px 12px;
+      font-weight: 700;
+      font-size: 13px;
+      color: #1e293b;
+      border-bottom: 1px solid #cbd5e1;
+    }
+    .card-box-body {
+      padding: 8px 12px;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .card-box-body div {
+      margin-bottom: 3px;
+    }
+    .highlight-val {
+      font-weight: 700;
+      color: #0369a1;
+    }
+    .mileage-val {
+      font-weight: 700;
+      color: #b45309;
+      font-size: 14px;
+    }
+    .service-types {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .type-pill {
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 6px 4px;
+      text-align: center;
+      font-size: 12px;
+      color: #64748b;
+      background: #ffffff;
+    }
+    .type-pill.active-badge {
+      border-color: #0284c7;
+      background: #e0f2fe;
+      color: #0369a1;
+      font-weight: 700;
+    }
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 12px;
+      font-size: 13px;
+    }
+    table.data-table th {
+      background: #e2e8f0;
+      color: #1e293b;
+      font-weight: 700;
+      padding: 6px 10px;
+      border: 1px solid #cbd5e1;
+      text-align: left;
+    }
+    table.data-table td {
+      padding: 7px 10px;
+      border: 1px solid #cbd5e1;
+      vertical-align: top;
+    }
+    .item-title {
+      font-weight: 600;
+      color: #0f172a;
+    }
+    .item-desc {
+      font-size: 12px;
+      color: #475569;
+      margin-top: 2px;
+    }
+    .terms-box {
+      background: #fefce8;
+      border: 1px solid #fde047;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 14px;
+      font-size: 12px;
+      color: #854d0e;
+    }
+    .terms-title {
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: #a16207;
+      font-size: 12.5px;
+    }
+    .terms-list {
+      margin: 0;
+      padding-left: 18px;
+    }
+    .terms-list li {
+      margin-bottom: 2px;
+    }
+    .sig-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .sig-card {
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 8px 10px;
+      text-align: center;
+      font-size: 12px;
+      background: #ffffff;
+    }
+    .sig-title {
+      font-weight: 700;
+      color: #475569;
+      text-align: left;
+      margin-bottom: 22px;
+      border-bottom: 1px dashed #e2e8f0;
+      padding-bottom: 3px;
+    }
+    .sig-line {
+      margin-bottom: 4px;
+    }
+    .sig-name {
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 2px;
+    }
+    .sig-pos {
+      color: #64748b;
+      font-size: 11px;
+    }
+    .btn-print-bar {
+      max-width: 210mm;
+      margin: 0 auto 12px auto;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .btn {
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #0284c7;
+      color: #ffffff;
+    }
+    .btn-primary:hover {
+      background: #0369a1;
+    }
+    .btn-secondary {
+      background: #e2e8f0;
+      color: #334155;
+    }
+  </style>
+</head>
+<body>
+  <div class="btn-print-bar no-print">
+    <button class="btn btn-secondary" onclick="window.close()">ปิดหน้าต่าง</button>
+    <button class="btn btn-primary" onclick="window.print()">สั่งพิมพ์เอกสาร A4 (Print)</button>
+  </div>
+
+  <div class="print-sheet">
+    <!-- Header -->
+    <div class="header-bar">
+      <div>
+        <div class="org-title">งานยานพาหนะ กลุ่มบริหารทั่วไป โรงเรียนพะเยาพิทยาคม</div>
+        <div class="doc-main-title">ใบส่งรถเข้าซ่อมบำรุง / สั่งตรวจสภาพ (Vehicle Repair Order)</div>
+        <div class="doc-subtitle">เอกสารส่งมอบรถและขอรับใบเสนอราคา (Quotation Authorization)</div>
+      </div>
+      <div class="doc-meta">
+        <div>เลขที่: <span class="no">WO-256911-002</span></div>
+        <div>วันที่ออกเอกสาร: 9 พฤศจิกายน 2569</div>
+        <div style="color:#d97706; font-weight:600; margin-top:2px;">สถานะ: ส่งตรวจสภาพ / รอเสนอราคา</div>
+      </div>
+    </div>
+
+    <!-- Info Grid -->
+    <div class="grid-2">
+      <div class="card-box">
+        <div class="card-box-header">ข้อมูลศูนย์บริการ / อู่ซ่อม</div>
+        <div class="card-box-body">
+          <div><strong>ศูนย์บริการ:</strong> ศูนย์บริการโตโยต้า (1994) พะเยา</div>
+          <div><strong>ที่ตั้ง / สาขา:</strong> สาขาเมืองพะเยา จังหวัดพะเยา</div>
+          <div><strong>เจ้าหน้าที่รับเรื่อง (SA):</strong> ....................................................</div>
+          <div><strong>วันที่นัดหมายส่งมอบ:</strong> 9 พฤศจิกายน 2569</div>
+        </div>
+      </div>
+
+      <div class="card-box">
+        <div class="card-box-header">ข้อมูลยานพาหนะ ณ วันส่งมอบ</div>
+        <div class="card-box-body">
+          <div><strong>หมายเลขทะเบียน:</strong> <span class="highlight-val" style="font-size:14px;">นข 1977 พะเยา</span></div>
+          <div><strong>ยี่ห้อ / รุ่น:</strong> TOYOTA Ventury 2.7 V (เบนซิน)</div>
+          <div><strong>เลขไมล์ ณ วันส่งซ่อม:</strong> <span class="mileage-val">447,427 กม.</span></div>
+          <div><strong>ระดับน้ำมันเชื้อเพลิง:</strong> [ &nbsp; ] E &nbsp; [ &nbsp; ] 1/4 &nbsp; [ &nbsp; ] 1/2 &nbsp; [ &#10003; ] 3/4 &nbsp; [ &nbsp; ] เต็มถัง</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Service Type Badges -->
+    <div class="service-types">
+      <div class="type-pill ">[ &nbsp; ] เช็คระยะตามกำหนด (PM)</div>
+      <div class="type-pill active-badge">[&#10003;] ซ่อมทั่วไป / แก้ไขอาการเสีย</div>
+      <div class="type-pill">[ &nbsp; ] ซ่อมสี / ตัวถัง / เคลมประกัน</div>
+      <div class="type-pill">[ &nbsp; ] เปลี่ยนยาง / แบตเตอรี่ / ช่วงล่าง</div>
+    </div>
+
+    <!-- Symptoms Table -->
+    <div style="font-weight:700; font-size:13.5px; margin-bottom:6px; color:#0f172a;">
+      รายการงานที่ต้องการให้ดำเนินการ / อาการผิดปกติที่ตรวจพบ
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 45px; text-align:center;">ลำดับ</th>
+          <th>รายละเอียดงาน / อาการผิดปกติที่พบ</th>
+          <th style="width: 140px; text-align:center;">ผลการตรวจ / หมายเหตุ</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        <tr>
+          <td style="text-align:center; font-weight:600;">1</td>
+          <td>
+            <div class="item-title">ตรวจเช็คเสียงดังผิดปกติบริเวณเครื่องยนต์อย่างละเอียด</div>
+            <div class='item-desc'>มีเสียงดังผิดปกติขณะเครื่องยนต์ทำงาน ขอให้ช่างเทคนิคตรวจเช็คหาสาเหตุที่มาของเสียง เช่น ชุดวาล์ว, โซ่ราวลิ้น, ลูกรอกสายพาน, ไดชาร์จ หรือแบริ่งภายใน</div>
+          </td>
+          <td style="text-align:center; color:#64748b; font-size:13px;">[  ] ต้องหาสาเหตุ</td>
+        </tr>
+        
+        <tr>
+          <td style="text-align:center; font-weight:600;">2</td>
+          <td>
+            <div class="item-title">ตรวจเช็คและวิเคราะห์อาการน้ำมันเครื่องหายโดยไม่ทราบสาเหตุ</div>
+            <div class='item-desc'>ระดับน้ำมันเครื่องลดลงผิดปกติ ขอให้ตรวจสอบการรั่วซึมภายนอก (ซีลหน้า-หลังเครื่อง, ซีลฝาวาล์ว, ปะเก็นอ่างน้ำมัน) และตรวจสอบการเผาไหม้ภายใน (ยางตีนวาล์ว, แหวนลูกสูบ)</div>
+          </td>
+          <td style="text-align:center; color:#64748b; font-size:13px;">[  ] ต้องตรวจสอบ</td>
+        </tr>
+        
+        <tr>
+          <td style="text-align:center; font-weight:600;">3</td>
+          <td>
+            <div class="item-title">จัดทำใบเสนอราคา (Quotation) ค่าแรงและค่าอะไหล่</div>
+            <div class='item-desc'>เมื่อวิเคราะห์สาเหตุแน่ชัดแล้ว ให้ทำใบเสนอราคาระบุรายการอะไหล่แท้ที่จำเป็นต้องเปลี่ยน พร้อมค่าบริการ ส่งให้ผู้ประสานงานอนุมัติก่อนลงมือซ่อม</div>
+          </td>
+          <td style="text-align:center; color:#64748b; font-size:13px;">[  ] ขอเสนอราคา</td>
+        </tr>
+        
+        <tr>
+          <td style="text-align:center; font-weight:600;">4</td>
+          <td>
+            <div class="item-title">ตรวจเช็คระบบระบายความร้อนและความร้อนสะสม</div>
+            <div class='item-desc'>ตรวจเช็คหม้อน้ำ ท่อยาง ฝาหม้อน้ำ และพัดลมระบายความร้อน เพื่อป้องกันปัญหาความร้อนขึ้นสูง</div>
+          </td>
+          <td style="text-align:center; color:#64748b; font-size:13px;">[  ] รอตรวจเช็ค</td>
+        </tr>
+        
+      </tbody>
+    </table>
+
+    <!-- Terms -->
+    <div class="terms-box">
+      <div class="terms-title">เงื่อนไขและข้อกำหนดในการดำเนินการ (Terms & Conditions)</div>
+      <ol class="terms-list">
+        <li><strong>การเสนอราคา:</strong> ให้ศูนย์บริการตรวจเช็คและจัดทำ "ใบเสนอราคา (Quotation)" ส่งให้ผู้ประสานงานพิจารณาอนุมัติก่อนลงมือดำเนินการซ่อมแซมหรือเปลี่ยนอะไหล่ทุกครั้ง</li>
+        <li><strong>การส่งคืนอะไหล่:</strong> ชิ้นส่วนอะไหล่เก่าที่ทำการเปลี่ยนออกทั้งหมด ต้องส่งมอบคืนให้กับโรงเรียนพะเยาพิทยาคมพร้อมตัวรถ</li>
+        <li><strong>การออกใบกำกับภาษี:</strong> ระบุชื่อ "โรงเรียนพะเยาพิทยาคม" เลขประจำตัวผู้เสียภาษี 0994000300109 ที่อยู่: ตำบลเวียง อำเภอเมืองพะเยา จังหวัดพะเยา 56000</li>
+        <li><strong>การรับประกัน:</strong> งานซ่อมและอะไหล่แท้ต้องมีการรับประกันตามมาตรฐานศูนย์บริการโตโยต้า</li>
+      </ol>
+    </div>
+
+    <!-- Signatures (4 Boxes) -->
+    <div class="sig-grid">
+      <!-- 1 -->
+      <div class="sig-card">
+        <div class="sig-title">1. ผู้ประสานงานและสั่งซ่อม</div>
+        <div class="sig-line">ลงชื่อ ................................................................</div>
+        <div class="sig-name">(นายพงศธร โพธิแก้ว)</div>
+        <div class="sig-pos">รองหัวหน้างานยานพาหนะ โรงเรียนพะเยาพิทยาคม</div>
+        <div class="sig-pos">โทรศัพท์: 095-696-1606</div>
+        <div class="sig-pos" style="margin-top:2px;">วันที่: 9 พฤศจิกายน 2569</div>
+      </div>
+
+      <!-- 2 -->
+      <div class="sig-card">
+        <div class="sig-title">2. ผู้อนุมัติการส่งซ่อมบำรุง</div>
+        <div class="sig-line">ลงชื่อ ................................................................</div>
+        <div class="sig-name">(................................................................)</div>
+        <div class="sig-pos">หัวหน้างานยานพาหนะ / รองผู้อำนวยการ</div>
+        <div class="sig-pos" style="color:#059669; font-weight:600; margin-top:2px;">[ &#10003; ] อนุมัติส่งตรวจสภาพและขอเสนอราคา</div>
+        <div class="sig-pos">วันที่: 9 พฤศจิกายน 2569</div>
+      </div>
+
+      <!-- 3 -->
+      <div class="sig-card">
+        <div class="sig-title">3. ศูนย์บริการผู้รับรถเข้าตรวจสภาพ</div>
+        <div class="sig-line">ลงชื่อ ................................................................</div>
+        <div class="sig-name">(................................................................)</div>
+        <div class="sig-pos">ผู้รับรถ ศูนย์บริการโตโยต้า (1994) พะเยา</div>
+        <div class="sig-pos">สภาพรถรับเข้า: [ &nbsp; ] เรียบร้อยดี &nbsp; [ &nbsp; ] มีรอยขีดข่วน</div>
+        <div class="sig-pos">วันที่รับรถ: ...... / ...... / 2569 &nbsp; เวลา: ........... น.</div>
+      </div>
+
+      <!-- 4 -->
+      <div class="sig-card">
+        <div class="sig-title">4. การตรวจรับรถกลับ (เมื่อซ่อมเสร็จ)</div>
+        <div class="sig-line">ลงชื่อ ................................................................</div>
+        <div class="sig-name">(................................................................)</div>
+        <div class="sig-pos" style="font-weight:600; color:#0f172a;">เลขไมล์ตอนรับกลับ: .................... กม.</div>
+        <div class="sig-pos">ตรวจรับ: [ &nbsp; ] งานเรียบร้อยดี &nbsp; [ &nbsp; ] ได้รับอะไหล่เก่าคืนครบ</div>
+        <div class="sig-pos">วันที่รับคืน: ...... / ...... / 2569</div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
