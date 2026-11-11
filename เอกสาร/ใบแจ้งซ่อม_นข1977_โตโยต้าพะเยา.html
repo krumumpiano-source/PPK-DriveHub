@@ -9,30 +9,32 @@
   <style>
     @page {
       size: A4 portrait;
-      margin: 10mm 12mm 10mm 12mm;
+      margin: 8mm 10mm 8mm 10mm;
     }
     * {
       box-sizing: border-box;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
-    body {
-      font-family: 'Sarabun', 'TH Sarabun New', Tahoma, sans-serif;
-      font-size: 13px;
-      line-height: 1.32;
-      color: #0f172a;
-      background: #f1f5f9;
+    html, body {
       margin: 0;
-      padding: 12px;
+      padding: 0;
+      background: #f1f5f9;
+      font-family: 'Sarabun', 'TH Sarabun New', Tahoma, sans-serif;
+      font-size: 12.5px;
+      line-height: 1.28;
+      color: #0f172a;
     }
     .print-sheet {
       background: #ffffff;
       width: 210mm;
-      min-height: 297mm;
-      padding: 10mm 14mm;
-      margin: 0 auto 16px auto;
+      max-height: 297mm;
+      box-sizing: border-box;
+      padding: 8mm 11mm;
+      margin: 10px auto;
       box-shadow: 0 4px 16px rgba(0,0,0,0.08);
       position: relative;
+      overflow: hidden;
     }
     @media print {
       body {
@@ -41,10 +43,14 @@
       }
       .print-sheet {
         width: 100%;
-        min-height: auto;
+        height: 100%;
+        max-height: 100vh;
         padding: 0;
         margin: 0;
         box-shadow: none;
+        overflow: hidden;
+        page-break-after: avoid !important;
+        page-break-inside: avoid !important;
       }
       .no-print {
         display: none !important;
@@ -52,64 +58,63 @@
     }
     .header-center {
       text-align: center;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       border-bottom: 2px solid #0284c7;
-      padding-bottom: 6px;
+      padding-bottom: 4px;
     }
     .doc-main-title {
-      font-size: 20px;
+      font-size: 19px;
       font-weight: 700;
       color: #0f172a;
-      margin-bottom: 2px;
-      letter-spacing: 0.5px;
+      margin-bottom: 1px;
     }
     .org-title {
-      font-size: 14.5px;
+      font-size: 14px;
       font-weight: 700;
       color: #0369a1;
       margin-bottom: 1px;
     }
     .org-subtitle {
-      font-size: 11.5px;
+      font-size: 11px;
       color: #64748b;
     }
     .ref-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 4px 10px;
+      padding: 3px 8px;
       background: #f8fafc;
       border: 1px solid #e2e8f0;
       border-radius: 4px;
-      margin-bottom: 8px;
-      font-size: 12.5px;
+      margin-bottom: 6px;
+      font-size: 12px;
     }
     .grid-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-bottom: 8px;
+      gap: 6px;
+      margin-bottom: 6px;
     }
     .card-box {
       border: 1px solid #cbd5e1;
-      border-radius: 5px;
+      border-radius: 4px;
       overflow: hidden;
     }
     .card-box-header {
       background: #f1f5f9;
-      padding: 4px 10px;
+      padding: 3px 8px;
       font-weight: 700;
-      font-size: 12.5px;
+      font-size: 12px;
       color: #1e293b;
       border-bottom: 1px solid #cbd5e1;
     }
     .card-box-body {
-      padding: 6px 10px;
-      font-size: 12.2px;
-      line-height: 1.4;
+      padding: 5px 8px;
+      font-size: 11.8px;
+      line-height: 1.35;
     }
     .card-box-body div {
-      margin-bottom: 2px;
+      margin-bottom: 1.5px;
     }
     .highlight-val {
       font-weight: 700;
@@ -118,20 +123,20 @@
     .mileage-val {
       font-weight: 700;
       color: #b45309;
-      font-size: 13px;
+      font-size: 12.5px;
     }
     .service-types {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 6px;
-      margin-bottom: 8px;
+      gap: 5px;
+      margin-bottom: 6px;
     }
     .type-pill {
       border: 1px solid #e2e8f0;
-      border-radius: 5px;
-      padding: 4px 3px;
+      border-radius: 4px;
+      padding: 3px 2px;
       text-align: center;
-      font-size: 11.5px;
+      font-size: 11px;
       color: #64748b;
       background: #ffffff;
     }
@@ -144,19 +149,19 @@
     table.data-table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 8px;
-      font-size: 12.2px;
+      margin-bottom: 6px;
+      font-size: 11.8px;
     }
     table.data-table th {
       background: #e2e8f0;
       color: #1e293b;
       font-weight: 700;
-      padding: 5px 8px;
+      padding: 4px 6px;
       border: 1px solid #cbd5e1;
       text-align: left;
     }
     table.data-table td {
-      padding: 6px 8px;
+      padding: 5px 6px;
       border: 1px solid #cbd5e1;
       vertical-align: top;
     }
@@ -165,58 +170,58 @@
       color: #0f172a;
     }
     .item-desc {
-      font-size: 11.5px;
+      font-size: 11px;
       color: #475569;
       margin-top: 1px;
     }
     .terms-box {
       background: #f0f9ff;
       border: 1px solid #bae6fd;
-      border-radius: 5px;
-      padding: 7px 10px;
-      margin-bottom: 8px;
-      font-size: 11.8px;
+      border-radius: 4px;
+      padding: 5px 8px;
+      margin-bottom: 6px;
+      font-size: 11.2px;
       color: #0f172a;
     }
     .terms-title {
       font-weight: 700;
-      margin-bottom: 3px;
+      margin-bottom: 2px;
       color: #0369a1;
-      font-size: 12.2px;
+      font-size: 11.8px;
     }
     .terms-list {
       margin: 0;
-      padding-left: 18px;
+      padding-left: 16px;
       color: #334155;
     }
     .terms-list li {
-      margin-bottom: 1.5px;
+      margin-bottom: 1px;
     }
     .sig-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 6px;
-      margin-bottom: 6px;
+      gap: 5px;
+      margin-bottom: 4px;
     }
     .sig-card {
       border: 1px solid #cbd5e1;
-      border-radius: 5px;
-      padding: 6px 8px;
+      border-radius: 4px;
+      padding: 5px 6px;
       text-align: center;
-      font-size: 11.5px;
+      font-size: 11px;
       background: #ffffff;
     }
     .sig-title {
       font-weight: 700;
       color: #475569;
       text-align: left;
-      margin-bottom: 15px;
+      margin-bottom: 12px;
       border-bottom: 1px dashed #e2e8f0;
-      padding-bottom: 2px;
-      font-size: 11.5px;
+      padding-bottom: 1px;
+      font-size: 11px;
     }
     .sig-line {
-      margin-bottom: 2px;
+      margin-bottom: 1.5px;
     }
     .sig-name {
       font-weight: 700;
@@ -225,28 +230,28 @@
     }
     .sig-pos {
       color: #64748b;
-      font-size: 10.8px;
+      font-size: 10.2px;
     }
     .footer-note {
-      font-size: 10.5px;
+      font-size: 10px;
       color: #64748b;
       text-align: center;
       border-top: 1px dashed #e2e8f0;
-      padding-top: 4px;
-      margin-top: 4px;
+      padding-top: 3px;
+      margin-top: 2px;
     }
     .btn-print-bar {
       max-width: 210mm;
-      margin: 0 auto 10px auto;
+      margin: 8px auto;
       display: flex;
       justify-content: flex-end;
-      gap: 10px;
+      gap: 8px;
     }
     .btn {
-      padding: 8px 18px;
-      border-radius: 5px;
+      padding: 6px 14px;
+      border-radius: 4px;
       font-family: inherit;
-      font-size: 13.5px;
+      font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       border: none;
@@ -285,7 +290,7 @@
     <div class="ref-bar">
       <div>
         <strong>เลขที่เอกสาร:</strong> <span style="font-weight:700; color:#0284c7;">WO-256911-002</span>
-        <span style="color:#64748b; font-size:11.8px; margin-left:8px;">(ส่งตรวจสภาพและขอรับใบเสนอราคา)</span>
+        <span style="color:#64748b; font-size:11.2px; margin-left:6px;">(ส่งตรวจสภาพและขอรับใบเสนอราคา)</span>
       </div>
       <div>
         <strong>วันที่ส่งซ่อม:</strong> ๙ พฤศจิกายน ๒๕๖๙
@@ -309,7 +314,7 @@
       <div class="card-box">
         <div class="card-box-header">ข้อมูลยานพาหนะ ณ วันส่งมอบ</div>
         <div class="card-box-body">
-          <div><strong>หมายเลขทะเบียน:</strong> <span style="font-weight:700; font-size:13.5px; color:#0f172a;">นข ๑๙๗๗ พะเยา</span></div>
+          <div><strong>หมายเลขทะเบียน:</strong> <span style="font-weight:700; font-size:13px; color:#0f172a;">นข ๑๙๗๗ พะเยา</span></div>
           <div><strong>ยี่ห้อ / รุ่น:</strong> TOYOTA Ventury 2.7 V</div>
           <div><strong>เลขไมล์ส่งซ่อม:</strong> <span class="mileage-val">447,427 กม.</span> &nbsp; <strong>น้ำมัน:</strong> [ &#10003; ] 3/4</div>
           <div><strong>ผู้นำส่งมอบรถ:</strong> นายสมชาย พรมศร (โทร. ๐๘๐-๐๑๖-๙๑๙๔)</div>
@@ -327,15 +332,15 @@
     </div>
 
     <!-- Symptoms Table -->
-    <div style="font-weight:700; font-size:12.8px; margin-bottom:4px; color:#0f172a;">
+    <div style="font-weight:700; font-size:12.2px; margin-bottom:3px; color:#0f172a;">
       รายการงานที่ขอรับบริการ / อาการที่ตรวจพบ
     </div>
     <table class="data-table">
       <thead>
         <tr>
-          <th style="width: 40px; text-align:center;">ลำดับ</th>
+          <th style="width: 35px; text-align:center;">ลำดับ</th>
           <th>รายการงาน / รายละเอียดอาการที่ตรวจพบ</th>
-          <th style="width: 130px; text-align:center;">ผลการตรวจเช็ค</th>
+          <th style="width: 120px; text-align:center;">ผลการตรวจเช็ค</th>
         </tr>
       </thead>
       <tbody>
@@ -346,7 +351,7 @@
             <div class="item-title">มีเสียงดังด้านหน้าเครื่องยนต์ในขณะใช้งาน</div>
             <div class='item-desc'>ขอความอนุเคราะห์ช่างเทคนิคตรวจเช็คหาสาเหตุที่มาของเสียง</div>
           </td>
-          <td style="text-align:center; color:#64748b; font-size:12px;">[  ] รอผลตรวจเช็ค</td>
+          <td style="text-align:center; color:#64748b; font-size:11.5px;">[  ] รอผลตรวจเช็ค</td>
         </tr>
         
         <tr>
@@ -355,7 +360,7 @@
             <div class="item-title">มีอาการน้ำมันเครื่องหายในระดับที่ไฟโชว์เตือน</div>
             <div class='item-desc'>ขอความอนุเคราะห์ตรวจเช็คหาสาเหตุการรั่วซึมหรือการพร่องของระดับน้ำมันเครื่อง</div>
           </td>
-          <td style="text-align:center; color:#64748b; font-size:12px;">[  ] รอผลตรวจเช็ค</td>
+          <td style="text-align:center; color:#64748b; font-size:11.5px;">[  ] รอผลตรวจเช็ค</td>
         </tr>
         
       </tbody>
@@ -364,13 +369,13 @@
     <!-- Terms (Polite, Professional & Clear Contact) -->
     <div class="terms-box">
       <div class="terms-title">การติดต่อประสานงานและข้อกำหนดการซ่อมบำรุง</div>
-      <div style="margin-bottom: 4px; line-height: 1.4;">
+      <div style="margin-bottom: 3px; line-height: 1.35;">
         <strong>การประสานงานและพิจารณาซ่อม:</strong> ขอความอนุเคราะห์ศูนย์บริการโปรดติดต่อแจ้งผลการตรวจเช็ค และเสนอราคาเพื่อพิจารณาอนุมัติซ่อมโดยตรงที่ <strong>นายพงศธร โพธิแก้ว</strong> (รองหัวหน้างานยานพาหนะ) โทรศัพท์ <span style="font-weight:700; color:#0369a1;">๐๙๕-๖๙๖-๑๖๐๖</span>
       </div>
       <ol class="terms-list">
         <li><strong>การเสนอราคา:</strong> ขอความอนุเคราะห์จัดทำใบเสนอราคา (Quotation) ส่งให้ผู้ประสานงานพิจารณาอนุมัติก่อนดำเนินการซ่อมหรือเปลี่ยนอะไหล่</li>
-        <li><strong>การส่งมอบอะไหล่เก่า:</strong> ขอรับคืนชิ้นส่วนอะไหล่เก่าที่ทำการเปลี่ยนออกทั้งหมดส่งมอบพร้อมตัวรถ</li>
-        <li><strong>การรับประกัน:</strong> อะไหล่และงานบริการตรวจซ่อมได้รับการรับประกันคุณภาพตามมาตรฐานศูนย์บริการโตโยต้า</li>
+        <li><strong>การส่งคืนอะไหล่:</strong> ขอรับคืนชิ้นส่วนอะไหล่เก่าที่ทำการเปลี่ยนออกทั้งหมดส่งมอบพร้อมตัวรถ</li>
+        <li><strong>การรับประกัน:</strong> งานซ่อมและอะไหล่แท้ได้รับการรับประกันคุณภาพตามมาตรฐานศูนย์บริการโตโยต้า</li>
       </ol>
     </div>
 
