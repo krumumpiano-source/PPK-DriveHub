@@ -1,7 +1,7 @@
 // Driver management + fatigue + leaves
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
-  parseBody, requirePermission, extractParam, uploadToR2, writeAuditLog
+  parseBody, requirePermission, checkPermission, extractParam, writeAuditLog
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
@@ -195,7 +195,7 @@ export async function onRequest(context) {
       [id, driverId, body.leave_type || 'personal', body.start_date, body.end_date,
        body.reason || '', now()]
     );
-    await writeAuditLog(env.DB, user.id, user.displayName, 'create_leave', 'drivers', id, { driver_id: driverId });
+    await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'create_leave', 'drivers', id, { driver_id: driverId });
     return success({ id, message: 'บันทึกการลาเรียบร้อย' }, 201);
   }
 
@@ -228,7 +228,8 @@ export async function onRequest(context) {
 
   // DELETE /api/drivers/leaves/:id
   if (path.match(/^\/api\/drivers\/leaves\/[^/]+$/) && method === 'DELETE') {
-    try { requirePermission(user, 'drivers', 'delete'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const isDriverAdmin = user.role === 'admin' || user.role === 'super_admin' || user.role === 'vehicle' || user.role === 'manager' || checkPermission(user, 'drivers', 'edit') || checkPermission(user, 'drivers', 'delete');
+    if (!isDriverAdmin) return error('ไม่มีสิทธิ์', 403);
     const id = path.split('/').pop();
     await dbRun(env.DB, 'DELETE FROM leaves WHERE id = ?', [id]);
     return success({ message: 'ลบข้อมูลการลาเรียบร้อย' });

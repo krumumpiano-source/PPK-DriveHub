@@ -1140,14 +1140,12 @@
         extendedTo.setDate(extendedTo.getDate() + 7);
 
         var queuesResult = await apiCall('getQueues', {
-          filters: {
-            date_from: formatDate(extendedFrom),
-            date_to: formatDate(extendedTo)
-          }
+          date_from: formatDate(extendedFrom),
+          date_to: formatDate(extendedTo)
         });
 
-        if (queuesResult.success && queuesResult.data && queuesResult.data.queues) {
-          queues = queuesResult.data.queues || [];
+        if (queuesResult && queuesResult.success && queuesResult.data) {
+          queues = Array.isArray(queuesResult.data) ? queuesResult.data : (queuesResult.data.queues || []);
         } else {
           queues = [];
         }
@@ -1484,12 +1482,16 @@
         if (dateTo) filters.date_to = dateTo;
         if (filterCar) filters.car_id = filterCar;
 
-        // Backend getUsageRecords will automatically filter by driver_id
-        var result = await apiCall('getUsageRecords', { filters: filters });
+        var queryParams = Object.assign({}, filters);
+        if (currentUser && currentUser.driver_id) {
+          queryParams.driver_id = currentUser.driver_id;
+        }
+        var result = await apiCall('getUsageRecords', queryParams);
         hideLoading('historyList');
 
-        if (result.success && result.data && result.data.records && result.data.records.length > 0) {
-          var records = result.data.records;
+        var rawRecords = (result && result.success && result.data) ? (Array.isArray(result.data) ? result.data : (result.data.records || [])) : [];
+        if (rawRecords.length > 0) {
+          var records = rawRecords;
 
           // Transform records
           records.forEach(function (record) {

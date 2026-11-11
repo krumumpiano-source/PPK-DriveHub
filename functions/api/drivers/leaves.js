@@ -1,4 +1,4 @@
-import { dbAll, dbFirst, dbRun, generateUUID, now, success, error, parseBody } from '../../_helpers.js';
+import { dbAll, dbRun, generateUUID, now, success, error, parseBody, checkPermission } from '../../_helpers.js';
 
 export async function onRequest(context) {
   try {
@@ -15,24 +15,26 @@ export async function onRequest(context) {
       return error('ไม่พบข้อมูลพนักงานขับรถที่ผูกกับบัญชีนี้', 403);
     }
 
+    const isDriverAdmin = user.role === 'admin' || user.role === 'super_admin' || user.role === 'vehicle' || user.role === 'manager' || checkPermission(user, 'drivers', 'edit');
+
     if (method === 'GET') {
       let queryDriverId = driverId;
-      // Admins can query for any driver or all
-      if (user.role === 'admin' || user.role === 'super_admin' || user.role === 'vehicle') {
-        const queryParam = url.searchParams.get('driver_id');
+      // Admins and managers can query for any driver or all
+      if (isDriverAdmin) {
+        const queryParam = url.searchParams.get('driver_id') || url.searchParams.get('id');
         if (queryParam) queryDriverId = queryParam;
         else queryDriverId = null; // null means all
       }
 
-      let sql = `SELECT * FROM leaves WHERE 1=1`;
+      let sql = `SELECT l.*, d.name AS driver_name FROM leaves l LEFT JOIN drivers d ON l.driver_id = d.id WHERE 1=1`;
       const params = [];
 
       if (queryDriverId) {
-        sql += ` AND driver_id = ?`;
+        sql += ` AND l.driver_id = ?`;
         params.push(queryDriverId);
       }
 
-      sql += ` ORDER BY created_at DESC`;
+      sql += ` ORDER BY l.created_at DESC`;
       const leaves = await dbAll(env.DB, sql, params);
       return success(leaves);
     }
@@ -50,8 +52,8 @@ export async function onRequest(context) {
 
       // If user is admin creating leave for someone else
       let targetDriverId = driverId;
-      if (body.driver_id && (user.role === 'admin' || user.role === 'super_admin' || user.role === 'vehicle')) {
-        targetDriverId = body.driver_id;
+      if ((body.driver_id || body.id) && isDriverAdmin) {
+        targetDriverId = body.driver_id || body.id;
       }
       
       if (!targetDriverId) return error('ไม่พบข้อมูลพนักงานขับรถ', 400);
@@ -70,7 +72,7 @@ export async function onRequest(context) {
     
     // Admins can approve/reject via PUT
     if (method === 'PUT') {
-      if (user.role !== 'admin' && user.role !== 'super_admin' && user.role !== 'vehicle') {
+      if (!isDriverAdmin) {
         return error('ไม่มีสิทธิ์อนุมัติการลางาน', 403);
       }
       const body = await parseBody(request);
@@ -82,6 +84,17 @@ export async function onRequest(context) {
         [body.status, user.id, ts, body.id]
       );
       return success({ message: 'อัปเดตสถานะลางานเรียบร้อย' });
+    }
+
+    // Admins/managers can delete leaves
+    if (method === 'DELETE') {
+      if (!isDriverAdmin) {
+        return error('ไม่มีสิทธิ์ลบข้อมูลการลา', 403);
+      }
+      const leaveId = url.searchParams.get('id') || url.searchParams.get('leave_id');
+      if (!leaveId) return error('กรุณาระบุ ID การลาที่ต้องการลบ');
+      await dbRun(env.DB, 'DELETE FROM leaves WHERE id = ?', [leaveId]);
+      return success({ message: 'ลบข้อมูลการลาเรียบร้อย' });
     }
 
     return error('Method not allowed', 405);

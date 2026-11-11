@@ -425,13 +425,16 @@ export async function onRequest(context) {
 
   // --- GET /api/usage ---
   if (path === '/api/usage' && method === 'GET') {
-    try { requirePermission(user, 'usage', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    if (user.role !== 'driver') {
+      try { requirePermission(user, 'usage', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    }
     const carId = url.searchParams.get('car_id');
     const recordType = url.searchParams.get('record_type');
     const dateFrom = url.searchParams.get('date_from');
     const dateTo = url.searchParams.get('date_to');
     const queueId = url.searchParams.get('queue_id');
     const dataQuality = url.searchParams.get('data_quality');
+    const driverId = url.searchParams.get('driver_id');
     const where = [];
     const params = [];
     if (carId) { where.push('ur.car_id = ?'); params.push(carId); }
@@ -440,6 +443,13 @@ export async function onRequest(context) {
     if (dateTo) { where.push('ur.datetime <= ?'); params.push(dateTo + ' 23:59:59'); }
     if (queueId) { where.push('ur.queue_id = ?'); params.push(queueId); }
     if (dataQuality) { where.push('ur.data_quality = ?'); params.push(dataQuality); }
+    if (user.role === 'driver' && user.driver_id) {
+      where.push('ur.driver_id = ?');
+      params.push(user.driver_id);
+    } else if (driverId) {
+      where.push('ur.driver_id = ?');
+      params.push(driverId);
+    }
     const rows = await dbAll(env.DB,
       `SELECT ur.*, c.license_plate, c.brand, COALESCE(d.name, ur.driver_name_manual) AS driver_name
        FROM usage_records ur

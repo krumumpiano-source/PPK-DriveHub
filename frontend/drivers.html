@@ -477,7 +477,21 @@
           if (driver.line_id) html += '<div class="driver-info-item"><span class="driver-info-label">LINE:</span><span class="driver-info-value"><span class="line-tag-badge">💬 ' + driver.line_id + '</span></span></div>';
           if (driver.position) html += '<div class="driver-info-item"><span class="driver-info-label">ตำแหน่ง:</span><span class="driver-info-value">' + driver.position + '</span></div>';
           if (driver.license_number) html += '<div class="driver-info-item"><span class="driver-info-label">ใบขับขี่:</span><span class="driver-info-value">' + driver.license_number + '</span></div>';
-          if (driver.license_expiry) html += '<div class="driver-info-item"><span class="driver-info-label">หมดอายุ:</span><span class="driver-info-value">' + formatDateThai(driver.license_expiry) + '</span></div>';
+          if (driver.license_expiry) {
+            var expDate = new Date(driver.license_expiry);
+            var nowD = new Date();
+            var diffDays = Math.ceil((expDate - nowD) / (1000 * 60 * 60 * 24));
+            var expBadge = '';
+            if (diffDays < 0) {
+              expBadge = ' <span style="background:#fee2e2;color:#991b1b;padding:2px 6px;border-radius:4px;font-size:0.8em;font-weight:600;">⚠️ หมดอายุแล้ว</span>';
+            } else if (diffDays <= 30) {
+              expBadge = ' <span style="background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:4px;font-size:0.8em;font-weight:600;">⏳ ใกล้หมดอายุ (' + diffDays + ' วัน)</span>';
+            }
+            html += '<div class="driver-info-item"><span class="driver-info-label">หมดอายุ:</span><span class="driver-info-value">' + formatDateThai(driver.license_expiry) + expBadge + '</span></div>';
+          }
+          if (driver.fatigue_flag) {
+            html += '<div class="driver-info-item"><span class="driver-info-label">ความล้า:</span><span class="driver-info-value" style="color:#d97706;font-weight:600;">🥱 แจ้งความเหนื่อยล้า</span></div>';
+          }
           var assignmentType = driver.assignment_type || 'primary';
           var assignmentText = {
             'primary': '🚗 ขับรถหลัก',
@@ -952,11 +966,12 @@
     async function loadLeaves(driverId) {
       try {
         var result = await apiCall('getDriverLeaves', {
-          id: driverId
+          id: driverId,
+          driver_id: driverId
         });
 
         var html = '';
-        var leaves = result.success && result.data ? (Array.isArray(result.data) ? result.data : []) : [];
+        var leaves = result.success && result.data ? (Array.isArray(result.data) ? result.data : (result.data.leaves || [])) : [];
         if (leaves.length > 0) {
           leaves.forEach(function (leave) {
             html += '<div class="leave-item">';
