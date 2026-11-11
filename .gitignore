@@ -19,3 +19,5 @@ test-output*.txt
 response.txt
 test-results/
 playwright-report/
+
+~$*
