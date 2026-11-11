@@ -18,6 +18,18 @@
   <script src="js/api.js"></script>
   <script src="common.js"></script>
   <style>
+    @font-face {
+      font-family: 'TH Sarabun New';
+      src: local('TH Sarabun New'), local('THSarabunNew');
+      font-weight: normal;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'TH Sarabun New';
+      src: local('TH Sarabun New Bold'), local('THSarabunNew-Bold');
+      font-weight: bold;
+      font-style: normal;
+    }
     :root {
       --primary: #0284c7;
       --primary-dark: #0369a1;
@@ -29,10 +41,10 @@
     }
     body {
       background: #f1f5f9;
-      font-family: 'Sarabun', 'TH Sarabun New', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 13px;
+      font-family: 'TH Sarabun New', 'TH Sarabun PSK', 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 15pt;
       color: var(--text);
-      line-height: 1.35;
+      line-height: 1.22;
       padding: 20px 0;
       margin: 0;
     }
@@ -67,7 +79,7 @@
       max-height: 297mm;
       margin: 0 auto;
       background: #ffffff;
-      padding: 10mm 12mm 8mm 12mm;
+      padding: 7mm 12mm 6mm 12mm;
       box-sizing: border-box;
       box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
       position: relative;
@@ -77,83 +89,85 @@
       justify-content: space-between;
     }
 
-    /* Document Header */
+    /* Document Header (Thai Official Government Standard: Title 24pt Bold, Agency 18pt Bold, Sub 14pt) */
     .doc-header {
       text-align: center;
-      margin-bottom: 6px;
-      border-bottom: 2px solid #0f172a;
-      padding-bottom: 5px;
+      margin-bottom: 3px;
+      border-bottom: 2px solid #0284c7;
+      padding-bottom: 2px;
     }
     .doc-title {
-      font-size: 21px;
+      font-size: 24pt;
       font-weight: 700;
       color: #0f172a;
-      margin: 0 0 2px 0;
-      letter-spacing: -0.3px;
+      line-height: 1.1;
+      margin: 0 0 1px 0;
     }
     .doc-dept {
-      font-size: 14.5px;
-      font-weight: 600;
-      color: #1e293b;
-      margin: 0 0 2px 0;
+      font-size: 18pt;
+      font-weight: 700;
+      color: #0369a1;
+      line-height: 1.15;
+      margin: 0 0 1px 0;
     }
     .doc-school {
-      font-size: 11px;
-      color: #475569;
+      font-size: 14pt;
+      color: #64748b;
+      line-height: 1.18;
       margin: 0;
     }
 
-    /* Ref & Date Row */
+    /* Ref & Date Row (16pt Bold) */
     .doc-ref-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin: 5px 0 7px 0;
-      font-size: 12px;
+      margin: 4px 0 5px 0;
+      font-size: 16pt;
     }
     .doc-ref-no {
-      font-weight: 600;
+      font-weight: 700;
       color: #0f172a;
     }
     .doc-date {
-      font-weight: 600;
+      font-weight: 700;
       color: #0f172a;
     }
 
-    /* Side-by-side Info Box */
+    /* Side-by-side Info Box (16pt Header, 15pt Content) */
     .info-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-bottom: 7px;
+      gap: 6px;
+      margin-bottom: 4px;
     }
     .info-card {
       border: 1px solid var(--border-dark);
       border-radius: 4px;
-      padding: 6px 9px;
+      padding: 3px 8px;
       background: #ffffff;
-      font-size: 11.5px;
-      line-height: 1.38;
+      font-size: 15pt;
+      line-height: 1.22;
     }
     .info-card.bg-light-blue {
       background: #f8fafc;
     }
     .card-heading {
-      font-size: 12.5px;
+      font-size: 16pt;
       font-weight: 700;
-      color: #0f172a;
-      margin-bottom: 4px;
+      color: #1e293b;
+      margin-bottom: 2px;
       border-bottom: 1px solid #e2e8f0;
-      padding-bottom: 3px;
+      padding-bottom: 1px;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
     .card-line {
-      margin-bottom: 2.5px;
+      margin-bottom: 1px;
     }
     .card-label {
-      font-weight: 600;
+      font-weight: 700;
       color: #334155;
     }
     .val-highlight {
@@ -163,47 +177,48 @@
     .val-mileage {
       font-weight: 700;
       color: #b45309;
+      font-size: 15.5pt;
     }
 
-    /* Types Checkbox Bar */
+    /* Types Checkbox Bar (14pt) */
     .types-bar {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 6px;
-      margin-bottom: 7px;
+      gap: 5px;
+      margin-bottom: 4px;
     }
     .type-chip {
       border: 1px solid var(--border);
       border-radius: 4px;
-      padding: 4px 6px;
+      padding: 2px 2px;
       text-align: center;
-      font-size: 11px;
+      font-size: 14pt;
       background: #ffffff;
       color: #64748b;
     }
     .type-chip.checked {
       border-color: #0284c7;
-      background: #f0f9ff;
+      background: #e0f2fe;
       color: #0369a1;
-      font-weight: 600;
+      font-weight: 700;
     }
 
-    /* Symptoms / Items Table */
+    /* Symptoms / Items Table (16pt Title, 15pt Content) */
     .section-title {
-      font-size: 12.5px;
+      font-size: 16pt;
       font-weight: 700;
       color: #0f172a;
-      margin: 4px 0 4px 0;
+      margin: 2px 0 2px 0;
     }
     .items-table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 7px;
-      font-size: 11.5px;
+      margin-bottom: 4px;
+      font-size: 15pt;
     }
     .items-table th, .items-table td {
       border: 1px solid var(--border-dark);
-      padding: 5px 8px;
+      padding: 3px 6px;
       vertical-align: top;
     }
     .items-table th {
@@ -211,148 +226,166 @@
       font-weight: 700;
       color: #1e293b;
       text-align: center;
+      font-size: 15pt;
     }
     .items-table td.col-idx {
       text-align: center;
-      font-weight: 600;
+      font-weight: 700;
       width: 38px;
     }
     .items-table td.col-result {
       text-align: center;
-      width: 130px;
-      font-size: 11px;
+      width: 120px;
+      font-size: 14pt;
       color: #64748b;
     }
     .item-main {
-      font-weight: 600;
+      font-weight: 700;
       color: #0f172a;
-      line-height: 1.3;
+      font-size: 15pt;
+      line-height: 1.25;
     }
     .item-sub {
-      font-size: 10.5px;
+      font-size: 14pt;
       color: #475569;
-      margin-top: 2px;
-      line-height: 1.3;
+      margin-top: 1px;
+      line-height: 1.2;
     }
 
     /* Terms & Direct Coordinator Contact Box */
     .terms-card {
       border: 1.2px solid #0284c7;
-      border-radius: 5px;
+      border-radius: 4px;
       background: #f0f9ff;
-      padding: 6px 10px;
-      margin-bottom: 7px;
-      font-size: 11px;
-      line-height: 1.36;
+      padding: 3px 8px;
+      margin-bottom: 4px;
+      font-size: 14.5pt;
+      line-height: 1.22;
       display: flex;
-      gap: 10px;
+      gap: 8px;
       align-items: center;
     }
     .terms-left {
       flex: 1;
     }
     .terms-qr {
-      width: 78px;
+      width: 76px;
       text-align: center;
       flex-shrink: 0;
       border-left: 1px dashed #bae6fd;
-      padding-left: 8px;
+      padding-left: 6px;
     }
     .terms-qr img {
-      width: 65px;
-      height: 65px;
+      width: 60px;
+      height: 60px;
       object-fit: contain;
       border-radius: 4px;
       border: 1px solid #cbd5e1;
       background: #ffffff;
     }
     .terms-qr-lbl {
-      font-size: 8.8px;
+      font-size: 12pt;
       font-weight: 700;
       color: #0369a1;
       margin-top: 1px;
-      line-height: 1.2;
+      line-height: 1.12;
     }
     .terms-heading {
       font-weight: 700;
       color: #0369a1;
-      font-size: 11.5px;
-      margin-bottom: 3px;
+      font-size: 15pt;
+      margin-bottom: 1px;
     }
     .coordinator-direct-notice {
       background: #e0f2fe;
       border-left: 3px solid #0284c7;
-      padding: 3px 6px;
-      margin-bottom: 3px;
+      padding: 2px 6px;
+      margin-bottom: 2px;
       font-weight: 500;
       color: #0c4a6e;
+      font-size: 14.5pt;
     }
     .contact-channels-line {
-      font-size: 10.5px;
+      font-size: 14.5pt;
       color: #1e293b;
-      margin-bottom: 3px;
+      margin-bottom: 2px;
+    }
+    .terms-list {
+      margin: 0;
+      padding-left: 16px;
+      color: #334155;
+      font-size: 14pt;
+      line-height: 1.18;
     }
 
     /* Signature Grid (4 Boxes) */
     .sig-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 7px;
-      margin-bottom: 6px;
+      gap: 5px;
+      margin-bottom: 2px;
     }
     .sig-box {
       border: 1px solid var(--border);
       border-radius: 4px;
-      padding: 6px 8px 4px 8px;
+      padding: 3px 6px;
       text-align: center;
       background: #ffffff;
-      font-size: 10.5px;
+      font-size: 14pt;
       position: relative;
+      min-height: 72px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
     }
     .sig-title {
       font-weight: 700;
       color: #475569;
-      font-size: 11px;
-      margin-bottom: 4px;
+      font-size: 14.5pt;
+      margin-bottom: 2px;
       text-align: left;
+      border-bottom: 1px dashed #e2e8f0;
+      padding-bottom: 1px;
     }
     .sig-canvas-display {
-      min-height: 38px;
-      max-height: 44px;
+      min-height: 32px;
+      max-height: 38px;
       display: flex;
       align-items: center;
       justify-content: center;
       margin-bottom: 1px;
     }
     .sig-img {
-      max-height: 38px;
-      max-width: 150px;
+      max-height: 36px;
+      max-width: 140px;
       object-fit: contain;
       filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
     }
     .sig-line-text {
       color: #0f172a;
       letter-spacing: 0.5px;
-      font-size: 11px;
+      font-size: 14.5pt;
+      margin-top: 6px;
+      margin-bottom: 1px;
     }
     .sig-name {
       font-weight: 700;
       color: #0f172a;
-      font-size: 11px;
+      font-size: 14.5pt;
       margin-top: 1px;
     }
     .sig-role {
-      color: #475569;
-      font-size: 10px;
+      color: #64748b;
+      font-size: 13.5pt;
     }
     .sig-btn-badge {
       position: absolute;
-      top: 4px;
-      right: 4px;
+      top: 3px;
+      right: 3px;
       background: #f1f5f9;
       border: 1px solid #cbd5e1;
       border-radius: 12px;
-      padding: 1px 7px;
+      padding: 1px 6px;
       font-size: 10px;
       cursor: pointer;
       color: #0284c7;
@@ -367,11 +400,12 @@
     /* Acceptance / Final Handover Footer */
     .doc-footer {
       border-top: 1px dashed var(--border-dark);
-      padding-top: 4px;
-      font-size: 9.8px;
+      padding-top: 3px;
+      font-size: 11pt;
       color: #64748b;
       text-align: center;
-      line-height: 1.35;
+      line-height: 1.25;
+      margin-top: 2px;
     }
 
     /* ─── Digital Signature Modal ─── */
@@ -665,7 +699,7 @@
 
     <!-- 8. Acceptance Footer -->
     <div class="doc-footer">
-      การตรวจรับรถกลับเมื่อซ่อมเสร็จ: ได้ตรวจรับรถยนต์คืนในสภาพเรียบร้อยดี และได้รับอะไหล่เก่าคืนครบถ้วน (เลขไมล์ตอนรับกลับ: .................... กม.) ลงชื่อ ........................................................ ผู้ตรวจรับ วันที่ ...../...../๒๕๖๙
+      <strong>การตรวจรับรถกลับเมื่อซ่อมเสร็จ:</strong> ได้ตรวจรับรถยนต์คืนในสภาพเรียบร้อยดี และได้รับอะไหล่เก่าคืนครบถ้วน ลงชื่อ .................................... ผู้ตรวจรับ วันที่ ...../...../๒๕๖๙
     </div>
 
   </div>
@@ -1362,7 +1396,7 @@
         };
         const CELL_MARGINS = { top: 80, bottom: 80, left: 120, right: 120 };
 
-        function makeRun(text, size = 23, bold = false, color = '0F172A') {
+        function makeRun(text, size = 30, bold = false, color = '0F172A') {
           return new TextRun({ text: text || '', font: FONT, size: size, bold: bold, color: color });
         }
 
@@ -1389,87 +1423,87 @@
           console.warn('QR fetch skipped:', e);
         }
 
-        // 1. Service Center Cell
+        // 1. Service Center Cell (16pt Header, 15pt Content)
         const garageCellParas = [
           new Paragraph({
-            spacing: { before: 0, after: 15 },
-            children: [makeRun('ข้อมูลศูนย์บริการ', 23, true, '0F172A')]
+            spacing: { before: 0, after: 10 },
+            children: [makeRun('ข้อมูลศูนย์บริการ', 32, true, '0F172A')]
           }),
           new Paragraph({
-            spacing: { before: 0, after: 15 },
+            spacing: { before: 0, after: 8 },
             children: [
-              makeRun('ศูนย์บริการ: ', 22, true),
-              makeRun(docData.garage_name, 22, true, '0284C7')
+              makeRun('ศูนย์บริการ: ', 30, true),
+              makeRun(docData.garage_name, 30, true, '0284C7')
             ]
           }),
           new Paragraph({
-            spacing: { before: 0, after: 15 },
+            spacing: { before: 0, after: 8 },
             children: [
-              makeRun('ที่อยู่: ', 21, true),
-              makeRun(docData.garage_address, 21, false)
+              makeRun('ที่อยู่: ', 29, true),
+              makeRun(docData.garage_address, 29, false)
             ]
           }),
           new Paragraph({
-            spacing: { before: 0, after: 15 },
+            spacing: { before: 0, after: 8 },
             children: [
-              makeRun('โทรศัพท์: ', 21, true),
-              makeRun(docData.garage_phone, 21, false)
+              makeRun('โทรศัพท์: ', 29, true),
+              makeRun(docData.garage_phone, 29, false)
             ]
           }),
           new Paragraph({
             spacing: { before: 0, after: 0 },
             children: [
-              makeRun('ที่ปรึกษาบริการ (SA): ', 21, true),
-              makeRun(docData.garage_sa, 21, false)
+              makeRun('ที่ปรึกษาบริการ (SA): ', 29, true),
+              makeRun(docData.garage_sa, 29, false)
             ]
           })
         ];
 
-        // 2. Vehicle Info Cell
+        // 2. Vehicle Info Cell (16pt Header, 15pt Content)
         const vehicleCellParas = [
           new Paragraph({
-            spacing: { before: 0, after: 15 },
-            children: [makeRun('ข้อมูลยานพาหนะ ณ วันส่งมอบ', 23, true, '0F172A')]
+            spacing: { before: 0, after: 10 },
+            children: [makeRun('ข้อมูลยานพาหนะ ณ วันส่งมอบ', 32, true, '0F172A')]
           }),
           new Paragraph({
-            spacing: { before: 0, after: 15 },
+            spacing: { before: 0, after: 8 },
             children: [
-              makeRun('หมายเลขทะเบียน: ', 22, true),
-              makeRun(docData.plate, 24, true, '0F172A')
+              makeRun('หมายเลขทะเบียน: ', 30, true),
+              makeRun(docData.plate, 32, true, '0F172A')
             ]
           }),
           new Paragraph({
-            spacing: { before: 0, after: 15 },
+            spacing: { before: 0, after: 8 },
             children: [
-              makeRun('ยี่ห้อ / รุ่น: ', 21, true),
-              makeRun(docData.car_model, 21, false)
+              makeRun('ยี่ห้อ / รุ่น: ', 29, true),
+              makeRun(docData.car_model, 29, false)
             ]
           }),
           new Paragraph({
-            spacing: { before: 0, after: 15 },
+            spacing: { before: 0, after: 8 },
             children: [
-              makeRun('เลขไมล์ส่งซ่อม: ', 21, true),
-              makeRun(`${Number(docData.mileage || 0).toLocaleString()} กม.`, 22, true, 'B45309'),
-              makeRun('   ระดับน้ำมัน: [✓] 3/4', 21, false)
+              makeRun('เลขไมล์ส่งซ่อม: ', 29, true),
+              makeRun(`${Number(docData.mileage || 0).toLocaleString()} กม.`, 30, true, 'B45309'),
+              makeRun('   ระดับน้ำมัน: [✓] 3/4', 29, false)
             ]
           }),
           new Paragraph({
-            spacing: { before: 0, after: 15 },
+            spacing: { before: 0, after: 8 },
             children: [
-              makeRun('ผู้นำส่งมอบรถ: ', 21, true),
-              makeRun(`${docData.driver_name} (โทร. ${docData.driver_phone})`, 21, false)
+              makeRun('ผู้นำส่งมอบรถ: ', 29, true),
+              makeRun(`${docData.driver_name} (โทร. ${docData.driver_phone})`, 29, false)
             ]
           }),
           new Paragraph({
             spacing: { before: 0, after: 0 },
             children: [
-              makeRun('ผู้ประสานงานสั่งซ่อม: ', 21, true),
-              makeRun(`${docData.coordinator_name} (โทร. ${docData.coordinator_phone})`, 21, true, '0284C7')
+              makeRun('ผู้ประสานงานสั่งซ่อม: ', 29, true),
+              makeRun(`${docData.coordinator_name} (โทร. ${docData.coordinator_phone})`, 29, true, '0284C7')
             ]
           })
         ];
 
-        // 3. Types Table
+        // 3. Types Table (14pt)
         const typeChips = [
           { checked: docData.is_pm, text: 'เช็คระยะตามกำหนด (PM)' },
           { checked: docData.is_repair, text: 'ซ่อมทั่วไป / แก้ไขอาการเสีย' },
@@ -1477,7 +1511,7 @@
           { checked: docData.is_check, text: 'ตรวจเช็คความปลอดภัย / ช่วงล่าง' }
         ];
 
-        // 4. Items Table Rows
+        // 4. Items Table Rows (16pt Title, 15pt Content)
         const itemRows = [
           new TableRow({
             tableHeader: true,
@@ -1487,21 +1521,21 @@
                 shading: { fill: 'E2E8F0', type: ShadingType.CLEAR },
                 margins: CELL_MARGINS,
                 borders: BOX_BORDERS,
-                children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [makeRun('ลำดับ', 21, true)] })]
+                children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [makeRun('ลำดับ', 30, true)] })]
               }),
               new TableCell({
                 width: { size: 7300, type: WidthType.DXA },
                 shading: { fill: 'E2E8F0', type: ShadingType.CLEAR },
                 margins: CELL_MARGINS,
                 borders: BOX_BORDERS,
-                children: [new Paragraph({ children: [makeRun('รายการงาน / รายละเอียดอาการที่ตรวจพบ', 21, true)] })]
+                children: [new Paragraph({ children: [makeRun('รายการงาน / รายละเอียดอาการที่ตรวจพบ', 30, true)] })]
               }),
               new TableCell({
                 width: { size: 2100, type: WidthType.DXA },
                 shading: { fill: 'E2E8F0', type: ShadingType.CLEAR },
                 margins: CELL_MARGINS,
                 borders: BOX_BORDERS,
-                children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [makeRun('ผลการตรวจเช็ค', 21, true)] })]
+                children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [makeRun('ผลการตรวจเช็ค', 30, true)] })]
               })
             ]
           })
@@ -1510,14 +1544,14 @@
         docData.items.forEach((it, idx) => {
           const paras = [
             new Paragraph({
-              spacing: { before: 0, after: 10 },
-              children: [makeRun(it.title, 21, true, '0F172A')]
+              spacing: { before: 0, after: 6 },
+              children: [makeRun(it.title, 30, true, '0F172A')]
             })
           ];
           if (it.desc) {
             paras.push(new Paragraph({
               spacing: { before: 0, after: 0 },
-              children: [makeRun(it.desc, 19, false, '475569')]
+              children: [makeRun(it.desc, 28, false, '475569')]
             }));
           }
 
@@ -1528,7 +1562,7 @@
                   width: { size: 900, type: WidthType.DXA },
                   margins: CELL_MARGINS,
                   borders: BOX_BORDERS,
-                  children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [makeRun(String(idx + 1), 21, true)] })]
+                  children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [makeRun(String(idx + 1), 30, true)] })]
                 }),
                 new TableCell({
                   width: { size: 7300, type: WidthType.DXA },
@@ -1540,19 +1574,19 @@
                   width: { size: 2100, type: WidthType.DXA },
                   margins: CELL_MARGINS,
                   borders: BOX_BORDERS,
-                  children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [makeRun(it.note || '[  ] รอผลตรวจเช็ค', 19, false, '64748B')] })]
+                  children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [makeRun(it.note || '[  ] รอผลตรวจเช็ค', 28, false, '64748B')] })]
                 })
               ]
             })
           );
         });
 
-        // Helper for Signature cell paragraphs
+        // Helper for Signature cell paragraphs (15pt bold name, 14pt role)
         function buildSigParas(boxTitle, sigBase64, name, role1, role2) {
           const paras = [
             new Paragraph({
-              spacing: { before: 0, after: 20 },
-              children: [makeRun(boxTitle, 20, true, '475569')]
+              spacing: { before: 0, after: 12 },
+              children: [makeRun(boxTitle, 30, true, '475569')]
             })
           ];
 
@@ -1562,7 +1596,7 @@
               paras.push(
                 new Paragraph({
                   alignment: AlignmentType.CENTER,
-                  spacing: { before: 0, after: 10 },
+                  spacing: { before: 0, after: 8 },
                   children: [
                     new ImageRun({
                       data: bytes,
@@ -1577,8 +1611,8 @@
             paras.push(
               new Paragraph({
                 alignment: AlignmentType.CENTER,
-                spacing: { before: 30, after: 15 },
-                children: [makeRun('ลงชื่อ ................................................................', 20, false)]
+                spacing: { before: 20, after: 10 },
+                children: [makeRun('ลงชื่อ ................................................................', 30, false)]
               })
             );
           }
@@ -1586,18 +1620,18 @@
           paras.push(
             new Paragraph({
               alignment: AlignmentType.CENTER,
-              spacing: { before: 0, after: 10 },
-              children: [makeRun(`(${name})`, 21, true)]
+              spacing: { before: 0, after: 6 },
+              children: [makeRun(`(${name})`, 30, true)]
             }),
             new Paragraph({
               alignment: AlignmentType.CENTER,
-              spacing: { before: 0, after: 10 },
-              children: [makeRun(role1, 19, false, '475569')]
+              spacing: { before: 0, after: 6 },
+              children: [makeRun(role1, 28, false, '475569')]
             }),
             new Paragraph({
               alignment: AlignmentType.CENTER,
               spacing: { before: 0, after: 0 },
-              children: [makeRun(role2, 19, false, '475569')]
+              children: [makeRun(role2, 27, false, '475569')]
             })
           );
           return paras;
@@ -1609,28 +1643,28 @@
             properties: {
               page: {
                 size: { width: 11906, height: 16838 }, // A4 exact
-                margin: { top: 567, right: 680, bottom: 567, left: 680 } // 1.0cm top/bottom, 1.2cm left/right
+                margin: { top: 454, right: 680, bottom: 454, left: 680 } // 0.8cm top/bottom, 1.2cm left/right
               }
             },
             children: [
-              // Header
+              // Header (24pt title, 18pt agency, 14pt address)
               new Paragraph({
                 alignment: AlignmentType.CENTER,
-                spacing: { before: 0, after: 20 },
-                children: [makeRun('ใบส่งซ่อมยานพาหนะ', 34, true, '0F172A')]
+                spacing: { before: 0, after: 12 },
+                children: [makeRun('ใบส่งซ่อมยานพาหนะ', 48, true, '0F172A')]
               }),
               new Paragraph({
                 alignment: AlignmentType.CENTER,
-                spacing: { before: 0, after: 15 },
-                children: [makeRun('งานยานพาหนะ กลุ่มบริหารงานบุคคล โรงเรียนพะเยาพิทยาคม', 26, true, '1E293B')]
+                spacing: { before: 0, after: 10 },
+                children: [makeRun('งานยานพาหนะ กลุ่มบริหารงานบุคคล โรงเรียนพะเยาพิทยาคม', 36, true, '1E293B')]
               }),
               new Paragraph({
                 alignment: AlignmentType.CENTER,
-                spacing: { before: 0, after: 50 },
-                children: [makeRun('สังกัดสำนักงานเขตพื้นที่การศึกษามัธยมศึกษาพะเยา เลขที่ ๒๔๔ ถนนพหลโยธิน ตำบลเวียง อำเภอเมืองพะเยา จังหวัดพะเยา ๕๖๐๐๐ โทรศัพท์ ๐๕๔-๔๓๑๘๗๑', 19, false, '475569')]
+                spacing: { before: 0, after: 30 },
+                children: [makeRun('สังกัดสำนักงานเขตพื้นที่การศึกษามัธยมศึกษาพะเยา เลขที่ ๒๔๔ ถนนพหลโยธิน ตำบลเวียง อำเภอเมืองพะเยา จังหวัดพะเยา ๕๖๐๐๐ โทรศัพท์ ๐๕๔-๔๓๑๘๗๑', 28, false, '475569')]
               }),
 
-              // Ref & Date
+              // Ref & Date (16pt bold)
               new Table({
                 width: { size: 100, type: WidthType.PERCENTAGE },
                 borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, insideHorizontal: { style: BorderStyle.NONE }, insideVertical: { style: BorderStyle.NONE } },
@@ -1641,8 +1675,8 @@
                         width: { size: 55, type: WidthType.PERCENTAGE },
                         children: [new Paragraph({
                           children: [
-                            makeRun(`เลขที่เอกสาร: ${docData.doc_no}`, 21, true),
-                            makeRun('   (ส่งตรวจสภาพและขอรับใบเสนอราคา)', 19, false, '64748B')
+                            makeRun(`เลขที่เอกสาร: ${docData.doc_no}`, 32, true),
+                            makeRun('   (ส่งตรวจสภาพและขอรับใบเสนอราคา)', 28, false, '64748B')
                           ]
                         })]
                       }),
@@ -1650,7 +1684,7 @@
                         width: { size: 45, type: WidthType.PERCENTAGE },
                         children: [new Paragraph({
                           alignment: AlignmentType.RIGHT,
-                          children: [makeRun(`วันที่ส่งซ่อม: ${docData.doc_date}`, 21, true)]
+                          children: [makeRun(`วันที่ส่งซ่อม: ${docData.doc_date}`, 32, true)]
                         })]
                       })
                     ]
@@ -1658,7 +1692,7 @@
                 ]
               }),
 
-              new Paragraph({ spacing: { before: 20, after: 30 } }),
+              new Paragraph({ spacing: { before: 10, after: 15 } }),
 
               // Info Table (Side by Side)
               new Table({
@@ -1684,9 +1718,9 @@
                 ]
               }),
 
-              new Paragraph({ spacing: { before: 20, after: 30 } }),
+              new Paragraph({ spacing: { before: 10, after: 15 } }),
 
-              // Types Bar Table
+              // Types Bar Table (14pt)
               new Table({
                 width: { size: 100, type: WidthType.PERCENTAGE },
                 rows: [
@@ -1694,12 +1728,12 @@
                     children: typeChips.map(c => new TableCell({
                       width: { size: 25, type: WidthType.PERCENTAGE },
                       shading: { fill: c.checked ? 'F0F9FF' : 'FFFFFF', type: ShadingType.CLEAR },
-                      margins: { top: 60, bottom: 60, left: 60, right: 60 },
+                      margins: { top: 50, bottom: 50, left: 40, right: 40 },
                       borders: BOX_BORDERS,
                       children: [
                         new Paragraph({
                           alignment: AlignmentType.CENTER,
-                          children: [makeRun(c.checked ? `[✓] ${c.text}` : `[  ] ${c.text}`, 20, c.checked, c.checked ? '0369A1' : '64748B')]
+                          children: [makeRun(c.checked ? `[✓] ${c.text}` : `[  ] ${c.text}`, 28, c.checked, c.checked ? '0369A1' : '64748B')]
                         })
                       ]
                     }))
@@ -1708,8 +1742,8 @@
               }),
 
               new Paragraph({
-                spacing: { before: 30, after: 20 },
-                children: [makeRun('รายการงานที่ขอรับบริการ / อาการที่ตรวจพบ', 22, true, '0F172A')]
+                spacing: { before: 15, after: 10 },
+                children: [makeRun('รายการงานที่ขอรับบริการ / อาการที่ตรวจพบ', 32, true, '0F172A')]
               }),
 
               // Items Table
@@ -1718,9 +1752,9 @@
                 rows: itemRows
               }),
 
-              new Paragraph({ spacing: { before: 20, after: 30 } }),
+              new Paragraph({ spacing: { before: 10, after: 15 } }),
 
-              // Terms & Direct Contact Box with QR Code
+              // Terms & Direct Contact Box with QR Code (15pt / 14.5pt / 14pt)
               new Table({
                 width: { size: 100, type: WidthType.PERCENTAGE },
                 rows: [
@@ -1738,43 +1772,43 @@
                         },
                         children: [
                           new Paragraph({
-                            spacing: { before: 0, after: 12 },
-                            children: [makeRun('การติดต่อประสานงาน ข้อกำหนด และช่องทางติดต่อผู้สั่งซ่อม', 21, true, '0369A1')]
-                          }),
-                          new Paragraph({
-                            spacing: { before: 0, after: 10 },
-                            children: [
-                              makeRun('การประสานงานและพิจารณาซ่อม: ', 20, true),
-                              makeRun('ขอความอนุเคราะห์ศูนย์บริการแจ้งผลตรวจเช็ค และส่งใบเสนอราคา (Quotation) เพื่อพิจารณาอนุมัติซ่อมโดยตรงที่ ', 20, false),
-                              makeRun(`${docData.coordinator_name} (รองหัวหน้างานยานพาหนะ)`, 20, true, '0369A1')
-                            ]
-                          }),
-                          new Paragraph({
                             spacing: { before: 0, after: 8 },
+                            children: [makeRun('การติดต่อประสานงาน ข้อกำหนด และช่องทางติดต่อผู้สั่งซ่อม', 30, true, '0369A1')]
+                          }),
+                          new Paragraph({
+                            spacing: { before: 0, after: 6 },
                             children: [
-                              makeRun(`โทร. ${docData.coordinator_phone}   |   LINE ID: `, 19, false),
-                              makeRun(docData.coordinator_line, 20, true, '0284C7'),
-                              makeRun(`   |   อีเมล: ${docData.coordinator_email}`, 19, false)
+                              makeRun('การประสานงานและพิจารณาซ่อม: ', 29, true),
+                              makeRun('ขอความอนุเคราะห์ศูนย์บริการแจ้งผลตรวจเช็ค และส่งใบเสนอราคา (Quotation) เพื่อพิจารณาอนุมัติซ่อมโดยตรงที่ ', 29, false),
+                              makeRun(`${docData.coordinator_name} (รองหัวหน้างานยานพาหนะ)`, 29, true, '0369A1')
                             ]
                           }),
                           new Paragraph({
                             spacing: { before: 0, after: 6 },
-                            children: [makeRun('๑. การเสนอราคา: ส่งใบเสนอราคาให้ผู้ประสานงานอนุมัติก่อนเริ่มดำเนินการซ่อมหรือเปลี่ยนอะไหล่', 18.5, false, '334155')]
+                            children: [
+                              makeRun(`โทร. ${docData.coordinator_phone}   |   LINE ID: `, 29, false),
+                              makeRun(docData.coordinator_line, 29, true, '0284C7'),
+                              makeRun(`   |   อีเมล: ${docData.coordinator_email}`, 29, false)
+                            ]
                           }),
                           new Paragraph({
-                            spacing: { before: 0, after: 6 },
-                            children: [makeRun('๒. การส่งคืนอะไหล่: ขอรับคืนชิ้นส่วนอะไหล่เก่าที่ทำการเปลี่ยนออกทั้งหมดส่งมอบพร้อมตัวรถ', 18.5, false, '334155')]
+                            spacing: { before: 0, after: 4 },
+                            children: [makeRun('๑. การเสนอราคา: ส่งใบเสนอราคาให้ผู้ประสานงานอนุมัติก่อนเริ่มดำเนินการซ่อมหรือเปลี่ยนอะไหล่', 28, false, '334155')]
+                          }),
+                          new Paragraph({
+                            spacing: { before: 0, after: 4 },
+                            children: [makeRun('๒. การส่งคืนอะไหล่: ขอรับคืนชิ้นส่วนอะไหล่เก่าที่ทำการเปลี่ยนออกทั้งหมดส่งมอบพร้อมตัวรถ', 28, false, '334155')]
                           }),
                           new Paragraph({
                             spacing: { before: 0, after: 0 },
-                            children: [makeRun('๓. การรับประกัน: งานซ่อมและอะไหล่แท้ได้รับการรับประกันคุณภาพตามมาตรฐานศูนย์บริการ', 18.5, false, '334155')]
+                            children: [makeRun('๓. การรับประกัน: งานซ่อมและอะไหล่แท้ได้รับการรับประกันคุณภาพตามมาตรฐานศูนย์บริการ', 28, false, '334155')]
                           })
                         ]
                       }),
                       new TableCell({
                         width: { size: 18, type: WidthType.PERCENTAGE },
                         shading: { fill: 'F0F9FF', type: ShadingType.CLEAR },
-                        margins: { top: 60, bottom: 60, left: 20, right: 20 },
+                        margins: { top: 40, bottom: 40, left: 15, right: 15 },
                         borders: {
                           top: { style: BorderStyle.SINGLE, size: 5, color: '0284C7' },
                           bottom: { style: BorderStyle.SINGLE, size: 5, color: '0284C7' },
@@ -1785,11 +1819,11 @@
                           ...(qrBytes ? [
                             new Paragraph({
                               alignment: AlignmentType.CENTER,
-                              spacing: { before: 0, after: 6 },
+                              spacing: { before: 0, after: 4 },
                               children: [
                                 new ImageRun({
                                   data: qrBytes,
-                                  transformation: { width: 70, height: 70 },
+                                  transformation: { width: 65, height: 65 },
                                   type: 'png'
                                 })
                               ]
@@ -1798,7 +1832,7 @@
                           new Paragraph({
                             alignment: AlignmentType.CENTER,
                             spacing: { before: 0, after: 0 },
-                            children: [makeRun('สแกน LINE ผู้ประสานงาน', 16, true, '0369A1')]
+                            children: [makeRun('สแกน LINE ผู้ประสานงาน', 24, true, '0369A1')]
                           })
                         ]
                       })
@@ -1807,9 +1841,9 @@
                 ]
               }),
 
-              new Paragraph({ spacing: { before: 20, after: 30 } }),
+              new Paragraph({ spacing: { before: 10, after: 15 } }),
 
-              // Signatures Table (4 Boxes)
+              // Signatures Table (4 Boxes in 2x2 Grid)
               new Table({
                 width: { size: 100, type: WidthType.PERCENTAGE },
                 rows: [
@@ -1872,12 +1906,12 @@
                 ]
               }),
 
-              // Acceptance Footer
+              // Acceptance Footer (11pt)
               new Paragraph({
                 alignment: AlignmentType.CENTER,
-                spacing: { before: 40, after: 0 },
+                spacing: { before: 20, after: 0 },
                 children: [
-                  makeRun('การตรวจรับรถกลับเมื่อซ่อมเสร็จ: ได้ตรวจรับรถยนต์คืนในสภาพเรียบร้อยดี และได้รับอะไหล่เก่าคืนครบถ้วน (เลขไมล์ตอนรับกลับ: .................... กม.) ลงชื่อ ........................................................ ผู้ตรวจรับ วันที่ ...../...../๒๕๖๙', 17, false, '64748B')
+                  makeRun('การตรวจรับรถกลับเมื่อซ่อมเสร็จ: ได้ตรวจรับรถยนต์คืนในสภาพเรียบร้อยดี และได้รับอะไหล่เก่าคืนครบถ้วน ลงชื่อ .................................... ผู้ตรวจรับ วันที่ ...../...../๒๕๖๙', 22, false, '64748B')
                 ]
               })
             ]

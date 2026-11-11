@@ -30,7 +30,7 @@ def set_cell_background(cell, fill_hex):
     shd = parse_xml(f'<w:shd {nsdecls("w")} w:fill="{fill_hex}"/>')
     tcPr.append(shd)
 
-def set_cell_margins(cell, top=25, bottom=25, left=45, right=45):
+def set_cell_margins(cell, top=18, bottom=18, left=35, right=35):
     tcPr = cell._tc.get_or_add_tcPr()
     tcMar = OxmlElement('w:tcMar')
     for m, val in [('top', top), ('bottom', bottom), ('left', left), ('right', right)]:
@@ -54,7 +54,7 @@ def set_box_borders(table, color="94A3B8", sz="4"):
     )
     tblPr.append(borders)
 
-def get_or_add_p(cell, text="", font_name="TH Sarabun New", size=11, bold=False, color=None, align=WD_ALIGN_PARAGRAPH.LEFT, space_before=0, space_after=0.5, line_spacing=1.05):
+def get_or_add_p(cell, text="", font_name="TH Sarabun New", size=15, bold=False, color=None, align=WD_ALIGN_PARAGRAPH.LEFT, space_before=0, space_after=0.4, line_spacing=1.01):
     if len(cell.paragraphs) == 1 and not cell.paragraphs[0].text.strip():
         p = cell.paragraphs[0]
     else:
@@ -76,7 +76,7 @@ def get_or_add_p(cell, text="", font_name="TH Sarabun New", size=11, bold=False,
         rPr.append(rFonts)
     return p
 
-def add_doc_p(doc, text="", font_name="TH Sarabun New", size=11.5, bold=False, color=None, align=WD_ALIGN_PARAGRAPH.LEFT, space_before=0, space_after=1, line_spacing=1.05):
+def add_doc_p(doc, text="", font_name="TH Sarabun New", size=16, bold=False, color=None, align=WD_ALIGN_PARAGRAPH.LEFT, space_before=0, space_after=1, line_spacing=1.01):
     p = doc.add_paragraph()
     p.alignment = align
     p.paragraph_format.space_before = Pt(space_before)
@@ -95,7 +95,7 @@ def add_doc_p(doc, text="", font_name="TH Sarabun New", size=11.5, bold=False, c
         rPr.append(rFonts)
     return p
 
-def add_run(p, text, font_name="TH Sarabun New", size=11, bold=False, color=None):
+def add_run(p, text, font_name="TH Sarabun New", size=15, bold=False, color=None):
     run = p.add_run(insert_zwsp(text))
     run.font.name = font_name
     run.font.size = Pt(size)
@@ -110,37 +110,37 @@ def add_run(p, text, font_name="TH Sarabun New", size=11, bold=False, color=None
 def create_repair_order_docx(data, output_filepath):
     doc = Document()
     
-    # Page setup - A4 Portrait with 0.85cm top/bottom, 1.2cm left/right margins to guarantee 1 single page in Word
+    # Page setup - A4 Portrait with 0.8cm top/bottom, 1.2cm left/right margins to guarantee 1 single page in Word
     section = doc.sections[0]
     section.page_width = Cm(21.0)
     section.page_height = Cm(29.7)
-    section.top_margin = Cm(0.85)
-    section.bottom_margin = Cm(0.85)
+    section.top_margin = Cm(0.8)
+    section.bottom_margin = Cm(0.8)
     section.left_margin = Cm(1.2)
     section.right_margin = Cm(1.2)
 
-    # 1. Header (No Garuda - Clean, Authoritative & Official)
-    add_doc_p(doc, "ใบส่งซ่อมยานพาหนะ", size=17, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_before=0, space_after=1, color=RGBColor(15, 23, 42))
-    add_doc_p(doc, "งานยานพาหนะ กลุ่มบริหารงานบุคคล โรงเรียนพะเยาพิทยาคม", size=13, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=1, color=RGBColor(30, 41, 59))
-    add_doc_p(doc, "สังกัดสำนักงานเขตพื้นที่การศึกษามัธยมศึกษาพะเยา  เลขที่ ๒๔๔ ถนนพหลโยธิน ตำบลเวียง อำเภอเมืองพะเยา จังหวัดพะเยา ๕๖๐๐๐ โทรศัพท์ ๐๕๔-๔๓๑๘๗๑", size=9.5, align=WD_ALIGN_PARAGRAPH.CENTER, color=RGBColor(71, 85, 105), space_after=2)
+    # 1. Official Thai Saraban Header (Title 24pt bold, Agency 18pt bold, Sub-agency 14pt)
+    add_doc_p(doc, "ใบส่งซ่อมยานพาหนะ", size=24, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_before=0, space_after=1, color=RGBColor(15, 23, 42))
+    add_doc_p(doc, "งานยานพาหนะ กลุ่มบริหารงานบุคคล โรงเรียนพะเยาพิทยาคม", size=18, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=1, color=RGBColor(30, 41, 59))
+    add_doc_p(doc, "สังกัดสำนักงานเขตพื้นที่การศึกษามัธยมศึกษาพะเยา  เลขที่ ๒๔๔ ถนนพหลโยธิน ตำบลเวียง อำเภอเมืองพะเยา จังหวัดพะเยา ๕๖๐๐๐ โทรศัพท์ ๐๕๔-๔๓๑๘๗๑", size=14, align=WD_ALIGN_PARAGRAPH.CENTER, color=RGBColor(71, 85, 105), space_after=2)
 
-    # Document Reference & Date Row
+    # Document Reference & Date Row (Standard 16pt bold)
     ref_tbl = doc.add_table(rows=1, cols=2)
     ref_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
     ref_tbl.autofit = False
     
     c_ref_l = ref_tbl.rows[0].cells[0]
-    c_ref_l.width = Cm(11.0)
-    set_cell_margins(c_ref_l, top=10, bottom=10, left=15, right=15)
-    p_num = get_or_add_p(c_ref_l, f"เลขที่เอกสาร: {data['doc_no']}", size=11, bold=True, space_after=0)
-    add_run(p_num, "   (ส่งตรวจสภาพและขอรับใบเสนอราคา)", size=10, color=RGBColor(100, 116, 139))
+    c_ref_l.width = Cm(11.2)
+    set_cell_margins(c_ref_l, top=8, bottom=8, left=12, right=12)
+    p_num = get_or_add_p(c_ref_l, f"เลขที่เอกสาร: {data['doc_no']}", size=16, bold=True, space_after=0)
+    add_run(p_num, "   (ส่งตรวจสภาพและขอรับใบเสนอราคา)", size=14, color=RGBColor(100, 116, 139))
 
     c_ref_r = ref_tbl.rows[0].cells[1]
-    c_ref_r.width = Cm(7.6)
-    set_cell_margins(c_ref_r, top=10, bottom=10, left=15, right=15)
-    get_or_add_p(c_ref_r, f"วันที่ส่งซ่อม: {data['doc_date']}", size=11, bold=True, align=WD_ALIGN_PARAGRAPH.RIGHT, space_after=0)
+    c_ref_r.width = Cm(7.4)
+    set_cell_margins(c_ref_r, top=8, bottom=8, left=12, right=12)
+    get_or_add_p(c_ref_r, f"วันที่ส่งซ่อม: {data['doc_date']}", size=16, bold=True, align=WD_ALIGN_PARAGRAPH.RIGHT, space_after=0)
 
-    # 2. Section: Service Center & Vehicle Info Table (Side by Side)
+    # 2. Section: Service Center & Vehicle Info Table (Side by Side, 16pt Header, 15pt Content)
     info_tbl = doc.add_table(rows=1, cols=2)
     info_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
     info_tbl.autofit = False
@@ -149,46 +149,46 @@ def create_repair_order_docx(data, output_filepath):
     # Left: Service Center
     c1 = info_tbl.rows[0].cells[0]
     c1.width = Cm(9.3)
-    set_cell_margins(c1, top=30, bottom=30, left=45, right=45)
+    set_cell_margins(c1, top=16, bottom=16, left=30, right=30)
     set_cell_background(c1, "F8FAFC")
-    get_or_add_p(c1, "ข้อมูลศูนย์บริการ", size=11, bold=True, color=RGBColor(15, 23, 42), space_after=1)
+    get_or_add_p(c1, "ข้อมูลศูนย์บริการ", size=16, bold=True, color=RGBColor(15, 23, 42), space_after=1)
     
-    p_gname = get_or_add_p(c1, "ศูนย์บริการ: ", size=10.5, bold=True, space_after=1)
-    add_run(p_gname, data['garage_name'], size=10.5, bold=True, color=RGBColor(2, 132, 199))
+    p_gname = get_or_add_p(c1, "ศูนย์บริการ: ", size=15, bold=True, space_after=0.4)
+    add_run(p_gname, data['garage_name'], size=15, bold=True, color=RGBColor(2, 132, 199))
     
-    p_gaddr = get_or_add_p(c1, "ที่อยู่: ", size=9.8, bold=True, space_after=1)
-    add_run(p_gaddr, data['garage_address'], size=9.8, bold=False)
+    p_gaddr = get_or_add_p(c1, "ที่อยู่: ", size=14.5, bold=True, space_after=0.4)
+    add_run(p_gaddr, data['garage_address'], size=14.5, bold=False)
 
-    p_gtel = get_or_add_p(c1, "โทรศัพท์: ", size=9.8, bold=True, space_after=1)
-    add_run(p_gtel, data['garage_phone'], size=9.8, bold=False)
+    p_gtel = get_or_add_p(c1, "โทรศัพท์: ", size=14.5, bold=True, space_after=0.4)
+    add_run(p_gtel, data['garage_phone'], size=14.5, bold=False)
 
-    p_gsa = get_or_add_p(c1, "ที่ปรึกษาบริการ (SA): ", size=9.8, bold=True, space_after=0)
-    add_run(p_gsa, "..........................................................", size=9.8, bold=False)
+    p_gsa = get_or_add_p(c1, "ที่ปรึกษาบริการ (SA): ", size=14.5, bold=True, space_after=0)
+    add_run(p_gsa, "..........................................................", size=14.5, bold=False)
 
     # Right: Vehicle Details & Handover
     c2 = info_tbl.rows[0].cells[1]
     c2.width = Cm(9.3)
-    set_cell_margins(c2, top=30, bottom=30, left=45, right=45)
+    set_cell_margins(c2, top=16, bottom=16, left=30, right=30)
     set_cell_background(c2, "FFFFFF")
-    get_or_add_p(c2, "ข้อมูลยานพาหนะ ณ วันส่งมอบ", size=11, bold=True, color=RGBColor(15, 23, 42), space_after=1)
+    get_or_add_p(c2, "ข้อมูลยานพาหนะ ณ วันส่งมอบ", size=16, bold=True, color=RGBColor(15, 23, 42), space_after=1)
 
-    p_v1 = get_or_add_p(c2, "หมายเลขทะเบียน: ", size=10.5, bold=True, space_after=1)
-    add_run(p_v1, data['plate'], size=11.5, bold=True, color=RGBColor(15, 23, 42))
+    p_v1 = get_or_add_p(c2, "หมายเลขทะเบียน: ", size=15, bold=True, space_after=0.4)
+    add_run(p_v1, data['plate'], size=16, bold=True, color=RGBColor(15, 23, 42))
 
-    p_v2 = get_or_add_p(c2, "ยี่ห้อ / รุ่น: ", size=9.8, bold=True, space_after=1)
-    add_run(p_v2, data['car_model'], size=9.8, bold=False)
+    p_v2 = get_or_add_p(c2, "ยี่ห้อ / รุ่น: ", size=14.5, bold=True, space_after=0.4)
+    add_run(p_v2, data['car_model'], size=14.5, bold=False)
 
-    p_v3 = get_or_add_p(c2, "เลขไมล์ส่งซ่อม: ", size=9.8, bold=True, space_after=1)
-    add_run(p_v3, f"{data['mileage']:,} กม.", size=10.5, bold=True, color=RGBColor(180, 83, 9))
-    add_run(p_v3, "   ระดับน้ำมัน: [✓] 3/4", size=9.8, bold=False)
+    p_v3 = get_or_add_p(c2, "เลขไมล์ส่งซ่อม: ", size=14.5, bold=True, space_after=0.4)
+    add_run(p_v3, f"{data['mileage']:,} กม.", size=15, bold=True, color=RGBColor(180, 83, 9))
+    add_run(p_v3, "   ระดับน้ำมัน: [✓] 3/4", size=14.5, bold=False)
 
-    p_v4 = get_or_add_p(c2, "ผู้นำส่งมอบรถ: ", size=9.8, bold=True, space_after=1)
-    add_run(p_v4, f"{data['driver_name']} (โทร. {data['driver_phone']})", size=9.8, bold=False)
+    p_v4 = get_or_add_p(c2, "ผู้นำส่งมอบรถ: ", size=14.5, bold=True, space_after=0.4)
+    add_run(p_v4, f"{data['driver_name']} (โทร. {data['driver_phone']})", size=14.5, bold=False)
 
-    p_v5 = get_or_add_p(c2, "ผู้ประสานงานสั่งซ่อม: ", size=9.8, bold=True, color=RGBColor(15, 23, 42), space_after=0)
-    add_run(p_v5, f"{data['coordinator_name']} (โทร. {data['coordinator_phone']})", size=9.8, bold=True, color=RGBColor(2, 132, 199))
+    p_v5 = get_or_add_p(c2, "ผู้ประสานงานสั่งซ่อม: ", size=14.5, bold=True, color=RGBColor(15, 23, 42), space_after=0)
+    add_run(p_v5, f"{data['coordinator_name']} (โทร. {data['coordinator_phone']})", size=14.5, bold=True, color=RGBColor(2, 132, 199))
 
-    # 3. Work Type Checkboxes Table
+    # 3. Work Type Checkboxes Table (14pt)
     type_tbl = doc.add_table(rows=1, cols=4)
     type_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
     type_tbl.autofit = False
@@ -203,13 +203,13 @@ def create_repair_order_docx(data, output_filepath):
     for i, t in enumerate(types):
         cell = type_tbl.rows[0].cells[i]
         cell.width = Cm(4.65)
-        set_cell_margins(cell, top=20, bottom=20, left=20, right=20)
+        set_cell_margins(cell, top=12, bottom=12, left=12, right=12)
         txt = t[0] if isinstance(t, tuple) else t
         set_cell_background(cell, "F1F5F9" if "[✓]" in txt else "FFFFFF")
-        get_or_add_p(cell, txt, size=9.5, bold=("[✓]" in txt), color=RGBColor(15, 23, 42) if "[✓]" in txt else RGBColor(100, 116, 139), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
+        get_or_add_p(cell, txt, size=14, bold=("[✓]" in txt), color=RGBColor(15, 23, 42) if "[✓]" in txt else RGBColor(100, 116, 139), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
 
-    # 4. Symptoms / Requested Action Items Table
-    add_doc_p(doc, "รายการงานที่ขอรับบริการ / อาการที่ตรวจพบ", size=10.5, bold=True, color=RGBColor(15, 23, 42), space_before=1.5, space_after=1)
+    # 4. Symptoms / Requested Action Items Table (16pt Header, 15pt Content)
+    add_doc_p(doc, "รายการงานที่ขอรับบริการ / อาการที่ตรวจพบ", size=16, bold=True, color=RGBColor(15, 23, 42), space_before=1, space_after=1)
     
     item_rows = len(data['items']) + 1
     items_tbl = doc.add_table(rows=item_rows, cols=3)
@@ -222,32 +222,32 @@ def create_repair_order_docx(data, output_filepath):
     for j, h in enumerate(headers):
         c = items_tbl.rows[0].cells[j]
         c.width = col_widths[j]
-        set_cell_margins(c, top=25, bottom=25, left=40, right=40)
+        set_cell_margins(c, top=16, bottom=16, left=30, right=30)
         set_cell_background(c, "E2E8F0")
-        get_or_add_p(c, h, size=10, bold=True, color=RGBColor(30, 41, 59), align=WD_ALIGN_PARAGRAPH.CENTER if j != 1 else WD_ALIGN_PARAGRAPH.LEFT, space_after=0)
+        get_or_add_p(c, h, size=15, bold=True, color=RGBColor(30, 41, 59), align=WD_ALIGN_PARAGRAPH.CENTER if j != 1 else WD_ALIGN_PARAGRAPH.LEFT, space_after=0)
 
     for idx, itm in enumerate(data['items'], 1):
         row = items_tbl.rows[idx]
         
         c0 = row.cells[0]
         c0.width = col_widths[0]
-        set_cell_margins(c0, top=25, bottom=25, left=20, right=20)
-        get_or_add_p(c0, str(idx), size=10, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
+        set_cell_margins(c0, top=14, bottom=14, left=12, right=12)
+        get_or_add_p(c0, str(idx), size=15, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
 
         c1 = row.cells[1]
         c1.width = col_widths[1]
-        set_cell_margins(c1, top=25, bottom=25, left=40, right=40)
-        get_or_add_p(c1, itm['title'], size=10.2, bold=True, color=RGBColor(15, 23, 42), space_after=0)
+        set_cell_margins(c1, top=14, bottom=14, left=30, right=30)
+        get_or_add_p(c1, itm['title'], size=15, bold=True, color=RGBColor(15, 23, 42), space_after=0)
         if itm.get('desc'):
-            get_or_add_p(c1, itm['desc'], size=9.2, color=RGBColor(71, 85, 105), space_before=0.5, space_after=0)
+            get_or_add_p(c1, itm['desc'], size=14, color=RGBColor(71, 85, 105), space_before=0.4, space_after=0)
 
         c2 = row.cells[2]
         c2.width = col_widths[2]
-        set_cell_margins(c2, top=25, bottom=25, left=20, right=20)
-        get_or_add_p(c2, itm.get('note', '[  ] รอผลตรวจเช็ค'), size=9.2, color=RGBColor(100, 116, 139), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
+        set_cell_margins(c2, top=14, bottom=14, left=12, right=12)
+        get_or_add_p(c2, itm.get('note', '[  ] รอผลตรวจเช็ค'), size=14, color=RGBColor(100, 116, 139), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
 
     # 5. Terms & Requirements Box WITH Coordinator Contact & QR CODE
-    add_doc_p(doc, "", space_before=1.5, space_after=0)
+    add_doc_p(doc, "", space_before=0.5, space_after=0)
     terms_box = doc.add_table(rows=1, cols=2)
     terms_box.alignment = WD_TABLE_ALIGNMENT.CENTER
     terms_box.autofit = False
@@ -256,20 +256,20 @@ def create_repair_order_docx(data, output_filepath):
     # Left cell: Contact details & rules
     tb_l = terms_box.rows[0].cells[0]
     tb_l.width = Cm(15.2)
-    set_cell_margins(tb_l, top=25, bottom=25, left=45, right=35)
+    set_cell_margins(tb_l, top=14, bottom=14, left=30, right=20)
     set_cell_background(tb_l, "F0F9FF")
 
-    get_or_add_p(tb_l, "การติดต่อประสานงาน ข้อกำหนด และช่องทางติดต่อผู้สั่งซ่อม", size=10.2, bold=True, color=RGBColor(3, 105, 161), space_after=0.5)
+    get_or_add_p(tb_l, "การติดต่อประสานงาน ข้อกำหนด และช่องทางติดต่อผู้สั่งซ่อม", size=15, bold=True, color=RGBColor(3, 105, 161), space_after=0.4)
     
-    p_coord = get_or_add_p(tb_l, "การประสานงานและพิจารณาซ่อม: ", size=9.6, bold=True, color=RGBColor(15, 23, 42), space_after=0.5)
-    add_run(p_coord, f"ขอความอนุเคราะห์ศูนย์บริการแจ้งผลตรวจเช็ค และส่งใบเสนอราคา (Quotation) เพื่อพิจารณาอนุมัติซ่อมโดยตรงที่ ", size=9.6, bold=False)
-    add_run(p_coord, f"{data['coordinator_name']} (รองหัวหน้างานยานพาหนะ)", size=9.6, bold=True, color=RGBColor(3, 105, 161))
+    p_coord = get_or_add_p(tb_l, "การประสานงานและพิจารณาซ่อม: ", size=14.5, bold=True, color=RGBColor(15, 23, 42), space_after=0.4)
+    add_run(p_coord, "ขอความอนุเคราะห์ศูนย์บริการแจ้งผลตรวจเช็ค และส่งใบเสนอราคา (Quotation) เพื่อพิจารณาอนุมัติซ่อมโดยตรงที่ ", size=14.5, bold=False)
+    add_run(p_coord, f"{data['coordinator_name']} (รองหัวหน้างานยานพาหนะ)", size=14.5, bold=True, color=RGBColor(3, 105, 161))
 
     # Contact channels line: Phone + LINE ID + Email
-    p_channels = get_or_add_p(tb_l, "ช่องทางติดต่อ: ", size=9.5, bold=True, color=RGBColor(15, 23, 42), space_after=0.5)
-    add_run(p_channels, f"โทร. {data['coordinator_phone']}   |   LINE ID: ", size=9.5, bold=False)
-    add_run(p_channels, f"{data['coordinator_line']}", size=9.8, bold=True, color=RGBColor(2, 132, 199))
-    add_run(p_channels, f"   |   อีเมล: {data['coordinator_email']}", size=9.5, bold=False)
+    p_channels = get_or_add_p(tb_l, "ช่องทางติดต่อ: ", size=14.5, bold=True, color=RGBColor(15, 23, 42), space_after=0.4)
+    add_run(p_channels, f"โทร. {data['coordinator_phone']}   |   LINE ID: ", size=14.5, bold=False)
+    add_run(p_channels, f"{data['coordinator_line']}", size=14.5, bold=True, color=RGBColor(2, 132, 199))
+    add_run(p_channels, f"   |   อีเมล: {data['coordinator_email']}", size=14.5, bold=False)
 
     terms = [
         "๑. การเสนอราคา: ส่งใบเสนอราคาให้ผู้ประสานงานอนุมัติก่อนเริ่มดำเนินการซ่อมหรือเปลี่ยนอะไหล่",
@@ -277,12 +277,12 @@ def create_repair_order_docx(data, output_filepath):
         "๓. การรับประกัน: งานซ่อมและอะไหล่แท้ได้รับการรับประกันคุณภาพตามมาตรฐานศูนย์บริการโตโยต้า"
     ]
     for term in terms:
-        get_or_add_p(tb_l, term, size=9.2, color=RGBColor(51, 65, 85), space_before=0, space_after=0.3)
+        get_or_add_p(tb_l, term, size=14, color=RGBColor(51, 65, 85), space_before=0, space_after=0.2)
 
     # Right cell: QR Code Image & Scan Label
     tb_r = terms_box.rows[0].cells[1]
     tb_r.width = Cm(3.4)
-    set_cell_margins(tb_r, top=20, bottom=20, left=15, right=15)
+    set_cell_margins(tb_r, top=12, bottom=12, left=10, right=10)
     set_cell_background(tb_r, "F0F9FF")
 
     p_qr = tb_r.paragraphs[0]
@@ -292,7 +292,7 @@ def create_repair_order_docx(data, output_filepath):
     
     if os.path.exists(data.get('qr_code_path', '')):
         r_qr = p_qr.add_run()
-        r_qr.add_picture(data['qr_code_path'], width=Cm(2.2), height=Cm(2.2))
+        r_qr.add_picture(data['qr_code_path'], width=Cm(2.0), height=Cm(2.0))
     
     p_qr_sub = tb_r.add_paragraph()
     p_qr_sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -300,7 +300,7 @@ def create_repair_order_docx(data, output_filepath):
     p_qr_sub.paragraph_format.space_after = Pt(0)
     run_q1 = p_qr_sub.add_run(insert_zwsp("สแกน QR Code LINE"))
     run_q1.font.name = "TH Sarabun New"
-    run_q1.font.size = Pt(8.8)
+    run_q1.font.size = Pt(13)
     run_q1.bold = True
     run_q1.font.color.rgb = RGBColor(3, 105, 161)
     
@@ -310,11 +310,11 @@ def create_repair_order_docx(data, output_filepath):
     p_qr_sub2.paragraph_format.space_after = Pt(0)
     run_q2 = p_qr_sub2.add_run(insert_zwsp("ติดต่อผู้ประสานงาน"))
     run_q2.font.name = "TH Sarabun New"
-    run_q2.font.size = Pt(8.5)
+    run_q2.font.size = Pt(12)
     run_q2.font.color.rgb = RGBColor(71, 85, 105)
 
-    # 6. Signatures Table (4 Boxes)
-    add_doc_p(doc, "", space_before=1.5, space_after=0)
+    # 6. Signatures Table (4 Boxes in 2x2 Grid, 15pt bold headers and names)
+    add_doc_p(doc, "", space_before=0.5, space_after=0)
     sig_tbl = doc.add_table(rows=2, cols=2)
     sig_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
     sig_tbl.autofit = False
@@ -323,53 +323,52 @@ def create_repair_order_docx(data, output_filepath):
     # 1: Coordinator / Requester
     b1 = sig_tbl.rows[0].cells[0]
     b1.width = Cm(9.3)
-    set_cell_margins(b1, top=25, bottom=25, left=35, right=35)
-    get_or_add_p(b1, "๑. ผู้ประสานงานและสั่งซ่อม", size=9.8, bold=True, color=RGBColor(71, 85, 105), space_after=7)
-    get_or_add_p(b1, "ลงชื่อ ................................................................", size=10, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.5)
-    get_or_add_p(b1, f"({data['coordinator_name']})", size=10, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.5)
-    get_or_add_p(b1, f"ตำแหน่ง: {data['coordinator_title']}", size=9, color=RGBColor(71, 85, 105), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.5)
-    get_or_add_p(b1, f"โทร. {data['coordinator_phone']} | LINE: {data['coordinator_line']}", size=9, color=RGBColor(71, 85, 105), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
+    set_cell_margins(b1, top=16, bottom=16, left=25, right=25)
+    get_or_add_p(b1, "๑. ผู้ประสานงานและสั่งซ่อม", size=15, bold=True, color=RGBColor(71, 85, 105), space_after=4)
+    get_or_add_p(b1, "ลงชื่อ ................................................................", size=15, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.4)
+    get_or_add_p(b1, f"({data['coordinator_name']})", size=15, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.4)
+    get_or_add_p(b1, f"ตำแหน่ง: {data['coordinator_title']}", size=14, color=RGBColor(71, 85, 105), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.4)
+    get_or_add_p(b1, f"โทร. {data['coordinator_phone']} | LINE: {data['coordinator_line']}", size=13.5, color=RGBColor(71, 85, 105), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
 
     # 2: Driver Delivering
     b2 = sig_tbl.rows[0].cells[1]
     b2.width = Cm(9.3)
-    set_cell_margins(b2, top=25, bottom=25, left=35, right=35)
-    get_or_add_p(b2, "๒. พนักงานขับรถผู้นำส่งมอบรถ", size=9.8, bold=True, color=RGBColor(71, 85, 105), space_after=7)
-    get_or_add_p(b2, "ลงชื่อ ................................................................", size=10, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.5)
-    get_or_add_p(b2, f"({data['driver_name']})", size=10, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.5)
-    get_or_add_p(b2, "ตำแหน่ง: พนักงานขับรถ งานยานพาหนะ", size=9, color=RGBColor(71, 85, 105), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.5)
-    get_or_add_p(b2, f"โทรศัพท์: {data['driver_phone']}", size=9, color=RGBColor(71, 85, 105), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
+    set_cell_margins(b2, top=16, bottom=16, left=25, right=25)
+    get_or_add_p(b2, "๒. พนักงานขับรถผู้นำส่งมอบรถ", size=15, bold=True, color=RGBColor(71, 85, 105), space_after=4)
+    get_or_add_p(b2, "ลงชื่อ ................................................................", size=15, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.4)
+    get_or_add_p(b2, f"({data['driver_name']})", size=15, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.4)
+    get_or_add_p(b2, "ตำแหน่ง: พนักงานขับรถ งานยานพาหนะ", size=14, color=RGBColor(71, 85, 105), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.4)
+    get_or_add_p(b2, f"โทรศัพท์: {data['driver_phone']}", size=13.5, color=RGBColor(71, 85, 105), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
 
     # 3: Garage Receiver
     b3 = sig_tbl.rows[1].cells[0]
     b3.width = Cm(9.3)
-    set_cell_margins(b3, top=25, bottom=25, left=35, right=35)
-    get_or_add_p(b3, "๓. เจ้าหน้าที่ศูนย์บริการผู้รับรถเข้าตรวจสภาพ", size=9.8, bold=True, color=RGBColor(71, 85, 105), space_after=7)
-    get_or_add_p(b3, "ลงชื่อ ................................................................", size=10, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.5)
-    get_or_add_p(b3, "(................................................................)", size=10, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.5)
-    get_or_add_p(b3, f"ผู้รับรถ บริษัท โตโยต้าพะเยา (1994) จำกัด", size=9, color=RGBColor(71, 85, 105), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.5)
-    get_or_add_p(b3, "สภาพรับรถ: [  ] เรียบร้อยดี   วันที่ ...../...../๒๕๖๙", size=9, color=RGBColor(71, 85, 105), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
+    set_cell_margins(b3, top=16, bottom=16, left=25, right=25)
+    get_or_add_p(b3, "๓. เจ้าหน้าที่ศูนย์บริการผู้รับรถเข้าตรวจสภาพ", size=15, bold=True, color=RGBColor(71, 85, 105), space_after=4)
+    get_or_add_p(b3, "ลงชื่อ ................................................................", size=15, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.4)
+    get_or_add_p(b3, "(................................................................)", size=15, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.4)
+    get_or_add_p(b3, "ผู้รับรถ บริษัท โตโยต้าพะเยา (1994) จำกัด", size=14, color=RGBColor(71, 85, 105), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.4)
+    get_or_add_p(b3, "สภาพรับรถ: [  ] เรียบร้อยดี   วันที่ ...../...../๒๕๖๙", size=13.5, color=RGBColor(71, 85, 105), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
 
     # 4: Approver
     b4 = sig_tbl.rows[1].cells[1]
     b4.width = Cm(9.3)
-    set_cell_margins(b4, top=25, bottom=25, left=35, right=35)
-    get_or_add_p(b4, "๔. ผู้อนุมัติการส่งซ่อมบำรุง", size=9.8, bold=True, color=RGBColor(71, 85, 105), space_after=7)
-    get_or_add_p(b4, "ลงชื่อ ................................................................", size=10, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.5)
-    get_or_add_p(b4, "(................................................................)", size=10, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.5)
-    get_or_add_p(b4, "หัวหน้างานยานพาหนะ / รองผู้อำนวยการกลุ่มบริหารงานบุคคล", size=9, color=RGBColor(71, 85, 105), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.5)
-    get_or_add_p(b4, "ความเห็น: [✓] อนุมัติส่งตรวจสภาพและขอใบเสนอราคา", size=9, bold=True, color=RGBColor(16, 185, 129), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
+    set_cell_margins(b4, top=16, bottom=16, left=25, right=25)
+    get_or_add_p(b4, "๔. ผู้อนุมัติการส่งซ่อมบำรุง", size=15, bold=True, color=RGBColor(71, 85, 105), space_after=4)
+    get_or_add_p(b4, "ลงชื่อ ................................................................", size=15, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.4)
+    get_or_add_p(b4, "(................................................................)", size=15, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.4)
+    get_or_add_p(b4, "หัวหน้างานยานพาหนะ / รองผู้อำนวยการกลุ่มบริหารงานบุคคล", size=14, color=RGBColor(71, 85, 105), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0.4)
+    get_or_add_p(b4, "ความเห็น: [✓] อนุมัติส่งตรวจสภาพและขอใบเสนอราคา", size=13.5, bold=True, color=RGBColor(16, 185, 129), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
 
-    # 7. Acceptance Footer
-    add_doc_p(doc, "", space_before=1, space_after=0)
-    add_doc_p(doc, "การตรวจรับรถกลับเมื่อซ่อมเสร็จ: ได้ตรวจรับรถยนต์คืนในสภาพเรียบร้อยดี และได้รับอะไหล่เก่าคืนครบถ้วน (เลขไมล์ตอนรับกลับ: .................... กม.) ลงชื่อ ........................................................ ผู้ตรวจรับ วันที่ ...../...../๒๕๖๙", size=8.8, color=RGBColor(100, 116, 139), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
+    # 7. Acceptance Footer (11pt)
+    add_doc_p(doc, "", space_before=0.5, space_after=0)
+    add_doc_p(doc, "การตรวจรับรถกลับเมื่อซ่อมเสร็จ: ได้ตรวจรับรถยนต์คืนในสภาพเรียบร้อยดี และได้รับอะไหล่เก่าคืนครบถ้วน ลงชื่อ .................................... ผู้ตรวจรับ วันที่ ...../...../๒๕๖๙", size=11, color=RGBColor(100, 116, 139), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
 
     doc.save(output_filepath)
     print(f"Created docx: {output_filepath}")
 
 def build_print_html_content(data):
-    """Builds clean, full-page edge-to-edge HTML for Playwright PDF rendering."""
-    # Read QR code as base64
+    """Builds clean, full-page edge-to-edge HTML for Playwright PDF rendering with official Thai Saraban typography."""
     qr_b64 = ""
     if os.path.exists(data.get('qr_code_path', '')):
         with open(data['qr_code_path'], 'rb') as f:
@@ -385,12 +384,12 @@ def build_print_html_content(data):
         desc_html = f"<div class='item-desc'>{itm['desc']}</div>" if itm.get('desc') else ""
         items_html += f"""
         <tr>
-          <td style="text-align:center; font-weight:600;">{idx}</td>
+          <td style="text-align:center; font-weight:600; font-size:15pt;">{idx}</td>
           <td>
             <div class="item-title">{itm['title']}</div>
             {desc_html}
           </td>
-          <td style="text-align:center; color:#64748b; font-size:11px;">{itm.get('note', '[ &nbsp; ] รอผลตรวจเช็ค')}</td>
+          <td style="text-align:center; color:#64748b; font-size:14pt;">{itm.get('note', '[ &nbsp; ] รอผลตรวจเช็ค')}</td>
         </tr>
         """
 
@@ -403,6 +402,27 @@ def build_print_html_content(data):
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
   <style>
+    @font-face {{
+      font-family: 'TH Sarabun New';
+      src: local('TH Sarabun New'),
+           url('file:///C:/Users/krumu/AppData/Local/Microsoft/Windows/Fonts/THSarabunNew.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }}
+    @font-face {{
+      font-family: 'TH Sarabun New';
+      src: local('TH Sarabun New Bold'),
+           url('file:///C:/Users/krumu/AppData/Local/Microsoft/Windows/Fonts/THSarabunNew Bold.ttf') format('truetype');
+      font-weight: bold;
+      font-style: normal;
+    }}
+    @font-face {{
+      font-family: 'TH Sarabun New';
+      src: local('TH Sarabun New Italic'),
+           url('file:///C:/Users/krumu/AppData/Local/Microsoft/Windows/Fonts/THSarabunNew Italic.ttf') format('truetype');
+      font-weight: normal;
+      font-style: italic;
+    }}
     @page {{
       size: A4 portrait;
       margin: 0;
@@ -416,9 +436,9 @@ def build_print_html_content(data):
       margin: 0;
       padding: 0;
       background: #ffffff;
-      font-family: 'Sarabun', 'TH Sarabun New', Tahoma, sans-serif;
-      font-size: 12px;
-      line-height: 1.32;
+      font-family: 'TH Sarabun New', 'TH Sarabun PSK', 'Sarabun', Tahoma, sans-serif;
+      font-size: 15pt;
+      line-height: 1.2;
       color: #0f172a;
     }}
     .a4-page {{
@@ -426,7 +446,7 @@ def build_print_html_content(data):
       height: 297mm;
       max-height: 297mm;
       box-sizing: border-box;
-      padding: 9mm 12mm 7mm 12mm;
+      padding: 6.5mm 12mm 5mm 12mm;
       margin: 0 auto;
       background: #ffffff;
       display: flex;
@@ -436,63 +456,66 @@ def build_print_html_content(data):
     }}
     .header-center {{
       text-align: center;
-      margin-bottom: 5px;
+      margin-bottom: 3px;
       border-bottom: 2px solid #0284c7;
-      padding-bottom: 4px;
+      padding-bottom: 2px;
     }}
     .doc-main-title {{
-      font-size: 20px;
+      font-size: 24pt;
       font-weight: 700;
       color: #0f172a;
+      line-height: 1.1;
       margin-bottom: 1px;
     }}
     .org-title {{
-      font-size: 14.5px;
+      font-size: 18pt;
       font-weight: 700;
       color: #0369a1;
+      line-height: 1.15;
       margin-bottom: 1px;
     }}
     .org-subtitle {{
-      font-size: 10.5px;
+      font-size: 14pt;
       color: #64748b;
+      line-height: 1.18;
     }}
     .ref-bar {{
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 3px 8px;
+      padding: 2px 8px;
       background: #f8fafc;
-      border: 1px solid #e2e8f0;
+      border: 1px solid #cbd5e1;
       border-radius: 4px;
-      margin-bottom: 6px;
-      font-size: 11.5px;
+      margin-bottom: 4px;
+      font-size: 16pt;
     }}
     .grid-2 {{
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 6px;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }}
     .card-box {{
-      border: 1px solid #cbd5e1;
+      border: 1px solid #94a3b8;
       border-radius: 4px;
       overflow: hidden;
     }}
     .card-box-header {{
       background: #f1f5f9;
-      padding: 3px 8px;
+      padding: 2px 8px;
       font-weight: 700;
-      font-size: 11.8px;
+      font-size: 16pt;
       color: #1e293b;
       border-bottom: 1px solid #cbd5e1;
     }}
     .card-box-body {{
-      padding: 5px 8px;
-      font-size: 11.2px;
-      line-height: 1.35;
+      padding: 3px 8px;
+      font-size: 15pt;
+      line-height: 1.22;
     }}
     .card-box-body div {{
-      margin-bottom: 1.5px;
+      margin-bottom: 1px;
     }}
     .highlight-val {{
       font-weight: 700;
@@ -501,20 +524,20 @@ def build_print_html_content(data):
     .mileage-val {{
       font-weight: 700;
       color: #b45309;
-      font-size: 12px;
+      font-size: 15.5pt;
     }}
     .service-types {{
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 5px;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }}
     .type-pill {{
-      border: 1px solid #e2e8f0;
+      border: 1px solid #cbd5e1;
       border-radius: 4px;
-      padding: 3px 2px;
+      padding: 2px 2px;
       text-align: center;
-      font-size: 10.5px;
+      font-size: 14pt;
       color: #64748b;
       background: #ffffff;
     }}
@@ -527,28 +550,31 @@ def build_print_html_content(data):
     table.data-table {{
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 6px;
-      font-size: 11.2px;
+      margin-bottom: 4px;
+      font-size: 15pt;
     }}
     table.data-table th {{
       background: #e2e8f0;
       color: #1e293b;
       font-weight: 700;
-      padding: 4px 6px;
-      border: 1px solid #cbd5e1;
+      padding: 3px 6px;
+      border: 1px solid #94a3b8;
       text-align: left;
+      font-size: 15pt;
     }}
     table.data-table td {{
-      padding: 4px 6px;
-      border: 1px solid #cbd5e1;
+      padding: 3px 6px;
+      border: 1px solid #94a3b8;
       vertical-align: top;
+      font-size: 15pt;
     }}
     .item-title {{
-      font-weight: 600;
+      font-weight: 700;
       color: #0f172a;
+      font-size: 15pt;
     }}
     .item-desc {{
-      font-size: 10.5px;
+      font-size: 14pt;
       color: #475569;
       margin-top: 1px;
     }}
@@ -556,23 +582,23 @@ def build_print_html_content(data):
       background: #f0f9ff;
       border: 1.2px solid #0284c7;
       border-radius: 4px;
-      padding: 5px 8px;
-      margin-bottom: 6px;
+      padding: 3px 8px;
+      margin-bottom: 4px;
       display: flex;
       gap: 8px;
       align-items: center;
     }}
     .terms-left {{
       flex: 1;
-      font-size: 10.8px;
-      line-height: 1.34;
+      font-size: 14.5pt;
+      line-height: 1.22;
       color: #0f172a;
     }}
     .terms-title {{
       font-weight: 700;
-      margin-bottom: 2px;
+      margin-bottom: 1px;
       color: #0369a1;
-      font-size: 11.2px;
+      font-size: 15pt;
     }}
     .coordinator-direct-notice {{
       background: #e0f2fe;
@@ -581,9 +607,10 @@ def build_print_html_content(data):
       margin-bottom: 2px;
       font-weight: 500;
       color: #0c4a6e;
+      font-size: 14.5pt;
     }}
     .contact-badge-line {{
-      font-size: 10.5px;
+      font-size: 14.5pt;
       margin-bottom: 2px;
       color: #1e293b;
     }}
@@ -591,46 +618,47 @@ def build_print_html_content(data):
       margin: 0;
       padding-left: 16px;
       color: #334155;
-      font-size: 10.2px;
+      font-size: 14pt;
+      line-height: 1.18;
     }}
     .terms-list li {{
       margin-bottom: 1px;
     }}
     .qr-container {{
-      width: 80px;
+      width: 76px;
       text-align: center;
       flex-shrink: 0;
       border-left: 1px dashed #bae6fd;
       padding-left: 6px;
     }}
     .qr-img {{
-      width: 68px;
-      height: 68px;
+      width: 60px;
+      height: 60px;
       object-fit: contain;
       border-radius: 4px;
       border: 1px solid #cbd5e1;
     }}
     .qr-label {{
-      font-size: 9px;
+      font-size: 12pt;
       font-weight: 700;
       color: #0369a1;
       margin-top: 1px;
-      line-height: 1.2;
+      line-height: 1.12;
     }}
     .sig-grid {{
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 5px;
-      margin-bottom: 4px;
+      margin-bottom: 2px;
     }}
     .sig-card {{
       border: 1px solid #cbd5e1;
       border-radius: 4px;
-      padding: 5px 6px;
+      padding: 3px 6px;
       text-align: center;
-      font-size: 10.5px;
+      font-size: 14pt;
       background: #ffffff;
-      min-height: 80px;
+      min-height: 72px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -639,32 +667,34 @@ def build_print_html_content(data):
       font-weight: 700;
       color: #475569;
       text-align: left;
-      margin-bottom: 4px;
+      margin-bottom: 2px;
       border-bottom: 1px dashed #e2e8f0;
       padding-bottom: 1px;
-      font-size: 10.8px;
+      font-size: 14.5pt;
     }}
     .sig-line {{
-      margin-top: 14px;
+      margin-top: 8px;
       margin-bottom: 1px;
+      font-size: 14.5pt;
     }}
     .sig-name {{
       font-weight: 700;
       color: #0f172a;
       margin-bottom: 1px;
-      font-size: 10.8px;
+      font-size: 14.5pt;
     }}
     .sig-pos {{
       color: #64748b;
-      font-size: 9.8px;
+      font-size: 13.5pt;
     }}
     .footer-note {{
-      font-size: 9.5px;
+      font-size: 11pt;
       color: #64748b;
       text-align: center;
-      border-top: 1px dashed #e2e8f0;
+      border-top: 1px dashed #cbd5e1;
       padding-top: 3px;
       margin-top: 2px;
+      margin-bottom: 0;
     }}
   </style>
 </head>
@@ -684,7 +714,7 @@ def build_print_html_content(data):
       <div class="ref-bar">
         <div>
           <strong>เลขที่เอกสาร:</strong> <span style="font-weight:700; color:#0284c7;">{data['doc_no']}</span>
-          <span style="color:#64748b; font-size:10.5px; margin-left:6px;">(ส่งตรวจสภาพและขอรับใบเสนอราคา)</span>
+          <span style="color:#64748b; font-size:14pt; margin-left:6px;">(ส่งตรวจสภาพและขอรับใบเสนอราคา)</span>
         </div>
         <div>
           <strong>วันที่ส่งซ่อม:</strong> {data['doc_date']}
@@ -708,7 +738,7 @@ def build_print_html_content(data):
         <div class="card-box">
           <div class="card-box-header">ข้อมูลยานพาหนะ ณ วันส่งมอบ</div>
           <div class="card-box-body">
-            <div><strong>หมายเลขทะเบียน:</strong> <span style="font-weight:700; font-size:12.5px; color:#0f172a;">{data['plate']}</span></div>
+            <div><strong>หมายเลขทะเบียน:</strong> <span style="font-weight:700; font-size:16pt; color:#0f172a;">{data['plate']}</span></div>
             <div><strong>ยี่ห้อ / รุ่น:</strong> {data['car_model']}</div>
             <div><strong>เลขไมล์ส่งซ่อม:</strong> <span class="mileage-val">{data['mileage']:,} กม.</span> &nbsp; <strong>น้ำมัน:</strong> [ &#10003; ] 3/4</div>
             <div><strong>ผู้นำส่งมอบรถ:</strong> {data['driver_name']} (โทร. {data['driver_phone']})</div>
@@ -726,15 +756,15 @@ def build_print_html_content(data):
       </div>
 
       <!-- Symptoms Table -->
-      <div style="font-weight:700; font-size:11.8px; margin-bottom:3px; color:#0f172a;">
+      <div style="font-weight:700; font-size:16pt; margin-bottom:2px; color:#0f172a;">
         รายการงานที่ขอรับบริการ / อาการที่ตรวจพบ
       </div>
       <table class="data-table">
         <thead>
           <tr>
-            <th style="width: 32px; text-align:center;">ลำดับ</th>
+            <th style="width: 38px; text-align:center;">ลำดับ</th>
             <th>รายการงาน / รายละเอียดอาการที่ตรวจพบ</th>
-            <th style="width: 110px; text-align:center;">ผลการตรวจเช็ค</th>
+            <th style="width: 120px; text-align:center;">ผลการตรวจเช็ค</th>
           </tr>
         </thead>
         <tbody>
@@ -808,7 +838,7 @@ def build_print_html_content(data):
 
     <!-- Acceptance Footer -->
     <div class="footer-note">
-      <strong>การตรวจรับรถกลับเมื่อซ่อมเสร็จ:</strong> ได้ตรวจรับรถยนต์คืนในสภาพเรียบร้อยดี และได้รับอะไหล่เก่าคืนครบถ้วน (เลขไมล์ตอนรับกลับ: .................... กม.) ลงชื่อ ........................................................ ผู้ตรวจรับ วันที่ ...../...../๒๕๖๙
+      <strong>การตรวจรับรถกลับเมื่อซ่อมเสร็จ:</strong> ได้ตรวจรับรถยนต์คืนในสภาพเรียบร้อยดี และได้รับอะไหล่เก่าคืนครบถ้วน ลงชื่อ .................................... ผู้ตรวจรับ วันที่ ...../...../๒๕๖๙
     </div>
   </div>
 </body>
@@ -821,7 +851,7 @@ def main():
     # 1. Car 1: นข 2455 พะเยา
     data_2455 = {
         "doc_no": "WO-256911-001",
-        "doc_date": "9 พฤศจิกายน 2569",
+        "doc_date": "๙ พฤศจิกายน ๒๕๖๙",
         "plate": "นข 2455 พะเยา",
         "car_model": "TOYOTA Commuter D4D",
         "mileage": 525907,
@@ -850,7 +880,7 @@ def main():
     # 2. Car 2: นข 1977 พะเยา
     data_1977 = {
         "doc_no": "WO-256911-002",
-        "doc_date": "9 พฤศจิกายน 2569",
+        "doc_date": "๙ พฤศจิกายน ๒๕๖๙",
         "plate": "นข 1977 พะเยา",
         "car_model": "TOYOTA Ventury 2.7 V",
         "mileage": 447427,
