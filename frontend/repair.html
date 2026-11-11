@@ -199,6 +199,7 @@
       <div id="tab-workflow" class="tab-content active">
         <div class="actions-bar" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem">
           <button class="btn btn-primary" onclick="openReportModal()">➕ แจ้งซ่อม</button>
+          <a href="print-repair-order.html" target="_blank" class="btn btn-outline-primary" style="display:inline-flex;align-items:center;gap:6px">📄 ออกใบส่งซ่อม (A4)</a>
           <button class="btn btn-secondary" onclick="printBlankForm()">🖨️ พิมพ์แบบฟอร์มเปล่า</button>
           <button class="btn btn-secondary" onclick="exportBlankFormWord()">📄 ดาวน์โหลด Word</button>
           <select id="wfFilterCar" onchange="loadWorkflow()" style="padding:8px;border-radius:var(--radius-md);border:1px solid var(--color-border);font-size:.88rem">
@@ -581,7 +582,8 @@
         if(rp.status==='repairing') html+='<button class="btn btn-primary" style="padding:5px 14px;font-size:.84rem" onclick="openAction(\'complete\',\''+rp.id+'\')">✅ ซ่อมเสร็จ</button>';
       }
       html+='<div class="spacer"></div>';
-      html+='<button class="btn btn-ghost" style="padding:5px 12px;font-size:.84rem" onclick="showDetail(\''+rp.id+'\')">📄 ดูเพิ่มเติม</button>';
+      html+='<a href="print-repair-order.html?id='+rp.id+'" target="_blank" class="btn btn-outline" style="padding:5px 12px;font-size:.84rem;color:var(--color-primary);border-color:var(--color-primary)" title="พิมพ์ใบส่งซ่อมศูนย์บริการ">📄 ใบส่งซ่อม</a>';
+      html+='<button class="btn btn-ghost" style="padding:5px 12px;font-size:.84rem" onclick="showDetail(\''+rp.id+'\')">🔍 ดูเพิ่มเติม</button>';
       html+='</div>';
       if(typeof renderAuditMeta==='function') html+=renderAuditMeta(rp);
       html+='</div>'; // end card
@@ -844,6 +846,10 @@
           html+='<hr style="margin:1rem 0;border-color:var(--color-border)">';
           html+=renderAuditMeta(rp);
         }
+
+        html+='<div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--color-border);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">';
+        html+='<a href="print-repair-order.html?id='+rp.id+'" target="_blank" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:6px"><i class="fa-solid fa-file-signature"></i> 📄 ออกใบส่งซ่อม (Word & PDF / เซ็นชื่อ)</a>';
+        html+='</div>';
 
         body.innerHTML=html;
       }catch(e){console.error(e);body.innerHTML='<p style="color:var(--color-danger)">เกิดข้อผิดพลาด</p>'}

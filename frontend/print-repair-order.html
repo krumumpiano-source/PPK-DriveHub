@@ -1,0 +1,1825 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>ใบส่งซ่อมยานพาหนะ - PPK DriveHub</title>
+  <script src="config.js"></script>
+  <script>
+    window.API_BASE_URL = CONFIG.API_BASE_URL;
+    window.currentPage = 'print-repair-order';
+    window.REQUIRE_AUTH = false;
+  </script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="common.css">
+  <script src="js/docx.iife.js"></script>
+  <script src="js/api.js"></script>
+  <script src="common.js"></script>
+  <style>
+    :root {
+      --primary: #0284c7;
+      --primary-dark: #0369a1;
+      --primary-light: #f0f9ff;
+      --text: #0f172a;
+      --text-muted: #475569;
+      --border: #cbd5e1;
+      --border-dark: #94a3b8;
+    }
+    body {
+      background: #f1f5f9;
+      font-family: 'Sarabun', 'TH Sarabun New', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.35;
+      padding: 20px 0;
+      margin: 0;
+    }
+
+    /* ─── Control Bar (Hidden when printing) ─── */
+    .control-bar {
+      max-width: 210mm;
+      margin: 0 auto 16px auto;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 14px 18px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+      border: 1px solid #e2e8f0;
+    }
+    .control-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .btn-action-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    /* ─── Paper Sheet (A4 Portrait exact) ─── */
+    .print-sheet {
+      width: 210mm;
+      min-height: 297mm;
+      max-height: 297mm;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 10mm 12mm 8mm 12mm;
+      box-sizing: border-box;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Document Header */
+    .doc-header {
+      text-align: center;
+      margin-bottom: 6px;
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 5px;
+    }
+    .doc-title {
+      font-size: 21px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 2px 0;
+      letter-spacing: -0.3px;
+    }
+    .doc-dept {
+      font-size: 14.5px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0 0 2px 0;
+    }
+    .doc-school {
+      font-size: 11px;
+      color: #475569;
+      margin: 0;
+    }
+
+    /* Ref & Date Row */
+    .doc-ref-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 5px 0 7px 0;
+      font-size: 12px;
+    }
+    .doc-ref-no {
+      font-weight: 600;
+      color: #0f172a;
+    }
+    .doc-date {
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    /* Side-by-side Info Box */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 7px;
+    }
+    .info-card {
+      border: 1px solid var(--border-dark);
+      border-radius: 4px;
+      padding: 6px 9px;
+      background: #ffffff;
+      font-size: 11.5px;
+      line-height: 1.38;
+    }
+    .info-card.bg-light-blue {
+      background: #f8fafc;
+    }
+    .card-heading {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 4px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 3px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-line {
+      margin-bottom: 2.5px;
+    }
+    .card-label {
+      font-weight: 600;
+      color: #334155;
+    }
+    .val-highlight {
+      font-weight: 700;
+      color: #0284c7;
+    }
+    .val-mileage {
+      font-weight: 700;
+      color: #b45309;
+    }
+
+    /* Types Checkbox Bar */
+    .types-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 7px;
+    }
+    .type-chip {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 6px;
+      text-align: center;
+      font-size: 11px;
+      background: #ffffff;
+      color: #64748b;
+    }
+    .type-chip.checked {
+      border-color: #0284c7;
+      background: #f0f9ff;
+      color: #0369a1;
+      font-weight: 600;
+    }
+
+    /* Symptoms / Items Table */
+    .section-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 4px 0 4px 0;
+    }
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 7px;
+      font-size: 11.5px;
+    }
+    .items-table th, .items-table td {
+      border: 1px solid var(--border-dark);
+      padding: 5px 8px;
+      vertical-align: top;
+    }
+    .items-table th {
+      background: #e2e8f0;
+      font-weight: 700;
+      color: #1e293b;
+      text-align: center;
+    }
+    .items-table td.col-idx {
+      text-align: center;
+      font-weight: 600;
+      width: 38px;
+    }
+    .items-table td.col-result {
+      text-align: center;
+      width: 130px;
+      font-size: 11px;
+      color: #64748b;
+    }
+    .item-main {
+      font-weight: 600;
+      color: #0f172a;
+      line-height: 1.3;
+    }
+    .item-sub {
+      font-size: 10.5px;
+      color: #475569;
+      margin-top: 2px;
+      line-height: 1.3;
+    }
+
+    /* Terms & Direct Coordinator Contact Box */
+    .terms-card {
+      border: 1.2px solid #0284c7;
+      border-radius: 5px;
+      background: #f0f9ff;
+      padding: 6px 10px;
+      margin-bottom: 7px;
+      font-size: 11px;
+      line-height: 1.36;
+    }
+    .terms-heading {
+      font-weight: 700;
+      color: #0369a1;
+      font-size: 11.5px;
+      margin-bottom: 3px;
+    }
+    .coordinator-direct-notice {
+      background: #e0f2fe;
+      border-left: 3px solid #0284c7;
+      padding: 3px 6px;
+      margin-bottom: 3px;
+      font-weight: 500;
+      color: #0c4a6e;
+    }
+
+    /* Signature Grid (4 Boxes) */
+    .sig-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+      margin-bottom: 6px;
+    }
+    .sig-box {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 6px 8px 4px 8px;
+      text-align: center;
+      background: #ffffff;
+      font-size: 10.5px;
+      position: relative;
+    }
+    .sig-title {
+      font-weight: 700;
+      color: #475569;
+      font-size: 11px;
+      margin-bottom: 4px;
+      text-align: left;
+    }
+    .sig-canvas-display {
+      min-height: 38px;
+      max-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1px;
+    }
+    .sig-img {
+      max-height: 38px;
+      max-width: 150px;
+      object-fit: contain;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+    }
+    .sig-line-text {
+      color: #0f172a;
+      letter-spacing: 0.5px;
+      font-size: 11px;
+    }
+    .sig-name {
+      font-weight: 700;
+      color: #0f172a;
+      font-size: 11px;
+      margin-top: 1px;
+    }
+    .sig-role {
+      color: #475569;
+      font-size: 10px;
+    }
+    .sig-btn-badge {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 1px 7px;
+      font-size: 10px;
+      cursor: pointer;
+      color: #0284c7;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+    .sig-btn-badge:hover {
+      background: #0284c7;
+      color: #fff;
+    }
+
+    /* Acceptance / Final Handover Footer */
+    .doc-footer {
+      border-top: 1px dashed var(--border-dark);
+      padding-top: 4px;
+      font-size: 9.8px;
+      color: #64748b;
+      text-align: center;
+      line-height: 1.35;
+    }
+
+    /* ─── Digital Signature Modal ─── */
+    .signature-modal-pad {
+      background: #ffffff;
+      border: 2px dashed #94a3b8;
+      border-radius: 8px;
+      cursor: crosshair;
+      touch-action: none;
+      width: 100%;
+      height: 200px;
+      display: block;
+    }
+
+    /* Print media overrides */
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      body {
+        background: #ffffff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .print-sheet {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 297mm !important;
+        max-height: 297mm !important;
+        margin: 0 !important;
+        padding: 8mm 10mm 6mm 10mm !important;
+        box-shadow: none !important;
+        border: none !important;
+        overflow: hidden !important;
+        page-break-after: avoid !important;
+        page-break-inside: avoid !important;
+      }
+      @page {
+        size: A4 portrait;
+        margin: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═════════ Control Panel (Hidden when printing) ═════════ -->
+  <div class="control-bar no-print">
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-2">
+      <div>
+        <h5 class="fw-bold mb-1 text-primary">
+          <i class="fa-solid fa-file-signature me-2"></i> ระบบสร้างใบส่งซ่อมยานพาหนะ (1 หน้า A4)
+        </h5>
+        <div class="small text-muted">
+          งานยานพาหนะ กลุ่มบริหารงานบุคคล โรงเรียนพะเยาพิทยาคม • รองรับการเซ็นชื่อดิจิทัล และส่งออกไฟล์ Word/PDF
+        </div>
+      </div>
+      <div class="btn-action-group">
+        <button class="btn btn-primary px-3 fw-bold shadow-sm" onclick="window.print()">
+          <i class="fa-solid fa-print me-1"></i> พิมพ์ / บันทึก PDF
+        </button>
+        <button class="btn btn-success px-3 fw-bold shadow-sm" id="btnExportWord" onclick="handleExportDocx()">
+          <i class="fa-solid fa-file-word me-1"></i> ดาวน์โหลด Word (.docx)
+        </button>
+        <a href="repair.html" class="btn btn-outline-secondary px-3">
+          <i class="fa-solid fa-arrow-left me-1"></i> กลับหน้าซ่อมบำรุง
+        </a>
+      </div>
+    </div>
+
+    <!-- Quick Toolbars -->
+    <div class="row g-2 align-items-center pt-2 border-top">
+      <div class="col-md-4">
+        <label class="form-label small fw-bold mb-1 text-secondary">
+          <i class="fa-solid fa-list-check me-1"></i> ดึงข้อมูลจากรายการซ่อมในระบบ:
+        </label>
+        <select class="form-select form-select-sm" id="selRepairLog" onchange="handleSelectRepairLog(this.value)">
+          <option value="">-- กรุณาเลือกรายการซ่อม --</option>
+        </select>
+      </div>
+      <div class="col-md-8 text-md-end pt-2 pt-md-0">
+        <div class="btn-group btn-group-sm" role="group">
+          <button type="button" class="btn btn-outline-primary" id="btnSigCoordinator" onclick="openSignatureModal('coordinator')">
+            <i class="fa-solid fa-pen-nib me-1"></i> ✍️ เซ็นชื่อผู้สั่งซ่อม
+          </button>
+          <button type="button" class="btn btn-outline-info" id="btnSigDriver" onclick="openSignatureModal('driver')">
+            <i class="fa-solid fa-signature me-1"></i> ✍️ เซ็นชื่อผู้นำส่ง
+          </button>
+          <button type="button" class="btn btn-outline-success" id="btnSigApprover" onclick="openSignatureModal('approver')">
+            <i class="fa-solid fa-check-double me-1"></i> ✍️ เซ็นชื่อผู้อนุมัติ
+          </button>
+          <button type="button" class="btn btn-secondary" id="btnOpenEdit" onclick="openEditModal()">
+            <i class="fa-solid fa-pen-to-square me-1"></i> แก้ไขข้อมูลเอกสาร
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═════════ Printable A4 Sheet ═════════ -->
+  <div class="print-sheet" id="printSheet">
+    
+    <!-- Top Block -->
+    <div>
+      <!-- 1. Header -->
+      <div class="doc-header">
+        <div class="doc-title">ใบส่งซ่อมยานพาหนะ</div>
+        <div class="doc-dept">งานยานพาหนะ กลุ่มบริหารงานบุคคล โรงเรียนพะเยาพิทยาคม</div>
+        <div class="doc-school">
+          สังกัดสำนักงานเขตพื้นที่การศึกษามัธยมศึกษาพะเยา เลขที่ ๒๔๔ ถนนพหลโยธิน ตำบลเวียง อำเภอเมืองพะเยา จังหวัดพะเยา ๕๖๐๐๐ โทรศัพท์ ๐๕๔-๔๓๑๘๗๑
+        </div>
+      </div>
+
+      <!-- 2. Ref No & Date -->
+      <div class="doc-ref-row">
+        <div class="doc-ref-no">
+          เลขที่เอกสาร: <span id="vDocNo">PPK-REP-2569-11-001</span>
+          <span style="font-weight:normal; color:#64748b; font-size:11px; margin-left:6px;">(ส่งตรวจสภาพและขอรับใบเสนอราคา)</span>
+        </div>
+        <div class="doc-date">
+          วันที่ส่งซ่อม: <span id="vDocDate">9 พฤศจิกายน 2569</span>
+        </div>
+      </div>
+
+      <!-- 3. Side-by-side Service Center & Vehicle Info -->
+      <div class="info-grid">
+        <!-- Left: Service Center -->
+        <div class="info-card bg-light-blue">
+          <div class="card-heading">
+            <span><i class="fa-solid fa-warehouse text-primary me-1 no-print"></i> ข้อมูลศูนย์บริการ</span>
+            <span class="badge bg-primary no-print" style="font-size:9px; font-weight:normal;">ปลายทาง</span>
+          </div>
+          <div class="card-line">
+            <span class="card-label">ศูนย์บริการ:</span>
+            <span class="val-highlight" id="vGarageName">บริษัท โตโยต้าพะเยา (1994) จำกัด (สำนักงานใหญ่)</span>
+          </div>
+          <div class="card-line">
+            <span class="card-label">ที่อยู่:</span>
+            <span id="vGarageAddress">403/11 ถนนพหลโยธิน ตำบลแม่ต๋ำ อำเภอเมืองพะเยา จังหวัดพะเยา 56000</span>
+          </div>
+          <div class="card-line">
+            <span class="card-label">โทรศัพท์:</span>
+            <span id="vGaragePhone">054-414999, 054-412036-40</span>
+          </div>
+          <div class="card-line">
+            <span class="card-label">ที่ปรึกษาบริการ (SA):</span>
+            <span id="vGarageSA">..........................................................</span>
+          </div>
+        </div>
+
+        <!-- Right: Vehicle Details -->
+        <div class="info-card">
+          <div class="card-heading">
+            <span><i class="fa-solid fa-van-shuttle text-secondary me-1 no-print"></i> ข้อมูลยานพาหนะ ณ วันส่งมอบ</span>
+            <span class="badge bg-secondary no-print" style="font-size:9px; font-weight:normal;">ยานพาหนะ</span>
+          </div>
+          <div class="card-line">
+            <span class="card-label">หมายเลขทะเบียน:</span>
+            <span style="font-size:13px; font-weight:700; color:#0f172a;" id="vPlate">นข 2455 พะเยา</span>
+          </div>
+          <div class="card-line">
+            <span class="card-label">ยี่ห้อ / รุ่น:</span>
+            <span id="vCarModel">TOYOTA Commuter D4D (ดีเซล)</span>
+          </div>
+          <div class="card-line">
+            <span class="card-label">เลขไมล์ส่งซ่อม:</span>
+            <span class="val-mileage" id="vMileage">525,907 กม.</span>
+            <span style="color:#64748b; font-size:10.5px; margin-left:8px;">ระดับน้ำมัน: [✓] 3/4</span>
+          </div>
+          <div class="card-line">
+            <span class="card-label">ผู้นำส่งมอบรถ:</span>
+            <span id="vDriverInfo">นายสุรเชษฐ์ บุริวงค์ (โทร. 062-098-1429)</span>
+          </div>
+          <div class="card-line">
+            <span class="card-label">ผู้ประสานงานสั่งซ่อม:</span>
+            <span class="val-highlight" id="vCoordinatorInfo">นายพงศธร โพธิแก้ว (โทร. 095-696-1606)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Work Type Checkboxes -->
+      <div class="types-bar" id="vTypesBar">
+        <div class="type-chip checked" id="typePm">[✓] เช็คระยะตามกำหนด (PM)</div>
+        <div class="type-chip" id="typeRepair">[ &nbsp; ] ซ่อมทั่วไป / แก้ไขอาการเสีย</div>
+        <div class="type-chip" id="typeBody">[ &nbsp; ] ซ่อมสี / ตัวถัง / เคลมประกัน</div>
+        <div class="type-chip" id="typeCheck">[ &nbsp; ] ตรวจเช็คระบบความปลอดภัย / ช่วงล่าง</div>
+      </div>
+
+      <!-- 5. Scope of Work / Symptoms -->
+      <div class="section-title">
+        รายการงานที่ขอรับบริการ / อาการที่ตรวจพบ
+      </div>
+      <table class="items-table" id="vItemsTable">
+        <thead>
+          <tr>
+            <th style="width:38px;">ลำดับ</th>
+            <th style="text-align:left;">รายการงาน / รายละเอียดอาการที่ตรวจพบ</th>
+            <th style="width:130px;">ผลการตรวจเช็ค</th>
+          </tr>
+        </thead>
+        <tbody id="vItemsBody">
+          <!-- Dynamic -->
+          <tr>
+            <td class="col-idx">1</td>
+            <td>
+              <div class="item-main">ตรวจเช็คระยะตามมาตรฐานศูนย์บริการ (Periodic Maintenance)</div>
+              <div class="item-sub">ตรวจเช็คตามรอบระยะทาง เปลี่ยนถ่ายน้ำมันเครื่อง ไส้กรอง และตรวจเช็คจุดสำคัญรอบคันตามมาตรฐานของศูนย์บริการ</div>
+            </td>
+            <td class="col-result">[ &nbsp; ] รอผลตรวจเช็ค</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- 6. Terms & Direct Contact Notice -->
+      <div class="terms-card">
+        <div class="terms-heading">
+          <i class="fa-solid fa-circle-exclamation text-primary me-1 no-print"></i> การติดต่อประสานงานและข้อกำหนดการซ่อมบำรุง
+        </div>
+        <div class="coordinator-direct-notice">
+          <strong>การประสานงานและพิจารณาซ่อม:</strong> ขอความอนุเคราะห์ศูนย์บริการโปรดติดต่อแจ้งผลการตรวจเช็ค และส่งใบเสนอราคา เพื่อพิจารณาอนุมัติซ่อมโดยตรงที่ <strong id="vNoticeCoordinator">นายพงศธร โพธิแก้ว (รองหัวหน้างานยานพาหนะ) โทรศัพท์ 095-696-1606</strong>
+        </div>
+        <div style="font-size:10.5px; color:#334155; margin-top:2px;">
+          ๑. <strong>การเสนอราคา:</strong> ขอความอนุเคราะห์จัดทำใบเสนอราคา (Quotation) ส่งให้ผู้ประสานงานพิจารณาอนุมัติก่อนดำเนินการซ่อมหรือเปลี่ยนอะไหล่<br>
+          ๒. <strong>การส่งคืนอะไหล่:</strong> ขอรับคืนชิ้นส่วนอะไหล่เก่าที่ทำการเปลี่ยนออกทั้งหมดส่งมอบพร้อมตัวรถ<br>
+          ๓. <strong>การรับประกัน:</strong> งานซ่อมและอะไหล่แท้ได้รับการรับประกันคุณภาพตามมาตรฐานศูนย์บริการ
+        </div>
+      </div>
+
+      <!-- 7. Signatures Grid (4 Boxes) -->
+      <div class="sig-grid">
+        <!-- 1. Coordinator -->
+        <div class="sig-box">
+          <div class="sig-title">๑. ผู้ประสานงานและสั่งซ่อม</div>
+          <button type="button" class="sig-btn-badge no-print" onclick="openSignatureModal('coordinator')">✍️ เซ็นชื่อ</button>
+          <div class="sig-canvas-display" id="sigDisplayCoordinator">
+            <span class="sig-line-text">ลงชื่อ ................................................................</span>
+          </div>
+          <div class="sig-name" id="vSigCoordinatorName">(นายพงศธร โพธิแก้ว)</div>
+          <div class="sig-role" id="vSigCoordinatorRole">ตำแหน่ง: รองหัวหน้างานยานพาหนะ</div>
+          <div class="sig-role" id="vSigCoordinatorPhone">โทรศัพท์: 095-696-1606</div>
+        </div>
+
+        <!-- 2. Driver Delivering -->
+        <div class="sig-box">
+          <div class="sig-title">๒. พนักงานขับรถผู้นำส่งมอบรถ</div>
+          <button type="button" class="sig-btn-badge no-print" onclick="openSignatureModal('driver')">✍️ เซ็นชื่อ</button>
+          <div class="sig-canvas-display" id="sigDisplayDriver">
+            <span class="sig-line-text">ลงชื่อ ................................................................</span>
+          </div>
+          <div class="sig-name" id="vSigDriverName">(นายสุรเชษฐ์ บุริวงค์)</div>
+          <div class="sig-role">ตำแหน่ง: พนักงานขับรถ งานยานพาหนะ</div>
+          <div class="sig-role" id="vSigDriverPhone">โทรศัพท์: 062-098-1429</div>
+        </div>
+
+        <!-- 3. Garage Receiver -->
+        <div class="sig-box">
+          <div class="sig-title">๓. เจ้าหน้าที่ศูนย์บริการผู้รับรถเข้าตรวจสภาพ</div>
+          <button type="button" class="sig-btn-badge no-print" onclick="openSignatureModal('garage')">✍️ เซ็นชื่อ</button>
+          <div class="sig-canvas-display" id="sigDisplayGarage">
+            <span class="sig-line-text">ลงชื่อ ................................................................</span>
+          </div>
+          <div class="sig-name">(................................................................)</div>
+          <div class="sig-role" id="vSigGarageRole">ผู้รับรถ บริษัท โตโยต้าพะเยา (1994) จำกัด</div>
+          <div class="sig-role">สภาพรับรถ: [ &nbsp; ] เรียบร้อยดี &nbsp;&nbsp; วันที่ ...../...../๒๕๖๙</div>
+        </div>
+
+        <!-- 4. Approver -->
+        <div class="sig-box">
+          <div class="sig-title">๔. ผู้อนุมัติการส่งซ่อมบำรุง</div>
+          <button type="button" class="sig-btn-badge no-print" onclick="openSignatureModal('approver')">✍️ เซ็นชื่อ</button>
+          <div class="sig-canvas-display" id="sigDisplayApprover">
+            <span class="sig-line-text">ลงชื่อ ................................................................</span>
+          </div>
+          <div class="sig-name">(................................................................)</div>
+          <div class="sig-role">หัวหน้างานยานพาหนะ / รองผู้อำนวยการกลุ่มบริหารงานบุคคล</div>
+          <div class="sig-role" style="font-weight:600; color:#16a34a;">ความเห็น: [✓] อนุมัติส่งตรวจสภาพและขอใบเสนอราคา</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8. Acceptance Footer -->
+    <div class="doc-footer">
+      การตรวจรับรถกลับเมื่อซ่อมเสร็จ: ได้ตรวจรับรถยนต์คืนในสภาพเรียบร้อยดี และได้รับอะไหล่เก่าคืนครบถ้วน (เลขไมล์ตอนรับกลับ: .................... กม.) ลงชื่อ ........................................................ ผู้ตรวจรับ วันที่ ...../...../๒๕๖๙
+    </div>
+
+  </div>
+
+  <!-- ═════════ Modal 1: Digital Signature Pad ═════════ -->
+  <div class="modal fade" id="signatureModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content shadow-lg border-0">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title fw-bold" id="sigModalTitle">
+            <i class="fa-solid fa-pen-nib text-primary me-2"></i> เซ็นชื่อดิจิทัล
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-3">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="small text-muted">ใช้เมาส์, ปากกา Stylus หรือสัมผัสหน้าจอบนช่องด้านล่างเพื่อเซ็นชื่อ:</div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-danger" onclick="clearSignatureCanvas()">
+                <i class="fa-solid fa-eraser me-1"></i> ล้าง
+              </button>
+            </div>
+          </div>
+
+          <!-- Canvas Container -->
+          <canvas id="signatureCanvas" class="signature-modal-pad"></canvas>
+
+          <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+            <div class="d-flex align-items-center gap-2">
+              <span class="small fw-bold">สีหมึก:</span>
+              <button type="button" class="btn btn-sm btn-outline-dark px-2 py-0 active" id="penColorBlack" onclick="setPenColor('#111827')">ดำ</button>
+              <button type="button" class="btn btn-sm btn-outline-primary px-2 py-0" id="penColorBlue" onclick="setPenColor('#0284c7')">น้ำเงิน</button>
+            </div>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">ยกเลิก</button>
+              <button type="button" class="btn btn-primary btn-sm px-3 fw-bold" onclick="saveSignature()">
+                <i class="fa-solid fa-check me-1"></i> บันทึกลายเซ็นลงเอกสาร
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═════════ Modal 2: Edit Document Info ═════════ -->
+  <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content shadow-lg border-0">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title fw-bold">
+            <i class="fa-solid fa-pen-to-square text-primary me-2"></i> ปรับแต่งและแก้ไขข้อมูลเอกสาร
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-3">
+          <!-- Presets -->
+          <div class="mb-3 p-2 bg-light rounded border">
+            <span class="small fw-bold text-secondary d-block mb-1">โหลดข้อมูลตัวอย่างที่เตรียมไว้:</span>
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-outline-primary" onclick="loadPreset('2455')">🚗 นข 2455 (เช็คระยะ)</button>
+              <button class="btn btn-outline-primary" onclick="loadPreset('1977')">🚐 นข 1977 (เสียงดังเครื่อง/น้ำมันหาย)</button>
+              <button class="btn btn-outline-secondary" onclick="loadPresetToyota()">🏪 ข้อมูลศูนย์โตโยต้าพะเยา</button>
+            </div>
+          </div>
+
+          <form id="editForm" onsubmit="handleSaveEdit(event)">
+            <div class="row g-2 mb-3">
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">เลขที่เอกสาร:</label>
+                <input type="text" class="form-control form-control-sm" id="eDocNo">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">วันที่ส่งซ่อม:</label>
+                <input type="text" class="form-control form-control-sm" id="eDocDate">
+              </div>
+            </div>
+
+            <!-- Garage Info -->
+            <h6 class="fw-bold text-primary border-bottom pb-1 mb-2">ข้อมูลศูนย์บริการ</h6>
+            <div class="row g-2 mb-3">
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">ชื่อศูนย์บริการ / อู่:</label>
+                <input type="text" class="form-control form-control-sm" id="eGarageName">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">เบอร์โทรศัพท์ศูนย์:</label>
+                <input type="text" class="form-control form-control-sm" id="eGaragePhone">
+              </div>
+              <div class="col-12">
+                <label class="form-label small fw-bold">ที่อยู่ศูนย์บริการ:</label>
+                <input type="text" class="form-control form-control-sm" id="eGarageAddress">
+              </div>
+            </div>
+
+            <!-- Vehicle Info -->
+            <h6 class="fw-bold text-primary border-bottom pb-1 mb-2">ข้อมูลยานพาหนะ</h6>
+            <div class="row g-2 mb-3">
+              <div class="col-md-4">
+                <label class="form-label small fw-bold">ทะเบียนรถ:</label>
+                <input type="text" class="form-control form-control-sm" id="ePlate">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-bold">ยี่ห้อ / รุ่น:</label>
+                <input type="text" class="form-control form-control-sm" id="eCarModel">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-bold">เลขไมล์ปัจจุบัน (กม.):</label>
+                <input type="number" class="form-control form-control-sm" id="eMileage">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">ผู้นำส่งมอบรถ (คนขับ):</label>
+                <input type="text" class="form-control form-control-sm" id="eDriverName">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">เบอร์โทรคนขับ:</label>
+                <input type="text" class="form-control form-control-sm" id="eDriverPhone">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">ผู้ประสานงานและสั่งซ่อม:</label>
+                <input type="text" class="form-control form-control-sm" id="eCoordinatorName">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">เบอร์โทรผู้ประสานงาน:</label>
+                <input type="text" class="form-control form-control-sm" id="eCoordinatorPhone">
+              </div>
+            </div>
+
+            <!-- Work Types -->
+            <h6 class="fw-bold text-primary border-bottom pb-1 mb-2">ประเภทงาน</h6>
+            <div class="row g-2 mb-3">
+              <div class="col-md-6">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="eTypePm">
+                  <label class="form-check-label small" for="eTypePm">เช็คระยะตามกำหนด (PM)</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="eTypeRepair">
+                  <label class="form-check-label small" for="eTypeRepair">ซ่อมทั่วไป / แก้ไขอาการเสีย</label>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="eTypeBody">
+                  <label class="form-check-label small" for="eTypeBody">ซ่อมสี / ตัวถัง / เคลมประกัน</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="eTypeCheck">
+                  <label class="form-check-label small" for="eTypeCheck">ตรวจเช็คระบบความปลอดภัย / ช่วงล่าง</label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Symptom / Items -->
+            <h6 class="fw-bold text-primary border-bottom pb-1 mb-2">รายการงาน / อาการเสียที่พบ</h6>
+            <div class="mb-3">
+              <label class="form-label small fw-bold">หัวข้อหลัก 1:</label>
+              <input type="text" class="form-control form-control-sm mb-1" id="eItem1Title">
+              <label class="form-label small text-muted">รายละเอียดเพิ่มเติม 1:</label>
+              <textarea class="form-control form-control-sm mb-2" rows="2" id="eItem1Desc"></textarea>
+
+              <label class="form-label small fw-bold">หัวข้อหลัก 2 (ถ้ามี):</label>
+              <input type="text" class="form-control form-control-sm mb-1" id="eItem2Title">
+              <label class="form-label small text-muted">รายละเอียดเพิ่มเติม 2:</label>
+              <textarea class="form-control form-control-sm" rows="2" id="eItem2Desc"></textarea>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+              <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">ปิด</button>
+              <button type="submit" class="btn btn-primary btn-sm px-3 fw-bold">
+                <i class="fa-solid fa-save me-1"></i> บันทึกข้อมูลและแสดงผล
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // State Store
+    let docData = {
+      doc_no: 'PPK-REP-2569-11-001',
+      doc_date: '9 พฤศจิกายน 2569',
+      garage_name: 'บริษัท โตโยต้าพะเยา (1994) จำกัด (สำนักงานใหญ่)',
+      garage_address: '403/11 ถนนพหลโยธิน ตำบลแม่ต๋ำ อำเภอเมืองพะเยา จังหวัดพะเยา 56000',
+      garage_phone: '054-414999, 054-412036-40',
+      garage_sa: '..........................................................',
+      plate: 'นข 2455 พะเยา',
+      car_model: 'TOYOTA Commuter D4D (ดีเซล)',
+      mileage: 525907,
+      fuel_level: '3/4',
+      driver_name: 'นายสุรเชษฐ์ บุริวงค์',
+      driver_phone: '062-098-1429',
+      coordinator_name: 'นายพงศธร โพธิแก้ว',
+      coordinator_title: 'รองหัวหน้างานยานพาหนะ',
+      coordinator_phone: '095-696-1606',
+      is_pm: true,
+      is_repair: false,
+      is_body: false,
+      is_check: false,
+      items: [
+        {
+          title: 'ตรวจเช็คระยะตามมาตรฐานศูนย์บริการ (Periodic Maintenance)',
+          desc: 'ตรวจเช็คตามรอบระยะทาง เปลี่ยนถ่ายน้ำมันเครื่อง ไส้กรอง และตรวจเช็คจุดสำคัญรอบคันตามมาตรฐานของศูนย์บริการ',
+          note: '[  ] รอผลตรวจเช็ค'
+        }
+      ]
+    };
+
+    // Signatures Store (Base64 PNGs)
+    let signatures = {
+      coordinator: null,
+      driver: null,
+      garage: null,
+      approver: null
+    };
+
+    // Canvas drawing state
+    let canvas, ctx;
+    let isDrawing = false;
+    let lastX = 0, lastY = 0;
+    let currentSigTarget = 'coordinator';
+    let penColor = '#111827';
+    let penWidth = 2.2;
+    let bsSigModal, bsEditModal;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      bsSigModal = new bootstrap.Modal(document.getElementById('signatureModal'));
+      bsEditModal = new bootstrap.Modal(document.getElementById('editModal'));
+
+      initCanvas();
+      await loadRepairLogsDropdown();
+
+      // Check URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const repairId = urlParams.get('id');
+      const plateParam = urlParams.get('plate');
+
+      if (repairId) {
+        await loadRepairDetail(repairId);
+      } else if (plateParam === '1977' || plateParam?.includes('1977')) {
+        loadPreset('1977');
+      } else {
+        renderDocument();
+      }
+    });
+
+    /* ─── Canvas Pad Handlers ─── */
+    function initCanvas() {
+      canvas = document.getElementById('signatureCanvas');
+      if (!canvas) return;
+      ctx = canvas.getContext('2d');
+
+      // Adjust high-DPI scaling
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * 2;
+        canvas.height = rect.height * 2;
+        ctx.scale(2, 2);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = penWidth;
+        ctx.strokeStyle = penColor;
+      }
+      resizeCanvas();
+
+      function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        let clientX = e.clientX;
+        let clientY = e.clientY;
+        if (e.touches && e.touches.length > 0) {
+          clientX = e.touches[0].clientX;
+          clientY = e.touches[0].clientY;
+        }
+        return {
+          x: clientX - rect.left,
+          y: clientY - rect.top
+        };
+      }
+
+      function startDraw(e) {
+        e.preventDefault();
+        isDrawing = true;
+        const pos = getPos(e);
+        lastX = pos.x;
+        lastY = pos.y;
+      }
+
+      function draw(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+        const pos = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.strokeStyle = penColor;
+        ctx.lineWidth = penWidth;
+        ctx.stroke();
+        lastX = pos.x;
+        lastY = pos.y;
+      }
+
+      function endDraw() {
+        isDrawing = false;
+      }
+
+      // Mouse events
+      canvas.addEventListener('mousedown', startDraw);
+      canvas.addEventListener('mousemove', draw);
+      canvas.addEventListener('mouseup', endDraw);
+      canvas.addEventListener('mouseleave', endDraw);
+
+      // Touch events
+      canvas.addEventListener('touchstart', startDraw, { passive: false });
+      canvas.addEventListener('touchmove', draw, { passive: false });
+      canvas.addEventListener('touchend', endDraw);
+    }
+
+    function setPenColor(color) {
+      penColor = color;
+      document.getElementById('penColorBlack').classList.toggle('active', color === '#111827');
+      document.getElementById('penColorBlue').classList.toggle('active', color === '#0284c7');
+    }
+
+    function clearSignatureCanvas() {
+      if (!ctx || !canvas) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function openSignatureModal(target) {
+      currentSigTarget = target;
+      const titles = {
+        coordinator: '✍️ เซ็นชื่อผู้ประสานงานและสั่งซ่อม (รองหัวหน้างาน/หัวหน้างาน)',
+        driver: '✍️ เซ็นชื่อพนักงานขับรถผู้นำส่งมอบรถ',
+        garage: '✍️ เซ็นชื่อเจ้าหน้าที่ศูนย์บริการผู้รับรถ',
+        approver: '✍️ เซ็นชื่อผู้อนุมัติการส่งซ่อมบำรุง'
+      };
+      document.getElementById('sigModalTitle').innerHTML = titles[target] || '✍️ เซ็นชื่อดิจิทัล';
+      clearSignatureCanvas();
+      bsSigModal.show();
+      setTimeout(() => {
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * 2;
+        canvas.height = rect.height * 2;
+        ctx.scale(2, 2);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = penWidth;
+        ctx.strokeStyle = penColor;
+      }, 250);
+    }
+
+    function saveSignature() {
+      // Check if canvas has strokes
+      const blank = document.createElement('canvas');
+      blank.width = canvas.width;
+      blank.height = canvas.height;
+      if (canvas.toDataURL() === blank.toDataURL()) {
+        alert('กรุณาเซ็นชื่อบนช่องก่อนกดยืนยัน หรือกดยกเลิก');
+        return;
+      }
+
+      const dataUrl = canvas.toDataURL('image/png');
+      signatures[currentSigTarget] = dataUrl;
+      renderSignatures();
+      bsSigModal.hide();
+    }
+
+    function removeSignature(target) {
+      signatures[target] = null;
+      renderSignatures();
+    }
+
+    function renderSignatures() {
+      // 1. Coordinator
+      const elCoord = document.getElementById('sigDisplayCoordinator');
+      if (signatures.coordinator) {
+        elCoord.innerHTML = `<img src="${signatures.coordinator}" class="sig-img" alt="ลายเซ็นผู้สั่งซ่อม">`;
+      } else {
+        elCoord.innerHTML = `<span class="sig-line-text">ลงชื่อ ................................................................</span>`;
+      }
+
+      // 2. Driver
+      const elDriver = document.getElementById('sigDisplayDriver');
+      if (signatures.driver) {
+        elDriver.innerHTML = `<img src="${signatures.driver}" class="sig-img" alt="ลายเซ็นคนขับ">`;
+      } else {
+        elDriver.innerHTML = `<span class="sig-line-text">ลงชื่อ ................................................................</span>`;
+      }
+
+      // 3. Garage
+      const elGarage = document.getElementById('sigDisplayGarage');
+      if (signatures.garage) {
+        elGarage.innerHTML = `<img src="${signatures.garage}" class="sig-img" alt="ลายเซ็นศูนย์บริการ">`;
+      } else {
+        elGarage.innerHTML = `<span class="sig-line-text">ลงชื่อ ................................................................</span>`;
+      }
+
+      // 4. Approver
+      const elApprover = document.getElementById('sigDisplayApprover');
+      if (signatures.approver) {
+        elApprover.innerHTML = `<img src="${signatures.approver}" class="sig-img" alt="ลายเซ็นผู้อนุมัติ">`;
+      } else {
+        elApprover.innerHTML = `<span class="sig-line-text">ลงชื่อ ................................................................</span>`;
+      }
+    }
+
+    /* ─── Render Document to DOM ─── */
+    function renderDocument() {
+      document.getElementById('vDocNo').textContent = docData.doc_no || '-';
+      document.getElementById('vDocDate').textContent = docData.doc_date || '-';
+      document.getElementById('vGarageName').textContent = docData.garage_name || '-';
+      document.getElementById('vGarageAddress').textContent = docData.garage_address || '-';
+      document.getElementById('vGaragePhone').textContent = docData.garage_phone || '-';
+      document.getElementById('vGarageSA').textContent = docData.garage_sa || '..........................................................';
+
+      document.getElementById('vPlate').textContent = docData.plate || '-';
+      document.getElementById('vCarModel').textContent = docData.car_model || '-';
+      document.getElementById('vMileage').textContent = (docData.mileage ? Number(docData.mileage).toLocaleString() : '0') + ' กม.';
+      document.getElementById('vDriverInfo').textContent = `${docData.driver_name || '-'} (โทร. ${docData.driver_phone || '-'})`;
+      document.getElementById('vCoordinatorInfo').textContent = `${docData.coordinator_name || '-'} (โทร. ${docData.coordinator_phone || '-'})`;
+
+      // Work Types
+      updateTypeChip('typePm', docData.is_pm, 'เช็คระยะตามกำหนด (PM)');
+      updateTypeChip('typeRepair', docData.is_repair, 'ซ่อมทั่วไป / แก้ไขอาการเสีย');
+      updateTypeChip('typeBody', docData.is_body, 'ซ่อมสี / ตัวถัง / เคลมประกัน');
+      updateTypeChip('typeCheck', docData.is_check, 'ตรวจเช็คระบบความปลอดภัย / ช่วงล่าง');
+
+      // Items Table
+      const tbody = document.getElementById('vItemsBody');
+      tbody.innerHTML = '';
+      (docData.items || []).forEach((itm, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="col-idx">${idx + 1}</td>
+          <td>
+            <div class="item-main">${escHtml(itm.title || '')}</div>
+            ${itm.desc ? `<div class="item-sub">${escHtml(itm.desc)}</div>` : ''}
+          </td>
+          <td class="col-result">${escHtml(itm.note || '[  ] รอผลตรวจเช็ค')}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Coordinator Notice
+      document.getElementById('vNoticeCoordinator').textContent =
+        `${docData.coordinator_name} (${docData.coordinator_title}) โทรศัพท์ ${docData.coordinator_phone}`;
+
+      // Signatures Text
+      document.getElementById('vSigCoordinatorName').textContent = `(${docData.coordinator_name})`;
+      document.getElementById('vSigCoordinatorRole').textContent = `ตำแหน่ง: ${docData.coordinator_title}`;
+      document.getElementById('vSigCoordinatorPhone').textContent = `โทรศัพท์: ${docData.coordinator_phone}`;
+
+      document.getElementById('vSigDriverName').textContent = `(${docData.driver_name})`;
+      document.getElementById('vSigDriverPhone').textContent = `โทรศัพท์: ${docData.driver_phone}`;
+      document.getElementById('vSigGarageRole').textContent = `ผู้รับรถ ${docData.garage_name}`;
+
+      renderSignatures();
+    }
+
+    function updateTypeChip(id, checked, text) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.className = 'type-chip' + (checked ? ' checked' : '');
+      el.textContent = checked ? `[✓] ${text}` : `[   ] ${text}`;
+    }
+
+    /* ─── API & Dropdown Integration ─── */
+    async function loadRepairLogsDropdown() {
+      const sel = document.getElementById('selRepairLog');
+      try {
+        const res = await apiCall('getRepairs', { active_only: '0' });
+        if (res && res.data && Array.isArray(res.data)) {
+          res.data.slice(0, 30).forEach(r => {
+            const opt = document.createElement('option');
+            opt.value = r.id;
+            const desc = (r.issue_description || r.repair_items || '').substring(0, 35);
+            opt.textContent = `${r.license_plate || ''} (${r.date_reported || ''}) - ${desc}`;
+            sel.appendChild(opt);
+          });
+        }
+      } catch (err) {
+        console.warn('Cannot load repairs dropdown:', err);
+      }
+    }
+
+    async function handleSelectRepairLog(repairId) {
+      if (!repairId) return;
+      await loadRepairDetail(repairId);
+    }
+
+    async function loadRepairDetail(id) {
+      try {
+        const res = await apiCall('getRepair', { id });
+        if (!res || !res.success || !res.data) return;
+        const rp = res.data;
+
+        docData.doc_no = rp.work_order_number || `PPK-REP-${(rp.date_reported || '').replace(/-/g, '')}-${rp.id.substring(0, 4).toUpperCase()}`;
+        docData.doc_date = formatDateThai(rp.date_started || rp.date_reported || new Date().toISOString());
+        docData.plate = rp.license_plate || docData.plate;
+        docData.car_model = `${rp.brand || ''} ${rp.model || ''}`.trim() || docData.car_model;
+        docData.mileage = rp.mileage_at_repair || rp.mileage_out || docData.mileage;
+        if (rp.garage_name) docData.garage_name = rp.garage_name;
+
+        // Determine Work Types & Items
+        const isPm = (rp.service_type === 'scheduled_service' || (rp.issue_description || '').includes('เช็คระยะ'));
+        docData.is_pm = isPm;
+        docData.is_repair = !isPm;
+
+        docData.items = [];
+        if (isPm) {
+          docData.items.push({
+            title: 'ตรวจเช็คระยะตามมาตรฐานศูนย์บริการ (Periodic Maintenance)',
+            desc: rp.issue_description || 'ตรวจเช็คตามรอบระยะทาง เปลี่ยนถ่ายน้ำมันเครื่อง ไส้กรอง และตรวจเช็คจุดสำคัญรอบคัน',
+            note: '[  ] รอผลตรวจเช็ค'
+          });
+        } else {
+          docData.items.push({
+            title: 'ตรวจเช็คและแก้ไขอาการผิดปกติ',
+            desc: rp.issue_description || 'ตรวจเช็คตามอาการที่แจ้งส่งซ่อม',
+            note: '[  ] รอผลตรวจเช็ค'
+          });
+        }
+
+        // Attach itemized parts if available
+        if (rp.items_detail && Array.isArray(rp.items_detail) && rp.items_detail.length) {
+          rp.items_detail.forEach(it => {
+            if (it.description) {
+              docData.items.push({
+                title: it.description,
+                desc: it.part_code ? `รหัสอะไหล่: ${it.part_code} (จำนวน ${it.quantity || 1})` : '',
+                note: '[  ] ตามใบสั่งซ่อม'
+              });
+            }
+          });
+        }
+
+        renderDocument();
+      } catch (err) {
+        console.error('Error loading repair detail:', err);
+      }
+    }
+
+    /* ─── Presets ─── */
+    function loadPreset(code) {
+      if (code === '2455') {
+        docData.plate = 'นข 2455 พะเยา';
+        docData.car_model = 'TOYOTA Commuter D4D (ดีเซล)';
+        docData.mileage = 525907;
+        docData.driver_name = 'นายสุรเชษฐ์ บุริวงค์';
+        docData.driver_phone = '062-098-1429';
+        docData.is_pm = true;
+        docData.is_repair = false;
+        docData.items = [{
+          title: 'ตรวจเช็คระยะตามมาตรฐานศูนย์บริการ (Periodic Maintenance)',
+          desc: 'ตรวจเช็คตามรอบระยะทาง เปลี่ยนถ่ายน้ำมันเครื่อง ไส้กรอง และตรวจเช็คจุดสำคัญรอบคันตามมาตรฐานของศูนย์บริการ',
+          note: '[  ] รอผลตรวจเช็ค'
+        }];
+      } else if (code === '1977') {
+        docData.plate = 'นข 1977 พะเยา';
+        docData.car_model = 'TOYOTA Ventury 2.7 V (เบนซิน)';
+        docData.mileage = 447427;
+        docData.driver_name = 'นายสมชาย พรมศร';
+        docData.driver_phone = '080-016-9194';
+        docData.is_pm = false;
+        docData.is_repair = true;
+        docData.items = [
+          {
+            title: 'มีเสียงดังผิดปกติบริเวณด้านหน้าเครื่องยนต์ในขณะใช้งาน',
+            desc: 'ขอความอนุเคราะห์ช่างผู้เชี่ยวชาญศูนย์บริการตรวจเช็คระบบขับเคลื่อนหน้าเครื่อง มู่เล่ย์ สายพาน ลูกปืน หรือระบบที่เกี่ยวข้องตามขั้นตอนมาตรฐาน',
+            note: '[  ] รอผลตรวจเช็ค'
+          },
+          {
+            title: 'ระดับน้ำมันเครื่องลดลงผิดปกติในระดับที่ไฟสัญญาณเตือนแสดง',
+            desc: 'ตรวจเช็คการรั่วซึมภายนอก ซีลยาง อ่างน้ำมันเครื่อง และตรวจเช็คการเผาไหม้ภายในเครื่องยนต์',
+            note: '[  ] รอผลตรวจเช็ค'
+          }
+        ];
+      }
+      renderDocument();
+    }
+
+    function loadPresetToyota() {
+      docData.garage_name = 'บริษัท โตโยต้าพะเยา (1994) จำกัด (สำนักงานใหญ่)';
+      docData.garage_address = '403/11 ถนนพหลโยธิน ตำบลแม่ต๋ำ อำเภอเมืองพะเยา จังหวัดพะเยา 56000';
+      docData.garage_phone = '054-414999, 054-412036-40';
+      renderDocument();
+    }
+
+    /* ─── Edit Modal ─── */
+    function openEditModal() {
+      document.getElementById('eDocNo').value = docData.doc_no;
+      document.getElementById('eDocDate').value = docData.doc_date;
+      document.getElementById('eGarageName').value = docData.garage_name;
+      document.getElementById('eGarageAddress').value = docData.garage_address;
+      document.getElementById('eGaragePhone').value = docData.garage_phone;
+
+      document.getElementById('ePlate').value = docData.plate;
+      document.getElementById('eCarModel').value = docData.car_model;
+      document.getElementById('eMileage').value = docData.mileage;
+      document.getElementById('eDriverName').value = docData.driver_name;
+      document.getElementById('eDriverPhone').value = docData.driver_phone;
+      document.getElementById('eCoordinatorName').value = docData.coordinator_name;
+      document.getElementById('eCoordinatorPhone').value = docData.coordinator_phone;
+
+      document.getElementById('eTypePm').checked = !!docData.is_pm;
+      document.getElementById('eTypeRepair').checked = !!docData.is_repair;
+      document.getElementById('eTypeBody').checked = !!docData.is_body;
+      document.getElementById('eTypeCheck').checked = !!docData.is_check;
+
+      const it1 = docData.items[0] || {};
+      document.getElementById('eItem1Title').value = it1.title || '';
+      document.getElementById('eItem1Desc').value = it1.desc || '';
+
+      const it2 = docData.items[1] || {};
+      document.getElementById('eItem2Title').value = it2.title || '';
+      document.getElementById('eItem2Desc').value = it2.desc || '';
+
+      bsEditModal.show();
+    }
+
+    function handleSaveEdit(e) {
+      e.preventDefault();
+      docData.doc_no = document.getElementById('eDocNo').value.trim();
+      docData.doc_date = document.getElementById('eDocDate').value.trim();
+      docData.garage_name = document.getElementById('eGarageName').value.trim();
+      docData.garage_address = document.getElementById('eGarageAddress').value.trim();
+      docData.garage_phone = document.getElementById('eGaragePhone').value.trim();
+
+      docData.plate = document.getElementById('ePlate').value.trim();
+      docData.car_model = document.getElementById('eCarModel').value.trim();
+      docData.mileage = parseInt(document.getElementById('eMileage').value) || 0;
+      docData.driver_name = document.getElementById('eDriverName').value.trim();
+      docData.driver_phone = document.getElementById('eDriverPhone').value.trim();
+      docData.coordinator_name = document.getElementById('eCoordinatorName').value.trim();
+      docData.coordinator_phone = document.getElementById('eCoordinatorPhone').value.trim();
+
+      docData.is_pm = document.getElementById('eTypePm').checked;
+      docData.is_repair = document.getElementById('eTypeRepair').checked;
+      docData.is_body = document.getElementById('eTypeBody').checked;
+      docData.is_check = document.getElementById('eTypeCheck').checked;
+
+      const items = [];
+      const t1 = document.getElementById('eItem1Title').value.trim();
+      if (t1) {
+        items.push({
+          title: t1,
+          desc: document.getElementById('eItem1Desc').value.trim(),
+          note: '[  ] รอผลตรวจเช็ค'
+        });
+      }
+      const t2 = document.getElementById('eItem2Title').value.trim();
+      if (t2) {
+        items.push({
+          title: t2,
+          desc: document.getElementById('eItem2Desc').value.trim(),
+          note: '[  ] รอผลตรวจเช็ค'
+        });
+      }
+      if (items.length) docData.items = items;
+
+      renderDocument();
+      bsEditModal.hide();
+    }
+
+    /* ─── Export to Word (.docx) ─── */
+    async function handleExportDocx() {
+      const btn = document.getElementById('btnExportWord');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> กำลังสร้าง Word...';
+
+      try {
+        const d = window.docx;
+        if (!d) throw new Error('docx.js library not loaded');
+
+        const {
+          Document, Paragraph, TextRun, Table, TableRow, TableCell,
+          WidthType, AlignmentType, BorderStyle, ShadingType, ImageRun, Packer
+        } = d;
+
+        const FONT = 'TH Sarabun New';
+        const BORDER_STD = { style: BorderStyle.SINGLE, size: 4, color: '94A3B8' };
+        const BOX_BORDERS = {
+          top: BORDER_STD, bottom: BORDER_STD, left: BORDER_STD, right: BORDER_STD,
+          insideHorizontal: BORDER_STD, insideVertical: BORDER_STD
+        };
+        const CELL_MARGINS = { top: 80, bottom: 80, left: 120, right: 120 };
+
+        function makeRun(text, size = 23, bold = false, color = '0F172A') {
+          return new TextRun({ text: text || '', font: FONT, size: size, bold: bold, color: color });
+        }
+
+        function base64ToUint8(dataUrl) {
+          if (!dataUrl) return null;
+          const base64 = dataUrl.split(',')[1];
+          const binary = atob(base64);
+          const len = binary.length;
+          const bytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+            bytes[i] = binary.charCodeAt(i);
+          }
+          return bytes;
+        }
+
+        // 1. Service Center Cell
+        const garageCellParas = [
+          new Paragraph({
+            spacing: { before: 0, after: 15 },
+            children: [makeRun('ข้อมูลศูนย์บริการ', 23, true, '0F172A')]
+          }),
+          new Paragraph({
+            spacing: { before: 0, after: 15 },
+            children: [
+              makeRun('ศูนย์บริการ: ', 22, true),
+              makeRun(docData.garage_name, 22, true, '0284C7')
+            ]
+          }),
+          new Paragraph({
+            spacing: { before: 0, after: 15 },
+            children: [
+              makeRun('ที่อยู่: ', 21, true),
+              makeRun(docData.garage_address, 21, false)
+            ]
+          }),
+          new Paragraph({
+            spacing: { before: 0, after: 15 },
+            children: [
+              makeRun('โทรศัพท์: ', 21, true),
+              makeRun(docData.garage_phone, 21, false)
+            ]
+          }),
+          new Paragraph({
+            spacing: { before: 0, after: 0 },
+            children: [
+              makeRun('ที่ปรึกษาบริการ (SA): ', 21, true),
+              makeRun(docData.garage_sa, 21, false)
+            ]
+          })
+        ];
+
+        // 2. Vehicle Info Cell
+        const vehicleCellParas = [
+          new Paragraph({
+            spacing: { before: 0, after: 15 },
+            children: [makeRun('ข้อมูลยานพาหนะ ณ วันส่งมอบ', 23, true, '0F172A')]
+          }),
+          new Paragraph({
+            spacing: { before: 0, after: 15 },
+            children: [
+              makeRun('หมายเลขทะเบียน: ', 22, true),
+              makeRun(docData.plate, 24, true, '0F172A')
+            ]
+          }),
+          new Paragraph({
+            spacing: { before: 0, after: 15 },
+            children: [
+              makeRun('ยี่ห้อ / รุ่น: ', 21, true),
+              makeRun(docData.car_model, 21, false)
+            ]
+          }),
+          new Paragraph({
+            spacing: { before: 0, after: 15 },
+            children: [
+              makeRun('เลขไมล์ส่งซ่อม: ', 21, true),
+              makeRun(`${Number(docData.mileage || 0).toLocaleString()} กม.`, 22, true, 'B45309'),
+              makeRun('   ระดับน้ำมัน: [✓] 3/4', 21, false)
+            ]
+          }),
+          new Paragraph({
+            spacing: { before: 0, after: 15 },
+            children: [
+              makeRun('ผู้นำส่งมอบรถ: ', 21, true),
+              makeRun(`${docData.driver_name} (โทร. ${docData.driver_phone})`, 21, false)
+            ]
+          }),
+          new Paragraph({
+            spacing: { before: 0, after: 0 },
+            children: [
+              makeRun('ผู้ประสานงานสั่งซ่อม: ', 21, true),
+              makeRun(`${docData.coordinator_name} (โทร. ${docData.coordinator_phone})`, 21, true, '0284C7')
+            ]
+          })
+        ];
+
+        // 3. Types Table
+        const typeChips = [
+          { checked: docData.is_pm, text: 'เช็คระยะตามกำหนด (PM)' },
+          { checked: docData.is_repair, text: 'ซ่อมทั่วไป / แก้ไขอาการเสีย' },
+          { checked: docData.is_body, text: 'ซ่อมสี / ตัวถัง / เคลมประกัน' },
+          { checked: docData.is_check, text: 'ตรวจเช็คความปลอดภัย / ช่วงล่าง' }
+        ];
+
+        // 4. Items Table Rows
+        const itemRows = [
+          new TableRow({
+            tableHeader: true,
+            children: [
+              new TableCell({
+                width: { size: 900, type: WidthType.DXA },
+                shading: { fill: 'E2E8F0', type: ShadingType.CLEAR },
+                margins: CELL_MARGINS,
+                borders: BOX_BORDERS,
+                children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [makeRun('ลำดับ', 21, true)] })]
+              }),
+              new TableCell({
+                width: { size: 7300, type: WidthType.DXA },
+                shading: { fill: 'E2E8F0', type: ShadingType.CLEAR },
+                margins: CELL_MARGINS,
+                borders: BOX_BORDERS,
+                children: [new Paragraph({ children: [makeRun('รายการงาน / รายละเอียดอาการที่ตรวจพบ', 21, true)] })]
+              }),
+              new TableCell({
+                width: { size: 2100, type: WidthType.DXA },
+                shading: { fill: 'E2E8F0', type: ShadingType.CLEAR },
+                margins: CELL_MARGINS,
+                borders: BOX_BORDERS,
+                children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [makeRun('ผลการตรวจเช็ค', 21, true)] })]
+              })
+            ]
+          })
+        ];
+
+        docData.items.forEach((it, idx) => {
+          const paras = [
+            new Paragraph({
+              spacing: { before: 0, after: 10 },
+              children: [makeRun(it.title, 21, true, '0F172A')]
+            })
+          ];
+          if (it.desc) {
+            paras.push(new Paragraph({
+              spacing: { before: 0, after: 0 },
+              children: [makeRun(it.desc, 19, false, '475569')]
+            }));
+          }
+
+          itemRows.push(
+            new TableRow({
+              children: [
+                new TableCell({
+                  width: { size: 900, type: WidthType.DXA },
+                  margins: CELL_MARGINS,
+                  borders: BOX_BORDERS,
+                  children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [makeRun(String(idx + 1), 21, true)] })]
+                }),
+                new TableCell({
+                  width: { size: 7300, type: WidthType.DXA },
+                  margins: CELL_MARGINS,
+                  borders: BOX_BORDERS,
+                  children: paras
+                }),
+                new TableCell({
+                  width: { size: 2100, type: WidthType.DXA },
+                  margins: CELL_MARGINS,
+                  borders: BOX_BORDERS,
+                  children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [makeRun(it.note || '[  ] รอผลตรวจเช็ค', 19, false, '64748B')] })]
+                })
+              ]
+            })
+          );
+        });
+
+        // Helper for Signature cell paragraphs
+        function buildSigParas(boxTitle, sigBase64, name, role1, role2) {
+          const paras = [
+            new Paragraph({
+              spacing: { before: 0, after: 20 },
+              children: [makeRun(boxTitle, 20, true, '475569')]
+            })
+          ];
+
+          if (sigBase64) {
+            const bytes = base64ToUint8(sigBase64);
+            if (bytes) {
+              paras.push(
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  spacing: { before: 0, after: 10 },
+                  children: [
+                    new ImageRun({
+                      data: bytes,
+                      transformation: { width: 110, height: 35 },
+                      type: 'png'
+                    })
+                  ]
+                })
+              );
+            }
+          } else {
+            paras.push(
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 30, after: 15 },
+                children: [makeRun('ลงชื่อ ................................................................', 20, false)]
+              })
+            );
+          }
+
+          paras.push(
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 0, after: 10 },
+              children: [makeRun(`(${name})`, 21, true)]
+            }),
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 0, after: 10 },
+              children: [makeRun(role1, 19, false, '475569')]
+            }),
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 0, after: 0 },
+              children: [makeRun(role2, 19, false, '475569')]
+            })
+          );
+          return paras;
+        }
+
+        // Build Master Document
+        const doc = new Document({
+          sections: [{
+            properties: {
+              page: {
+                size: { width: 11906, height: 16838 }, // A4 exact
+                margin: { top: 567, right: 680, bottom: 567, left: 680 } // 1.0cm top/bottom, 1.2cm left/right
+              }
+            },
+            children: [
+              // Header
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 0, after: 20 },
+                children: [makeRun('ใบส่งซ่อมยานพาหนะ', 34, true, '0F172A')]
+              }),
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 0, after: 15 },
+                children: [makeRun('งานยานพาหนะ กลุ่มบริหารงานบุคคล โรงเรียนพะเยาพิทยาคม', 26, true, '1E293B')]
+              }),
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 0, after: 50 },
+                children: [makeRun('สังกัดสำนักงานเขตพื้นที่การศึกษามัธยมศึกษาพะเยา เลขที่ ๒๔๔ ถนนพหลโยธิน ตำบลเวียง อำเภอเมืองพะเยา จังหวัดพะเยา ๕๖๐๐๐ โทรศัพท์ ๐๕๔-๔๓๑๘๗๑', 19, false, '475569')]
+              }),
+
+              // Ref & Date
+              new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, insideHorizontal: { style: BorderStyle.NONE }, insideVertical: { style: BorderStyle.NONE } },
+                rows: [
+                  new TableRow({
+                    children: [
+                      new TableCell({
+                        width: { size: 55, type: WidthType.PERCENTAGE },
+                        children: [new Paragraph({
+                          children: [
+                            makeRun(`เลขที่เอกสาร: ${docData.doc_no}`, 21, true),
+                            makeRun('   (ส่งตรวจสภาพและขอรับใบเสนอราคา)', 19, false, '64748B')
+                          ]
+                        })]
+                      }),
+                      new TableCell({
+                        width: { size: 45, type: WidthType.PERCENTAGE },
+                        children: [new Paragraph({
+                          alignment: AlignmentType.RIGHT,
+                          children: [makeRun(`วันที่ส่งซ่อม: ${docData.doc_date}`, 21, true)]
+                        })]
+                      })
+                    ]
+                  })
+                ]
+              }),
+
+              new Paragraph({ spacing: { before: 20, after: 30 } }),
+
+              // Info Table (Side by Side)
+              new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [
+                  new TableRow({
+                    children: [
+                      new TableCell({
+                        width: { size: 50, type: WidthType.PERCENTAGE },
+                        shading: { fill: 'F8FAFC', type: ShadingType.CLEAR },
+                        margins: CELL_MARGINS,
+                        borders: BOX_BORDERS,
+                        children: garageCellParas
+                      }),
+                      new TableCell({
+                        width: { size: 50, type: WidthType.PERCENTAGE },
+                        margins: CELL_MARGINS,
+                        borders: BOX_BORDERS,
+                        children: vehicleCellParas
+                      })
+                    ]
+                  })
+                ]
+              }),
+
+              new Paragraph({ spacing: { before: 20, after: 30 } }),
+
+              // Types Bar Table
+              new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [
+                  new TableRow({
+                    children: typeChips.map(c => new TableCell({
+                      width: { size: 25, type: WidthType.PERCENTAGE },
+                      shading: { fill: c.checked ? 'F0F9FF' : 'FFFFFF', type: ShadingType.CLEAR },
+                      margins: { top: 60, bottom: 60, left: 60, right: 60 },
+                      borders: BOX_BORDERS,
+                      children: [
+                        new Paragraph({
+                          alignment: AlignmentType.CENTER,
+                          children: [makeRun(c.checked ? `[✓] ${c.text}` : `[  ] ${c.text}`, 20, c.checked, c.checked ? '0369A1' : '64748B')]
+                        })
+                      ]
+                    }))
+                  })
+                ]
+              }),
+
+              new Paragraph({
+                spacing: { before: 30, after: 20 },
+                children: [makeRun('รายการงานที่ขอรับบริการ / อาการที่ตรวจพบ', 22, true, '0F172A')]
+              }),
+
+              // Items Table
+              new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: itemRows
+              }),
+
+              new Paragraph({ spacing: { before: 20, after: 30 } }),
+
+              // Terms & Direct Contact Box
+              new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [
+                  new TableRow({
+                    children: [
+                      new TableCell({
+                        shading: { fill: 'F0F9FF', type: ShadingType.CLEAR },
+                        margins: CELL_MARGINS,
+                        borders: {
+                          top: { style: BorderStyle.SINGLE, size: 5, color: '0284C7' },
+                          bottom: { style: BorderStyle.SINGLE, size: 5, color: '0284C7' },
+                          left: { style: BorderStyle.SINGLE, size: 5, color: '0284C7' },
+                          right: { style: BorderStyle.SINGLE, size: 5, color: '0284C7' }
+                        },
+                        children: [
+                          new Paragraph({
+                            spacing: { before: 0, after: 15 },
+                            children: [makeRun('การติดต่อประสานงานและข้อกำหนดการซ่อมบำรุง', 21, true, '0369A1')]
+                          }),
+                          new Paragraph({
+                            spacing: { before: 0, after: 15 },
+                            children: [
+                              makeRun('การประสานงานและพิจารณาซ่อม: ', 20, true),
+                              makeRun('ขอความอนุเคราะห์ศูนย์บริการโปรดติดต่อแจ้งผลการตรวจเช็ค และส่งใบเสนอราคา เพื่อพิจารณาอนุมัติซ่อมโดยตรงที่ ', 20, false),
+                              makeRun(`${docData.coordinator_name} (รองหัวหน้างานยานพาหนะ) โทรศัพท์ ${docData.coordinator_phone}`, 20, true, '0369A1')
+                            ]
+                          }),
+                          new Paragraph({
+                            spacing: { before: 0, after: 8 },
+                            children: [makeRun('๑. การเสนอราคา: ขอความอนุเคราะห์จัดทำใบเสนอราคา (Quotation) ส่งให้ผู้ประสานงานพิจารณาอนุมัติก่อนดำเนินการซ่อมหรือเปลี่ยนอะไหล่', 19, false, '334155')]
+                          }),
+                          new Paragraph({
+                            spacing: { before: 0, after: 8 },
+                            children: [makeRun('๒. การส่งคืนอะไหล่: ขอรับคืนชิ้นส่วนอะไหล่เก่าที่ทำการเปลี่ยนออกทั้งหมดส่งมอบพร้อมตัวรถ', 19, false, '334155')]
+                          }),
+                          new Paragraph({
+                            spacing: { before: 0, after: 0 },
+                            children: [makeRun('๓. การรับประกัน: งานซ่อมและอะไหล่แท้ได้รับการรับประกันคุณภาพตามมาตรฐานศูนย์บริการ', 19, false, '334155')]
+                          })
+                        ]
+                      })
+                    ]
+                  })
+                ]
+              }),
+
+              new Paragraph({ spacing: { before: 20, after: 30 } }),
+
+              // Signatures Table (4 Boxes)
+              new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [
+                  new TableRow({
+                    children: [
+                      new TableCell({
+                        width: { size: 50, type: WidthType.PERCENTAGE },
+                        margins: CELL_MARGINS,
+                        borders: BOX_BORDERS,
+                        children: buildSigParas(
+                          '๑. ผู้ประสานงานและสั่งซ่อม',
+                          signatures.coordinator,
+                          docData.coordinator_name,
+                          `ตำแหน่ง: ${docData.coordinator_title}`,
+                          `โทรศัพท์: ${docData.coordinator_phone}`
+                        )
+                      }),
+                      new TableCell({
+                        width: { size: 50, type: WidthType.PERCENTAGE },
+                        margins: CELL_MARGINS,
+                        borders: BOX_BORDERS,
+                        children: buildSigParas(
+                          '๒. พนักงานขับรถผู้นำส่งมอบรถ',
+                          signatures.driver,
+                          docData.driver_name,
+                          'ตำแหน่ง: พนักงานขับรถ งานยานพาหนะ',
+                          `โทรศัพท์: ${docData.driver_phone}`
+                        )
+                      })
+                    ]
+                  }),
+                  new TableRow({
+                    children: [
+                      new TableCell({
+                        width: { size: 50, type: WidthType.PERCENTAGE },
+                        margins: CELL_MARGINS,
+                        borders: BOX_BORDERS,
+                        children: buildSigParas(
+                          '๓. เจ้าหน้าที่ศูนย์บริการผู้รับรถเข้าตรวจสภาพ',
+                          signatures.garage,
+                          '................................................................',
+                          `ผู้รับรถ ${docData.garage_name}`,
+                          'สภาพรับรถ: [  ] เรียบร้อยดี   วันที่ ...../...../๒๕๖๙'
+                        )
+                      }),
+                      new TableCell({
+                        width: { size: 50, type: WidthType.PERCENTAGE },
+                        margins: CELL_MARGINS,
+                        borders: BOX_BORDERS,
+                        children: buildSigParas(
+                          '๔. ผู้อนุมัติการส่งซ่อมบำรุง',
+                          signatures.approver,
+                          '................................................................',
+                          'หัวหน้างานยานพาหนะ / รองผู้อำนวยการกลุ่มบริหารงานบุคคล',
+                          'ความเห็น: [✓] อนุมัติส่งตรวจสภาพและขอใบเสนอราคา'
+                        )
+                      })
+                    ]
+                  })
+                ]
+              }),
+
+              // Acceptance Footer
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 40, after: 0 },
+                children: [
+                  makeRun('การตรวจรับรถกลับเมื่อซ่อมเสร็จ: ได้ตรวจรับรถยนต์คืนในสภาพเรียบร้อยดี และได้รับอะไหล่เก่าคืนครบถ้วน (เลขไมล์ตอนรับกลับ: .................... กม.) ลงชื่อ ........................................................ ผู้ตรวจรับ วันที่ ...../...../๒๕๖๙', 17, false, '64748B')
+                ]
+              })
+            ]
+          }]
+        });
+
+        const blob = await Packer.toBlob(doc);
+        const fileName = `ใบส่งซ่อม_${(docData.plate || '').replace(/\s+/g, '_')}_${docData.doc_no}.docx`;
+
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (err) {
+        console.error('Word export failed:', err);
+        alert('เกิดข้อผิดพลาดในการสร้างไฟล์ Word: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+
+    /* ─── Helpers ─── */
+    function escHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+      }[m]));
+    }
+
+    function formatDateThai(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      const thMonths = [
+        'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+      ];
+      return `${d.getDate()} ${thMonths[d.getMonth()]} ${d.getFullYear() + 543}`;
+    }
+  </script>
+</body>
+</html>
