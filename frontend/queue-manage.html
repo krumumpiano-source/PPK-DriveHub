@@ -1391,7 +1391,8 @@
 
         
         <div class="stepper-footer" id="editStepperFooter">
-          <button type="button" class="btn btn-danger" onclick="deleteQueue(editingQueueId)" id="editBtnDelete" style="margin-right: auto;">🗑️ ลบคิว</button>
+          <button type="button" class="btn btn-danger" onclick="deleteQueue(editingQueueId)" id="editBtnDelete" style="margin-right: 8px;">🗑️ ลบคิว</button>
+          <button type="button" class="btn" onclick="copyCurrentQueueToLine(this)" id="editBtnCopyLine" style="background: #06C755; color: white; margin-right: auto;">💬 ส่ง LINE</button>
           
           <div style="display: flex; gap: 10px; margin-left: auto;">
             <button type="button" class="btn btn-secondary" onclick="prevEditStep()" id="editBtnPrev" style="display: none;">⬅️ ถอยกลับ</button>
@@ -1817,7 +1818,7 @@
       document.getElementById('ganttChart').innerHTML = '<p style="text-align:center; color:#999;">กำลังโหลด...</p>';
       
       try {
-        var res = await apiCall('getQueues', { start_date: dateStr, end_date: dateStr });
+        var res = await apiCall('getQueues', { date: dateStr, date_from: dateStr, date_to: dateStr });
         var dailyQueues = (res && res.success && Array.isArray(res.data)) ? res.data : [];
         
         var vRes = await apiCall('getVehicles');
@@ -1837,7 +1838,7 @@
         
         // Rows
         activeVehicles.forEach(v => {
-          var vQs = dailyQueues.filter(q => q.car_id === v.id && q.status !== 'cancelled' && q.status !== 'rejected');
+          var vQs = dailyQueues.filter(q => q.car_id === v.id && q.status !== 'cancelled' && q.status !== 'rejected' && (q.date === dateStr || (q.date <= dateStr && (q.return_date || q.date) >= dateStr)));
           
           html += '<tr style="border-bottom:1px solid #eee;">';
           html += `<td style="padding:10px; border-right:1px solid #ddd; position:sticky; left:0; background:white; z-index:10;">
@@ -2299,7 +2300,9 @@
         var dateObj = new Date(currentYear, currentMonth, day);
         dateObj.setHours(0, 0, 0, 0);
         var isToday = dateStr === todayStr;
-        var dayQueues = queues.filter(function (q) { return q.date === dateStr; });
+        var dayQueues = queues.filter(function (q) {
+          return q.date === dateStr || (q.date <= dateStr && (q.return_date || q.date) >= dateStr);
+        });
 
         // Determine status class
         var statusClass = '';
@@ -2798,23 +2801,14 @@
 
     async function checkQueueConflicts(queueData) {
       try {
-        var carResult = await apiCall('getQueue', {
+        var queueResult = await apiCall('getQueue', {
           date_from: queueData.date,
-          date_to: queueData.date
+          date_to: queueData.return_date || queueData.date
         });
 
-        var driverResult = await apiCall('getQueue', {
-          date_from: queueData.date,
-          date_to: queueData.date
-        });
-
-        var existingQueues = [];
-        if (carResult.success && carResult.data) {
-          existingQueues = existingQueues.concat(Array.isArray(carResult.data) ? carResult.data : []);
-        }
-        if (driverResult.success && driverResult.data) {
-          existingQueues = existingQueues.concat(Array.isArray(driverResult.data) ? driverResult.data : []);
-        }
+        var existingQueues = (queueResult && queueResult.success && Array.isArray(queueResult.data))
+          ? queueResult.data
+          : [];
 
         var seen = {};
         existingQueues = existingQueues.filter(function (q) {
@@ -2875,7 +2869,8 @@
             time_end: queueData.time_end,
             car_id: queueData.car_id,
             driver_id: queueData.driver_id,
-            estimated_km: queueData.estimated_km || 0
+            estimated_km: queueData.estimated_km || 0,
+            exclude_queue_id: editingQueueId || undefined
           });
           if (avail && avail.success && avail.data) {
             if (Array.isArray(avail.data.blockers)) {
@@ -3097,7 +3092,7 @@
           document.getElementById('editQueueInfo').innerHTML = infoHtml;
           document.getElementById('editQueueInfo').style.display = 'block';
 
-          if (frozen || status === 'active' || status === 'completed') {
+          if (frozen || status === 'active' || status === 'ongoing' || status === 'completed') {
             showAlert('⚠️ คิวนี้ถูก Freeze หรือเริ่มใช้งานแล้ว ไม่สามารถแก้ไขได้', 'warning');
             setTimeout(function () {
               closeEditModal();
@@ -3120,27 +3115,13 @@
             } catch (e) { console.warn('inject missing vehicle failed', e); }
           }
           // เช่นเดียวกันกับคนขับ — getDrivers ดึงเฉพาะ status='active'
-          // ถ้าคนขับถูกปิดใช้งาน/ลาออกแล้ว ต้องดึงคันนี้มาเพิ่ม dropdown ก่อน
+          // ถ้าคนขับถูกปิดใช้งาน/ลาออกแล้ว ต้องดึงคันนี้มาเพิ่มก่อน
           if (editingQueueData.driver_id && !driversMap[editingQueueData.driver_id]) {
             try {
               var dRes = await apiCall('getDriver', { id: editingQueueData.driver_id });
               if (dRes && dRes.success && dRes.data) {
                 drivers.push(dRes.data);
                 driversMap[dRes.data.id] = dRes.data;
-                // เพิ่ม <option> เข้า edit_driver_id โดยตรง (loadDrivers จะกรองทิ้งถ้าเรียกซ้ำ)
-                var editDriverSel = document.getElementById('edit_driver_id');
-                if (editDriverSel) {
-                  var hasOpt = false;
-                  for (var i = 0; i < editDriverSel.options.length; i++) {
-                    if (editDriverSel.options[i].value === dRes.data.id) { hasOpt = true; break; }
-                  }
-                  if (!hasOpt) {
-                    var dOpt = document.createElement('option');
-                    dOpt.value = dRes.data.id;
-                    dOpt.textContent = (dRes.data.name || '-') + (dRes.data.status === 'inactive' ? ' [ยกเลิกใช้]' : '');
-                    editDriverSel.appendChild(dOpt);
-                  }
-                }
               }
             } catch (e) { console.warn('inject missing driver failed', e); }
           }
@@ -3229,8 +3210,9 @@
       var carModel = (q.brand || car.brand || '') + ' ' + (q.model || car.model || '');
       var carLabel = carPlate + (carModel.trim() ? ' (' + carModel.trim() + ')' : '');
       
-      var driver = driversMap[q.driver_id] || {};
-      var driverName = q.driver_name || driver.name || (document.getElementById('edit_driver_id') ? document.getElementById('edit_driver_id').options[document.getElementById('edit_driver_id').selectedIndex]?.text : '-');
+      var currentEditDriverId = document.getElementById('edit_driver_id') ? document.getElementById('edit_driver_id').value : '';
+      var driver = (currentEditDriverId ? driversMap[currentEditDriverId] : null) || driversMap[q.driver_id] || {};
+      var driverName = driver.name || q.driver_name || '-';
       var dTag = q.driver_line_id || driver.line_id || '';
       if (dTag && !dTag.startsWith('@')) dTag = '@' + dTag;
 
@@ -3322,8 +3304,7 @@ ${dTagHeader}📅 วันเดินทาง: ${dateFormatted}
       };
 
       saveFormMemory({
-        requested_by: raw_requested_by,
-        requester_phone: requester_phone,
+        requested_by: requested_by,
         destination: destination,
         mission: mission,
         notes: formData.notes
@@ -3405,6 +3386,7 @@ ${dTagHeader}📅 วันเดินทาง: ${dateFormatted}
 
         if (result.success) {
           showAlert('✅ ลบคิวสำเร็จ', 'success');
+          closeEditModal();
           loadQueues();
         } else {
           showAlert(typeof getUserMessage !== 'undefined' ? getUserMessage(result.message) : (result.message || 'ลบคิวไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'), 'error');
@@ -3427,48 +3409,6 @@ ${dTagHeader}📅 วันเดินทาง: ${dateFormatted}
       }, 5000);
     }
 
-    function copyCurrentQueueToLine(btn) {
-      if (!editingQueueData) {
-        alert('ไม่พบข้อมูลคิวงาน');
-        return;
-      }
-      var q = editingQueueData;
-      var car = vehiclesMap[q.car_id] || {};
-      var carLabel = (q.license_plate || car.license_plate || '-') + ' ' + (q.brand || car.brand || '') + ' ' + (q.model || car.model || '');
-      
-      var driver = driversMap[q.driver_id] || {};
-      var driverName = q.driver_name || driver.name || (document.getElementById('edit_driver_id') ? document.getElementById('edit_driver_id').options[document.getElementById('edit_driver_id').selectedIndex]?.text : '-');
-      var dTag = q.driver_line_id || driver.line_id || '';
-      if (dTag && !dTag.startsWith('@')) dTag = '@' + dTag;
-
-      var dPhone = q.driver_phone || driver.phone || '';
-      var dTagHeader = dTag ? `\n🔔 แจ้งเตือน: ${dTag} (มีมอบหมายคิวงาน)` : '';
-      var dDisplay = dTag ? `${driverName} (${dTag})` : driverName;
-      var dPhoneStr = dPhone ? ` 📞 ${dPhone}` : '';
-
-      var dateVal = document.getElementById('edit_date') ? document.getElementById('edit_date').value : q.date;
-      var timeStart = document.getElementById('edit_time_start') ? document.getElementById('edit_time_start').value : (q.time_start || '-');
-      var timeEnd = document.getElementById('edit_time_end') ? document.getElementById('edit_time_end').value : (q.time_end || '-');
-      var dest = document.getElementById('edit_destination') ? document.getElementById('edit_destination').value : (q.destination || '-');
-      var mission = document.getElementById('edit_mission') ? document.getElementById('edit_mission').value : (q.notes || q.mission || '-');
-      var requester = document.getElementById('edit_requested_by') ? document.getElementById('edit_requested_by').value : (q.requester_name || q.requested_by || '-');
-      var passengerCount = document.getElementById('edit_passenger_count') ? document.getElementById('edit_passenger_count').value : (q.passenger_count || 1);
-
-      var lineText = `🚐 [คิวงานรถราชการ - โรงเรียนพะเยาพิทยาคม]${dTagHeader}\n📅 วันที่: ${dateVal} (${timeStart} - ${timeEnd} น.)\n📍 ปลายทาง: ${dest}\n🎯 ภารกิจ: ${mission}\n🚗 รถ: ${carLabel.trim()}\n👤 คนขับ: ${dDisplay}${dPhoneStr}\n👥 ผู้ขอ/คณะเดินทาง: ${requester} (จำนวน ${passengerCount} คน)`;
-
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(lineText).then(function() {
-          var orig = btn.innerHTML;
-          btn.innerHTML = '✅ คัดลอกแล้ว!';
-          setTimeout(function() { btn.innerHTML = orig; }, 2500);
-        }).catch(function() {
-          prompt('คัดลอกข้อความด้านล่างเพื่อส่ง LINE:', lineText);
-        });
-      } else {
-        prompt('คัดลอกข้อความด้านล่างเพื่อส่ง LINE:', lineText);
-      }
-    }
-  
 // --- Stepper Logic Create ---
 let currentCreateStep = 1;
 function updateCreateStepper() {
@@ -3506,11 +3446,37 @@ function updateCreateStepper() {
 }
 
 function validateCreateStep(step) {
-  // Simple validation for current step fields
+  if (step === 1) {
+    if (createDateType === 'single') {
+      var d = document.getElementById('create_date').value;
+      if (!d) { showAlert('กรุณาเลือกวันที่', 'error'); return false; }
+    } else if (createDateType === 'range') {
+      var from = document.getElementById('create_date_from').value;
+      var to = document.getElementById('create_date_to').value;
+      if (!from || !to) { showAlert('กรุณาระบุช่วงวันที่เริ่มต้นและสิ้นสุด', 'error'); return false; }
+      if (to < from) { showAlert('วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่มต้น', 'error'); return false; }
+    } else if (createDateType === 'weekly') {
+      var from = document.getElementById('weekly_date_from').value;
+      var to = document.getElementById('weekly_date_to').value;
+      if (!from || !to) { showAlert('กรุณาระบุช่วงวันที่', 'error'); return false; }
+      if (to < from) { showAlert('วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่มต้น', 'error'); return false; }
+      if (!selectedWeekdays || selectedWeekdays.length === 0) { showAlert('กรุณาเลือกวันในสัปดาห์อย่างน้อย 1 วัน', 'error'); return false; }
+    }
+    var t = document.getElementById('create_time_start').value;
+    if (!t) { showAlert('กรุณาระบุเวลาเริ่มต้น', 'error'); return false; }
+    return true;
+  }
+  if (step === 2) {
+    var carId = document.getElementById('create_car_id').value;
+    var driverId = document.getElementById('create_driver_id').value;
+    if (!carId) { showAlert('กรุณาเลือกรถ', 'error'); return false; }
+    if (!driverId) { showAlert('กรุณาเลือกพนักงานขับรถ', 'error'); return false; }
+    return true;
+  }
   const stepEl = document.getElementById('createStep' + step);
-  const inputs = stepEl.querySelectorAll('input[required], select[required]');
+  if (!stepEl) return true;
+  const inputs = stepEl.querySelectorAll('input[required], select[required], textarea[required]');
   for (let input of inputs) {
-    // Only validate if it's visible (not inside a display: none group like date ranges)
     if (input.offsetParent !== null && !input.checkValidity()) {
       input.reportValidity();
       return false;
@@ -3592,9 +3558,23 @@ function updateEditStepper() {
 }
 
 function validateEditStep(step) {
+  if (step === 1) {
+    var d = document.getElementById('edit_date').value;
+    var t = document.getElementById('edit_time_start').value;
+    if (!d) { showAlert('กรุณาเลือกวันที่', 'error'); return false; }
+    if (!t) { showAlert('กรุณาระบุเวลาเริ่มต้น', 'error'); return false; }
+    return true;
+  }
+  if (step === 2) {
+    var carId = document.getElementById('edit_car_id').value;
+    var driverId = document.getElementById('edit_driver_id').value;
+    if (!carId) { showAlert('กรุณาเลือกรถ', 'error'); return false; }
+    if (!driverId) { showAlert('กรุณาเลือกพนักงานขับรถ', 'error'); return false; }
+    return true;
+  }
   const stepEl = document.getElementById('editStep' + step);
   if (!stepEl) return true;
-  const inputs = stepEl.querySelectorAll('input[required], select[required]');
+  const inputs = stepEl.querySelectorAll('input[required], select[required], textarea[required]');
   for (let input of inputs) {
     if (input.offsetParent !== null && !input.checkValidity()) {
       input.reportValidity();

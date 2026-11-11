@@ -23,16 +23,21 @@ export async function onRequest(context) {
     const status = url.searchParams.get('status');
     const date = url.searchParams.get('date');
     const carId = url.searchParams.get('car_id');
-    const dateFrom = url.searchParams.get('date_from');
-    const dateTo = url.searchParams.get('date_to');
+    const dateFrom = url.searchParams.get('date_from') || url.searchParams.get('start_date');
+    const dateTo = url.searchParams.get('date_to') || url.searchParams.get('end_date');
     const driverIdParam = url.searchParams.get('driver_id');
     const where = [];
     const params = [];
     if (status) { where.push('q.status = ?'); params.push(status); }
     if (date) { where.push('q.date = ?'); params.push(date); }
     if (carId) { where.push('q.car_id = ?'); params.push(carId); }
-    if (dateFrom) { where.push('q.date >= ?'); params.push(dateFrom); }
-    if (dateTo) { where.push('q.date <= ?'); params.push(dateTo); }
+    if (dateFrom && dateTo) {
+      where.push('COALESCE(q.return_date, q.date) >= ? AND q.date <= ?');
+      params.push(dateFrom, dateTo);
+    } else {
+      if (dateFrom) { where.push('COALESCE(q.return_date, q.date) >= ?'); params.push(dateFrom); }
+      if (dateTo) { where.push('q.date <= ?'); params.push(dateTo); }
+    }
     if (driverIdParam) { where.push('q.driver_id = ?'); params.push(driverIdParam); }
     const rows = await dbAll(env.DB,
       `SELECT q.*, c.license_plate, c.brand, c.model,
@@ -91,7 +96,7 @@ export async function onRequest(context) {
   if (path === '/api/queue' && method === 'POST') {
     try { requirePermission(user, 'queue', 'create'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const body = await parseBody(request);
-    if (!body?.car_id || !body?.date) return error('กรุณาระบุยานพาหนะและวันที่');
+    if (!body?.car_id || !body?.date || !body?.driver_id) return error('กรุณาระบุยานพาหนะ วันที่ และพนักงานขับรถ', 400);
 
     const returnDate = body.return_date || body.date;
     if (returnDate < body.date) {

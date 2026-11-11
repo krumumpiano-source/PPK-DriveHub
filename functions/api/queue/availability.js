@@ -18,6 +18,7 @@ export async function onRequest(context) {
     const carId = url.searchParams.get('car_id');
     const driverId = url.searchParams.get('driver_id');
     const estKm = parseFloat(url.searchParams.get('estimated_km')) || 0;
+    const excludeQueueId = url.searchParams.get('exclude_queue_id') || url.searchParams.get('exclude_id') || '';
 
     if (!date) return error('Missing date');
 
@@ -47,13 +48,19 @@ export async function onRequest(context) {
         }
       }
 
-      // Check Car Conflicts across date and time
+      // Check Car Conflicts across date and time (exclude current queue being edited)
+      const carConflictParams = [carId, returnDate, date];
+      let carExcludeSql = '';
+      if (excludeQueueId) {
+        carExcludeSql = ' AND q.id != ?';
+        carConflictParams.push(excludeQueueId);
+      }
       const carConflicts = await dbAll(env.DB, `
         SELECT q.time_start, q.time_end, q.destination, q.date, q.return_date
         FROM queue q 
         WHERE q.car_id = ? AND q.status NOT IN ('cancelled', 'completed')
-        AND q.date <= ? AND COALESCE(q.return_date, q.date) >= ?
-      `, [carId, returnDate, date]);
+        AND q.date <= ? AND COALESCE(q.return_date, q.date) >= ?${carExcludeSql}
+      `, carConflictParams);
 
       // If single-day check time overlap, if multi-day it's a conflict
       for (const qc of carConflicts) {
@@ -91,13 +98,19 @@ export async function onRequest(context) {
         }
       }
 
-      // Check Driver Conflicts
+      // Check Driver Conflicts (exclude current queue being edited)
+      const drvConflictParams = [driverId, returnDate, date];
+      let drvExcludeSql = '';
+      if (excludeQueueId) {
+        drvExcludeSql = ' AND q.id != ?';
+        drvConflictParams.push(excludeQueueId);
+      }
       const drvConflicts = await dbAll(env.DB, `
         SELECT q.time_start, q.time_end, q.destination, q.date, q.return_date
         FROM queue q 
         WHERE q.driver_id = ? AND q.status NOT IN ('cancelled', 'completed')
-        AND q.date <= ? AND COALESCE(q.return_date, q.date) >= ?
-      `, [driverId, returnDate, date]);
+        AND q.date <= ? AND COALESCE(q.return_date, q.date) >= ?${drvExcludeSql}
+      `, drvConflictParams);
 
       for (const qd of drvConflicts) {
         const isMultiDay = (date !== returnDate) || (qd.date !== (qd.return_date || qd.date));
