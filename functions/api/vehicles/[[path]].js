@@ -80,11 +80,21 @@ export async function onRequest(context) {
        images, body.registration_book_image || '', body.notes || '', user.id, ts, ts,
        body.province || '', body.vehicle_type || '', body.registration_number || '', body.vehicle_category || 'primary']
     );
-    await writeAuditLog(env.DB, user.id, user.displayName, 'create_vehicle', 'vehicles', id, { license_plate: body.license_plate });
+    await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'create_vehicle', 'vehicles', id, { license_plate: body.license_plate });
     return success({ id, message: 'เพิ่มยานพาหนะเรียบร้อย' }, 201);
   }
 
-  if (path.match(/^\/api\/vehicles\/[^/]+$/) && method === 'GET') {
+  // --- GET /api/vehicles/inactive ---
+  if (path === '/api/vehicles/inactive' && method === 'GET') {
+    try { requirePermission(user, 'vehicles', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    const vehicles = await dbAll(env.DB,
+      `SELECT id, license_plate, brand, model, color, year, vehicle_category, deactivated_reason, deactivated_at FROM cars WHERE status = 'inactive' ORDER BY deactivated_at DESC`
+    );
+    return success({ vehicles });
+  }
+
+  // --- GET /api/vehicles/:id ---
+  if (path.match(/^\/api\/vehicles\/[^/]+$/) && !path.endsWith('/inactive') && method === 'GET') {
     try { requirePermission(user, 'vehicles', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = extractParam(path, '/api/vehicles/');
     // Note: no status filter — single-record lookup must return inactive vehicles too,
@@ -99,7 +109,8 @@ export async function onRequest(context) {
     return car ? success(car) : error('ไม่พบยานพาหนะ', 404);
   }
 
-  if (path.match(/^\/api\/vehicles\/[^/]+$/) && method === 'PUT') {
+  // --- PUT /api/vehicles/:id ---
+  if (path.match(/^\/api\/vehicles\/[^/]+$/) && !path.endsWith('/inactive') && method === 'PUT') {
     try { requirePermission(user, 'vehicles', 'edit'); } catch { return error('ไม่มีสิทธิ์แก้ไขยานพาหนะ', 403); }
     const id = extractParam(path, '/api/vehicles/');
     const body = await parseBody(request);
@@ -118,29 +129,48 @@ export async function onRequest(context) {
     }
     if (!updates.length) return error('ไม่มีข้อมูลที่จะอัปเดต');
     updates.push('updated_by = ?'); params.push(user.id);
-    updates.push('updated_at = ?'); params.push(now(), id);
+    updates.push('updated_at = ?'); params.push(now());
+    params.push(id);
     await dbRun(env.DB, `UPDATE cars SET ${updates.join(', ')} WHERE id = ?`, params);
-    await writeAuditLog(env.DB, user.id, user.displayName, 'update_vehicle', 'vehicles', id, null);
+    await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'update_vehicle', 'vehicles', id, null);
     return success({ message: 'อัปเดตยานพาหนะเรียบร้อย' });
   }
 
-  if (path === '/api/vehicles/inactive' && method === 'GET') {
-    try { requirePermission(user, 'vehicles', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
-    const vehicles = await dbAll(env.DB,
-      `SELECT id, license_plate, brand, model, color, year, vehicle_category, deactivated_reason, deactivated_at FROM cars WHERE status = 'inactive' ORDER BY deactivated_at DESC`
+  // --- DELETE /api/vehicles/:id (Soft-delete / Deactivate) ---
+  if (path.match(/^\/api\/vehicles\/[^/]+$/) && !path.endsWith('/inactive') && method === 'DELETE') {
+    try { requirePermission(user, 'vehicles', 'delete'); } catch { return error('ไม่มีสิทธิ์ลบยานพาหนะ', 403); }
+    const id = extractParam(path, '/api/vehicles/');
+    const activeQueue = await dbFirst(env.DB,
+      "SELECT id, date FROM queue WHERE car_id = ? AND status IN ('pending', 'approved', 'in_progress') LIMIT 1",
+      [id]
     );
-    return success({ vehicles });
+    if (activeQueue) {
+      return error('ไม่สามารถลบรถคันนี้ได้ เนื่องจากมีคิวงานที่ยังรอดำเนินการหรือกำลังเดินทางอยู่ (วันที่ ' + activeQueue.date + ')', 400);
+    }
+    await dbRun(env.DB,
+      `UPDATE cars SET status = 'inactive', deactivated_reason = 'ลบโดยผู้ใช้', deactivated_at = ?, updated_by = ?, updated_at = ? WHERE id = ?`,
+      [now(), user.id, now(), id]
+    );
+    await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'deactivate_vehicle', 'vehicles', id, null);
+    return success({ message: 'ลบยานพาหนะเรียบร้อย' });
   }
 
   if (path.match(/\/api\/vehicles\/[^/]+\/deactivate/) && method === 'PUT') {
     try { requirePermission(user, 'vehicles', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[3];
     const body = await parseBody(request);
+    const activeQueue = await dbFirst(env.DB,
+      "SELECT id, date FROM queue WHERE car_id = ? AND status IN ('pending', 'approved', 'in_progress') LIMIT 1",
+      [id]
+    );
+    if (activeQueue) {
+      return error('ไม่สามารถปิดการใช้งานรถคันนี้ได้ เนื่องจากมีคิวงานที่ยังรอดำเนินการหรือกำลังเดินทางอยู่ (วันที่ ' + activeQueue.date + ')', 400);
+    }
     await dbRun(env.DB,
       `UPDATE cars SET status = 'inactive', deactivated_reason = ?, deactivated_at = ?, updated_by = ?, updated_at = ? WHERE id = ?`,
       [body?.reason || '', now(), user.id, now(), id]
     );
-    await writeAuditLog(env.DB, user.id, user.displayName, 'deactivate_vehicle', 'vehicles', id, null);
+    await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'deactivate_vehicle', 'vehicles', id, null);
     return success({ message: 'ปิดการใช้งานยานพาหนะเรียบร้อย' });
   }
 
@@ -153,7 +183,7 @@ export async function onRequest(context) {
       `UPDATE cars SET status = 'active', deactivated_reason = NULL, deactivated_at = NULL, updated_by = ?, updated_at = ? WHERE id = ?`,
       [user.id, now(), id]
     );
-    await writeAuditLog(env.DB, user.id, user.displayName, 'reactivate_vehicle', 'vehicles', id, { license_plate: car.license_plate });
+    await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'reactivate_vehicle', 'vehicles', id, { license_plate: car.license_plate });
     return success({ message: 'กู้คืนยานพาหนะเรียบร้อย' });
   }
 

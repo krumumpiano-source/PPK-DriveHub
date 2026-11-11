@@ -571,6 +571,11 @@
     var vehicleImages = [];
     var registrationBookFile = null;
 
+    function isUserAdmin() {
+      var u = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+      return !!(u && (u.role === 'admin' || u.role === 'super_admin'));
+    }
+
     function waitForCommon() {
       return new Promise(function (resolve) {
         if (typeof apiCall !== 'undefined' && typeof getCurrentUser !== 'undefined') {
@@ -686,12 +691,11 @@
         document.getElementById('loading').style.display = 'block';
         document.getElementById('vehiclesContainer').style.display = 'none';
 
-        var result = await apiCall('getVehicles', {
-          filters: { for_queue_selection: false }
-        });
+        var result = await apiCall('getVehicles');
 
-        if (result.success && result.data && result.data.vehicles) {
-          vehicles = (result.data.vehicles || []).slice();
+        var vehiclesList = (result && result.success && result.data) ? (Array.isArray(result.data) ? result.data : (result.data.vehicles || [])) : [];
+        if (vehiclesList.length > 0) {
+          vehicles = vehiclesList.slice();
           displayVehicles(vehicles);
         } else {
           document.getElementById('vehiclesGrid').innerHTML = '<div class="empty-state"><div class="empty-state-icon">🚗</div><p>ไม่พบข้อมูลรถ</p></div>';
@@ -762,7 +766,7 @@
 
           // Actions — clean: Edit + Delete + More dropdown
           html += '<div class="vehicle-actions">';
-          if (hasModulePermission('vehicles', 'edit') || getCurrentUser().role === 'admin') {
+          if (hasModulePermission('vehicles', 'edit') || isUserAdmin()) {
             html += '<button class="btn btn-primary" onclick="editVehicle(\'' + vehicle.id + '\')">✏️ แก้ไข</button>';
             html += '<button class="btn btn-danger" onclick="deleteVehicle(\'' + vehicle.id + '\')">🗑️ ลบ</button>';
             html += '<div class="btn-more">';
@@ -795,7 +799,7 @@
           return;
         }
         if (typeof hasModulePermission === 'function' && typeof getCurrentUser === 'function') {
-          if (!hasModulePermission('vehicles', 'create') && getCurrentUser().role !== 'admin') {
+          if (!hasModulePermission('vehicles', 'create') && !isUserAdmin()) {
             alert('คุณไม่มีสิทธิ์เพิ่มรถ');
             return;
           }
@@ -817,7 +821,7 @@
     };
 
     function editVehicle(carId) {
-      if (!hasModulePermission('vehicles', 'edit') && getCurrentUser().role !== 'admin') {
+      if (!hasModulePermission('vehicles', 'edit') && !isUserAdmin()) {
         alert('คุณไม่มีสิทธิ์แก้ไขรถ');
         return;
       }
@@ -1037,7 +1041,7 @@
         return;
       }
 
-      if (!hasModulePermission('vehicles', 'delete') && getCurrentUser().role !== 'admin') {
+      if (!hasModulePermission('vehicles', 'delete') && !isUserAdmin()) {
         alert('คุณไม่มีสิทธิ์ลบรถ');
         return;
       }
@@ -1061,7 +1065,7 @@
     }
 
     async function changeVehicleCategory(carId, newCategory) {
-      if (!hasModulePermission('vehicles', 'edit') && getCurrentUser().role !== 'admin') {
+      if (!hasModulePermission('vehicles', 'edit') && !isUserAdmin()) {
         alert('คุณไม่มีสิทธิ์เปลี่ยนสถานะรถ');
         return;
       }
@@ -1081,7 +1085,7 @@
     }
 
     async function setVehicleUnavailable(carId) {
-      if (!hasModulePermission('vehicles', 'edit') && getCurrentUser().role !== 'admin') {
+      if (!hasModulePermission('vehicles', 'edit') && !isUserAdmin()) {
         alert('คุณไม่มีสิทธิ์ยกเลิกใช้รถ');
         return;
       }
@@ -1100,7 +1104,7 @@
     }
 
     async function setVehicleAvailable(carId) {
-      if (!hasModulePermission('vehicles', 'edit') && getCurrentUser().role !== 'admin') {
+      if (!hasModulePermission('vehicles', 'edit') && !isUserAdmin()) {
         alert('คุณไม่มีสิทธิ์เปิดใช้รถ');
         return;
       }
