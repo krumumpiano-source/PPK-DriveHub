@@ -9,7 +9,7 @@
   <style>
     @page {
       size: A4 portrait;
-      margin: 12mm 15mm;
+      margin: 10mm 14mm;
     }
     * {
       box-sizing: border-box;
@@ -18,18 +18,18 @@
     }
     body {
       font-family: 'Sarabun', 'TH Sarabun New', Tahoma, sans-serif;
-      font-size: 14px;
+      font-size: 13.5px;
       line-height: 1.35;
       color: #0f172a;
       background: #f1f5f9;
       margin: 0;
-      padding: 20px;
+      padding: 16px;
     }
     .print-sheet {
       background: #ffffff;
       width: 210mm;
       min-height: 297mm;
-      padding: 16mm 18mm;
+      padding: 14mm 16mm;
       margin: 0 auto 20px auto;
       box-shadow: 0 4px 16px rgba(0,0,0,0.08);
       position: relative;
@@ -55,17 +55,17 @@
       justify-content: space-between;
       align-items: flex-start;
       border-bottom: 2px solid #0284c7;
-      padding-bottom: 10px;
-      margin-bottom: 12px;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
     }
     .org-title {
-      font-size: 14px;
+      font-size: 13.5px;
       font-weight: 700;
       color: #0369a1;
       margin-bottom: 2px;
     }
     .doc-main-title {
-      font-size: 18px;
+      font-size: 17.5px;
       font-weight: 700;
       color: #0f172a;
       margin-bottom: 2px;
@@ -78,7 +78,7 @@
       background: #f8fafc;
       border: 1px solid #e2e8f0;
       border-radius: 6px;
-      padding: 8px 12px;
+      padding: 6px 12px;
       text-align: right;
       font-size: 12px;
     }
@@ -90,8 +90,8 @@
     .grid-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 12px;
+      gap: 10px;
+      margin-bottom: 10px;
     }
     .card-box {
       border: 1px solid #cbd5e1;
@@ -100,39 +100,43 @@
     }
     .card-box-header {
       background: #f1f5f9;
-      padding: 6px 12px;
+      padding: 5px 12px;
       font-weight: 700;
       font-size: 13px;
       color: #1e293b;
       border-bottom: 1px solid #cbd5e1;
     }
     .card-box-body {
-      padding: 8px 12px;
-      font-size: 13px;
+      padding: 7px 12px;
+      font-size: 12.8px;
       line-height: 1.4;
     }
     .card-box-body div {
-      margin-bottom: 3px;
+      margin-bottom: 2px;
     }
     .highlight-val {
       font-weight: 700;
       color: #0369a1;
     }
+    .driver-val {
+      font-weight: 700;
+      color: #0f172a;
+    }
     .mileage-val {
       font-weight: 700;
       color: #b45309;
-      font-size: 14px;
+      font-size: 13.5px;
     }
     .service-types {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 6px;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
     .type-pill {
       border: 1px solid #e2e8f0;
       border-radius: 6px;
-      padding: 6px 4px;
+      padding: 5px 4px;
       text-align: center;
       font-size: 12px;
       color: #64748b;
@@ -147,19 +151,19 @@
     table.data-table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 12px;
-      font-size: 13px;
+      margin-bottom: 10px;
+      font-size: 12.8px;
     }
     table.data-table th {
       background: #e2e8f0;
       color: #1e293b;
       font-weight: 700;
-      padding: 6px 10px;
+      padding: 5px 8px;
       border: 1px solid #cbd5e1;
       text-align: left;
     }
     table.data-table td {
-      padding: 7px 10px;
+      padding: 6px 8px;
       border: 1px solid #cbd5e1;
       vertical-align: top;
     }
@@ -168,41 +172,41 @@
       color: #0f172a;
     }
     .item-desc {
-      font-size: 12px;
+      font-size: 11.8px;
       color: #475569;
-      margin-top: 2px;
+      margin-top: 1px;
     }
     .terms-box {
       background: #fefce8;
       border: 1px solid #fde047;
       border-radius: 6px;
-      padding: 8px 12px;
-      margin-bottom: 14px;
-      font-size: 12px;
+      padding: 7px 12px;
+      margin-bottom: 12px;
+      font-size: 11.8px;
       color: #854d0e;
     }
     .terms-title {
       font-weight: 700;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
       color: #a16207;
-      font-size: 12.5px;
+      font-size: 12px;
     }
     .terms-list {
       margin: 0;
       padding-left: 18px;
     }
     .terms-list li {
-      margin-bottom: 2px;
+      margin-bottom: 1.5px;
     }
     .sig-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap: 8px;
     }
     .sig-card {
       border: 1px solid #cbd5e1;
       border-radius: 6px;
-      padding: 8px 10px;
+      padding: 7px 10px;
       text-align: center;
       font-size: 12px;
       background: #ffffff;
@@ -211,17 +215,17 @@
       font-weight: 700;
       color: #475569;
       text-align: left;
-      margin-bottom: 22px;
+      margin-bottom: 18px;
       border-bottom: 1px dashed #e2e8f0;
-      padding-bottom: 3px;
+      padding-bottom: 2px;
     }
     .sig-line {
-      margin-bottom: 4px;
+      margin-bottom: 3px;
     }
     .sig-name {
       font-weight: 700;
       color: #0f172a;
-      margin-bottom: 2px;
+      margin-bottom: 1px;
     }
     .sig-pos {
       color: #64748b;
@@ -297,6 +301,7 @@
           <div><strong>ยี่ห้อ / รุ่น:</strong> TOYOTA Ventury 2.7 V (เบนซิน)</div>
           <div><strong>เลขไมล์ ณ วันส่งซ่อม:</strong> <span class="mileage-val">447,427 กม.</span></div>
           <div><strong>ระดับน้ำมันเชื้อเพลิง:</strong> [ &nbsp; ] E &nbsp; [ &nbsp; ] 1/4 &nbsp; [ &nbsp; ] 1/2 &nbsp; [ &#10003; ] 3/4 &nbsp; [ &nbsp; ] เต็มถัง</div>
+          <div><strong>พนักงานขับรถผู้นำส่ง:</strong> <span class="driver-val">นายสมชาย พรมศร</span> (โทร. 080-016-9194)</div>
         </div>
       </div>
     </div>
@@ -310,7 +315,7 @@
     </div>
 
     <!-- Symptoms Table -->
-    <div style="font-weight:700; font-size:13.5px; margin-bottom:6px; color:#0f172a;">
+    <div style="font-weight:700; font-size:13.2px; margin-bottom:5px; color:#0f172a;">
       รายการงานที่ต้องการให้ดำเนินการ / อาการผิดปกติที่ตรวจพบ
     </div>
     <table class="data-table">
@@ -329,7 +334,7 @@
             <div class="item-title">ตรวจเช็คเสียงดังผิดปกติบริเวณเครื่องยนต์อย่างละเอียด</div>
             <div class='item-desc'>มีเสียงดังผิดปกติขณะเครื่องยนต์ทำงาน ขอให้ช่างเทคนิคตรวจเช็คหาสาเหตุที่มาของเสียง เช่น ชุดวาล์ว, โซ่ราวลิ้น, ลูกรอกสายพาน, ไดชาร์จ หรือแบริ่งภายใน</div>
           </td>
-          <td style="text-align:center; color:#64748b; font-size:13px;">[  ] ต้องหาสาเหตุ</td>
+          <td style="text-align:center; color:#64748b; font-size:12.5px;">[  ] ต้องหาสาเหตุ</td>
         </tr>
         
         <tr>
@@ -338,7 +343,7 @@
             <div class="item-title">ตรวจเช็คและวิเคราะห์อาการน้ำมันเครื่องหายโดยไม่ทราบสาเหตุ</div>
             <div class='item-desc'>ระดับน้ำมันเครื่องลดลงผิดปกติ ขอให้ตรวจสอบการรั่วซึมภายนอก (ซีลหน้า-หลังเครื่อง, ซีลฝาวาล์ว, ปะเก็นอ่างน้ำมัน) และตรวจสอบการเผาไหม้ภายใน (ยางตีนวาล์ว, แหวนลูกสูบ)</div>
           </td>
-          <td style="text-align:center; color:#64748b; font-size:13px;">[  ] ต้องตรวจสอบ</td>
+          <td style="text-align:center; color:#64748b; font-size:12.5px;">[  ] ต้องตรวจสอบ</td>
         </tr>
         
         <tr>
@@ -347,7 +352,7 @@
             <div class="item-title">จัดทำใบเสนอราคา (Quotation) ค่าแรงและค่าอะไหล่</div>
             <div class='item-desc'>เมื่อวิเคราะห์สาเหตุแน่ชัดแล้ว ให้ทำใบเสนอราคาระบุรายการอะไหล่แท้ที่จำเป็นต้องเปลี่ยน พร้อมค่าบริการ ส่งให้ผู้ประสานงานอนุมัติก่อนลงมือซ่อม</div>
           </td>
-          <td style="text-align:center; color:#64748b; font-size:13px;">[  ] ขอเสนอราคา</td>
+          <td style="text-align:center; color:#64748b; font-size:12.5px;">[  ] ขอเสนอราคา</td>
         </tr>
         
         <tr>
@@ -356,7 +361,7 @@
             <div class="item-title">ตรวจเช็คระบบระบายความร้อนและความร้อนสะสม</div>
             <div class='item-desc'>ตรวจเช็คหม้อน้ำ ท่อยาง ฝาหม้อน้ำ และพัดลมระบายความร้อน เพื่อป้องกันปัญหาความร้อนขึ้นสูง</div>
           </td>
-          <td style="text-align:center; color:#64748b; font-size:13px;">[  ] รอตรวจเช็ค</td>
+          <td style="text-align:center; color:#64748b; font-size:12.5px;">[  ] รอตรวจเช็ค</td>
         </tr>
         
       </tbody>
@@ -375,29 +380,29 @@
 
     <!-- Signatures (4 Boxes) -->
     <div class="sig-grid">
-      <!-- 1 -->
+      <!-- 1: Coordinator / Authorizer -->
       <div class="sig-card">
         <div class="sig-title">1. ผู้ประสานงานและสั่งซ่อม</div>
         <div class="sig-line">ลงชื่อ ................................................................</div>
         <div class="sig-name">(นายพงศธร โพธิแก้ว)</div>
         <div class="sig-pos">รองหัวหน้างานยานพาหนะ โรงเรียนพะเยาพิทยาคม</div>
         <div class="sig-pos">โทรศัพท์: 095-696-1606</div>
-        <div class="sig-pos" style="margin-top:2px;">วันที่: 9 พฤศจิกายน 2569</div>
+        <div class="sig-pos" style="margin-top:1px;">วันที่: 9 พฤศจิกายน 2569</div>
       </div>
 
-      <!-- 2 -->
+      <!-- 2: Driver Delivering -->
       <div class="sig-card">
-        <div class="sig-title">2. ผู้อนุมัติการส่งซ่อมบำรุง</div>
+        <div class="sig-title">2. พนักงานขับรถผู้นำส่ง</div>
         <div class="sig-line">ลงชื่อ ................................................................</div>
-        <div class="sig-name">(................................................................)</div>
-        <div class="sig-pos">หัวหน้างานยานพาหนะ / รองผู้อำนวยการ</div>
-        <div class="sig-pos" style="color:#059669; font-weight:600; margin-top:2px;">[ &#10003; ] อนุมัติส่งตรวจสภาพและขอเสนอราคา</div>
-        <div class="sig-pos">วันที่: 9 พฤศจิกายน 2569</div>
+        <div class="sig-name">(นายสมชาย พรมศร)</div>
+        <div class="sig-pos">พนักงานขับรถ งานยานพาหนะ</div>
+        <div class="sig-pos">โทรศัพท์: 080-016-9194</div>
+        <div class="sig-pos" style="margin-top:1px;">วันที่: 9 พฤศจิกายน 2569</div>
       </div>
 
-      <!-- 3 -->
+      <!-- 3: Garage Receiver -->
       <div class="sig-card">
-        <div class="sig-title">3. ศูนย์บริการผู้รับรถเข้าตรวจสภาพ</div>
+        <div class="sig-title">3. เจ้าหน้าที่ศูนย์บริการผู้รับรถเข้าตรวจสภาพ</div>
         <div class="sig-line">ลงชื่อ ................................................................</div>
         <div class="sig-name">(................................................................)</div>
         <div class="sig-pos">ผู้รับรถ ศูนย์บริการโตโยต้า (1994) พะเยา</div>
@@ -405,14 +410,14 @@
         <div class="sig-pos">วันที่รับรถ: ...... / ...... / 2569 &nbsp; เวลา: ........... น.</div>
       </div>
 
-      <!-- 4 -->
+      <!-- 4: Return Acceptance -->
       <div class="sig-card">
         <div class="sig-title">4. การตรวจรับรถกลับ (เมื่อซ่อมเสร็จ)</div>
         <div class="sig-line">ลงชื่อ ................................................................</div>
         <div class="sig-name">(................................................................)</div>
+        <div class="sig-pos">ผู้ตรวจรับรถ / หัวหน้างานยานพาหนะ</div>
         <div class="sig-pos" style="font-weight:600; color:#0f172a;">เลขไมล์ตอนรับกลับ: .................... กม.</div>
         <div class="sig-pos">ตรวจรับ: [ &nbsp; ] งานเรียบร้อยดี &nbsp; [ &nbsp; ] ได้รับอะไหล่เก่าคืนครบ</div>
-        <div class="sig-pos">วันที่รับคืน: ...... / ...... / 2569</div>
       </div>
     </div>
 
