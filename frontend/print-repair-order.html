@@ -244,6 +244,34 @@
       margin-bottom: 7px;
       font-size: 11px;
       line-height: 1.36;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .terms-left {
+      flex: 1;
+    }
+    .terms-qr {
+      width: 78px;
+      text-align: center;
+      flex-shrink: 0;
+      border-left: 1px dashed #bae6fd;
+      padding-left: 8px;
+    }
+    .terms-qr img {
+      width: 65px;
+      height: 65px;
+      object-fit: contain;
+      border-radius: 4px;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+    }
+    .terms-qr-lbl {
+      font-size: 8.8px;
+      font-weight: 700;
+      color: #0369a1;
+      margin-top: 1px;
+      line-height: 1.2;
     }
     .terms-heading {
       font-weight: 700;
@@ -258,6 +286,11 @@
       margin-bottom: 3px;
       font-weight: 500;
       color: #0c4a6e;
+    }
+    .contact-channels-line {
+      font-size: 10.5px;
+      color: #1e293b;
+      margin-bottom: 3px;
     }
 
     /* Signature Grid (4 Boxes) */
@@ -552,18 +585,29 @@
         </tbody>
       </table>
 
-      <!-- 6. Terms & Direct Contact Notice -->
+      <!-- 6. Terms & Direct Contact Notice with QR Code -->
       <div class="terms-card">
-        <div class="terms-heading">
-          <i class="fa-solid fa-circle-exclamation text-primary me-1 no-print"></i> การติดต่อประสานงานและข้อกำหนดการซ่อมบำรุง
+        <div class="terms-left">
+          <div class="terms-heading">
+            <i class="fa-solid fa-circle-exclamation text-primary me-1 no-print"></i> การติดต่อประสานงาน ข้อกำหนด และช่องทางติดต่อผู้สั่งซ่อม
+          </div>
+          <div class="coordinator-direct-notice">
+            <strong>การประสานงานและพิจารณาซ่อม:</strong> ขอความอนุเคราะห์ศูนย์บริการแจ้งผลตรวจเช็ค และส่งใบเสนอราคา (Quotation) เพื่อพิจารณาอนุมัติซ่อมโดยตรงที่ <strong id="vNoticeCoordinator">นายพงศธร โพธิแก้ว (รองหัวหน้างานยานพาหนะ)</strong>
+          </div>
+          <div class="contact-channels-line">
+            <strong>โทรศัพท์:</strong> <span id="vCoordPhone">095-696-1606</span> &nbsp;|&nbsp;
+            <strong>LINE ID:</strong> <span style="color:#0284c7; font-weight:700;" id="vCoordLine">pianist.krumum</span> &nbsp;|&nbsp;
+            <strong>อีเมล:</strong> <span id="vCoordEmail">pongsatorn.b@ppk.ac.th</span>
+          </div>
+          <div style="font-size:10.2px; color:#334155;">
+            ๑. <strong>การเสนอราคา:</strong> ส่งใบเสนอราคา (Quotation) ให้ผู้ประสานงานอนุมัติก่อนเริ่มดำเนินการซ่อมหรือเปลี่ยนอะไหล่<br>
+            ๒. <strong>การส่งคืนอะไหล่:</strong> ขอรับคืนชิ้นส่วนอะไหล่เก่าที่ทำการเปลี่ยนออกทั้งหมดส่งมอบพร้อมตัวรถ<br>
+            ๓. <strong>การรับประกัน:</strong> งานซ่อมและอะไหล่แท้ได้รับการรับประกันคุณภาพตามมาตรฐานศูนย์บริการ
+          </div>
         </div>
-        <div class="coordinator-direct-notice">
-          <strong>การประสานงานและพิจารณาซ่อม:</strong> ขอความอนุเคราะห์ศูนย์บริการโปรดติดต่อแจ้งผลการตรวจเช็ค และส่งใบเสนอราคา เพื่อพิจารณาอนุมัติซ่อมโดยตรงที่ <strong id="vNoticeCoordinator">นายพงศธร โพธิแก้ว (รองหัวหน้างานยานพาหนะ) โทรศัพท์ 095-696-1606</strong>
-        </div>
-        <div style="font-size:10.5px; color:#334155; margin-top:2px;">
-          ๑. <strong>การเสนอราคา:</strong> ขอความอนุเคราะห์จัดทำใบเสนอราคา (Quotation) ส่งให้ผู้ประสานงานพิจารณาอนุมัติก่อนดำเนินการซ่อมหรือเปลี่ยนอะไหล่<br>
-          ๒. <strong>การส่งคืนอะไหล่:</strong> ขอรับคืนชิ้นส่วนอะไหล่เก่าที่ทำการเปลี่ยนออกทั้งหมดส่งมอบพร้อมตัวรถ<br>
-          ๓. <strong>การรับประกัน:</strong> งานซ่อมและอะไหล่แท้ได้รับการรับประกันคุณภาพตามมาตรฐานศูนย์บริการ
+        <div class="terms-qr">
+          <img src="img/qr_line_coordinator.png" alt="QR Code LINE">
+          <div class="terms-qr-lbl">สแกน LINE<br>ผู้ประสานงาน</div>
         </div>
       </div>
 
@@ -820,6 +864,8 @@
       coordinator_name: 'นายพงศธร โพธิแก้ว',
       coordinator_title: 'รองหัวหน้างานยานพาหนะ',
       coordinator_phone: '095-696-1606',
+      coordinator_line: 'pianist.krumum',
+      coordinator_email: 'pongsatorn.b@ppk.ac.th',
       is_pm: true,
       is_repair: false,
       is_body: false,
@@ -1068,14 +1114,17 @@
         tbody.appendChild(tr);
       });
 
-      // Coordinator Notice
+      // Coordinator Notice & Contact Channels
       document.getElementById('vNoticeCoordinator').textContent =
-        `${docData.coordinator_name} (${docData.coordinator_title}) โทรศัพท์ ${docData.coordinator_phone}`;
+        `${docData.coordinator_name} (${docData.coordinator_title})`;
+      if (document.getElementById('vCoordPhone')) document.getElementById('vCoordPhone').textContent = docData.coordinator_phone || '-';
+      if (document.getElementById('vCoordLine')) document.getElementById('vCoordLine').textContent = docData.coordinator_line || '-';
+      if (document.getElementById('vCoordEmail')) document.getElementById('vCoordEmail').textContent = docData.coordinator_email || '-';
 
       // Signatures Text
       document.getElementById('vSigCoordinatorName').textContent = `(${docData.coordinator_name})`;
       document.getElementById('vSigCoordinatorRole').textContent = `ตำแหน่ง: ${docData.coordinator_title}`;
-      document.getElementById('vSigCoordinatorPhone').textContent = `โทรศัพท์: ${docData.coordinator_phone}`;
+      document.getElementById('vSigCoordinatorPhone').textContent = `โทร. ${docData.coordinator_phone} | LINE: ${docData.coordinator_line}`;
 
       document.getElementById('vSigDriverName').textContent = `(${docData.driver_name})`;
       document.getElementById('vSigDriverPhone').textContent = `โทรศัพท์: ${docData.driver_phone}`;
@@ -1327,6 +1376,17 @@
             bytes[i] = binary.charCodeAt(i);
           }
           return bytes;
+        }
+
+        let qrBytes = null;
+        try {
+          const qResp = await fetch('img/qr_line_coordinator.png');
+          if (qResp.ok) {
+            const qBuf = await qResp.arrayBuffer();
+            qrBytes = new Uint8Array(qBuf);
+          }
+        } catch (e) {
+          console.warn('QR fetch skipped:', e);
         }
 
         // 1. Service Center Cell
@@ -1660,45 +1720,85 @@
 
               new Paragraph({ spacing: { before: 20, after: 30 } }),
 
-              // Terms & Direct Contact Box
+              // Terms & Direct Contact Box with QR Code
               new Table({
                 width: { size: 100, type: WidthType.PERCENTAGE },
                 rows: [
                   new TableRow({
                     children: [
                       new TableCell({
+                        width: { size: 82, type: WidthType.PERCENTAGE },
                         shading: { fill: 'F0F9FF', type: ShadingType.CLEAR },
                         margins: CELL_MARGINS,
                         borders: {
                           top: { style: BorderStyle.SINGLE, size: 5, color: '0284C7' },
                           bottom: { style: BorderStyle.SINGLE, size: 5, color: '0284C7' },
                           left: { style: BorderStyle.SINGLE, size: 5, color: '0284C7' },
-                          right: { style: BorderStyle.SINGLE, size: 5, color: '0284C7' }
+                          right: { style: BorderStyle.NONE }
                         },
                         children: [
                           new Paragraph({
-                            spacing: { before: 0, after: 15 },
-                            children: [makeRun('การติดต่อประสานงานและข้อกำหนดการซ่อมบำรุง', 21, true, '0369A1')]
+                            spacing: { before: 0, after: 12 },
+                            children: [makeRun('การติดต่อประสานงาน ข้อกำหนด และช่องทางติดต่อผู้สั่งซ่อม', 21, true, '0369A1')]
                           }),
                           new Paragraph({
-                            spacing: { before: 0, after: 15 },
+                            spacing: { before: 0, after: 10 },
                             children: [
                               makeRun('การประสานงานและพิจารณาซ่อม: ', 20, true),
-                              makeRun('ขอความอนุเคราะห์ศูนย์บริการโปรดติดต่อแจ้งผลการตรวจเช็ค และส่งใบเสนอราคา เพื่อพิจารณาอนุมัติซ่อมโดยตรงที่ ', 20, false),
-                              makeRun(`${docData.coordinator_name} (รองหัวหน้างานยานพาหนะ) โทรศัพท์ ${docData.coordinator_phone}`, 20, true, '0369A1')
+                              makeRun('ขอความอนุเคราะห์ศูนย์บริการแจ้งผลตรวจเช็ค และส่งใบเสนอราคา (Quotation) เพื่อพิจารณาอนุมัติซ่อมโดยตรงที่ ', 20, false),
+                              makeRun(`${docData.coordinator_name} (รองหัวหน้างานยานพาหนะ)`, 20, true, '0369A1')
                             ]
                           }),
                           new Paragraph({
                             spacing: { before: 0, after: 8 },
-                            children: [makeRun('๑. การเสนอราคา: ขอความอนุเคราะห์จัดทำใบเสนอราคา (Quotation) ส่งให้ผู้ประสานงานพิจารณาอนุมัติก่อนดำเนินการซ่อมหรือเปลี่ยนอะไหล่', 19, false, '334155')]
+                            children: [
+                              makeRun(`โทร. ${docData.coordinator_phone}   |   LINE ID: `, 19, false),
+                              makeRun(docData.coordinator_line, 20, true, '0284C7'),
+                              makeRun(`   |   อีเมล: ${docData.coordinator_email}`, 19, false)
+                            ]
                           }),
                           new Paragraph({
-                            spacing: { before: 0, after: 8 },
-                            children: [makeRun('๒. การส่งคืนอะไหล่: ขอรับคืนชิ้นส่วนอะไหล่เก่าที่ทำการเปลี่ยนออกทั้งหมดส่งมอบพร้อมตัวรถ', 19, false, '334155')]
+                            spacing: { before: 0, after: 6 },
+                            children: [makeRun('๑. การเสนอราคา: ส่งใบเสนอราคาให้ผู้ประสานงานอนุมัติก่อนเริ่มดำเนินการซ่อมหรือเปลี่ยนอะไหล่', 18.5, false, '334155')]
+                          }),
+                          new Paragraph({
+                            spacing: { before: 0, after: 6 },
+                            children: [makeRun('๒. การส่งคืนอะไหล่: ขอรับคืนชิ้นส่วนอะไหล่เก่าที่ทำการเปลี่ยนออกทั้งหมดส่งมอบพร้อมตัวรถ', 18.5, false, '334155')]
                           }),
                           new Paragraph({
                             spacing: { before: 0, after: 0 },
-                            children: [makeRun('๓. การรับประกัน: งานซ่อมและอะไหล่แท้ได้รับการรับประกันคุณภาพตามมาตรฐานศูนย์บริการ', 19, false, '334155')]
+                            children: [makeRun('๓. การรับประกัน: งานซ่อมและอะไหล่แท้ได้รับการรับประกันคุณภาพตามมาตรฐานศูนย์บริการ', 18.5, false, '334155')]
+                          })
+                        ]
+                      }),
+                      new TableCell({
+                        width: { size: 18, type: WidthType.PERCENTAGE },
+                        shading: { fill: 'F0F9FF', type: ShadingType.CLEAR },
+                        margins: { top: 60, bottom: 60, left: 20, right: 20 },
+                        borders: {
+                          top: { style: BorderStyle.SINGLE, size: 5, color: '0284C7' },
+                          bottom: { style: BorderStyle.SINGLE, size: 5, color: '0284C7' },
+                          left: { style: BorderStyle.NONE },
+                          right: { style: BorderStyle.SINGLE, size: 5, color: '0284C7' }
+                        },
+                        children: [
+                          ...(qrBytes ? [
+                            new Paragraph({
+                              alignment: AlignmentType.CENTER,
+                              spacing: { before: 0, after: 6 },
+                              children: [
+                                new ImageRun({
+                                  data: qrBytes,
+                                  transformation: { width: 70, height: 70 },
+                                  type: 'png'
+                                })
+                              ]
+                            })
+                          ] : []),
+                          new Paragraph({
+                            alignment: AlignmentType.CENTER,
+                            spacing: { before: 0, after: 0 },
+                            children: [makeRun('สแกน LINE ผู้ประสานงาน', 16, true, '0369A1')]
                           })
                         ]
                       })
