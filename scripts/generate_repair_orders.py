@@ -164,22 +164,25 @@ def create_repair_order_docx(data, output_filepath):
     # Right: Vehicle Details
     c2 = info_tbl.rows[0].cells[1]
     c2.width = Cm(9.0)
-    set_cell_margins(c2, top=60, bottom=60, left=80, right=80)
+    set_cell_margins(c2, top=50, bottom=50, left=80, right=80)
     set_cell_background(c2, "FFFFFF")
-    add_p(c2, "ข้อมูลยานพาหนะของทางราชการ", size=12, bold=True, color=RGBColor(15, 23, 42), space_after=2)
+    add_p(c2, "ข้อมูลยานพาหนะของทางราชการ", size=12, bold=True, color=RGBColor(15, 23, 42), space_after=1)
 
-    p_v1 = add_p(c2, "หมายเลขทะเบียน: ", size=11.5, bold=True)
-    add_run(p_v1, data['plate'], size=12.5, bold=True, color=RGBColor(15, 23, 42))
+    p_v1 = add_p(c2, "หมายเลขทะเบียน: ", size=11, bold=True)
+    add_run(p_v1, data['plate'], size=12, bold=True, color=RGBColor(15, 23, 42))
 
     p_v2 = add_p(c2, "ยี่ห้อ / รุ่น / ชนิด: ", size=11, bold=True)
     add_run(p_v2, data['car_model'], size=11, bold=False)
 
     p_v3 = add_p(c2, "เลขไมล์ ณ วันส่งซ่อม: ", size=11, bold=True)
-    add_run(p_v3, f"{data['mileage']:,} กม.", size=12, bold=True, color=RGBColor(180, 83, 9))
-    add_run(p_v3, "   ระดับน้ำมัน: [✓] 3/4", size=11, bold=False)
+    add_run(p_v3, f"{data['mileage']:,} กม.", size=11.5, bold=True, color=RGBColor(180, 83, 9))
+    add_run(p_v3, "   ระดับน้ำมัน: [✓] 3/4", size=10.5, bold=False)
 
-    p_v4 = add_p(c2, "พนักงานขับรถผู้นำส่ง: ", size=11.5, bold=True)
-    add_run(p_v4, f"{data['driver_name']} (โทร. {data['driver_phone']})", size=11.5, bold=True)
+    p_v4 = add_p(c2, "พนักงานขับรถผู้นำส่ง: ", size=11, bold=True)
+    add_run(p_v4, f"{data['driver_name']} (ผู้นำส่งมอบรถเท่านั้น โทร. {data['driver_phone']})", size=10.5, bold=False)
+
+    p_v5 = add_p(c2, "ผู้ประสานงานตัดสินใจซ่อม: ", size=11, bold=True, color=RGBColor(185, 28, 28))
+    add_run(p_v5, f"{data['coordinator_name']} (โทร. {data['coordinator_phone']} ติดต่อโดยตรง)", size=11, bold=True, color=RGBColor(185, 28, 28))
 
     add_p(doc, "", space_before=1, space_after=2)
 
@@ -245,24 +248,26 @@ def create_repair_order_docx(data, output_filepath):
 
     add_p(doc, "", space_before=2, space_after=2)
 
-    # 5. Terms & Requirements of Government (Without Tax ID, Without Tax Invoice)
+    # 5. Terms & Requirements of Government (Emphasizing Direct Contact with Coordinator)
     terms_box = doc.add_table(rows=1, cols=1)
     terms_box.alignment = WD_TABLE_ALIGNMENT.CENTER
     terms_box.autofit = False
-    set_box_borders(terms_box, color="CBD5E1", sz="4")
+    set_box_borders(terms_box, color="DC2626", sz="6")
     tb_cell = terms_box.rows[0].cells[0]
     tb_cell.width = Cm(18.0)
-    set_cell_margins(tb_cell, top=50, bottom=50, left=80, right=80)
-    set_cell_background(tb_cell, "F8FAFC")
+    set_cell_margins(tb_cell, top=40, bottom=40, left=70, right=70)
+    set_cell_background(tb_cell, "FEF2F2")
 
-    add_p(tb_cell, "ข้อกำหนดในการดำเนินการของทางราชการ", size=11.5, bold=True, color=RGBColor(30, 41, 59), space_after=1)
+    p_warn = add_p(tb_cell, "ข้อกำหนดสำคัญที่สุด: การประสานงานและการพิจารณาซ่อมบำรุงทุกกรณี", size=11, bold=True, color=RGBColor(185, 28, 28), space_after=1)
+    p_warn_body = add_p(tb_cell, f"การแจ้งผลตรวจเช็ค ประเมินราคา ส่งใบเสนอราคา หรือการตัดสินใจทุกเรื่องเกี่ยวกับการซ่อมทั้งหมด ให้ติดต่อกับ {data['coordinator_name']} (โทร. {data['coordinator_phone']}) โดยตรงเพียงผู้เดียวเท่านั้น ห้ามศูนย์บริการลงมือซ่อมหรือเปลี่ยนอะไหล่ก่อนได้รับอนุมัติโดยตรง (พนักงานขับรถเป็นเพียงผู้นำส่งมอบรถ ไม่มีอำนาจตัดสินใจในงานซ่อม)", size=10, bold=True, color=RGBColor(153, 27, 27), space_after=1)
+
     terms = [
-        "๑. การเสนอราคา: ขอความอนุเคราะห์ศูนย์บริการตรวจเช็คและจัดทำ 'ใบเสนอราคา (Quotation)' ส่งให้ผู้ประสานงาน เพื่อดำเนินการขออนุมัติจัดจ้างตามระเบียบพัสดุฯ ก่อนลงมือดำเนินการซ่อมแซมหรือเปลี่ยนอะไหล่ทุกรายการ",
+        f"๑. การเสนอราคา: ศูนย์บริการต้องจัดทำ 'ใบเสนอราคา (Quotation)' ส่งให้ {data['coordinator_name']} พิจารณาอนุมัติก่อนลงมือดำเนินการซ่อมแซมหรือเปลี่ยนอะไหล่ทุกรายการ",
         "๒. การส่งคืนอะไหล่: ชิ้นส่วนอะไหล่เก่าที่ทำการถอดเปลี่ยนออกทั้งหมด ต้องส่งมอบคืนให้กับทางโรงเรียนพะเยาพิทยาคมพร้อมตัวรถ",
         "๓. การรับประกัน: งานซ่อมและอะไหล่แท้ต้องได้รับการรับประกันคุณภาพตามมาตรฐานศูนย์บริการโตโยต้า"
     ]
     for term in terms:
-        add_p(tb_cell, term, size=10.5, color=RGBColor(51, 65, 85), space_before=0, space_after=1)
+        add_p(tb_cell, term, size=10, color=RGBColor(30, 41, 59), space_before=0, space_after=0)
 
     add_p(doc, "", space_before=2, space_after=2)
 
@@ -275,22 +280,22 @@ def create_repair_order_docx(data, output_filepath):
     # 1: Coordinator / Requester
     b1 = sig_tbl.rows[0].cells[0]
     b1.width = Cm(9.0)
-    set_cell_margins(b1, top=50, bottom=50, left=60, right=60)
-    add_p(b1, "๑. ผู้ขอส่งซ่อม / ประสานงาน", size=11, bold=True, color=RGBColor(71, 85, 105), space_after=8)
-    add_p(b1, f"ลงชื่อ ................................................................", size=11.5, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=1)
-    add_p(b1, f"({data['coordinator_name']})", size=11.5, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=1)
-    add_p(b1, f"ตำแหน่ง: {data['coordinator_title']}", size=10.5, color=RGBColor(71, 85, 105), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=1)
-    add_p(b1, f"โทรศัพท์: {data['coordinator_phone']}", size=10.5, color=RGBColor(71, 85, 105), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
+    set_cell_margins(b1, top=40, bottom=40, left=50, right=50)
+    add_p(b1, "๑. ผู้ประสานงานและสั่งซ่อม (ผู้มีอำนาจตัดสินใจโดยตรง)", size=10.5, bold=True, color=RGBColor(185, 28, 28), space_after=6)
+    add_p(b1, f"ลงชื่อ ................................................................", size=11, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=1)
+    add_p(b1, f"({data['coordinator_name']})", size=11, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=1)
+    add_p(b1, f"ตำแหน่ง: {data['coordinator_title']}", size=10, color=RGBColor(71, 85, 105), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=1)
+    add_p(b1, f"โทรศัพท์: {data['coordinator_phone']} (ติดต่อโดยตรง)", size=10, bold=True, color=RGBColor(185, 28, 28), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
 
     # 2: Driver Delivering
     b2 = sig_tbl.rows[0].cells[1]
     b2.width = Cm(9.0)
-    set_cell_margins(b2, top=50, bottom=50, left=60, right=60)
-    add_p(b2, "๒. พนักงานขับรถผู้นำส่ง", size=11, bold=True, color=RGBColor(71, 85, 105), space_after=8)
-    add_p(b2, "ลงชื่อ ................................................................", size=11.5, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=1)
-    add_p(b2, f"({data['driver_name']})", size=11.5, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=1)
-    add_p(b2, "ตำแหน่ง: พนักงานขับรถ งานยานพาหนะ", size=10.5, color=RGBColor(71, 85, 105), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=1)
-    add_p(b2, f"โทรศัพท์: {data['driver_phone']}", size=10.5, color=RGBColor(71, 85, 105), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
+    set_cell_margins(b2, top=40, bottom=40, left=50, right=50)
+    add_p(b2, "๒. พนักงานขับรถผู้นำส่ง (ผู้นำส่งมอบรถเท่านั้น)", size=10.5, bold=True, color=RGBColor(71, 85, 105), space_after=6)
+    add_p(b2, "ลงชื่อ ................................................................", size=11, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=1)
+    add_p(b2, f"({data['driver_name']})", size=11, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=1)
+    add_p(b2, "ตำแหน่ง: พนักงานขับรถ (ไม่มีอำนาจตัดสินใจงานซ่อม)", size=10, color=RGBColor(71, 85, 105), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=1)
+    add_p(b2, f"โทรศัพท์: {data['driver_phone']}", size=10, color=RGBColor(71, 85, 105), align=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
 
     # 3: Garage Receiver
     b3 = sig_tbl.rows[1].cells[0]
@@ -665,7 +670,8 @@ def create_repair_order_html(data, output_filepath):
           <div><strong>หมายเลขทะเบียน:</strong> <span style="font-weight:700; font-size:13.5px; color:#0f172a;">{data['plate']}</span></div>
           <div><strong>ยี่ห้อ / รุ่น / ชนิด:</strong> {data['car_model']}</div>
           <div><strong>เลขไมล์ ณ วันส่งซ่อม:</strong> <span class="mileage-val">{data['mileage']:,} กม.</span> &nbsp; <strong>น้ำมัน:</strong> [ &#10003; ] 3/4</div>
-          <div><strong>พนักงานขับรถผู้นำส่ง:</strong> <span class="driver-val">{data['driver_name']}</span> (โทร. {data['driver_phone']})</div>
+          <div><strong>พนักงานขับรถผู้นำส่ง:</strong> {data['driver_name']} (ผู้นำส่งมอบรถเท่านั้น โทร. {data['driver_phone']})</div>
+          <div><strong>ผู้มีอำนาจตัดสินใจสั่งซ่อม:</strong> <span style="color:#b91c1c; font-weight:700;">{data['coordinator_name']} (โทร. {data['coordinator_phone']} ติดต่อโดยตรง)</span></div>
         </div>
       </div>
     </div>
@@ -695,11 +701,17 @@ def create_repair_order_html(data, output_filepath):
       </tbody>
     </table>
 
-    <!-- Terms (Official Government Requirements - No Tax ID, No Tax Invoice) -->
-    <div class="terms-box">
-      <div class="terms-title">ข้อกำหนดในการดำเนินการของทางราชการ</div>
-      <ol class="terms-list">
-        <li><strong>การเสนอราคา:</strong> ขอความอนุเคราะห์ศูนย์บริการตรวจเช็คและจัดทำ "ใบเสนอราคา (Quotation)" ส่งให้ผู้ประสานงาน เพื่อดำเนินการขออนุมัติจัดจ้างตามระเบียบพัสดุฯ ก่อนลงมือดำเนินการซ่อมแซมหรือเปลี่ยนอะไหล่ทุกรายการ</li>
+    <!-- Terms (Emphasizing Direct Contact with Coordinator) -->
+    <div class="terms-box" style="border: 1.5px solid #dc2626; background: #fff5f5;">
+      <div class="terms-title" style="color: #b91c1c; font-size: 12px;">
+        ⚠️ ข้อกำหนดสำคัญที่สุด: การประสานงานและการพิจารณาอนุมัติการซ่อมบำรุงทุกกรณี
+      </div>
+      <div style="font-size: 11.2px; color: #991b1b; line-height: 1.35; margin-bottom: 3px;">
+        <strong>การแจ้งผลตรวจเช็ค ประเมินราคา ส่งใบเสนอราคา หรือการตัดสินใจทุกเรื่องเกี่ยวกับการซ่อมทั้งหมด:</strong>
+        โปรดติดต่อ <strong>{data['coordinator_name']}</strong> (รองหัวหน้างานยานพาหนะ) โทร. <span style="font-size: 12.5px; font-weight: 700; text-decoration: underline;">{data['coordinator_phone']}</span> <strong>โดยตรงเพียงผู้เดียวเท่านั้น</strong> (พนักงานขับรถเป็นเพียงผู้นำส่งมอบรถ ไม่มีอำนาจตัดสินใจในงานซ่อม)
+      </div>
+      <ol class="terms-list" style="color: #374151;">
+        <li><strong>การเสนอราคา:</strong> ศูนย์บริการต้องจัดทำ "ใบเสนอราคา (Quotation)" ส่งให้ {data['coordinator_name']} พิจารณาอนุมัติก่อนลงมือดำเนินการซ่อมแซมหรือเปลี่ยนอะไหล่ทุกรายการ</li>
         <li><strong>การส่งคืนอะไหล่:</strong> ชิ้นส่วนอะไหล่เก่าที่ทำการถอดเปลี่ยนออกทั้งหมด ต้องส่งมอบคืนให้กับทางโรงเรียนพะเยาพิทยาคมพร้อมตัวรถ</li>
         <li><strong>การรับประกัน:</strong> งานซ่อมและอะไหล่แท้ต้องได้รับการรับประกันคุณภาพตามมาตรฐานศูนย์บริการโตโยต้า</li>
       </ol>
@@ -707,21 +719,21 @@ def create_repair_order_html(data, output_filepath):
 
     <!-- Signatures (4 Boxes) -->
     <div class="sig-grid">
-      <!-- 1: Coordinator / Requester -->
+      <!-- 1: Coordinator / Authorizer Directly -->
       <div class="sig-card">
-        <div class="sig-title">๑. ผู้ขอส่งซ่อม / ประสานงาน</div>
+        <div class="sig-title" style="color: #b91c1c;">๑. ผู้ประสานงานและสั่งซ่อม (ผู้มีอำนาจตัดสินใจโดยตรง)</div>
         <div class="sig-line">ลงชื่อ ................................................................</div>
         <div class="sig-name">({data['coordinator_name']})</div>
         <div class="sig-pos">{data['coordinator_title']}</div>
-        <div class="sig-pos">โทรศัพท์: {data['coordinator_phone']}</div>
+        <div class="sig-pos" style="color: #b91c1c; font-weight: 700;">โทรศัพท์: {data['coordinator_phone']} (ติดต่อโดยตรง)</div>
       </div>
 
-      <!-- 2: Driver Delivering -->
+      <!-- 2: Driver Delivering (Delivery Only) -->
       <div class="sig-card">
-        <div class="sig-title">๒. พนักงานขับรถผู้นำส่ง</div>
+        <div class="sig-title">๒. พนักงานขับรถผู้นำส่ง (ผู้นำส่งมอบรถเท่านั้น)</div>
         <div class="sig-line">ลงชื่อ ................................................................</div>
         <div class="sig-name">({data['driver_name']})</div>
-        <div class="sig-pos">พนักงานขับรถ งานยานพาหนะ</div>
+        <div class="sig-pos">พนักงานขับรถ (ไม่มีอำนาจตัดสินใจงานซ่อม)</div>
         <div class="sig-pos">โทรศัพท์: {data['driver_phone']}</div>
       </div>
 
