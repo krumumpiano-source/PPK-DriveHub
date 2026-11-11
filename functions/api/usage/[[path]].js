@@ -252,7 +252,7 @@ export async function onRequest(context) {
       let targetQueueId = body.queue_id || null;
       if (!targetQueueId) {
         const openQ = await dbFirst(env.DB,
-          `SELECT id FROM queue WHERE car_id = ? AND status IN ('ongoing','scheduled')
+          `SELECT id FROM queue WHERE car_id = ? AND status IN ('ongoing', 'scheduled', 'in_progress', 'approved')
            ORDER BY date DESC, time_start DESC LIMIT 1`,
           [body.car_id]
         );
@@ -263,7 +263,7 @@ export async function onRequest(context) {
         const retTime = (body.datetime || ts).length >= 16 ? (body.datetime || ts).substr(11, 5) : '00:00';
         await dbRun(env.DB,
           `UPDATE queue SET status = 'completed', time_end = ?, updated_at = ?
-           WHERE id = ? AND status IN ('ongoing','scheduled')`,
+           WHERE id = ? AND status IN ('ongoing', 'scheduled', 'in_progress', 'approved')`,
           [retTime, ts, targetQueueId]
         );
         // ผูก return record กับ queue
@@ -309,7 +309,7 @@ export async function onRequest(context) {
             const retTime = (body.datetime || ts).length >= 16 ? (body.datetime || ts).substr(11, 5) : '00:00';
             await dbRun(env.DB,
               `UPDATE queue SET status = 'completed', time_end = ?, updated_at = ?
-               WHERE id = ? AND status IN ('ongoing','scheduled')`,
+               WHERE id = ? AND status IN ('ongoing', 'scheduled', 'in_progress', 'approved')`,
               [retTime, ts, linkedQueueId]
             );
           }
@@ -338,7 +338,7 @@ export async function onRequest(context) {
       let targetQueueId = body.queue_id || null;
       if (!targetQueueId) {
         const schedQ = await dbFirst(env.DB,
-          `SELECT id FROM queue WHERE car_id = ? AND status = 'scheduled'
+          `SELECT id FROM queue WHERE car_id = ? AND status IN ('scheduled', 'approved', 'pending')
            ORDER BY date DESC, time_start DESC LIMIT 1`,
           [body.car_id]
         );
@@ -346,7 +346,7 @@ export async function onRequest(context) {
       }
       if (targetQueueId) {
         await dbRun(env.DB,
-          `UPDATE queue SET status = 'ongoing', updated_at = ? WHERE id = ? AND status = 'scheduled'`,
+          `UPDATE queue SET status = 'ongoing', updated_at = ? WHERE id = ? AND status IN ('scheduled', 'approved', 'pending')`,
           [ts, targetQueueId]
         );
         // ผูก departure record กับ queue ที่มีอยู่
@@ -374,6 +374,27 @@ export async function onRequest(context) {
     await notifyTelegramDriverUsage(env, { ...body, datetime: body.datetime || ts }, null);
 
     return success({ id, message: 'บันทึกการใช้งานเรียบร้อย', auto_healed: healed, queue_completed: queueCompleted, auto_queue_id: autoCreatedQueueId }, 201);
+  }
+
+    // PUBLIC — ดึงข้อมูลคิวที่เตรียมไว้สำหรับ pre-fill หน้า QR (ไม่ต้อง login)
+  if (path === '/api/usage/queue-prefill' && method === 'GET') {
+    const carId = url.searchParams.get('car_id');
+    const date = url.searchParams.get('date') || now().substr(0, 10);
+    if (!carId) return error('กรุณาระบุ car_id');
+    const queue = await dbFirst(env.DB,
+      `SELECT q.id, q.destination, q.mission, q.departure_time, q.time_start,
+              q.passengers, q.driver_id,
+              COALESCE(u.display_name, q.requested_by) AS requested_by,
+              d.name AS driver_name
+       FROM queue q
+       LEFT JOIN users u ON q.requester_id = u.id
+       LEFT JOIN drivers d ON q.driver_id = d.id
+       WHERE q.car_id = ? AND (q.date = ? OR (q.date <= ? AND COALESCE(q.return_date, q.date) >= ?))
+         AND q.status IN ('scheduled', 'ongoing', 'in_progress', 'approved')
+       ORDER BY q.date ASC, q.time_start ASC LIMIT 1`,
+      [carId, date, date, date]
+    );
+    return success(queue || null);
   }
 
   // PUBLIC — ดึงสถานะล่าสุดของรถ (ใช้โดยหน้า QR ไม่ต้อง login)

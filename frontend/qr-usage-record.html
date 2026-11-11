@@ -596,6 +596,7 @@
     var latestStatus = null;
     var submitLock = false;
     var odometerFile = null; // global odometer photo file
+    var currentQueueId = null;
 
     function getCarIdFromURL() {
       var p = new URLSearchParams(window.location.search);
@@ -780,16 +781,35 @@
       if (!carId) return;
       var today = formatDate(new Date());
       try {
-        // Try scheduled first, fallback to ongoing
         var queueData = null;
-        for (var status of ['scheduled', 'ongoing']) {
-          var resp = await fetch('/api/queue?car_id=' + encodeURIComponent(carId) + '&date=' + today + '&status=' + status);
-          if (!resp.ok) continue;
-          var result = await resp.json();
-          var list = (result && result.data) ? result.data : [];
-          if (list.length > 0) { queueData = list[0]; break; }
+        // 1. Try public usage prefill endpoint first
+        try {
+          var resp = await fetch('/api/usage/queue-prefill?car_id=' + encodeURIComponent(carId) + '&date=' + today);
+          if (resp.ok) {
+            var result = await resp.json();
+            if (result && result.success && result.data) {
+              queueData = result.data;
+            }
+          }
+        } catch (e) {
+          console.warn('Could not fetch queue-prefill:', e);
+        }
+
+        // 2. Fallback to /api/queue if authenticated
+        if (!queueData) {
+          for (var status of ['scheduled', 'ongoing', 'in_progress', 'approved']) {
+            var resp = await fetch('/api/queue?car_id=' + encodeURIComponent(carId) + '&date=' + today + '&status=' + status);
+            if (!resp.ok) continue;
+            var result = await resp.json();
+            var list = (result && result.data) ? (Array.isArray(result.data) ? result.data : (result.data.queues || [])) : [];
+            if (list.length > 0) { queueData = list[0]; break; }
+          }
         }
         if (!queueData) return;
+
+        if (queueData.id) {
+          currentQueueId = queueData.id;
+        }
 
         // Show info card
         var destination = queueData.destination || '';
@@ -810,9 +830,18 @@
         var reqEl = document.getElementById('requester_name');
         if (reqEl && !reqEl.value && requester) {
           reqEl.value = requester;
-          document.getElementById('requesterFromQueue').style.display = 'block';
+          var qBadge = document.getElementById('requesterFromQueue');
+          if (qBadge) qBadge.style.display = 'block';
         }
-      } catch {}
+
+        // Pre-fill driver name if available and not yet selected
+        if (queueData.driver_name) {
+          var dNameEl = document.getElementById('driver_name_manual');
+          if (dNameEl && !dNameEl.value) dNameEl.value = queueData.driver_name;
+        }
+      } catch (e) {
+        console.warn('loadQueuePrefill error:', e);
+      }
     }
 
     // ---- Odometer photo + OCR ----
@@ -935,6 +964,7 @@
         destination: (document.getElementById('destination').value || '').trim() || undefined,
         passengers: (document.getElementById('passengers') && document.getElementById('passengers').value || '').trim() || undefined,
         purpose: document.getElementById('purpose').value || undefined,
+        queue_id: currentQueueId || undefined,
         notes: ''
       };
 
