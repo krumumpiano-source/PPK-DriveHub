@@ -1,8 +1,8 @@
 // Fuel logs + fuel requests + fuel types + bill reconciliation
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
-  parseBody, requirePermission, extractParam, uploadToR2, writeAuditLog,
-  sendTelegramMessage, createNotification, notifyAllAdmins
+  parseBody, requirePermission, checkPermission, uploadToR2, writeAuditLog,
+  notifyAllAdmins
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
@@ -63,7 +63,7 @@ export async function onRequest(context) {
 
     // --- Validation: mileage required ---
     const mileageAfter = parseInt(body.mileage_after) || 0;
-    const mileageBefore = parseInt(body.mileage_before) || 0;
+    let mileageBefore = parseInt(body.mileage_before) || 0;
     if (!mileageAfter || mileageAfter <= 0) {
       return error('กรุณากรอกเลขไมล์ (บังคับเด็ดขาด)');
     }
@@ -79,12 +79,24 @@ export async function onRequest(context) {
       return error('กรุณาระบุผู้เบิกน้ำมัน (เลือกจากระบบ หรือ พิมพ์ชื่อ)');
     }
 
-    // --- Mileage check: not less than previous ---
+    // --- Mileage check: not less than previous & auto-populate mileageBefore ---
     const prevMileage = await dbFirst(env.DB,
       `SELECT MAX(mileage_after) AS max_km FROM fuel_log WHERE car_id = ? AND deleted_at IS NULL AND mileage_after > 0`,
       [body.car_id]);
     if (prevMileage?.max_km && mileageAfter < prevMileage.max_km) {
       return error('เลขไมล์ต่ำกว่ารายการก่อนหน้า (' + prevMileage.max_km + ' กม.) กรุณาตรวจสอบ');
+    }
+    if (!mileageBefore || mileageBefore <= 0 || mileageBefore >= mileageAfter) {
+      if (prevMileage?.max_km && prevMileage.max_km > 0 && prevMileage.max_km < mileageAfter) {
+        mileageBefore = prevMileage.max_km;
+      } else {
+        const prevUsage = await dbFirst(env.DB,
+          `SELECT MAX(mileage) AS max_km FROM usage_records WHERE car_id = ? AND mileage > 0 AND mileage < ?`,
+          [body.car_id, mileageAfter]);
+        if (prevUsage?.max_km) {
+          mileageBefore = prevUsage.max_km;
+        }
+      }
     }
 
     const id = generateUUID();
@@ -123,6 +135,10 @@ export async function onRequest(context) {
       fuelConsumptionRate = (mileageAfter - mileageBefore) / liters;
     }
 
+    // Signed supply chief can only be set by authenticated privileged users
+    const canSignSupply = user && (['admin', 'super_admin', 'manager', 'fuel'].includes(user.role) || checkPermission(user, 'fuel', 'approve'));
+    const safeSignedSupplyChief = canSignSupply ? (body.signed_supply_chief || null) : null;
+
     await dbRun(env.DB,
       `INSERT INTO fuel_log (id, date, time, car_id, driver_id,
         mileage_before, mileage_after, liters, price_per_liter, amount,
@@ -145,7 +161,7 @@ export async function onRequest(context) {
        body.notes || '', body.created_by || user?.id || 'qr', ts, ts,
        documentNumber, body.purpose, body.purpose_detail || null,
        body.driver_name_manual || null,
-       body.signed_supply_chief || null]
+       safeSignedSupplyChief]
     );
 
     // --- Anomaly Detection ---
@@ -200,7 +216,15 @@ export async function onRequest(context) {
     // Telegram notifications for fuel disabled per user request
     // await sendTelegramMessage(env, telegramMsg);
 
-    return success({ id, document_number: documentNumber, anomaly_flag: anomalyFlag, message: 'บันทึกข้อมูลเชื้อเพลิงเรียบร้อย' }, 201);
+    return success({
+      id,
+      document_number: documentNumber,
+      mileage_before: mileageBefore,
+      mileage_after: mileageAfter,
+      fuel_consumption_rate: fuelConsumptionRate !== null ? Math.round(fuelConsumptionRate * 100) / 100 : null,
+      anomaly_flag: anomalyFlag,
+      message: 'บันทึกข้อมูลเชื้อเพลิงเรียบร้อย'
+    }, 201);
   }
 
   if (!user) return error('Unauthorized', 401);
@@ -276,6 +300,17 @@ export async function onRequest(context) {
         if (String(body[f]) !== String(before[f] || '')) {
           changedFields[f] = { from: before[f], to: body[f] };
         }
+      }
+    }
+    // Recalculate fuel_consumption_rate if mileage or liters changed and fuel_consumption_rate wasn't explicitly set
+    if (body.fuel_consumption_rate === undefined && (body.mileage_after !== undefined || body.mileage_before !== undefined || body.liters !== undefined)) {
+      const mAfter = parseInt(body.mileage_after ?? before.mileage_after) || 0;
+      const mBefore = parseInt(body.mileage_before ?? before.mileage_before) || 0;
+      const ltrs = parseFloat(body.liters ?? before.liters) || 0;
+      if (mAfter > mBefore && mBefore > 0 && ltrs > 0) {
+        const newRate = (mAfter - mBefore) / ltrs;
+        sets.push('fuel_consumption_rate = ?');
+        params.push(newRate);
       }
     }
     if (!sets.length) return error('ไม่มีข้อมูลที่จะอัปเดต');
@@ -494,6 +529,39 @@ export async function onRequest(context) {
     const invItems = await dbAll(env.DB,
       `SELECT * FROM fuel_invoice_items WHERE invoice_id = ?`, [id]);
 
+    // Load fuel_types_list for ID <-> Name normalization
+    const ftSetting = await dbFirst(env.DB,
+      `SELECT value FROM system_settings WHERE key = 'fuel_types_list'`, []);
+    let ftList = [
+      { id: 'fuelSave_gasohol91', name: 'ฟิวเซฟ แก๊สโซฮอล์ 91' },
+      { id: 'vPower_gasohol95', name: 'วี-เพาวอร์แก๊สโซฮอล์ 95' },
+      { id: 'vPower_diesel_b7', name: 'วี-เพาเวอร์ ดีเซล B7' },
+      { id: 'fuelSave_diesel_b7', name: 'ฟิวเซฟดีเซล B7' },
+      { id: 'e20', name: 'E20' },
+      { id: 'fuelSave_diesel', name: 'ฟิวเซฟดีเซล' },
+      { id: 'diesel', name: 'ดีเซล' },
+      { id: 'gasohol_95', name: 'แก๊สโซฮอล์ 95' },
+      { id: 'gasohol_91', name: 'แก๊สโซฮอล์ 91' }
+    ];
+    if (ftSetting?.value) {
+      try {
+        const parsed = JSON.parse(ftSetting.value);
+        if (Array.isArray(parsed) && parsed.length) ftList = [... parsed, ...ftList];
+      } catch { /* ignore */ }
+    }
+    const normalizeFuelType = (val) => {
+      if (!val) return '';
+      const s = String(val).trim();
+      const found = ftList.find(f => f.id === s || f.name === s || f.id?.toLowerCase() === s.toLowerCase() || f.name?.toLowerCase() === s.toLowerCase());
+      return found ? found.id : s.toLowerCase();
+    };
+
+    // Optional station_name filter: match records with same station OR blank station
+    const stationFilterSql = inv.station_name
+      ? `AND (gas_station_name IS NULL OR gas_station_name = '' OR instr(gas_station_name, ?) > 0 OR instr(?, gas_station_name) > 0)`
+      : '';
+    const stationParams = inv.station_name ? [inv.station_name.trim(), inv.station_name.trim()] : [];
+
     // Query system records in date range (procurement only)
     const systemByType = await dbAll(env.DB,
       `SELECT fuel_type, COUNT(*) AS count,
@@ -501,30 +569,38 @@ export async function onRequest(context) {
        COALESCE(SUM(amount),0) AS total_amount
        FROM fuel_log
        WHERE date >= ? AND date <= ? AND expense_type = 'procurement' AND deleted_at IS NULL
+       ${stationFilterSql}
        GROUP BY fuel_type`,
-      [inv.date_from, inv.date_to]);
+      [inv.date_from, inv.date_to, ...stationParams]);
 
     const systemTotal = await dbFirst(env.DB,
       `SELECT COALESCE(SUM(liters),0) AS total_liters, COALESCE(SUM(amount),0) AS total_amount
        FROM fuel_log
-       WHERE date >= ? AND date <= ? AND expense_type = 'procurement' AND deleted_at IS NULL`,
-      [inv.date_from, inv.date_to]);
+       WHERE date >= ? AND date <= ? AND expense_type = 'procurement' AND deleted_at IS NULL
+       ${stationFilterSql}`,
+      [inv.date_from, inv.date_to, ...stationParams]);
 
-    // Build comparison
+    // Build comparison (matching fuel_type by normalized ID or Name)
+    let invoiceTotalLiters = 0;
     const comparison = [];
     for (const item of invItems) {
-      const sysMatch = systemByType.find(s => s.fuel_type === item.fuel_type) || { total_liters: 0, total_amount: 0 };
+      invoiceTotalLiters += (item.total_liters || 0);
+      const normItemType = normalizeFuelType(item.fuel_type);
+      const matchingSysRows = systemByType.filter(s => normalizeFuelType(s.fuel_type) === normItemType);
+      const sysLiters = matchingSysRows.reduce((acc, r) => acc + (r.total_liters || 0), 0);
+      const sysAmount = matchingSysRows.reduce((acc, r) => acc + (r.total_amount || 0), 0);
       comparison.push({
         fuel_type: item.fuel_type,
         invoice_liters: item.total_liters || 0,
-        system_liters: sysMatch.total_liters,
-        diff_liters: (sysMatch.total_liters) - (item.total_liters || 0),
+        system_liters: sysLiters,
+        diff_liters: sysLiters - (item.total_liters || 0),
         invoice_amount: item.total_amount || 0,
-        system_amount: sysMatch.total_amount,
-        diff_amount: (sysMatch.total_amount) - (item.total_amount || 0)
+        system_amount: sysAmount,
+        diff_amount: sysAmount - (item.total_amount || 0)
       });
     }
 
+    const totalDiffLiters = (systemTotal?.total_liters || 0) - invoiceTotalLiters;
     const totalDiffAmount = (systemTotal?.total_amount || 0) - (inv.total_amount || 0);
     const totalDiffPct = inv.total_amount > 0 ? Math.abs(totalDiffAmount / inv.total_amount * 100) : 0;
     const matchStatus = totalDiffPct <= 0.5 ? 'matched' : 'mismatched';
@@ -544,14 +620,15 @@ export async function onRequest(context) {
        LEFT JOIN cars c ON fl.car_id = c.id
        LEFT JOIN drivers d ON fl.driver_id = d.id
        WHERE fl.date >= ? AND fl.date <= ? AND fl.expense_type = 'procurement' AND fl.deleted_at IS NULL
+       ${stationFilterSql.replace(/gas_station_name/g, 'fl.gas_station_name')}
        ORDER BY fl.date, fl.time`,
-      [inv.date_from, inv.date_to]);
+      [inv.date_from, inv.date_to, ...stationParams]);
 
     return success({
       invoice: inv,
       system_records: { by_fuel_type: systemByType, total_liters: systemTotal?.total_liters || 0, total_amount: systemTotal?.total_amount || 0 },
       comparison,
-      total_diff_liters: (systemTotal?.total_liters || 0) - (inv.total_amount || 0),
+      total_diff_liters: totalDiffLiters,
       total_diff_amount: totalDiffAmount,
       total_diff_pct: totalDiffPct.toFixed(2),
       status: matchStatus,
@@ -605,15 +682,22 @@ export async function onRequest(context) {
        GROUP BY fl.fuel_type
        ORDER BY total_amount DESC`, [dateFrom, dateTo]);
 
-    // By vehicle (with avg consumption = total_km / total_liters)
+    // By vehicle (with avg consumption = total distance / total liters)
     const byVehicle = await dbAll(env.DB,
       `SELECT c.license_plate, c.brand,
         COUNT(*) AS count,
         COALESCE(SUM(fl.liters), 0) AS total_liters,
         COALESCE(SUM(fl.amount), 0) AS total_amount,
-        CASE WHEN SUM(fl.liters) > 0 AND MAX(fl.mileage_before) > 0 AND MIN(fl.mileage_before) > 0
-          THEN ROUND(CAST(MAX(fl.mileage_before) - MIN(fl.mileage_before) AS REAL) / SUM(fl.liters), 2)
-          ELSE NULL END AS avg_km_per_liter
+        CASE
+          WHEN SUM(CASE WHEN fl.mileage_after > fl.mileage_before AND fl.mileage_before > 0 AND fl.liters > 0 THEN fl.liters ELSE 0 END) > 0
+            THEN ROUND(
+              CAST(SUM(CASE WHEN fl.mileage_after > fl.mileage_before AND fl.mileage_before > 0 AND fl.liters > 0 THEN (fl.mileage_after - fl.mileage_before) ELSE 0 END) AS REAL) /
+              SUM(CASE WHEN fl.mileage_after > fl.mileage_before AND fl.mileage_before > 0 AND fl.liters > 0 THEN fl.liters ELSE 0 END), 2
+            )
+          WHEN COUNT(fl.id) > 1 AND MAX(fl.mileage_after) > MIN(fl.mileage_after) AND MIN(fl.mileage_after) > 0 AND SUM(fl.liters) > 0
+            THEN ROUND(CAST(MAX(fl.mileage_after) - MIN(fl.mileage_after) AS REAL) / NULLIF(SUM(fl.liters), 0), 2)
+          ELSE ROUND(AVG(CASE WHEN fl.fuel_consumption_rate > 0 THEN fl.fuel_consumption_rate ELSE NULL END), 2)
+        END AS avg_km_per_liter
        FROM fuel_log fl
        LEFT JOIN cars c ON fl.car_id = c.id
        WHERE fl.date >= ? AND fl.date <= ? AND fl.deleted_at IS NULL
@@ -697,9 +781,16 @@ export async function onRequest(context) {
         COUNT(*) AS count,
         COALESCE(SUM(fl.liters), 0) AS total_liters,
         COALESCE(SUM(fl.amount), 0) AS total_amount,
-        CASE WHEN SUM(fl.liters) > 0 AND MAX(fl.mileage_before) > 0 AND MIN(fl.mileage_before) > 0
-          THEN ROUND(CAST(MAX(fl.mileage_before) - MIN(fl.mileage_before) AS REAL) / SUM(fl.liters), 2)
-          ELSE NULL END AS avg_km_per_liter
+        CASE
+          WHEN SUM(CASE WHEN fl.mileage_after > fl.mileage_before AND fl.mileage_before > 0 AND fl.liters > 0 THEN fl.liters ELSE 0 END) > 0
+            THEN ROUND(
+              CAST(SUM(CASE WHEN fl.mileage_after > fl.mileage_before AND fl.mileage_before > 0 AND fl.liters > 0 THEN (fl.mileage_after - fl.mileage_before) ELSE 0 END) AS REAL) /
+              SUM(CASE WHEN fl.mileage_after > fl.mileage_before AND fl.mileage_before > 0 AND fl.liters > 0 THEN fl.liters ELSE 0 END), 2
+            )
+          WHEN COUNT(fl.id) > 1 AND MAX(fl.mileage_after) > MIN(fl.mileage_after) AND MIN(fl.mileage_after) > 0 AND SUM(fl.liters) > 0
+            THEN ROUND(CAST(MAX(fl.mileage_after) - MIN(fl.mileage_after) AS REAL) / NULLIF(SUM(fl.liters), 0), 2)
+          ELSE ROUND(AVG(CASE WHEN fl.fuel_consumption_rate > 0 THEN fl.fuel_consumption_rate ELSE NULL END), 2)
+        END AS avg_km_per_liter
        FROM fuel_log fl
        LEFT JOIN cars c ON fl.car_id = c.id
        WHERE fl.date >= ? AND fl.date <= ? AND fl.deleted_at IS NULL

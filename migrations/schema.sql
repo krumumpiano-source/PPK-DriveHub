@@ -694,44 +694,6 @@ CREATE TABLE IF NOT EXISTS rate_limits (
 );
 
 -- Added from 005-system-overhaul.sql
-CREATE TABLE IF NOT EXISTS repair_log_new (
-  id TEXT PRIMARY KEY,
-  car_id TEXT NOT NULL,
-  date_reported TEXT NOT NULL,
-  date_started TEXT,
-  date_completed TEXT,
-  status TEXT NOT NULL DEFAULT 'requested' CHECK(status IN (
-    'requested','approved','rejected','inspected','documented','repairing','completed','cancelled'
-  )),
-  mileage_at_repair INTEGER,
-  reporter_id TEXT,
-  reporter_name TEXT,
-  garage_name TEXT,
-  repair_items TEXT DEFAULT '[]',
-  issue_description TEXT,
-  cost REAL,
-  documents TEXT DEFAULT '[]',
-  notes TEXT,
-  created_by TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT,
-  -- New columns for 7-step workflow
-  approved_by TEXT,
-  approved_at TEXT,
-  rejected_by TEXT,
-  rejected_at TEXT,
-  rejection_reason TEXT,
-  inspection_date TEXT,
-  inspection_notes TEXT,
-  quotation_documents TEXT DEFAULT '[]',
-  memo_documents TEXT DEFAULT '[]',
-  memo_notes TEXT,
-  receipt_documents TEXT DEFAULT '[]',
-  requested_by_driver_id TEXT REFERENCES drivers(id),
-  FOREIGN KEY (car_id) REFERENCES cars(id)
-);
-
--- Added from 005-system-overhaul.sql
 CREATE TABLE IF NOT EXISTS vehicle_requests (
   signature_image TEXT,
   request_no TEXT,
@@ -931,10 +893,6 @@ CREATE INDEX IF NOT EXISTS idx_usage_records_datetime ON usage_records(datetime)
 
 -- 7. repair_log table
 CREATE INDEX IF NOT EXISTS idx_repair_log_created_at ON repair_log(created_at);
-
--- 8. repair_log_new table
-CREATE INDEX IF NOT EXISTS idx_repair_log_new_created_at ON repair_log_new(created_at);
-CREATE INDEX IF NOT EXISTS idx_repair_log_new_status ON repair_log_new(status);
 
 -- 9. users table (Admin panel list often ordered by created_at)
 CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);

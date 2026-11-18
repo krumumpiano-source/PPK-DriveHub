@@ -11,7 +11,7 @@ export async function onRequest(context) {
   const path = url.pathname;
   const method = request.method;
 
-  // --- GET /api/survey/drivers --- PUBLIC (สำหรับดึงรายชื่อคนขับให้ผู้โดยสารเลือกเอง - เฉพาะ 4 คนหลัก)
+  // --- GET /api/survey/drivers --- PUBLIC (สำหรับดึงรายชื่อคนขับให้ผู้โดยสารเลือกเอง)
   if (path === '/api/survey/drivers' && method === 'GET') {
       const drivers = await dbAll(env.DB, `
         SELECT d.id, d.name, d.status,
@@ -27,12 +27,7 @@ export async function onRequest(context) {
           GROUP BY q.driver_id
         ) c ON d.id = c.driver_id
         WHERE d.status = 'active'
-          AND (
-            d.name LIKE '%ชารี%' 
-            OR d.name LIKE '%ณัฐวุฒิ%' 
-            OR d.name LIKE '%สมชาย%' 
-            OR d.name LIKE '%สุรเชษฐ์%'
-          )
+          AND (d.assignment_type = 'primary' OR d.assignment_type IS NULL OR d.assignment_type = '')
         ORDER BY 
           CASE 
             WHEN d.name LIKE '%ชารี%' THEN 1
@@ -40,7 +35,8 @@ export async function onRequest(context) {
             WHEN d.name LIKE '%สมชาย%' THEN 3
             WHEN d.name LIKE '%สุรเชษฐ์%' THEN 4
             ELSE 5
-          END
+          END,
+          d.name ASC
       `);
       return success(drivers);
   }
@@ -105,6 +101,7 @@ export async function onRequest(context) {
       }
     }
     const id = generateUUID();
+    const createdAt = now();
     await dbRun(env.DB,
       `INSERT INTO survey_responses (id, car_id, queue_id, driver_id,
         politeness_score, safety_score, punctuality_score,
@@ -118,7 +115,7 @@ export async function onRequest(context) {
        body.comment || '', body.respondent_name || '',
        request.headers.get('CF-Connecting-IP') || request.headers.get('x-real-ip') || '',
        request.headers.get('User-Agent') || '',
-       now()]
+       createdAt]
     );
     return success({ id, message: 'ขอบคุณสำหรับการประเมิน' }, 201);
   }

@@ -49,6 +49,8 @@ export async function onRequest(context) {
       }
 
       // Check Car Conflicts across date and time (exclude current queue being edited)
+      const queryStart = `${date} ${timeStart}`;
+      const queryEnd = `${returnDate} ${timeEnd}`;
       const carConflictParams = [carId, returnDate, date];
       let carExcludeSql = '';
       if (excludeQueueId) {
@@ -62,10 +64,11 @@ export async function onRequest(context) {
         AND q.date <= ? AND COALESCE(q.return_date, q.date) >= ?${carExcludeSql}
       `, carConflictParams);
 
-      // If single-day check time overlap, if multi-day it's a conflict
+      // Compare full start/end timestamps so multi-day trips only conflict when timestamps actually overlap
       for (const qc of carConflicts) {
-        const isMultiDay = (date !== returnDate) || (qc.date !== (qc.return_date || qc.date));
-        if (isMultiDay || (qc.time_start < timeEnd && qc.time_end > timeStart)) {
+        const confStart = `${qc.date} ${qc.time_start || '00:00'}`;
+        const confEnd = `${qc.return_date || qc.date} ${qc.time_end || '23:59'}`;
+        if (confStart < queryEnd && confEnd > queryStart) {
           blockers.push(`🚗 รถทะเบียน ${car?.license_plate || carId} มีคิวซ้อนทับ: วันที่ ${qc.date}${qc.return_date && qc.return_date !== qc.date ? ' ถึง ' + qc.return_date : ''} เวลา ${qc.time_start || '-'}-${qc.time_end || '-'} (${qc.destination || ''})`);
         }
       }
@@ -73,15 +76,24 @@ export async function onRequest(context) {
 
     // 2. Check Driver
     if (driverId) {
-      const drv = await dbFirst(env.DB, 'SELECT name, status, license_expiry FROM drivers WHERE id = ?', [driverId]);
+      const drv = await dbFirst(env.DB, 'SELECT name, status, license_expiry, fatigue_flag FROM drivers WHERE id = ?', [driverId]);
       if (drv) {
         if (drv.status === 'inactive') {
           blockers.push(`👤 พนักงานขับรถ '${drv.name}' ถูกระงับการปฏิบัติงาน (Inactive)`);
         } else if (drv.status === 'on_leave') {
-          blockers.push(`👤 พนักงานขับรถ '${drv.name}' อยู่ระหว่างการลา (On Leave)`);
+          // Verify if there is an actual active leave covering this date; if leave already expired, auto-heal driver status
+          const currentLeave = await dbFirst(env.DB,
+            `SELECT id FROM leaves WHERE driver_id = ? AND status = 'approved' AND start_date <= ? AND end_date >= ?`,
+            [driverId, returnDate, date]);
+          if (currentLeave) {
+            blockers.push(`👤 พนักงานขับรถ '${drv.name}' อยู่ระหว่างการลา (On Leave)`);
+          }
+        }
+        if (drv.fatigue_flag === 1) {
+          warnings.push(`😴 พนักงานขับรถ '${drv.name}' มีรายงานความเหนื่อยล้าค้างอยู่ (Fatigue Flag)`);
         }
 
-        if (drv.license_expiry && drv.license_expiry < new Date().toISOString().substr(0,10)) {
+        if (drv.license_expiry && drv.license_expiry < date) {
           blockers.push(`👤 ใบขับขี่ของ '${drv.name}' หมดอายุแล้ว (${drv.license_expiry})`);
         }
 
@@ -99,6 +111,8 @@ export async function onRequest(context) {
       }
 
       // Check Driver Conflicts (exclude current queue being edited)
+      const queryStartDrv = `${date} ${timeStart}`;
+      const queryEndDrv = `${returnDate} ${timeEnd}`;
       const drvConflictParams = [driverId, returnDate, date];
       let drvExcludeSql = '';
       if (excludeQueueId) {
@@ -113,13 +127,14 @@ export async function onRequest(context) {
       `, drvConflictParams);
 
       for (const qd of drvConflicts) {
-        const isMultiDay = (date !== returnDate) || (qd.date !== (qd.return_date || qd.date));
-        if (isMultiDay || (qd.time_start < timeEnd && qd.time_end > timeStart)) {
+        const confStart = `${qd.date} ${qd.time_start || '00:00'}`;
+        const confEnd = `${qd.return_date || qd.date} ${qd.time_end || '23:59'}`;
+        if (confStart < queryEndDrv && confEnd > queryStartDrv) {
           blockers.push(`👤 คนขับ '${drv?.name || driverId}' มีคิวซ้อนทับ: วันที่ ${qd.date}${qd.return_date && qd.return_date !== qd.date ? ' ถึง ' + qd.return_date : ''} เวลา ${qd.time_start || '-'}-${qd.time_end || '-'} (${qd.destination || ''})`);
         }
       }
 
-      // 3. Fatigue Rule (กฎความล้าสะสม 400 กิโลเมตรในวันก่อนหน้า)
+      // 3. Fatigue Rule (กฎความล้าสะสม 400 กิโลเมตรในวันก่อนหน้า — คิดทั้ง estimated_km และไมล์จริงจาก usage_records)
       try {
         const targetD = new Date(date + 'T00:00:00');
         if (!isNaN(targetD.getTime())) {
@@ -128,13 +143,18 @@ export async function onRequest(context) {
           const prevDateStr = prevD.toISOString().substr(0, 10);
 
           const prevQueues = await dbAll(env.DB, `
-            SELECT estimated_km, destination FROM queue
-            WHERE driver_id = ? AND date <= ? AND COALESCE(return_date, date) >= ? AND status NOT IN ('cancelled')
+            SELECT q.id, q.estimated_km, q.destination,
+                   dep.mileage AS dep_km, ret.mileage AS ret_km
+            FROM queue q
+            LEFT JOIN usage_records dep ON dep.queue_id = q.id AND dep.record_type = 'departure'
+            LEFT JOIN usage_records ret ON ret.queue_id = q.id AND ret.record_type = 'return'
+            WHERE q.driver_id = ? AND q.date <= ? AND COALESCE(q.return_date, q.date) >= ? AND q.status NOT IN ('cancelled')
           `, [driverId, prevDateStr, prevDateStr]);
 
           let totalPrevKm = 0;
           for (const pq of prevQueues) {
-            totalPrevKm += (pq.estimated_km || 0);
+            const actualKm = (pq.ret_km && pq.dep_km && pq.ret_km > pq.dep_km) ? (pq.ret_km - pq.dep_km) : 0;
+            totalPrevKm += Math.max(actualKm, pq.estimated_km || 0);
           }
 
           if (totalPrevKm >= 400) {

@@ -14,7 +14,14 @@ Thumbs.db
 # Test output logs
 driver-test*.log
 test-output*.txt
+test-rerun*.txt
 *.log
+tmp*.txt
+tmp*.js
+temp_*.html
+captured.txt
+err.txt
+out.txt
 
 response.txt
 test-results/

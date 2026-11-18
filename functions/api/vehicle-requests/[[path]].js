@@ -456,12 +456,18 @@ export async function onRequest(context) {
         const prevDateStr = prevD.toISOString().substr(0, 10);
 
         const prevQueues = await dbAll(env.DB, `
-          SELECT estimated_km FROM queue
-          WHERE driver_id = ? AND date <= ? AND COALESCE(return_date, date) >= ? AND status NOT IN ('cancelled')
+          SELECT q.estimated_km, dep.mileage AS dep_km, ret.mileage AS ret_km
+          FROM queue q
+          LEFT JOIN usage_records dep ON dep.queue_id = q.id AND dep.record_type = 'departure'
+          LEFT JOIN usage_records ret ON ret.queue_id = q.id AND ret.record_type = 'return'
+          WHERE q.driver_id = ? AND q.date <= ? AND COALESCE(q.return_date, q.date) >= ? AND q.status NOT IN ('cancelled')
         `, [body.assigned_driver_id, prevDateStr, prevDateStr]);
 
         let totalPrevKm = 0;
-        for (const pq of prevQueues) totalPrevKm += (pq.estimated_km || 0);
+        for (const pq of prevQueues) {
+          const actualKm = (pq.ret_km && pq.dep_km && pq.ret_km > pq.dep_km) ? (pq.ret_km - pq.dep_km) : 0;
+          totalPrevKm += Math.max(actualKm, pq.estimated_km || 0);
+        }
 
         if (totalPrevKm >= 400 && estKm > 100) {
           blockers.push(`😴 [กฎความล้า] พนักงานขับรถ '${driverCheck.name}' ขับรถสะสมมากกว่า 400 กม. (${totalPrevKm} กม.) ในวันก่อนหน้า (${prevDateStr}) ไม่อนุญาตให้จัดคิวขับรถทางไกลในวันนี้ (ควรได้พัก หรือวิ่งงานระยะสั้นในพื้นที่เท่านั้น)`);
@@ -473,6 +479,8 @@ export async function onRequest(context) {
 
     // 4. ตรวจสอบคิวซ้อน (Conflict detection)
     if (!isOverride) {
+      const queryStart = `${row.date} ${timeStart}`;
+      const queryEnd = `${returnDate} ${timeEnd}`;
       const conflicts = await dbAll(env.DB,
         `SELECT q.id, q.time_start, q.time_end, q.date, q.return_date, c.license_plate, d.name AS driver_name
          FROM queue q
@@ -484,8 +492,9 @@ export async function onRequest(context) {
         [returnDate, row.date, body.assigned_car_id, body.assigned_driver_id]
       );
       for (const conf of conflicts) {
-        const isMulti = (row.date !== returnDate) || (conf.date !== (conf.return_date || conf.date));
-        if (isMulti || (conf.time_start < timeEnd && conf.time_end > timeStart)) {
+        const confStart = `${conf.date} ${conf.time_start || '00:00'}`;
+        const confEnd = `${conf.return_date || conf.date} ${conf.time_end || '23:59'}`;
+        if (confStart < queryEnd && confEnd > queryStart) {
           blockers.push(`คิวซ้อนทับ: ${conf.license_plate || ''} ${conf.driver_name || ''} (${conf.date} เวลา ${conf.time_start}-${conf.time_end})`);
         }
       }

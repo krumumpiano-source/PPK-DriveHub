@@ -24,7 +24,7 @@ export async function onRequest(context) {
       dbFirst(env.DB,
         `SELECT COUNT(*) AS total,
          SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active,
-         SUM(CASE WHEN status = 'maintenance' THEN 1 ELSE 0 END) AS in_maintenance,
+         SUM(CASE WHEN status IN ('maintenance', 'under_repair') THEN 1 ELSE 0 END) AS in_maintenance,
          SUM(CASE WHEN status = 'inactive' THEN 1 ELSE 0 END) AS inactive
          FROM cars`, []),
       dbFirst(env.DB,
@@ -45,9 +45,9 @@ export async function onRequest(context) {
          FROM fuel_log WHERE date LIKE ? AND deleted_at IS NULL`, [monthStart + '%']),
       dbFirst(env.DB,
         `SELECT COUNT(*) AS total,
-         SUM(CASE WHEN status = 'reported' THEN 1 ELSE 0 END) AS reported,
-         SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) AS in_progress
-         FROM repair_log WHERE status NOT IN ('completed','cancelled')`, []),
+         SUM(CASE WHEN status IN ('requested', 'approved', 'inspected', 'documented') THEN 1 ELSE 0 END) AS reported,
+         SUM(CASE WHEN status = 'repairing' THEN 1 ELSE 0 END) AS in_progress
+         FROM repair_log WHERE status NOT IN ('completed','cancelled','rejected')`, []),
       dbFirst(env.DB,
         `SELECT COUNT(*) AS unresolved FROM inspection_alerts WHERE resolved = 0`, [])
     ]);
@@ -443,7 +443,7 @@ export async function onRequest(context) {
       dbAll(env.DB, `SELECT driver_id, COUNT(DISTINCT date) AS cnt FROM queue WHERE date>=? AND date<=? AND status IN ('completed','ongoing') GROUP BY driver_id`, [dpDateFrom, dpDateTo]),
       dbAll(env.DB, `SELECT q2.driver_id, COUNT(DISTINCT DATE(cl.created_at)) AS cnt FROM check_log cl JOIN (SELECT DISTINCT driver_id, car_id FROM queue WHERE date>=? AND date<=? AND status IN ('completed','ongoing')) q2 ON cl.car_id=q2.car_id WHERE cl.created_at>=? AND cl.created_at<=? GROUP BY q2.driver_id`, [dpDateFrom, dpDateTo, dpDateFrom, dpDateToFull]),
       dbAll(env.DB, `SELECT q.driver_id, COUNT(ur.datetime) AS total_dep, SUM(CASE WHEN CAST((julianday(ur.datetime)-julianday(q.date||'T'||q.time_start))*1440 AS INTEGER)<=15 THEN 1 ELSE 0 END) AS on_time FROM queue q JOIN usage_records ur ON ur.queue_id=q.id AND ur.record_type='departure' WHERE q.date>=? AND q.date<=? AND q.status IN ('completed','ongoing') AND q.time_start IS NOT NULL GROUP BY q.driver_id`, [dpDateFrom, dpDateTo]),
-      dbAll(env.DB, `SELECT q2.driver_id, COALESCE(SUM(COALESCE(NULLIF(rl.grand_total,0), rl.cost, 0)),0) AS tc, COUNT(rl.id) AS cnt FROM repair_log rl JOIN (SELECT DISTINCT driver_id, car_id FROM queue) q2 ON rl.car_id=q2.car_id WHERE rl.date_reported>=? AND rl.date_reported<=? GROUP BY q2.driver_id`, [dpDateFrom, dpDateTo]),
+      dbAll(env.DB, `SELECT q2.driver_id, COALESCE(SUM(CASE WHEN rl.service_type IN ('accident') THEN COALESCE(NULLIF(rl.grand_total,0), rl.cost, 0) ELSE 0 END),0) AS tc, COUNT(rl.id) AS cnt FROM repair_log rl JOIN (SELECT DISTINCT driver_id, car_id FROM queue WHERE date>=? AND date<=?) q2 ON rl.car_id=q2.car_id WHERE rl.date_reported>=? AND rl.date_reported<=? GROUP BY q2.driver_id`, [dpDateFrom, dpDateTo, dpDateFrom, dpDateTo]),
       dbAll(env.DB, `SELECT r.driver_id, COALESCE(SUM(r.mileage-d.mileage),0) AS km FROM usage_records r JOIN usage_records d ON d.queue_id=r.queue_id AND d.record_type='departure' WHERE r.record_type='return' AND r.datetime>=? AND r.datetime<=? AND d.mileage IS NOT NULL AND r.mileage>d.mileage GROUP BY r.driver_id`, [dpDateFrom, dpDateToFull]),
       dbAll(env.DB, `SELECT driver_id, COUNT(*) AS total FROM fuel_log WHERE date>=? AND date<=? AND deleted_at IS NULL GROUP BY driver_id`, [dpDateFrom, dpDateTo]),
       dbAll(env.DB, `SELECT driver_id, COUNT(*) AS cnt FROM fuel_log WHERE date>=? AND date<=? AND deleted_at IS NULL AND mileage_before IS NOT NULL AND mileage_after IS NOT NULL GROUP BY driver_id`, [dpDateFrom, dpDateTo]),
@@ -515,7 +515,7 @@ export async function onRequest(context) {
     const cd=await dbFirst(env.DB,`SELECT COUNT(DISTINCT DATE(created_at)) AS cnt FROM check_log WHERE car_id IN (SELECT car_id FROM queue WHERE driver_id=? AND date>=? AND date<=?) AND created_at>=? AND created_at<=?`,[did,dpDF,dpDT,dpDF,dpDT+' 23:59:59']);
     const qs=await dbAll(env.DB,`SELECT q.date,q.time_start,ur.datetime AS dep FROM queue q LEFT JOIN usage_records ur ON ur.queue_id=q.id AND ur.record_type='departure' WHERE q.driver_id=? AND q.date>=? AND q.date<=? AND q.status IN ('completed','ongoing')`,[did,dpDF,dpDT]);
     let ot=0;for(const s of qs){if(!s.dep||!s.time_start)continue;if((new Date(s.dep)-new Date(s.date+'T'+s.time_start))/60000<=15)ot++;}
-    const rc=await dbFirst(env.DB,`SELECT COALESCE(SUM(COALESCE(NULLIF(rl.grand_total,0), rl.cost, 0)),0) AS tc,COUNT(*) AS cnt FROM repair_log rl JOIN queue q ON rl.car_id=q.car_id WHERE q.driver_id=? AND rl.date_reported>=? AND rl.date_reported<=?`,[did,dpDF,dpDT]);
+    const rc=await dbFirst(env.DB,`SELECT COALESCE(SUM(CASE WHEN rl.service_type IN ('accident') THEN COALESCE(NULLIF(rl.grand_total,0), rl.cost, 0) ELSE 0 END),0) AS tc,COUNT(*) AS cnt FROM repair_log rl JOIN (SELECT DISTINCT car_id FROM queue WHERE driver_id=? AND date>=? AND date<=?) q ON rl.car_id=q.car_id WHERE rl.date_reported>=? AND rl.date_reported<=?`,[did,dpDF,dpDT,dpDF,dpDT]);
     const tk=await dbFirst(env.DB,`SELECT COALESCE(SUM(r.mileage - d.mileage),0) AS km FROM usage_records r LEFT JOIN usage_records d ON d.queue_id=r.queue_id AND d.record_type='departure' WHERE r.driver_id=? AND r.record_type='return' AND r.datetime>=? AND r.datetime<=? AND d.mileage IS NOT NULL AND r.mileage>d.mileage`,[did,dpDF,dpDT+' 23:59:59']);
     const fa=await dbFirst(env.DB,`SELECT COUNT(*) AS total FROM fuel_log WHERE driver_id=? AND date>=? AND date<=? AND deleted_at IS NULL`,[did,dpDF,dpDT]);
     const fg=await dbFirst(env.DB,`SELECT COUNT(*) AS cnt FROM fuel_log WHERE driver_id=? AND date>=? AND date<=? AND deleted_at IS NULL AND mileage_before IS NOT NULL AND mileage_after IS NOT NULL`,[did,dpDF,dpDT]);

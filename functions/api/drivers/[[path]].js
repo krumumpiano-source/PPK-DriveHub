@@ -1,7 +1,8 @@
 // Driver management + fatigue + leaves
 import {
-  dbAll, dbFirst, dbRun, generateUUID, now, success, error,
-  parseBody, requirePermission, checkPermission, extractParam, writeAuditLog
+  dbAll, dbFirst, dbRun, generateUUID, now, todayThai, success, error,
+  parseBody, requirePermission, checkPermission, extractParam, writeAuditLog,
+  maskNationalId, writePdpaLog
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
@@ -16,6 +17,18 @@ export async function onRequest(context) {
   // --- GET /api/drivers ---
   if (path === '/api/drivers' && method === 'GET') {
     try { requirePermission(user, 'drivers', 'view'); } catch { return error('ไม่มีสิทธิ์', 403); }
+    // Auto-restore drivers whose 'on_leave' period has already ended
+    const todayStr = todayThai();
+    await dbRun(env.DB,
+      `UPDATE drivers SET status = 'active', updated_at = ?
+       WHERE status = 'on_leave'
+         AND NOT EXISTS (
+           SELECT 1 FROM leaves l
+           WHERE l.driver_id = drivers.id AND l.status = 'approved'
+             AND l.start_date <= ? AND l.end_date >= ?
+         )`,
+      [now(), todayStr, todayStr]
+    );
     const status = url.searchParams.get('status');
     const search = url.searchParams.get('search');
     const where = [];
@@ -24,8 +37,8 @@ export async function onRequest(context) {
     if (search) { where.push("(d.name LIKE ? OR d.license_number LIKE ? OR d.phone LIKE ?)"); params.push(`%${search}%`, `%${search}%`, `%${search}%`); }
     const rows = await dbAll(env.DB,
       `SELECT d.*, uc.display_name AS created_by_name, uu.display_name AS updated_by_name,
-       (SELECT COUNT(*) FROM queue q WHERE q.driver_id = d.id AND q.status NOT IN ('cancelled', 'rejected') AND q.date = date('now', 'localtime')) AS today_queues,
-       (SELECT COUNT(*) FROM queue q WHERE q.driver_id = d.id AND q.status NOT IN ('cancelled', 'rejected') AND q.date >= date('now', 'localtime', '-7 days')) AS week_queues
+       (SELECT COUNT(*) FROM queue q WHERE q.driver_id = d.id AND q.status NOT IN ('cancelled', 'rejected') AND q.date = date('now', '+7 hours')) AS today_queues,
+       (SELECT COUNT(*) FROM queue q WHERE q.driver_id = d.id AND q.status NOT IN ('cancelled', 'rejected') AND q.date >= date('now', '+7 hours', '-7 days')) AS week_queues
        FROM drivers d
        LEFT JOIN users uc ON d.created_by = uc.id
        LEFT JOIN users uu ON d.updated_by = uu.id
@@ -33,7 +46,9 @@ export async function onRequest(context) {
        ORDER BY d.created_at DESC`,
       params
     );
-    return success({ drivers: rows });
+    const isAdmin = user.role === 'admin' || user.role === 'super_admin';
+    const sanitized = rows.map(r => isAdmin ? r : { ...r, id_card_number: maskNationalId(r.id_card_number) });
+    return success({ drivers: sanitized });
   }
 
   // --- GET /api/drivers/:id ---
@@ -42,13 +57,18 @@ export async function onRequest(context) {
     const id = extractParam(path, '/api/drivers/');
     const row = await dbFirst(env.DB,
       `SELECT d.*, uc.display_name AS created_by_name, uu.display_name AS updated_by_name,
-       (SELECT COUNT(*) FROM queue q WHERE q.driver_id = d.id AND q.status NOT IN ('cancelled', 'rejected') AND q.date = date('now', 'localtime')) AS today_queues,
-       (SELECT COUNT(*) FROM queue q WHERE q.driver_id = d.id AND q.status NOT IN ('cancelled', 'rejected') AND q.date >= date('now', 'localtime', '-7 days')) AS week_queues
+       (SELECT COUNT(*) FROM queue q WHERE q.driver_id = d.id AND q.status NOT IN ('cancelled', 'rejected') AND q.date = date('now', '+7 hours')) AS today_queues,
+       (SELECT COUNT(*) FROM queue q WHERE q.driver_id = d.id AND q.status NOT IN ('cancelled', 'rejected') AND q.date >= date('now', '+7 hours', '-7 days')) AS week_queues
        FROM drivers d
        LEFT JOIN users uc ON d.created_by = uc.id
        LEFT JOIN users uu ON d.updated_by = uu.id
        WHERE d.id = ?`, [id]);
     if (!row) return error('ไม่พบข้อมูลพนักงานขับรถ', 404);
+    await writePdpaLog(env.DB, user.id, id, 'view_driver_profile', 'driver_pii', 'fleet_management');
+    const isAdmin = user.role === 'admin' || user.role === 'super_admin';
+    if (!isAdmin && row.id_card_number) {
+      row.id_card_number = maskNationalId(row.id_card_number);
+    }
     return success(row);
   }
 
@@ -162,11 +182,21 @@ export async function onRequest(context) {
     try { requirePermission(user, 'drivers', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = path.split('/')[4];
     const body = await parseBody(request);
+    const fatRow = await dbFirst(env.DB, 'SELECT driver_id FROM self_reported_fatigue WHERE id = ?', [id]);
     await dbRun(env.DB,
       `UPDATE self_reported_fatigue SET acknowledged = 1, acknowledged_by = ?,
        admin_notes = ?, acknowledged_at = ? WHERE id = ?`,
-      [user.id, body.admin_notes || '', now(), id]
+      [user.id, body?.admin_notes || '', now(), id]
     );
+    if (fatRow?.driver_id) {
+      const remaining = await dbFirst(env.DB,
+        'SELECT id FROM self_reported_fatigue WHERE driver_id = ? AND acknowledged = 0',
+        [fatRow.driver_id]
+      );
+      if (!remaining) {
+        await dbRun(env.DB, 'UPDATE drivers SET fatigue_flag = 0, updated_at = ? WHERE id = ?', [now(), fatRow.driver_id]);
+      }
+    }
     return success({ message: 'รับทราบรายงานความเหนื่อยล้าเรียบร้อย' });
   }
 

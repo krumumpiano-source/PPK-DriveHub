@@ -248,13 +248,20 @@ export async function onRequest(context) {
 
     if (body.record_type === 'return') {
       let linkedQueueId = null;
-      // หา queue ที่ผูกอยู่: ถ้ามี queue_id ตรงๆ ใช้เลย, ถ้าไม่มีให้ค้นจาก car_id ที่ยังไม่ปิด
+      const scanDate = (body.datetime || ts).substr(0, 10);
+      // หา queue ที่ผูกอยู่: ถ้ามี queue_id ตรงๆ ใช้เลย, ถ้าไม่มีให้ค้นจาก car_id ที่กำลัง ongoing หรือมีคิวของวันนี้/ก่อนหน้า (ห้ามปิดคิวอนาคตล่วงหน้า!)
       let targetQueueId = body.queue_id || null;
       if (!targetQueueId) {
         const openQ = await dbFirst(env.DB,
-          `SELECT id FROM queue WHERE car_id = ? AND status IN ('ongoing', 'scheduled', 'in_progress', 'approved')
-           ORDER BY date DESC, time_start DESC LIMIT 1`,
-          [body.car_id]
+          `SELECT id FROM queue
+           WHERE car_id = ?
+             AND (
+               status IN ('ongoing', 'in_progress')
+               OR (status IN ('scheduled', 'approved') AND date <= ?)
+             )
+           ORDER BY CASE WHEN status IN ('ongoing', 'in_progress') THEN 0 ELSE 1 END,
+                    date DESC, time_start DESC LIMIT 1`,
+          [body.car_id, scanDate]
         );
         if (openQ) targetQueueId = openQ.id;
       }
@@ -335,12 +342,15 @@ export async function onRequest(context) {
     // Auto-set queue status = 'ongoing' เมื่อสแกนออก (ถ้ายังเป็น scheduled)
     // หรือสร้าง queue ใหม่อัตโนมัติถ้าไม่มีคิวเลย
     if (body.record_type === 'departure') {
+      const scanDate = (body.datetime || ts).substr(0, 10);
       let targetQueueId = body.queue_id || null;
       if (!targetQueueId) {
         const schedQ = await dbFirst(env.DB,
-          `SELECT id FROM queue WHERE car_id = ? AND status IN ('scheduled', 'approved', 'pending')
-           ORDER BY date DESC, time_start DESC LIMIT 1`,
-          [body.car_id]
+          `SELECT id FROM queue
+           WHERE car_id = ? AND status IN ('scheduled', 'approved', 'pending')
+             AND date <= ? AND COALESCE(return_date, date) >= ?
+           ORDER BY date ASC, time_start ASC LIMIT 1`,
+          [body.car_id, scanDate, scanDate]
         );
         if (schedQ) targetQueueId = schedQ.id;
       }
@@ -641,11 +651,12 @@ export async function onRequest(context) {
     for (const car of cars) {
       summary.cars_scanned++;
 
-      // Get all departure/return records for this car, ordered chronologically
+      // Get all departure/return records for this car (excluding synthetic gap_record), ordered chronologically
       const records = await dbAll(env.DB,
         `SELECT id, car_id, driver_id, record_type, datetime, mileage, queue_id, data_quality
          FROM usage_records
          WHERE car_id = ? AND record_type IN ('departure','return')
+           AND COALESCE(data_quality, 'normal') != 'gap_record'
          ORDER BY datetime ASC, record_type ASC`,
         [car.id]
       );

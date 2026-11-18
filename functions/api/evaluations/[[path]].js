@@ -15,17 +15,27 @@ export async function onRequest(context) {
       const fiscalStart = `${fiscalGregorianYear - 1}-10-01`;
       const fiscalEnd = `${fiscalGregorianYear}-09-30`;
 
-      // Get 4 main drivers
+      // Get all active primary drivers (dynamically instead of hardcoded 4 names)
       const drivers = await db.prepare(`
         SELECT id, name, first_name, last_name, title, status FROM drivers 
-        WHERE status = 'active' AND (name LIKE '%ชารี%' OR name LIKE '%ณัฐวุฒิ%' OR name LIKE '%สมชาย%' OR name LIKE '%สุรเชษฐ์%')
+        WHERE status = 'active'
+          AND (assignment_type = 'primary' OR assignment_type IS NULL OR assignment_type = '')
+        ORDER BY
+          CASE 
+            WHEN name LIKE '%ชารี%' THEN 1
+            WHEN name LIKE '%ณัฐวุฒิ%' THEN 2
+            WHEN name LIKE '%สมชาย%' THEN 3
+            WHEN name LIKE '%สุรเชษฐ์%' THEN 4
+            ELSE 5
+          END,
+          name ASC
       `).all();
 
       const summaryList = [];
       const driverList = drivers.results || [];
 
       for (const d of driverList) {
-        // Passenger stats
+        // Passenger stats (combining driver_evaluations passenger rows and survey_responses within fiscal year)
         const pStats = await db.prepare(`
           SELECT 
             AVG(score_driving) as avg_driving,
@@ -33,9 +43,20 @@ export async function onRequest(context) {
             AVG(score_punctuality) as avg_punctuality,
             AVG(total_score) as avg_total_score,
             COUNT(id) as total_trips
-          FROM driver_evaluations
-          WHERE driver_id = ? AND evaluation_type = 'passenger' AND academic_year = ?
-        `).bind(d.id, year).first();
+          FROM (
+            SELECT id, score_driving, score_service, score_punctuality, total_score
+            FROM driver_evaluations
+            WHERE driver_id = ? AND evaluation_type = 'passenger' AND academic_year = ?
+            UNION ALL
+            SELECT id,
+              safety_score AS score_driving,
+              politeness_score AS score_service,
+              punctuality_score AS score_punctuality,
+              (COALESCE(politeness_score,0)+COALESCE(safety_score,0)+COALESCE(punctuality_score,0)+COALESCE(cleanliness_score,0)+COALESCE(appearance_score,0)+COALESCE(overall_score,0))/6.0 AS total_score
+            FROM survey_responses
+            WHERE driver_id = ? AND created_at >= ? AND created_at <= ?
+          )
+        `).bind(d.id, year, d.id, fiscalStart, fiscalEnd + 'T23:59:59').first();
 
         // Committee stats
         const cStats = await db.prepare(`
@@ -49,20 +70,33 @@ export async function onRequest(context) {
           WHERE driver_id = ? AND evaluation_type = 'committee' AND academic_year = ?
         `).bind(d.id, year).first();
 
+        const hasPassenger = (pStats?.total_trips || 0) > 0;
+        const hasCommittee = (cStats?.committee_count || 0) > 0;
         const pAvg = pStats?.avg_total_score || 0;
         const cAvg = cStats?.avg_total_score || 0;
         const pWeighted = (pAvg / 5) * 40;
         const cWeighted = (cAvg / 100) * 60;
         const totalScore = pWeighted + cWeighted;
-        const hasEval = (pStats?.total_trips || 0) > 0 || (cStats?.committee_count || 0) > 0 || totalScore > 0;
+        const hasEval = hasPassenger || hasCommittee;
 
         let grade = 'ยังไม่ประเมิน';
         if (hasEval) {
-          if (totalScore >= 90) grade = 'ดีเด่น';
-          else if (totalScore >= 80) grade = 'ดีมาก';
-          else if (totalScore >= 70) grade = 'ดี';
-          else if (totalScore >= 60) grade = 'พอใช้';
-          else grade = 'ต้องปรับปรุง';
+          if (hasPassenger && !hasCommittee) {
+            grade = 'รอกรรมการประเมิน';
+          } else if (!hasPassenger && hasCommittee) {
+            // Normalize or grade if committee evaluated
+            if (totalScore >= 90) grade = 'ดีเด่น';
+            else if (totalScore >= 80) grade = 'ดีมาก';
+            else if (totalScore >= 70) grade = 'ดี';
+            else if (totalScore >= 60) grade = 'พอใช้';
+            else grade = 'รอผลผู้โดยสาร';
+          } else {
+            if (totalScore >= 90) grade = 'ดีเด่น';
+            else if (totalScore >= 80) grade = 'ดีมาก';
+            else if (totalScore >= 70) grade = 'ดี';
+            else if (totalScore >= 60) grade = 'พอใช้';
+            else grade = 'ต้องปรับปรุง';
+          }
         }
 
         summaryList.push({
@@ -129,8 +163,11 @@ export async function onRequest(context) {
       const driverId = path.split('/')[1];
       const url = new URL(request.url);
       const year = url.searchParams.get('year') || (new Date().getFullYear() + 543).toString();
+      const fiscalGregorianYear = parseInt(year) - 543;
+      const fiscalStart = `${fiscalGregorianYear - 1}-10-01`;
+      const fiscalEnd = `${fiscalGregorianYear}-09-30`;
 
-      // Get passenger average
+      // Get passenger average (combining driver_evaluations and survey_responses)
       const passengerStmt = await db.prepare(`
         SELECT 
           AVG(score_driving) as avg_driving,
@@ -138,9 +175,20 @@ export async function onRequest(context) {
           AVG(score_punctuality) as avg_punctuality,
           AVG(total_score) as avg_total_score,
           COUNT(id) as total_trips
-        FROM driver_evaluations 
-        WHERE driver_id = ? AND evaluation_type = 'passenger' AND academic_year = ?
-      `).bind(driverId, year).first();
+        FROM (
+          SELECT id, score_driving, score_service, score_punctuality, total_score
+          FROM driver_evaluations 
+          WHERE driver_id = ? AND evaluation_type = 'passenger' AND academic_year = ?
+          UNION ALL
+          SELECT id,
+            safety_score AS score_driving,
+            politeness_score AS score_service,
+            punctuality_score AS score_punctuality,
+            (COALESCE(politeness_score,0)+COALESCE(safety_score,0)+COALESCE(punctuality_score,0)+COALESCE(cleanliness_score,0)+COALESCE(appearance_score,0)+COALESCE(overall_score,0))/6.0 AS total_score
+          FROM survey_responses
+          WHERE driver_id = ? AND created_at >= ? AND created_at <= ?
+        )
+      `).bind(driverId, year, driverId, fiscalStart, fiscalEnd + 'T23:59:59').first();
 
       // Get committee average
       const committeeStmt = await db.prepare(`
@@ -162,10 +210,6 @@ export async function onRequest(context) {
         WHERE e.driver_id = ? AND e.academic_year = ?
         ORDER BY e.created_at DESC
       `).bind(driverId, year).all();
-
-      const fiscalGregorianYear = parseInt(year) - 543;
-      const fiscalStart = `${fiscalGregorianYear - 1}-10-01`;
-      const fiscalEnd = `${fiscalGregorianYear}-09-30`;
 
       // Check queues and usage records with single fast join
       const anomalyCheck = await db.prepare(`
@@ -208,6 +252,8 @@ export async function onRequest(context) {
       };
 
       // Calculate combined score
+      const hasPassenger = (passengerStmt?.total_trips || 0) > 0;
+      const hasCommittee = (committeeStmt?.committee_count || 0) > 0;
       const passengerAvg = passengerStmt?.avg_total_score || 0;
       const committeeAvg = committeeStmt?.avg_total_score || 0;
 
@@ -215,14 +261,24 @@ export async function onRequest(context) {
       const committeeWeighted = (committeeAvg / 100) * 60;
       const combinedScore = passengerWeighted + committeeWeighted;
 
-      const hasEvaluations = (passengerStmt?.total_trips || 0) > 0 || (committeeStmt?.committee_count || 0) > 0 || combinedScore > 0;
+      const hasEvaluations = hasPassenger || hasCommittee;
       let grade = 'ยังไม่ประเมิน';
       if (hasEvaluations) {
-          if (combinedScore >= 90) grade = 'ดีเด่น';
-          else if (combinedScore >= 80) grade = 'ดีมาก';
-          else if (combinedScore >= 70) grade = 'ดี';
-          else if (combinedScore >= 60) grade = 'พอใช้';
-          else grade = 'ต้องปรับปรุง';
+          if (hasPassenger && !hasCommittee) {
+            grade = 'รอกรรมการประเมิน';
+          } else if (!hasPassenger && hasCommittee) {
+            if (combinedScore >= 90) grade = 'ดีเด่น';
+            else if (combinedScore >= 80) grade = 'ดีมาก';
+            else if (combinedScore >= 70) grade = 'ดี';
+            else if (combinedScore >= 60) grade = 'พอใช้';
+            else grade = 'รอผลผู้โดยสาร';
+          } else {
+            if (combinedScore >= 90) grade = 'ดีเด่น';
+            else if (combinedScore >= 80) grade = 'ดีมาก';
+            else if (combinedScore >= 70) grade = 'ดี';
+            else if (combinedScore >= 60) grade = 'พอใช้';
+            else grade = 'ต้องปรับปรุง';
+          }
       }
 
       return success({

@@ -6,6 +6,41 @@ export function now() {
   return new Date().toISOString();
 }
 
+// Thai timezone (UTC+7) helpers
+export function nowThai() {
+  const d = new Date(Date.now() + 7 * 3600000);
+  return d.toISOString().replace('Z', '+07:00');
+}
+
+export function todayThai() {
+  return new Date(Date.now() + 7 * 3600000).toISOString().substr(0, 10);
+}
+
+export function maskNationalId(idStr) {
+  if (!idStr) return '';
+  const clean = String(idStr).replace(/\D/g, '');
+  if (clean.length === 13) {
+    return `${clean[0]}-xxxx-xxxxx-${clean.slice(10, 12)}-${clean[12]}`;
+  }
+  if (clean.length > 4) {
+    return '*'.repeat(clean.length - 4) + clean.slice(-4);
+  }
+  return idStr;
+}
+
+export async function writePdpaLog(db, userId, accessedUserId, action, dataType, purpose) {
+  try {
+    if (!userId) return;
+    await dbRun(db,
+      `INSERT INTO pdpa_log (id, user_id, accessed_user_id, action, data_type, purpose, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [generateUUID(), userId, accessedUserId || null, action, dataType || 'driver_pii', purpose || 'operational', now()]
+    );
+  } catch {
+    // Non-critical
+  }
+}
+
 // PBKDF2-SHA256, 100k iterations — OWASP recommended minimum for password storage
 export async function hashPassword(password, salt) {
   const enc = new TextEncoder();

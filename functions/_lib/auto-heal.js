@@ -22,9 +22,11 @@ export async function autoHeal(db, newRecord, env) {
   if (newRecord.record_type === 'departure') {
     const lastRecord = await dbFirst(db,
       `SELECT * FROM usage_records
-       WHERE car_id = ? AND record_type IN ('departure','return') AND id != ?
+       WHERE car_id = ? AND record_type IN ('departure','return')
+         AND COALESCE(data_quality, 'normal') != 'gap_record'
+         AND id != ? AND datetime <= ?
        ORDER BY datetime DESC LIMIT 1`,
-      [newRecord.car_id, newRecord.id]
+      [newRecord.car_id, newRecord.id, newRecord.datetime]
     );
 
     if (lastRecord && lastRecord.record_type === 'departure') {
@@ -61,9 +63,11 @@ export async function autoHeal(db, newRecord, env) {
   } else if (newRecord.record_type === 'return') {
     const lastRecord = await dbFirst(db,
       `SELECT * FROM usage_records
-       WHERE car_id = ? AND record_type IN ('departure','return') AND id != ?
+       WHERE car_id = ? AND record_type IN ('departure','return')
+         AND COALESCE(data_quality, 'normal') != 'gap_record'
+         AND id != ? AND datetime <= ?
        ORDER BY datetime DESC LIMIT 1`,
-      [newRecord.car_id, newRecord.id]
+      [newRecord.car_id, newRecord.id, newRecord.datetime]
     );
 
     if (lastRecord && lastRecord.record_type === 'return') {

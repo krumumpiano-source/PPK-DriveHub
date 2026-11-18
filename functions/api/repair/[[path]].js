@@ -332,8 +332,10 @@ export async function onRequest(context) {
     // await sendTelegramMessage(env,
     //   `🔧 <b>แจ้งซ่อมใหม่</b>\n🚗 ${carLabel}\n📝 ${body.issue_description || body.description || '-'}\n👨‍💼 โดย: ${user.displayName}`);
 
-    // Auto-sync maintenance schedule if completed
-    if (status === 'completed') {
+    // Auto-sync car status if created as repairing, or sync maintenance schedule if completed
+    if (status === 'repairing') {
+      await dbRun(env.DB, `UPDATE cars SET status = 'under_repair', updated_at = ? WHERE id = ?`, [ts, body.car_id]);
+    } else if (status === 'completed') {
       const mil = body.mileage_at_repair || body.mileage_out || 0;
       const allItems = buildMaintenanceSyncPayload(body.repair_items || [], body.items_detail || [], body.issue_description || '');
       await syncMaintenanceFromRepair(body.car_id, mil, body.date_completed || body.date_reported, allItems, body.service_type || 'repair');
@@ -386,19 +388,32 @@ export async function onRequest(context) {
         );
       }
     }
-    // Auto-sync maintenance schedule if status updated to completed
-    if (body.status === 'completed') {
+    // Auto-sync car status and maintenance schedule when status changes in PUT /api/repair/log/:id
+    if (body.status === 'repairing') {
+      const updated = await dbFirst(env.DB, 'SELECT car_id FROM repair_log WHERE id = ?', [id]);
+      if (updated?.car_id) {
+        await dbRun(env.DB, `UPDATE cars SET status = 'under_repair', updated_at = ? WHERE id = ?`, [now(), updated.car_id]);
+      }
+    } else if (body.status === 'completed' || body.status === 'cancelled' || body.status === 'rejected') {
       const updated = await dbFirst(env.DB, 'SELECT * FROM repair_log WHERE id = ?', [id]);
       if (updated) {
-        const mil = updated.mileage_out || updated.mileage_at_repair || 0;
-        const detailRows = await dbAll(env.DB,
-          'SELECT part_code, description FROM repair_items WHERE repair_id = ? ORDER BY sort_order, created_at', [id]);
-        const allItems = buildMaintenanceSyncPayload(
-          parseMaintenanceSyncItems(updated.repair_items || '[]'),
-          detailRows,
-          updated.issue_description || ''
-        );
-        await syncMaintenanceFromRepair(updated.car_id, mil, updated.date_completed || updated.date_reported, allItems, updated.service_type || 'repair');
+        const otherRepairs = await dbFirst(env.DB,
+          `SELECT id FROM repair_log WHERE car_id = ? AND status = 'repairing' AND id != ?`,
+          [updated.car_id, id]);
+        if (!otherRepairs) {
+          await dbRun(env.DB, `UPDATE cars SET status = 'active', updated_at = ? WHERE id = ? AND status = 'under_repair'`, [now(), updated.car_id]);
+        }
+        if (body.status === 'completed') {
+          const mil = updated.mileage_out || updated.mileage_at_repair || 0;
+          const detailRows = await dbAll(env.DB,
+            'SELECT part_code, description FROM repair_items WHERE repair_id = ? ORDER BY sort_order, created_at', [id]);
+          const allItems = buildMaintenanceSyncPayload(
+            parseMaintenanceSyncItems(updated.repair_items || '[]'),
+            detailRows,
+            updated.issue_description || ''
+          );
+          await syncMaintenanceFromRepair(updated.car_id, mil, updated.date_completed || updated.date_reported, allItems, updated.service_type || 'repair');
+        }
       }
     }
 

@@ -235,12 +235,18 @@ export async function onRequest(context) {
           const prevDateStr = prevD.toISOString().substr(0, 10);
 
           const prevQueues = await dbAll(env.DB, `
-            SELECT estimated_km FROM queue
-            WHERE driver_id = ? AND date <= ? AND COALESCE(return_date, date) >= ? AND status NOT IN ('cancelled')
+            SELECT q.estimated_km, dep.mileage AS dep_km, ret.mileage AS ret_km
+            FROM queue q
+            LEFT JOIN usage_records dep ON dep.queue_id = q.id AND dep.record_type = 'departure'
+            LEFT JOIN usage_records ret ON ret.queue_id = q.id AND ret.record_type = 'return'
+            WHERE q.driver_id = ? AND q.date <= ? AND COALESCE(q.return_date, q.date) >= ? AND q.status NOT IN ('cancelled')
           `, [body.driver_id, prevDateStr, prevDateStr]);
 
           let totalPrevKm = 0;
-          for (const pq of prevQueues) totalPrevKm += (pq.estimated_km || 0);
+          for (const pq of prevQueues) {
+            const actualKm = (pq.ret_km && pq.dep_km && pq.ret_km > pq.dep_km) ? (pq.ret_km - pq.dep_km) : 0;
+            totalPrevKm += Math.max(actualKm, pq.estimated_km || 0);
+          }
 
           if (totalPrevKm >= 400 && estKm > 100) {
             blockers.push(`😴 [กฎความล้า] พนักงานขับรถ '${driverCheck.name}' ขับรถสะสมมากกว่า 400 กม. (${totalPrevKm} กม.) ในวันก่อนหน้า (${prevDateStr}) ไม่อนุญาตให้จัดคิวขับรถทางไกลในวันนี้ (ควรได้พัก หรือวิ่งงานระยะสั้นในพื้นที่เท่านั้น)`);
@@ -253,6 +259,8 @@ export async function onRequest(context) {
 
     // 4. ตรวจสอบคิวซ้อนทับ (Conflict detection)
     if (!body.allow_flexible && !isOverride && !body.force_queue) {
+      const queryStart = `${body.date} ${timeStart}`;
+      const queryEnd = `${returnDate} ${timeEnd}`;
       const conflicts = await dbAll(env.DB,
         `SELECT q.id, q.time_start, q.time_end, q.date, q.return_date, c.license_plate, d.name AS driver_name
          FROM queue q
@@ -265,8 +273,9 @@ export async function onRequest(context) {
       );
 
       for (const conf of conflicts) {
-        const isMulti = (body.date !== returnDate) || (conf.date !== (conf.return_date || conf.date));
-        if (isMulti || (conf.time_start < timeEnd && conf.time_end > timeStart)) {
+        const confStart = `${conf.date} ${conf.time_start || '00:00'}`;
+        const confEnd = `${conf.return_date || conf.date} ${conf.time_end || '23:59'}`;
+        if (confStart < queryEnd && confEnd > queryStart) {
           blockers.push(`คิวซ้อนทับ: ${conf.license_plate || ''} ${conf.driver_name || ''} (${conf.date} เวลา ${conf.time_start}-${conf.time_end})`);
         }
       }
@@ -363,6 +372,9 @@ export async function onRequest(context) {
   if (path.match(/^\/api\/queue\/[^/]+$/) && method === 'PUT') {
     try { requirePermission(user, 'queue', 'edit'); } catch { return error('ไม่มีสิทธิ์', 403); }
     const id = extractParam(path, '/api/queue/');
+    const existing = await dbFirst(env.DB, 'SELECT * FROM queue WHERE id = ?', [id]);
+    if (!existing) return error('ไม่พบคิว', 404);
+
     const body = await parseBody(request);
     const sets = [];
     const params = [];
@@ -380,6 +392,39 @@ export async function onRequest(context) {
     if (body.backup_driver_id) {
       const backupCheck = await dbFirst(env.DB, 'SELECT license_expiry, status FROM drivers WHERE id = ?', [body.backup_driver_id]);
       if (backupCheck?.license_expiry && backupCheck.license_expiry < new Date().toISOString().substr(0,10)) return error('ใบขับขี่พนักงานสำรองหมดอายุ');
+    }
+
+    // Check conflicts when schedule/car/driver changes (unless override or cancelled/completed)
+    const isOverride = !!(body.override || body.emergency_override || body.allow_flexible || body.force_queue);
+    const targetStatus = body.status || existing.status;
+    if (!isOverride && !['cancelled', 'completed'].includes(targetStatus) &&
+        (body.date !== undefined || body.return_date !== undefined || body.time_start !== undefined || body.time_end !== undefined || body.car_id !== undefined || body.driver_id !== undefined)) {
+      const effDate = body.date || existing.date;
+      const effReturnDate = body.return_date || existing.return_date || effDate;
+      const effTimeStart = body.time_start || existing.time_start || '00:00';
+      const effTimeEnd = body.time_end || existing.time_end || '23:59';
+      const effCarId = body.car_id || existing.car_id;
+      const effDriverId = body.driver_id !== undefined ? body.driver_id : existing.driver_id;
+
+      const queryStart = `${effDate} ${effTimeStart}`;
+      const queryEnd = `${effReturnDate} ${effTimeEnd}`;
+      const conflicts = await dbAll(env.DB,
+        `SELECT q.id, q.time_start, q.time_end, q.date, q.return_date, c.license_plate, d.name AS driver_name
+         FROM queue q
+         LEFT JOIN cars c ON q.car_id = c.id
+         LEFT JOIN drivers d ON q.driver_id = d.id
+         WHERE q.id != ? AND q.status NOT IN ('cancelled','completed')
+         AND q.date <= ? AND COALESCE(q.return_date, q.date) >= ?
+         AND ((q.car_id = ?) OR (q.driver_id = ? AND ? IS NOT NULL))`,
+        [id, effReturnDate, effDate, effCarId, effDriverId || null, effDriverId || null]
+      );
+      for (const conf of conflicts) {
+        const confStart = `${conf.date} ${conf.time_start || '00:00'}`;
+        const confEnd = `${conf.return_date || conf.date} ${conf.time_end || '23:59'}`;
+        if (confStart < queryEnd && confEnd > queryStart) {
+          return error(`ไม่สามารถแก้ไขคิวได้ เนื่องจากคิวซ้อนทับกับ: ${conf.license_plate || ''} ${conf.driver_name || ''} (${conf.date} เวลา ${conf.time_start}-${conf.time_end})`, 409);
+        }
+      }
     }
 
     const fields = ['date','return_date','time_start','time_end','car_id','driver_id',

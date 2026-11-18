@@ -1379,3 +1379,129 @@ test.describe.serial('23. Phase 1 Remediation Regression', () => {
     expect(r.data.success).toBe(false);
   });
 });
+
+// ════════════════════════════════════════════
+// 24. PHASES 2–5 REMEDIATION REGRESSION TESTS
+// ════════════════════════════════════════════
+let phase2CarId = '';
+let phase2DriverId = '';
+
+test.describe.serial('24. Phases 2–5 Remediation Regression', () => {
+  test('Setup — สร้างรถและพนักงานขับรถสำหรับทดสอบ Phases 2–5', async () => {
+    const v = await post('/api/vehicles', {
+      license_plate: `P25-${Date.now().toString().slice(-4)}`,
+      brand: 'Toyota', model: 'Commuter', year: 2025,
+      fuel_type: 'diesel', seat_count: 12, status: 'active',
+    }, adminToken);
+    expect([200, 201]).toContain(v.status);
+    phase2CarId = v.data?.id || v.data?.data?.id;
+    expect(phase2CarId).toBeTruthy();
+
+    const d = await post('/api/drivers', {
+      name: 'พขร. ทดสอบเฟส 2-5',
+      license_number: `LIC-P25-${Date.now().toString().slice(-4)}`,
+      phone: '0899999999',
+      status: 'active',
+      id_card_number: '1509900123456',
+    }, adminToken);
+    expect([200, 201]).toContain(d.status);
+    phase2DriverId = d.data?.id || d.data?.data?.id;
+    expect(phase2DriverId).toBeTruthy();
+  });
+
+  test('POST /api/fuel/record — คำนวณ mileage_before และ fuel_consumption_rate อัตโนมัติเมื่อส่งจาก QR', async () => {
+    const dummyImg = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    const r1 = await post('/api/fuel/record', {
+      car_id: phase2CarId,
+      driver_id: phase2DriverId,
+      purpose: 'ราชการ',
+      date: '2026-07-01',
+      fuel_type: 'fuelSave_diesel',
+      liters: 40,
+      price_per_liter: 30,
+      amount: 1200,
+      mileage_before: 10000,
+      mileage_after: 10400,
+      gas_station_name: 'ปตท. ทดสอบกระทบยอด',
+      receipt_image: dummyImg,
+    }, adminToken);
+    expect([200, 201]).toContain(r1.status);
+
+    // ครั้งที่ 2 ไม่ส่ง mileage_before (จำลองการสแกน QR)
+    const r2 = await post('/api/fuel/record', {
+      car_id: phase2CarId,
+      driver_id: phase2DriverId,
+      purpose: 'ราชการ',
+      date: '2026-07-05',
+      fuel_type: 'fuelSave_diesel',
+      liters: 50,
+      price_per_liter: 30,
+      amount: 1500,
+      mileage_after: 10900,
+      gas_station_name: 'ปตท. ทดสอบกระทบยอด',
+      receipt_image: dummyImg,
+    });
+    expect([200, 201]).toContain(r2.status);
+    expect(r2.data.data.mileage_before).toBe(10400);
+    expect(r2.data.data.fuel_consumption_rate).toBe(10); // (10900 - 10400) / 50 = 10 km/L
+  });
+
+  test('POST /api/fuel/invoices & GET /api/fuel/invoices/:id/reconcile — กระทบยอดลิตรต่อลิตรและจับคู่ ID/ชื่อชนิดน้ำมันถูกต้อง', async () => {
+    const rInv = await post('/api/fuel/invoices', {
+      invoice_number: `INV-RECON-${Date.now()}`,
+      station_name: 'ปตท. ทดสอบกระทบยอด',
+      date_from: '2026-07-01',
+      date_to: '2026-07-31',
+      items: [
+        { fuel_type: 'ฟิวเซฟดีเซล', total_liters: 90, total_amount: 2700 }
+      ],
+      total_amount: 2700
+    }, adminToken);
+    expect([200, 201]).toContain(rInv.status);
+    const invId = rInv.data.data?.id || rInv.data.id;
+
+    const rRec = await get(`/api/fuel/invoices/${invId}/reconcile`, adminToken);
+    expect(rRec.status).toBe(200);
+    expect(rRec.data.success).toBe(true);
+    // ระบบบันทึก 40 + 50 = 90 ลิตร (ID: fuelSave_diesel) ตรงกับใบแจ้งหนี้ 90 ลิตร (ชื่อ: ฟิวเซฟดีเซล)
+    expect(rRec.data.data.total_diff_liters).toBe(0);
+    expect(rRec.data.data.total_diff_amount).toBe(0);
+    expect(rRec.data.data.status).toBe('matched');
+    expect(rRec.data.data.comparison[0].diff_liters).toBe(0);
+  });
+
+  test('GET /api/queue/availability — คิวข้ามวันไม่บล็อกทั้งวันหากเวลาไม่ทับซ้อนกัน', async () => {
+    // สร้างคิววันที่ 2026-08-10 เวลา 14:00 ถึง 2026-08-11 เวลา 12:00
+    const rQ = await post('/api/queue', {
+      car_id: phase2CarId,
+      driver_id: phase2DriverId,
+      requester_name: 'ครูทดสอบ ข้ามวัน',
+      destination: 'เชียงใหม่',
+      purpose: 'ราชการข้ามวัน',
+      date: '2026-08-10',
+      time_start: '14:00',
+      return_date: '2026-08-11',
+      time_end: '12:00',
+      passengers: 4
+    }, adminToken);
+    expect([200, 201]).toContain(rQ.status);
+
+    // ตรวจสอบช่วงเช้า 2026-08-10 เวลา 08:00 - 11:00 (ก่อน 14:00) รถต้องยังว่าง (ไม่มี blockers)
+    const rAvailMorning = await get(`/api/queue/availability?date=2026-08-10&return_date=2026-08-10&time_start=08:00&time_end=11:00&car_id=${phase2CarId}&driver_id=${phase2DriverId}`, adminToken);
+    expect(rAvailMorning.status).toBe(200);
+    expect(rAvailMorning.data.data.blockers.length).toBe(0);
+
+    // ตรวจสอบช่วงบ่าย 2026-08-10 เวลา 13:00 - 15:00 (ทับกับ 14:00) รถต้องไม่ว่าง (มี blockers)
+    const rAvailOverlap = await get(`/api/queue/availability?date=2026-08-10&return_date=2026-08-10&time_start=13:00&time_end=15:00&car_id=${phase2CarId}&driver_id=${phase2DriverId}`, adminToken);
+    expect(rAvailOverlap.status).toBe(200);
+    expect(rAvailOverlap.data.data.blockers.length).toBeGreaterThan(0);
+  });
+
+  test('GET /api/survey/drivers — แสดงรายชื่อพนักงานขับรถแบบ Dynamic ไม่ล็อกเฉพาะ 3 ชื่อเดิม', async () => {
+    const r = await get('/api/survey/drivers');
+    expect(r.status).toBe(200);
+    expect(r.data.success).toBe(true);
+    expect(Array.isArray(r.data.data)).toBe(true);
+    expect(r.data.data.some(d => d.id === phase2DriverId)).toBe(true);
+  });
+});
