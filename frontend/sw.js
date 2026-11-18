@@ -1,6 +1,6 @@
 // sw.js — PPK DriveHub Service Worker
-// v16: Remove approver fields
-var CACHE_NAME='ppk-v16';
+// v17: Full Phase 1-5 Remediation + UI/UX Unification
+var CACHE_NAME='ppk-v17';
 // Only pre-cache truly static fallback assets. JS/CSS use network-first below.
 var STATIC_ASSETS=[
   '/manifest.json'
