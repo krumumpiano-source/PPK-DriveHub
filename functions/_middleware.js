@@ -1,4 +1,4 @@
-import { error, dbFirst, dbRun, dbAll } from './_helpers.js';
+import { error, dbFirst, dbRun, setCurrentClientIp } from './_helpers.js';
 
 const PUBLIC_PATHS = [
   '/api/auth/login',
@@ -6,6 +6,7 @@ const PUBLIC_PATHS = [
   '/api/auth/check-identity',
   '/api/auth/forgot-password',
   '/api/auth/reset-password',
+  '/api/auth/line',             // LINE Login OAuth + callback
   '/api/setup',
   '/api/check/daily',           // QR ตรวจสภาพ+แจ้งซ่อม
   '/api/usage/record',          // QR บันทึกใช้รถ
@@ -20,6 +21,8 @@ const PUBLIC_PATHS = [
   '/api/survey/drivers',        // รายชื่อคนขับสำหรับแบบประเมิน (ไม่ต้อง login)
   '/api/cron/sync-google-forms', // Cron token auth (X-Cron-Token header)
   '/api/cron/cleanup',          // Cron token auth (X-Cron-Token header)
+  '/api/cron/daily',            // Cron secret auth (Authorization Bearer header)
+  '/api/cron/weekly',           // Cron secret auth (Authorization Bearer header)
   '/api/maps'                   // Map proxy endpoints
 ];
 
@@ -28,6 +31,8 @@ const RATE_LIMITS = {
   '/api/auth/login': { max: 5, windowMs: 15 * 60 * 1000 },           // 5 per 15 min
   '/api/auth/forgot-password': { max: 3, windowMs: 15 * 60 * 1000 }, // 3 per 15 min
   '/api/auth/register': { max: 5, windowMs: 60 * 60 * 1000 },        // 5 per hour
+  '/api/auth/check-identity': { max: 15, windowMs: 60 * 1000 },      // 15 per min
+  '/api/usage/ocr-odometer': { max: 10, windowMs: 60 * 1000 },       // 10 per min (Gemini API quota protection)
   '/api/usage/record': { max: 30, windowMs: 60 * 1000 },              // 30 per min (QR usage record)
   '/api/fuel/record': { max: 20, windowMs: 60 * 1000 },               // 20 per min (QR fuel record)
   '/api/check/daily': { max: 20, windowMs: 60 * 1000 },               // 20 per min (QR inspection)
@@ -60,6 +65,12 @@ const CSP = [
 export async function onRequest(context) {
   const { request, env, next } = context;
   const url = new URL(request.url);
+
+  const clientIp = request.headers.get('CF-Connecting-IP') ||
+                   request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+                   request.headers.get('x-real-ip') || null;
+  env.clientIp = clientIp;
+  setCurrentClientIp(clientIp);
 
   // Handle CORS preflight
   if (request.method === 'OPTIONS') {
@@ -144,7 +155,8 @@ export async function onRequest(context) {
         mustChangePassword: session.must_change_password === 1,
         isImpersonated: session.is_impersonated === 1,
         impersonatorId: session.impersonator_id || null,
-        driver_id: session.driver_id || null
+        driver_id: session.driver_id || null,
+        ipAddress: clientIp
       };
     } catch (e) {
       console.error('Session verification error:', e);

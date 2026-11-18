@@ -1,9 +1,9 @@
 // Auth: login, register, password management
 import {
-  dbFirst, dbRun, dbAll, generateUUID, now, success, error,
+  dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, hashPassword, verifyPassword, generateSalt, generateToken,
   writeAuditLog, validatePasswordComplexity, checkPasswordReuse,
-  sendTelegramMessage, notifyAllAdmins, sendPasswordResetEmail
+  notifyAllAdmins, sendPasswordResetEmail, getSafeOrigin
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
@@ -25,53 +25,25 @@ export async function onRequest(context) {
       [inputUsername, inputUsername]
     );
 
-    let isFirstTimePhoneLogin = false;
+    if (!user) {
+      return error('username/email หรือ password ไม่ถูกต้อง', 401);
+    }
 
-    if (user) {
-      // User exists, verify password
-      // If user is pending onboarding (onboarding_completed = 0), test with raw or digits
-      let valid = await verifyPassword(inputPassword, user.salt, user.password_hash);
-      if (!valid && inputPassword.replace(/\D/g, '').length >= 9) {
-        valid = await verifyPassword(inputPassword.replace(/\D/g, ''), user.salt, user.password_hash);
+    // User exists, verify password
+    let valid = await verifyPassword(inputPassword, user.salt, user.password_hash);
+    if (!valid && inputPassword.replace(/\D/g, '').length >= 9) {
+      valid = await verifyPassword(inputPassword.replace(/\D/g, ''), user.salt, user.password_hash);
+    }
+    if (!valid && user.must_change_password === 1 && user.phone) {
+      const cleanInputPhone = inputPassword.replace(/\D/g, '');
+      const cleanUserPhone = user.phone.replace(/\D/g, '');
+      if (cleanUserPhone.length >= 9 && cleanInputPhone === cleanUserPhone) {
+        valid = true;
       }
-      if (!valid && user.must_change_password === 1) {
-        if (inputPassword === '123456' || inputPassword === 'ppk123456') {
-          valid = true;
-        } else if (user.phone && inputPassword.replace(/\D/g, '') === user.phone.replace(/\D/g, '')) {
-          valid = true;
-        }
-      }
+    }
 
-      if (!valid) {
-        return error('username/email หรือ password ไม่ถูกต้อง', 401);
-      }
-    } else {
-      // User not found. Check if it's a new @ppk.ac.th registration & first login attempt
-      if (inputUsername.endsWith('@ppk.ac.th')) {
-        isFirstTimePhoneLogin = true;
-        const cleanPhone = inputPassword.replace(/\D/g, '');
-        if (cleanPhone.length < 9 || cleanPhone.length > 10) {
-          return error('กรุณากรอกเบอร์โทรศัพท์มือถือ 9-10 หลัก เป็นรหัสผ่านสำหรับการเข้าสู่ระบบครั้งแรก');
-        }
-
-        const ts = now();
-        const userId = generateUUID();
-        const defaultPerms = JSON.stringify({});
-        const pwSalt = generateSalt();
-        const pwHash = await hashPassword(cleanPhone, pwSalt); // Save cleaned phone number as initial password
-        const generatedUsername = inputUsername.split('@')[0];
-        
-        await dbRun(env.DB,
-          `INSERT INTO users (id, username, email, phone, password_hash, salt, role, permissions, first_name, last_name, display_name, active, pdpa_accepted, must_change_password, onboarding_completed, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, 'staff', ?, ?, '', ?, 1, 0, 1, 0, ?, ?)`,
-          [userId, inputUsername, inputUsername, cleanPhone, pwHash, pwSalt, defaultPerms, generatedUsername, generatedUsername, ts, ts]
-        );
-        
-        user = await dbFirst(env.DB, 'SELECT * FROM users WHERE id = ?', [userId]);
-        await notifyAllAdmins(env.DB, 'system', 'ผู้ขอใช้รถล็อกอินครั้งแรกด้วยเบอร์โทรศัพท์', `${generatedUsername} (${inputUsername}) เข้าสู่ระบบด้วยเบอร์โทรศัพท์สำเร็จ กำลังกรอกข้อมูล Onboarding`);
-      } else {
-        return error('username/email หรือ password ไม่ถูกต้อง', 401);
-      }
+    if (!valid) {
+      return error('username/email หรือ password ไม่ถูกต้อง', 401);
     }
 
     // Create session (8 hours)
@@ -86,8 +58,7 @@ export async function onRequest(context) {
     await dbRun(env.DB, 'UPDATE users SET last_login = ?, updated_at = ? WHERE id = ?',
       [now(), now(), user.id]);
 
-    const auditAction = isFirstTimePhoneLogin ? 'login_first_time_phone' : 'login';
-    await writeAuditLog(env.DB, user.id, user.username, auditAction, 'auth', user.id, null);
+    await writeAuditLog(env.DB, user.id, user.username, 'login', 'auth', user.id, null);
 
     const needsOnboarding = user.onboarding_completed === 0;
 
@@ -254,13 +225,12 @@ export async function onRequest(context) {
     const isSchoolEmail = rawIdentity.endsWith('@ppk.ac.th');
 
     const user = await dbFirst(env.DB,
-      'SELECT id, username, email, display_name, first_name, last_name, role, department, phone, onboarding_completed FROM users WHERE (LOWER(username) = ? OR LOWER(email) = ?) AND active = 1',
+      'SELECT id, username, email, must_change_password, onboarding_completed FROM users WHERE (LOWER(username) = ? OR LOWER(email) = ?) AND active = 1',
       [rawIdentity, rawIdentity]
     );
 
     if (user) {
       const isFirstTime = user.onboarding_completed === 0;
-      const name = user.display_name || (user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user.username);
       return success({
         exists: true,
         is_school_email: isSchoolEmail,
@@ -269,33 +239,18 @@ export async function onRequest(context) {
         user: {
           username: user.username,
           email: user.email || user.username,
-          display_name: name,
-          role: user.role,
-          phone: user.phone || '',
-          department: user.department || '',
+          display_name: user.username,
           onboarding_completed: user.onboarding_completed === 1,
           must_change_password: user.must_change_password === 1
         }
       });
     }
 
-    let suggestedFirstName = '';
-    let suggestedLastName = '';
-    if (rawIdentity.includes('@')) {
-      const prefix = rawIdentity.split('@')[0];
-      const nameParts = prefix.split(/[._-]/);
-      suggestedFirstName = nameParts[0] ? nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1) : '';
-      suggestedLastName = nameParts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
-    }
-
     return success({
       exists: false,
       is_school_email: isSchoolEmail,
-      is_first_time: isSchoolEmail,
-      suggested_username: rawIdentity,
-      suggested_first_name: suggestedFirstName,
-      suggested_last_name: suggestedLastName,
-      suggested_name: `${suggestedFirstName} ${suggestedLastName}`.trim()
+      is_first_time: false,
+      must_change_password: false
     });
   }
 
@@ -333,17 +288,17 @@ export async function onRequest(context) {
     const user = await dbFirst(env.DB, 'SELECT * FROM users WHERE id = ?', [env.user.id]);
     if (!user) return error('ไม่พบข้อมูลผู้ใช้', 404);
 
-    // If must_change_password is not 1, old_password is required
-    if (user.must_change_password !== 1) {
-      if (!oldPassword) return error('กรุณาระบุรหัสผ่านเดิม');
-      const valid = await verifyPassword(oldPassword, user.salt, user.password_hash);
-      if (!valid) return error('รหัสผ่านเดิมไม่ถูกต้อง');
-    } else if (oldPassword) {
-      let valid = await verifyPassword(oldPassword, user.salt, user.password_hash);
-      if (!valid && (oldPassword === '123456' || oldPassword === 'ppk123456' || (user.phone && oldPassword.replace(/\D/g, '') === user.phone.replace(/\D/g, '')))) {
+    // Old password is ALWAYS required to prevent unauthenticated/hijacked password change
+    if (!oldPassword) return error('กรุณาระบุรหัสผ่านเดิม');
+    let valid = await verifyPassword(oldPassword, user.salt, user.password_hash);
+    if (!valid && user.must_change_password === 1 && user.phone) {
+      const cleanOld = oldPassword.replace(/\D/g, '');
+      const cleanPhone = user.phone.replace(/\D/g, '');
+      if (cleanPhone.length >= 9 && cleanOld === cleanPhone) {
         valid = true;
       }
     }
+    if (!valid) return error('รหัสผ่านเดิมไม่ถูกต้อง');
 
     // Password complexity validation (supports 6-8 digit PIN or standard 8+ char password)
     const complexityErr = validatePasswordComplexity(newPassword);
@@ -386,7 +341,7 @@ export async function onRequest(context) {
       [generateUUID(), user.id, user.email, token, expiresAt, now()]
     );
 
-    const origin = request.headers.get('Origin') || new URL(request.url).origin;
+    const origin = getSafeOrigin(request);
     await sendPasswordResetEmail(env, user, token, origin);
 
     return success({ message: 'ถ้า email นี้มีในระบบ จะได้รับลิงก์รีเซ็ตรหัสผ่านทางอีเมล' });

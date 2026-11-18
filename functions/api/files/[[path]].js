@@ -27,12 +27,17 @@ export async function onRequest(context) {
   if (path === '/api/files/upload' && method === 'POST') {
     const body = await parseBody(request);
     if (!body?.base64 || !body?.mime) return error('กรุณาส่ง base64 และ mime type');
+    const ALLOWED_MIMES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
+    const cleanMime = String(body.mime).toLowerCase().trim();
+    if (!ALLOWED_MIMES.includes(cleanMime)) {
+      return error('ประเภทไฟล์ไม่ได้รับอนุญาต (รองรับเฉพาะรูปภาพ JPEG, PNG, WEBP, GIF และ PDF)', 400);
+    }
     const folder = body.folder || 'MISC';
     const mod = FOLDER_MODULE[folder.toUpperCase()];
     if (mod) { try { requirePermission(user, mod, 'create'); } catch { return error('ไม่มีสิทธิ์อัปโหลดไฟล์', 403); } }
-    const ext = body.mime.split('/')[1]?.replace('jpeg', 'jpg') || 'bin';
+    const ext = cleanMime.split('/')[1]?.replace('jpeg', 'jpg') || 'bin';
     const filename = body.filename || `file_${Date.now()}.${ext}`;
-    const r2Url = await uploadToR2(env, body.base64, filename, folder, body.mime);
+    const r2Url = await uploadToR2(env, body.base64, filename, folder, cleanMime);
     if (!r2Url) return error('ไม่สามารถอัปโหลดไฟล์ได้ (R2 storage not configured or failed)');
     return success({ url: r2Url, filename });
   }
@@ -60,6 +65,8 @@ export async function onRequest(context) {
       'Content-Type': contentType,
       'Cache-Control': 'private, max-age=3600',
       'Content-Disposition': 'inline',
+      'Content-Security-Policy': "default-src 'none'; img-src 'self' data: blob:; style-src 'unsafe-inline'",
+      'X-Content-Type-Options': 'nosniff',
     };
 
     return new Response(obj.body, { status: 200, headers });

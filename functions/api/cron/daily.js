@@ -38,19 +38,21 @@ export async function onRequest(context) {
     }
 
     // 2. Check for maintenance (e.g., oil change approaching)
-    // Assume maintenance interval logic: if (next_km - current_mileage) <= 500
+    // Query vehicle_maintenance joined with cars: if (vm.next_km - c.current_mileage) <= 500
     const maintenanceCars = await dbAll(env.DB, 
-      `SELECT license_plate, brand, current_mileage, next_km 
-       FROM cars 
-       WHERE next_km IS NOT NULL 
-       AND (next_km - current_mileage) <= 500 
-       AND status != 'retired'`
+      `SELECT c.license_plate, c.brand, c.current_mileage, vm.next_km, ms.item_name
+       FROM vehicle_maintenance vm
+       JOIN cars c ON vm.car_id = c.id
+       LEFT JOIN maintenance_settings ms ON vm.item_key = ms.item_key
+       WHERE vm.next_km IS NOT NULL 
+       AND (vm.next_km - COALESCE(c.current_mileage, 0)) <= 500 
+       AND c.status NOT IN ('retired', 'inactive')`
     );
 
     if (maintenanceCars && maintenanceCars.length > 0) {
       messages.push('<b>🔧 แจ้งเตือน: ใกล้ถึงระยะเช็คบำรุงรักษา (ภายใน 500 กม.)</b>');
       maintenanceCars.forEach(c => {
-        messages.push(`- ${c.license_plate} ${c.brand || ''} (ไมล์ปัจจุบัน: ${c.current_mileage}, ระยะถัดไป: ${c.next_km})`);
+        messages.push(`- ${c.license_plate} ${c.brand || ''} [${c.item_name || 'บำรุงรักษา'}] (ไมล์ปัจจุบัน: ${c.current_mileage}, ระยะถัดไป: ${c.next_km})`);
       });
       messages.push(''); // blank line
     }

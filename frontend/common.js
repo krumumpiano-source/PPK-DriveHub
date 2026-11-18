@@ -159,12 +159,23 @@ window.toggleSidebarGroup = function(id) {
     if (group) group.classList.toggle('active');
 };
 
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 function renderNavigation() {
     var user = getCurrentUser();
     if (!user) return '';
 
-    var roleLabel = { super_admin: 'ผู้ดูแลสูงสุด', admin: 'ผู้ดูแลระบบ', manager: 'ผู้จัดการ', vehicle: 'หัวหน้างานยานพาหนะ', driver: 'พนักงานขับรถ', staff: 'เจ้าหน้าที่', requester: 'ผู้ขอใช้รถ' };
-    var initials = (user.display_name || user.full_name || user.username || '?').charAt(0).toUpperCase();
+    var roleLabel = { super_admin: 'ผู้ดูแลสูงสุด', admin: 'ผู้ดูแลระบบ', manager: 'ผู้จัดการ', vehicle: 'หัวหน้างานยานพาหนะ', driver: 'พนักงานขับรถ', staff: 'ผู้ขอใช้รถ / เจ้าหน้าที่', requester: 'ผู้ขอใช้รถ', viewer: 'ผู้ขอใช้รถ' };
+    var safeDisplayName = escapeHtml(user.display_name || user.full_name || user.username || '');
+    var initials = escapeHtml((user.display_name || user.full_name || user.username || '?').charAt(0).toUpperCase());
 
     var nav = '';
     // Brand
@@ -179,8 +190,8 @@ function renderNavigation() {
     nav += '<div class="sidebar-user">' +
         '<div class="sidebar-user-avatar">' + initials + '</div>' +
         '<div class="sidebar-user-info">' +
-        '<div class="sidebar-user-name">' + (user.display_name || user.full_name || user.username || '') + '</div>' +
-        '<div class="sidebar-user-role">' + (roleLabel[user.role] || user.role || '') + '</div>' +
+        '<div class="sidebar-user-name">' + safeDisplayName + '</div>' +
+        '<div class="sidebar-user-role">' + escapeHtml(roleLabel[user.role] || user.role || '') + '</div>' +
         '</div></div>';
 
     nav += '<nav class="sidebar-nav">';
@@ -486,7 +497,7 @@ function previewRole(role) {
 
     // Create preview user with target role + empty permissions
     var previewUser = JSON.parse(JSON.stringify(currentUser));
-    previewUser.role = role;
+    previewUser.role = (role === 'requester') ? 'staff' : role;
     previewUser.permissions = {};
     previewUser.is_impersonated = true;
     API.setUser(previewUser);
@@ -651,16 +662,16 @@ function _displayCreator(name) {
 // แสดง "บันทึกโดย ... / แก้ไขล่าสุด ..." สำหรับ row ที่มี created_by_name, created_at, updated_by_name, updated_at
 function renderAuditMeta(row) {
     if (!row) return '';
-    var created = _displayCreator(row.created_by_name);
-    var createdAt = _formatAuditTime(row.created_at);
+    var created = escapeHtml(_displayCreator(row.created_by_name));
+    var createdAt = escapeHtml(_formatAuditTime(row.created_at));
     var html = '<small style="color:#666;display:block;margin-top:4px">' +
         '📝 บันทึกโดย: <b>' + created + '</b>' +
         (createdAt ? ' <span style="color:#999">(' + createdAt + ')</span>' : '') +
         '</small>';
     if (row.updated_by_name && row.updated_at && row.updated_at !== row.created_at) {
         html += '<small style="color:#e67e22;display:block">' +
-            '✏️ แก้ไขล่าสุด: <b>' + _displayCreator(row.updated_by_name) + '</b>' +
-            ' <span style="color:#999">(' + _formatAuditTime(row.updated_at) + ')</span>' +
+            '✏️ แก้ไขล่าสุด: <b>' + escapeHtml(_displayCreator(row.updated_by_name)) + '</b>' +
+            ' <span style="color:#999">(' + escapeHtml(_formatAuditTime(row.updated_at)) + ')</span>' +
             '</small>';
     }
     return html;
@@ -669,10 +680,10 @@ function renderAuditMeta(row) {
 // แบบสั้นบรรทัดเดียว สำหรับใส่ในตาราง
 function renderAuditMetaInline(row) {
     if (!row) return '-';
-    var created = _displayCreator(row.created_by_name);
+    var created = escapeHtml(_displayCreator(row.created_by_name));
     var s = '<small>' + created;
     if (row.updated_by_name && row.updated_at && row.updated_at !== row.created_at) {
-        s += ' <span style="color:#e67e22">/ แก้: ' + _displayCreator(row.updated_by_name) + '</span>';
+        s += ' <span style="color:#e67e22">/ แก้: ' + escapeHtml(_displayCreator(row.updated_by_name)) + '</span>';
     }
     s += '</small>';
     return s;

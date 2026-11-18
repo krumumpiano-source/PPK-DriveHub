@@ -91,7 +91,8 @@ export async function onRequest(context) {
       if (!isDriverAdmin) {
         return error('ไม่มีสิทธิ์ลบข้อมูลการลา', 403);
       }
-      const leaveId = url.searchParams.get('id') || url.searchParams.get('leave_id');
+      const body = await parseBody(request);
+      const leaveId = url.searchParams.get('id') || url.searchParams.get('leave_id') || body?.id || body?.leaveId || body?.leave_id;
       if (!leaveId) return error('กรุณาระบุ ID การลาที่ต้องการลบ');
       await dbRun(env.DB, 'DELETE FROM leaves WHERE id = ?', [leaveId]);
       return success({ message: 'ลบข้อมูลการลาเรียบร้อย' });

@@ -782,7 +782,7 @@ export async function onRequest(context) {
        body.allocated_liters || null, body.allocated_amount,
        body.notes || null, user.id, ts, ts]
     );
-    await writeAuditLog(env, { action: 'create', table_name: 'fuel_budget', record_id: id, user_id: user.id, new_values: body });
+    await writeAuditLog(env.DB, user.id, user.displayName || user.username, 'create_fuel_budget', 'fuel_budget', id, body);
     return success({ id, message: 'บันทึกวงเงินจัดสรรเรียบร้อย' }, 201);
   }
 
@@ -807,7 +807,7 @@ export async function onRequest(context) {
        body.allocated_liters || null, body.allocated_amount || null,
        body.notes || null, ts, id]
     );
-    await writeAuditLog(env, { action: 'update', table_name: 'fuel_budget', record_id: id, user_id: user.id, new_values: body });
+    await writeAuditLog(env.DB, user.id, user.displayName || user.username, 'update_fuel_budget', 'fuel_budget', id, body);
     return success({ message: 'อัปเดตวงเงินจัดสรรเรียบร้อย' });
   }
 
@@ -818,7 +818,7 @@ export async function onRequest(context) {
     const existing = await dbFirst(env.DB, `SELECT id FROM fuel_budget WHERE id = ?`, [id]);
     if (!existing) return error('ไม่พบข้อมูล', 404);
     await dbRun(env.DB, `DELETE FROM fuel_budget WHERE id = ?`, [id]);
-    await writeAuditLog(env, { action: 'delete', table_name: 'fuel_budget', record_id: id, user_id: user.id });
+    await writeAuditLog(env.DB, user.id, user.displayName || user.username, 'delete_fuel_budget', 'fuel_budget', id, null);
     return success({ message: 'ลบวงเงินจัดสรรเรียบร้อย' });
   }
 

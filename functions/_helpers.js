@@ -93,7 +93,27 @@ export function extractParam(pathname, prefix) {
   return slash === -1 ? rest : rest.slice(0, slash);
 }
 
-const PERMISSION_LEVELS = { view: 1, create: 2, edit: 3, delete: 4 };
+const PERMISSION_LEVELS = { view: 1, create: 2, edit: 3, approve: 3, delete: 4, manage: 4 };
+
+export const ALLOWED_ORIGINS = [
+  'https://ppk-drivehub.pages.dev',
+  'http://localhost:8788'
+];
+
+export function getSafeOrigin(request) {
+  const origin = request?.headers?.get('Origin') || '';
+  if (ALLOWED_ORIGINS.includes(origin)) return origin;
+  try {
+    const reqOrigin = new URL(request.url).origin;
+    if (ALLOWED_ORIGINS.includes(reqOrigin)) return reqOrigin;
+  } catch { /* ignore */ }
+  return ALLOWED_ORIGINS[0];
+}
+
+let _lastClientIp = null;
+export function setCurrentClientIp(ip) {
+  _lastClientIp = ip || null;
+}
 
 // Hierarchical: view < create < edit < delete — having 'edit' implies 'create' and 'view'
 export function checkPermission(user, module, level) {
@@ -173,11 +193,12 @@ export const AUDIT_NAME_JOIN = `LEFT JOIN users uc ON t.created_by = uc.id
 
 export async function writeAuditLog(db, userId, username, action, module, entityId, details, ipAddress) {
   try {
+    const finalIp = ipAddress || _lastClientIp || null;
     await dbRun(db,
       `INSERT INTO audit_log (id, user_id, username, action, module, entity_id, details, ip_address, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [generateUUID(), userId || null, username || null, action, module || null, entityId || null,
-       details ? JSON.stringify(details) : null, ipAddress || null, now()]
+       details ? JSON.stringify(details) : null, finalIp, now()]
     );
   } catch {
     // Audit log failures should not crash the main request

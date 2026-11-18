@@ -1,8 +1,7 @@
 // Tax & insurance record tracking
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
-  parseBody, requirePermission, extractParam, writeAuditLog, uploadToR2,
-  sendTelegramMessage, notifyAllAdmins
+  parseBody, requirePermission, checkPermission, writeAuditLog, uploadToR2
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
@@ -194,6 +193,9 @@ export async function onRequest(context) {
 
   // --- GET /api/tax-insurance/inspections ---
   if (path === '/api/tax-insurance/inspections' && method === 'GET') {
+    if (!checkPermission(user, 'tax', 'view') && !checkPermission(user, 'vehicles', 'view')) {
+      return error('ไม่มีสิทธิ์', 403);
+    }
     const carId = url.searchParams.get('car_id');
     const where = carId ? 'WHERE ir.car_id = ?' : '';
     const rows = await dbAll(env.DB,
@@ -212,6 +214,9 @@ export async function onRequest(context) {
 
   // --- POST /api/tax-insurance/inspections ---
   if (path === '/api/tax-insurance/inspections' && method === 'POST') {
+    if (!checkPermission(user, 'tax', 'create') && !checkPermission(user, 'vehicles', 'edit')) {
+      return error('ไม่มีสิทธิ์', 403);
+    }
     const body = await parseBody(request);
     if (!body?.car_id || !body?.expiry_date) return error('กรุณาระบุรถและวันหมดอายุ');
     const id = generateUUID();
@@ -230,16 +235,14 @@ export async function onRequest(context) {
     const car = await dbFirst(env.DB, 'SELECT license_plate, brand FROM cars WHERE id = ?', [body.car_id]);
     const carLabel = car ? `${car.license_plate} ${car.brand || ''}`.trim() : body.car_id;
     await writeAuditLog(env.DB, user.id, user.displayName, 'create_inspection', 'inspection', id, { car: carLabel });
-    const daysLeft = Math.floor((new Date(body.expiry_date) - Date.now()) / 86400000);
-    if (daysLeft <= 30) {
-      // await sendTelegramMessage(env,
-      //   `🔍 <b>ตรอ. ใกล้หมดอายุ</b>\n🚗 ${carLabel}\n📅 หมดอายุ: ${body.expiry_date} (เหลือ ${daysLeft} วัน)`);
-    }
     return success({ id, message: 'บันทึกข้อมูล ตรอ. เรียบร้อย' }, 201);
   }
 
   // --- PUT /api/tax-insurance/inspections/:id ---
   if (path.match(/\/api\/tax-insurance\/inspections\/[^/]+/) && method === 'PUT') {
+    if (!checkPermission(user, 'tax', 'edit') && !checkPermission(user, 'vehicles', 'edit')) {
+      return error('ไม่มีสิทธิ์', 403);
+    }
     const id = path.split('/')[4];
     const body = await parseBody(request);
     if (body.inspection_center === undefined && body.center !== undefined) body.inspection_center = body.center;
@@ -260,6 +263,9 @@ export async function onRequest(context) {
 
   // --- DELETE /api/tax-insurance/inspections/:id ---
   if (path.match(/\/api\/tax-insurance\/inspections\/[^/]+/) && method === 'DELETE') {
+    if (!checkPermission(user, 'tax', 'delete') && !checkPermission(user, 'vehicles', 'delete')) {
+      return error('ไม่มีสิทธิ์', 403);
+    }
     const id = path.split('/')[4];
     await dbRun(env.DB, 'DELETE FROM inspection_records WHERE id = ?', [id]);
     await writeAuditLog(env.DB, user.id, user.displayName, 'delete_inspection', 'inspection', id, null);

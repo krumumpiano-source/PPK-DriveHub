@@ -3,7 +3,7 @@ import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
   parseBody, hashPassword, generateSalt, generateToken, requireAdmin,
   extractParam, writeAuditLog, validatePasswordComplexity,
-  sendTelegramMessage, createNotification, sendPasswordResetEmail
+  sendPasswordResetEmail, getSafeOrigin
 } from '../../_helpers.js';
 import { runGoogleFormSync } from '../../_lib/gform-sync.js';
 
@@ -75,10 +75,9 @@ export async function onRequest(context) {
       return error('ไม่สามารถแก้ไขผู้ดูแลสูงสุดได้', 403);
     }
 
-    // Sole admin enforcement: Only krumum.piano@gmail.com can hold admin/super_admin role
-    const targetEmail = (targetUser?.email || targetUser?.username || '').toLowerCase();
-    if (body.role && ['admin', 'super_admin'].includes(body.role) && targetEmail !== 'krumum.piano@gmail.com') {
-      return error('สิทธิ์ผู้ดูแลระบบ (Admin) สงวนไว้สำหรับ krumum.piano@gmail.com เท่านั้น', 403);
+    // Only super_admin can assign or modify admin / super_admin role
+    if (body.role && ['admin', 'super_admin'].includes(body.role) && user.role !== 'super_admin') {
+      return error('เฉพาะผู้ดูแลสูงสุด (Super Admin) เท่านั้นที่สามารถแต่งตั้งสิทธิ์ Admin ได้', 403);
     }
 
     const allowed = ['role', 'permissions', 'title', 'first_name', 'last_name', 'phone', 'email', 'active', 'driver_id'];
@@ -150,7 +149,7 @@ export async function onRequest(context) {
          VALUES (?, ?, ?, ?, ?, 0, ?)`,
         [generateUUID(), targetUser.id, targetUser.email, token, expiresAt, now()]
       );
-      const origin = request.headers.get('Origin') || new URL(request.url).origin;
+      const origin = getSafeOrigin(request);
       await sendPasswordResetEmail(env, targetUser, token, origin);
       await writeAuditLog(env.DB, user.id, user.displayName || user.username, 'admin_send_reset_email', 'admin', id, null);
       return success({ message: `ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมล ${targetUser.email} เรียบร้อยแล้ว` });
@@ -175,14 +174,29 @@ export async function onRequest(context) {
 
   if (path.startsWith('/api/admin/users/') && method === 'DELETE') {
     const id = extractParam(path, '/api/admin/users/');
-    const targetUser = await dbFirst(env.DB, 'SELECT role, email, username FROM users WHERE id = ?', [id]);
+    if (id === user.id) return error('ไม่สามารถลบบัญชีของตัวเองได้', 400);
+
+    const targetUser = await dbFirst(env.DB, 'SELECT id, role, email, username, first_name, last_name, display_name FROM users WHERE id = ?', [id]);
     if (!targetUser) return error('ไม่พบผู้ใช้งานในระบบ', 404);
     if (targetUser.role === 'super_admin') {
       return error('ไม่สามารถลบผู้ดูแลสูงสุดได้', 403);
     }
+    if (targetUser.role === 'admin' && user.role !== 'super_admin') {
+      return error('ต้องเป็น super_admin ถึงจะลบแอดมินได้', 403);
+    }
+
     await dbRun(env.DB, 'DELETE FROM sessions WHERE user_id = ?', [id]);
     await dbRun(env.DB, 'DELETE FROM notifications WHERE user_id = ?', [id]);
-    await dbRun(env.DB, 'DELETE FROM users WHERE id = ?', [id]);
+    await dbRun(env.DB, 'DELETE FROM password_history WHERE user_id = ?', [id]);
+    await dbRun(env.DB, 'DELETE FROM reset_password_requests WHERE user_id = ?', [id]);
+
+    try {
+      await dbRun(env.DB, 'DELETE FROM users WHERE id = ?', [id]);
+    } catch {
+      // If user is referenced by historical records (vehicle_requests, evaluations, etc.), fall back to soft-deactivate
+      await dbRun(env.DB, 'UPDATE users SET active = 0, updated_at = ? WHERE id = ?', [now(), id]);
+    }
+
     await writeAuditLog(env.DB, user.id, user.displayName, 'delete_user', 'admin', id, { target_email: targetUser.email || targetUser.username });
     return success({ message: 'ลบผู้ใช้งานออกจากระบบเรียบร้อย' });
   }
@@ -377,11 +391,12 @@ export async function onRequest(context) {
 
   // ── Impersonate by Role: admin picks a role to preview ──
   if (path.match(/\/api\/admin\/impersonate-role\/[^/]+$/) && method === 'POST') {
-    const targetRole = path.split('/').pop();
+    const rawRole = path.split('/').pop();
+    const targetRole = rawRole === 'requester' ? 'staff' : rawRole;
     if (user.role !== 'admin' && user.role !== 'super_admin') {
       return error('ต้องเป็น Admin เท่านั้น', 403);
     }
-    const validRoles = ['admin', 'manager', 'driver', 'staff'];
+    const validRoles = ['admin', 'manager', 'driver', 'staff', 'viewer', 'vehicle', 'fuel', 'repair'];
     if (!validRoles.includes(targetRole)) {
       return error('บทบาทไม่ถูกต้อง', 400);
     }
@@ -402,7 +417,6 @@ export async function onRequest(context) {
        VALUES (?, ?, ?, ?, ?, 1, ?)`,
       [sessionId, target.id, token, expiresAt, now(), user.id]
     );
-    const roleLabel = { admin: 'ผู้ดูแลระบบ', manager: 'ผู้จัดการ', driver: 'พนักงานขับรถ', staff: 'เจ้าหน้าที่' };
     await writeAuditLog(env.DB, user.id, user.displayName, 'impersonate_role', 'admin', target.id,
       { target_role: targetRole, target_name: target.display_name || target.username });
 
@@ -427,31 +441,6 @@ export async function onRequest(context) {
     // Delete the current impersonated session
     await dbRun(env.DB, 'DELETE FROM sessions WHERE id = ? AND is_impersonated = 1', [user.sessionId]);
     return success({ message: 'หยุดสวมรอยเรียบร้อย' });
-  }
-
-  // ── Delete User (hard delete) ──
-  if (path.match(/^\/api\/admin\/users\/[^/]+$/) && method === 'DELETE') {
-    const id = path.split('/').pop();
-
-    // Cannot delete yourself
-    if (id === user.id) return error('ไม่สามารถลบบัญชีของตัวเองได้', 400);
-
-    const targetUser = await dbFirst(env.DB, 'SELECT id, username, role, first_name, last_name, display_name FROM users WHERE id = ?', [id]);
-    if (!targetUser) return error('ไม่พบผู้ใช้', 404);
-
-    // Only super_admin can delete another super_admin or admin
-    if (targetUser.role === 'super_admin') return error('ไม่สามารถลบผู้ดูแลสูงสุดได้', 403);
-    if (targetUser.role === 'admin' && user.role !== 'super_admin') return error('ต้องเป็น super_admin ถึงจะลบแอดมินได้', 403);
-
-    const targetName = targetUser.display_name || ((targetUser.first_name || '') + ' ' + (targetUser.last_name || '')).trim() || targetUser.username;
-
-    // Remove sessions first
-    await dbRun(env.DB, 'DELETE FROM sessions WHERE user_id = ?', [id]);
-    // Delete the user
-    await dbRun(env.DB, 'DELETE FROM users WHERE id = ?', [id]);
-
-    await writeAuditLog(env.DB, user.id, user.displayName, 'delete_user', 'admin', id, { username: targetUser.username, name: targetName });
-    return success({ message: 'ลบผู้ใช้ "' + targetName + '" เรียบร้อยแล้ว' });
   }
 
   // ── Sync staff names from school website ──

@@ -1302,3 +1302,80 @@ test.describe.serial('22. Admin User Management', () => {
     expect(r.data.success).toBe(true);
   });
 });
+
+// ════════════════════════════════════════════
+// 23. PHASE 1 REMEDIATION REGRESSION TESTS
+// ════════════════════════════════════════════
+test.describe.serial('23. Phase 1 Remediation Regression', () => {
+  test('POST /api/auth/check-identity — ต้องไม่รั่วไหลเบอร์โทรศัพท์และตำแหน่ง (PII Leak Prevention)', async () => {
+    try { execSync('npx wrangler d1 execute ppk-drivehub-db --local --command "DELETE FROM rate_limits"', { timeout: 10000, stdio: 'pipe' }); } catch {}
+    const r = await post('/api/auth/check-identity', { identity: 'testadmin' });
+    expect(r.status).toBe(200);
+    expect(r.data.success).toBe(true);
+    expect(r.data.data.exists).toBe(true);
+    if (r.data.data.user) {
+      expect(r.data.data.user).not.toHaveProperty('phone');
+      expect(r.data.data.user).not.toHaveProperty('role');
+      expect(r.data.data.user).not.toHaveProperty('department');
+    }
+  });
+
+  test('POST /api/auth/login — บล็อกการสร้างบัญชีอัตโนมัติโดยไม่ยืนยันตัวตนด้วยอีเมล @ppk.ac.th', async () => {
+    try { execSync('npx wrangler d1 execute ppk-drivehub-db --local --command "DELETE FROM rate_limits"', { timeout: 10000, stdio: 'pipe' }); } catch {}
+    const r = await post('/api/auth/login', {
+      username: `unregistered_${Date.now()}@ppk.ac.th`,
+      password: '0812345678'
+    });
+    expect(r.status).toBe(401);
+    expect(r.data.success).toBe(false);
+  });
+
+  test('GET /api/reports/audit-export & /api/reports/check-log — ไม่พังด้วย SQL 500', async () => {
+    const rAudit = await get('/api/reports/audit-export', adminToken);
+    expect(rAudit.status).toBe(200);
+    expect(rAudit.data.success).toBe(true);
+
+    const rCheck = await get('/api/reports/check-log', adminToken);
+    expect(rCheck.status).toBe(200);
+    expect(rCheck.data.success).toBe(true);
+  });
+
+  test('GET /api/cron/daily & /api/cron/weekly — ไม่พังด้วย SQL 500', async () => {
+    const rDaily = await fetch(`${BASE}/api/cron/daily`);
+    expect(rDaily.status).toBe(200);
+
+    const rWeekly = await fetch(`${BASE}/api/cron/weekly`);
+    expect(rWeekly.status).toBe(200);
+  });
+
+  test('GET /api/warnings/pending — ไม่พังด้วย TypeError data.user undefined (500)', async () => {
+    const r = await get('/api/warnings/pending', adminToken);
+    expect(r.status).toBe(200);
+    expect(r.data.success).toBe(true);
+  });
+
+  test('POST /api/evaluations — บันทึกผลประเมินกรรมการสำเร็จโดยไม่พังด้วย data.user undefined', async () => {
+    if (!createdDriverId) { test.skip(); return; }
+    const r = await post('/api/evaluations', {
+      driver_id: createdDriverId,
+      evaluation_type: 'committee',
+      score_maintenance: 25,
+      score_discipline: 35,
+      score_contribution: 28,
+      comments: '[ผู้ประเมิน: กรรมการทดสอบ] ดีมาก'
+    }, adminToken);
+    expect(r.status).toBe(200);
+    expect(r.data.success).toBe(true);
+    expect(r.data.data.total_score).toBe(88);
+  });
+
+  test('POST /api/files/upload — บล็อกการอัปโหลดไฟล์ HTML/SVG เพื่อป้องกัน Stored XSS', async () => {
+    const r = await post('/api/files/upload', {
+      base64: 'PGh0bWw+PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0PjwvaHRtbD4=',
+      mime: 'text/html',
+      filename: 'evil.html'
+    }, adminToken);
+    expect(r.status).toBe(400);
+    expect(r.data.success).toBe(false);
+  });
+});

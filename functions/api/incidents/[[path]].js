@@ -1,8 +1,8 @@
 // Incident Logging — อุบัติเหตุ/เหตุการณ์ผิดปกติ
 import {
   dbAll, dbFirst, dbRun, generateUUID, now, success, error,
-  parseBody, requirePermission, writeAuditLog,
-  sendTelegramMessage, createNotification, notifyAllAdmins
+  parseBody, requirePermission, checkPermission, writeAuditLog,
+  notifyAllAdmins
 } from '../../_helpers.js';
 
 export async function onRequest(context) {
@@ -99,6 +99,10 @@ export async function onRequest(context) {
   // --- PUT /api/incidents/:id ---
   if (path.match(/^\/api\/incidents\/[^/]+$/) && method === 'PUT'
       && !path.includes('/resolve')) {
+    const canEditIncident = ['admin', 'super_admin', 'manager'].includes(user.role) ||
+      checkPermission(user, 'repair', 'edit') ||
+      checkPermission(user, 'vehicles', 'edit');
+    if (!canEditIncident) return error('ไม่มีสิทธิ์แก้ไขข้อมูลอุบัติเหตุ', 403);
     const id = path.split('/').pop();
     const body = await parseBody(request);
     const sets = [];
@@ -121,6 +125,10 @@ export async function onRequest(context) {
 
   // --- PUT /api/incidents/:id/resolve --- ปิดเรื่อง
   if (path.match(/^\/api\/incidents\/[^/]+\/resolve$/) && method === 'PUT') {
+    const canResolveIncident = ['admin', 'super_admin', 'manager'].includes(user.role) ||
+      checkPermission(user, 'repair', 'edit') ||
+      checkPermission(user, 'vehicles', 'edit');
+    if (!canResolveIncident) return error('ไม่มีสิทธิ์ปิดเรื่องอุบัติเหตุ', 403);
     const id = path.split('/').slice(-2, -1)[0];
     const body = await parseBody(request);
     const row = await dbFirst(env.DB, 'SELECT * FROM incidents WHERE id = ?', [id]);

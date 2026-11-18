@@ -10,6 +10,17 @@ export async function onRequest(context) {
     return new Response('No authorization code provided.', { status: 400 });
   }
 
+  // Verify CSRF state cookie
+  const cookieHeader = request.headers.get('Cookie') || '';
+  const stateCookieMatch = cookieHeader.match(/(?:^|;\s*)line_auth_state=([^;]+)/);
+  const savedState = stateCookieMatch ? stateCookieMatch[1] : null;
+  if (!state || !savedState || state !== savedState) {
+    return new Response('Invalid OAuth state (CSRF protection).', {
+      status: 400,
+      headers: { 'Set-Cookie': 'line_auth_state=; Path=/; HttpOnly; Max-Age=0; Secure; SameSite=Lax' }
+    });
+  }
+
   const clientId = env.LINE_CHANNEL_ID;
   const clientSecret = env.LINE_CHANNEL_SECRET;
   

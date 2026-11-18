@@ -1,7 +1,7 @@
 import { json, success, error, generateUUID, now } from '../../_helpers.js';
 
 export async function onRequest(context) {
-  const { request, env, params, data } = context;
+  const { request, env, params } = context;
   const path = params.path ? params.path.join('/') : '';
   const db = env.DB;
 
@@ -439,7 +439,7 @@ export async function onRequest(context) {
     // 3. POST /api/evaluations - Submit an evaluation
     if (request.method === 'POST' && path === '') {
       if (!env.user) return error('Unauthorized', 401);
-      const user = data.user;
+      const user = env.user;
       const body = await request.json();
 
       const { 
@@ -451,6 +451,10 @@ export async function onRequest(context) {
 
       if (!driver_id || !evaluation_type) {
         return error('Missing required fields', 400);
+      }
+
+      if (evaluation_type === 'committee' && !['admin', 'super_admin', 'manager'].includes(user.role)) {
+        return error('เฉพาะคณะกรรมการหรือผู้บริหารเท่านั้นที่สามารถบันทึกผลประเมินกรรมการได้', 403);
       }
 
       const id = generateUUID();
@@ -472,8 +476,10 @@ export async function onRequest(context) {
           score_driving, score_service, score_punctuality, totalScore, comments || null, currentYear, createdAt
         ).run();
       } else if (evaluation_type === 'committee') {
-        if (!score_maintenance || !score_discipline || !score_contribution) return error('All committee scores are required', 400);
-        totalScore = score_maintenance + score_discipline + score_contribution; // Max 100
+        if (score_maintenance === undefined || score_discipline === undefined || score_contribution === undefined) {
+          return error('All committee scores are required', 400);
+        }
+        totalScore = Number(score_maintenance) + Number(score_discipline) + Number(score_contribution); // Max 100
 
         await db.prepare(`
           INSERT INTO driver_evaluations (
@@ -494,6 +500,9 @@ export async function onRequest(context) {
     // 4. DELETE /api/evaluations/:id - Delete evaluation record
     if (request.method === 'DELETE' && path) {
       if (!env.user) return error('Unauthorized', 401);
+      if (!['admin', 'super_admin'].includes(env.user.role)) {
+        return error('ต้องเป็น Admin เท่านั้นจึงจะลบผลการประเมินได้', 403);
+      }
       const evalId = path;
       await db.prepare(`DELETE FROM driver_evaluations WHERE id = ?`).bind(evalId).run();
       return success({ message: 'ลบผลการประเมินเรียบร้อยแล้ว' });

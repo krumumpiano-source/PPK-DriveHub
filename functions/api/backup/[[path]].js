@@ -4,16 +4,44 @@ import {
   parseBody, requireAdmin, writeAuditLog
 } from '../../_helpers.js';
 
-const BACKUP_TABLES = [
-  'users', 'cars', 'drivers', 'queue', 'vehicle_requests', 'usage_records',
-  'fuel_log', 'repair_log', 'tax_records', 'insurance_records',
-  'check_log', 'vehicle_maintenance', 'leaves', 'maintenance_settings'
+// Ordered from parent tables to child tables to satisfy Foreign Key dependencies
+const RESTORABLE_TABLES = [
+  'system_settings',
+  'queue_rules',
+  'maintenance_settings',
+  'maintenance_profiles',
+  'cars',
+  'drivers',
+  'maintenance_vehicle_profiles',
+  'vehicle_maintenance',
+  'leaves',
+  'self_reported_fatigue',
+  'queue',
+  'vehicle_requests',
+  'usage_records',
+  'fuel_log',
+  'fuel_requests',
+  'fuel_station_invoices',
+  'fuel_invoice_items',
+  'fuel_budget',
+  'repair_log',
+  'repair_items',
+  'scheduled_repairs',
+  'check_log',
+  'inspection_alerts',
+  'tax_records',
+  'insurance_records',
+  'inspection_records',
+  'incidents',
+  'driver_evaluations',
+  'driver_warnings',
+  'survey_responses',
+  'trip_evaluations'
 ];
 
-const RESTORABLE_TABLES = [
-  'cars', 'drivers', 'queue', 'vehicle_requests', 'usage_records', 'fuel_log',
-  'repair_log', 'tax_records', 'insurance_records', 'check_log',
-  'vehicle_maintenance', 'leaves'
+const BACKUP_TABLES = [
+  'users',
+  ...RESTORABLE_TABLES
 ];
 
 async function createSnapshot(db) {
@@ -27,16 +55,34 @@ async function createSnapshot(db) {
 
 async function restoreSnapshot(db, snapshot) {
   const SAFE_COL = /^[a-z_][a-z0-9_]*$/;
+  const stmts = [];
+
+  // 1. Delete in reverse order (child tables first, then parent tables)
+  const tablesToClear = [...RESTORABLE_TABLES].reverse().filter(
+    table => Array.isArray(snapshot[table]) && snapshot[table].length > 0
+  );
+  // If repair_log is being restored, ensure repair_items is cleared first if snapshot also has repair_items
+  for (const table of tablesToClear) {
+    stmts.push(db.prepare(`DELETE FROM ${table}`));
+  }
+
+  // 2. Insert in forward order (parent tables first, then child tables)
   for (const table of RESTORABLE_TABLES) {
-    if (!snapshot[table] || !snapshot[table].length) continue;
-    await dbRun(db, `DELETE FROM ${table}`);
+    if (!Array.isArray(snapshot[table]) || !snapshot[table].length) continue;
     for (const row of snapshot[table]) {
       const keys = Object.keys(row);
+      if (!keys.length) continue;
       if (keys.some(k => !SAFE_COL.test(k))) throw new Error(`Invalid column name in table ${table}`);
       const cols = keys.join(', ');
       const placeholders = keys.map(() => '?').join(', ');
-      await dbRun(db, `INSERT OR IGNORE INTO ${table} (${cols}) VALUES (${placeholders})`, Object.values(row));
+      stmts.push(
+        db.prepare(`INSERT OR REPLACE INTO ${table} (${cols}) VALUES (${placeholders})`).bind(...Object.values(row))
+      );
     }
+  }
+
+  if (stmts.length > 0) {
+    await db.batch(stmts);
   }
 }
 

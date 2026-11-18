@@ -329,6 +329,11 @@
           </button>
         </form>
 
+        <div class="login-links" style="margin-top:14px;margin-bottom:4px;justify-content:center;gap:12px;">
+          <span>ยังไม่มีบัญชีผู้ใช้งาน?</span>
+          <a href="register.html" class="btn-register">สมัครสมาชิกใหม่</a>
+        </div>
+
         <div class="divider"><span>หรือเข้าใช้งานด้วยช่องทางอื่น</span></div>
 
         <button type="button" class="btn-action" style="background:#00B900; box-shadow:0 4px 14px rgba(0,185,0,0.3);" onclick="window.location.href='/api/auth/line'">
@@ -538,18 +543,18 @@
             document.getElementById('userDisplayEmail').textContent = u.email || u.username || inputVal;
 
             firstTimeNotice.style.display = 'flex';
-            firstTimeNotice.innerHTML = '<span>🔐</span><div><strong>เข้าใช้งานครั้งแรก:</strong> กรุณากรอกรหัสผ่านเริ่มต้น <code>123456</code> ระบบจะนำท่านไปตั้งรหัส PIN 6 หลักทันที</div>';
-            pwLabel.textContent = 'รหัสผ่านเริ่มต้น (123456)';
+            firstTimeNotice.innerHTML = '<span>🔐</span><div><strong>เข้าใช้งานครั้งแรก:</strong> กรุณากรอกรหัสผ่านเริ่มต้นหรือเบอร์โทรศัพท์ที่ลงทะเบียนไว้ เพื่อตั้งรหัสผ่านใหม่</div>';
+            pwLabel.textContent = 'รหัสผ่านเริ่มต้น / เบอร์โทรศัพท์';
             pwInput.type = 'password';
-            pwInput.placeholder = 'กรอก 123456';
-            pwInput.value = '123456';
+            pwInput.placeholder = 'กรอกรหัสผ่านเริ่มต้น หรือ เบอร์โทร 9-10 หลัก';
+            pwInput.value = '';
             pwInput.removeAttribute('maxLength');
             pwInput.removeAttribute('pattern');
             pwHelp.style.display = 'none';
             toggleBtn.style.display = 'block';
             toggleBtn.textContent = '👁️';
-            forgotLink.style.display = 'none';
-            loginBtnText.textContent = 'เข้าสู่ระบบเพื่อตั้งรหัส PIN';
+            forgotLink.style.display = 'inline';
+            loginBtnText.textContent = 'เข้าสู่ระบบเพื่อตั้งรหัสใหม่';
             pwInput.focus();
           } else if (res.data.is_first_time) {
             // CASE: First-time @ppk.ac.th user -> Phone number login!

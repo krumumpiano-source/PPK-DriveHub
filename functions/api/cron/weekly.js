@@ -21,21 +21,21 @@ export async function onRequest(context) {
   try {
     // 1. Total queues/trips
     const queues = await dbFirst(env.DB, 
-      `SELECT COUNT(*) as count FROM queue WHERE date >= ? AND date <= ? AND status IN ('completed', 'done', 'running', 'active')`,
+      `SELECT COUNT(*) as count FROM queue WHERE date >= ? AND date <= ? AND status IN ('completed', 'ongoing')`,
       [lastWeekStr, todayStr]
     );
     const totalTrips = queues ? queues.count : 0;
 
     // 2. Total fuel cost
     const fuels = await dbFirst(env.DB, 
-      `SELECT SUM(cost) as total_cost FROM fuel_records WHERE date >= ? AND date <= ?`,
+      `SELECT COALESCE(SUM(amount), 0) as total_cost FROM fuel_log WHERE date >= ? AND date <= ? AND deleted_at IS NULL`,
       [lastWeekStr, todayStr]
     );
     const totalFuelCost = fuels && fuels.total_cost ? fuels.total_cost : 0;
 
     // 3. Total repair cost
     const repairs = await dbFirst(env.DB, 
-      `SELECT SUM(cost) as total_cost FROM repair_records WHERE repair_date >= ? AND repair_date <= ?`,
+      `SELECT COALESCE(SUM(COALESCE(NULLIF(grand_total, 0), cost, 0)), 0) as total_cost FROM repair_log WHERE date_reported >= ? AND date_reported <= ? AND status != 'cancelled'`,
       [lastWeekStr, todayStr]
     );
     const totalRepairCost = repairs && repairs.total_cost ? repairs.total_cost : 0;

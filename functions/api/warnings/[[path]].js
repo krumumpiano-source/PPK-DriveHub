@@ -1,7 +1,7 @@
 import { json, success, error, generateUUID, now } from '../../_helpers.js';
 
 export async function onRequest(context) {
-  const { request, env, params, data } = context;
+  const { request, env, params } = context;
   const path = params.path ? params.path.join('/') : '';
   const db = env.DB;
 
@@ -27,7 +27,7 @@ export async function onRequest(context) {
     // 2. GET /api/warnings/pending - Get unacknowledged warnings for the currently logged-in driver
     if (request.method === 'GET' && path === 'pending') {
       if (!env.user) return error('Unauthorized', 401);
-      const user = data.user;
+      const user = env.user;
       
       // First, get the driver_id associated with this user
       const driverStmt = await db.prepare(`SELECT driver_id FROM users WHERE id = ?`).bind(user.id).first();
@@ -49,7 +49,7 @@ export async function onRequest(context) {
     // 3. POST /api/warnings - Issue a new warning
     if (request.method === 'POST' && path === '') {
       if (!env.user) return error('Unauthorized', 401);
-      const user = data.user;
+      const user = env.user;
       const body = await request.json();
 
       const { driver_id, warning_type, reason, pip_start_date, pip_end_date, academic_year } = body;
@@ -91,7 +91,7 @@ export async function onRequest(context) {
     // 4. POST /api/warnings/:id/acknowledge - Driver acknowledges a warning
     if (request.method === 'POST' && path.endsWith('/acknowledge')) {
         if (!env.user) return error('Unauthorized', 401);
-        const user = data.user;
+        const user = env.user;
         const warningId = path.split('/')[0];
 
         // Verify the warning belongs to the logged-in driver

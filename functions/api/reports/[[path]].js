@@ -897,16 +897,17 @@ export async function onRequest(context) {
     try { requirePermission(user, 'admin', 'view'); } catch { return error('ไม่มีสิทธิ์ (admin เท่านั้น)', 403); }
     const dateFrom = url.searchParams.get('date_from');
     const dateTo = url.searchParams.get('date_to');
-    const targetTable = url.searchParams.get('table');
+    const targetTable = url.searchParams.get('table') || url.searchParams.get('module');
     const where = [];
     const params = [];
     if (dateFrom) { where.push('al.created_at >= ?'); params.push(dateFrom); }
     if (dateTo) { where.push('al.created_at <= ?'); params.push(dateTo + ' 23:59:59'); }
-    if (targetTable) { where.push('al.table_name = ?'); params.push(targetTable); }
+    if (targetTable) { where.push('al.module = ?'); params.push(targetTable); }
     const rows = await dbAll(env.DB,
-      `SELECT al.id, al.created_at, al.table_name, al.record_id, al.action,
-       al.changed_fields, al.old_values, al.new_values, al.ip_address,
-       u.display_name AS actor_name, u.username AS actor_username
+      `SELECT al.id, al.created_at, al.module AS table_name, al.module, al.entity_id AS record_id, al.entity_id,
+       al.action, al.details, al.ip_address,
+       COALESCE(u.display_name, al.username) AS actor_name,
+       COALESCE(u.username, al.username) AS actor_username
        FROM audit_log al
        LEFT JOIN users u ON al.user_id = u.id
        ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
@@ -917,7 +918,7 @@ export async function onRequest(context) {
     const summary = await dbFirst(env.DB,
       `SELECT COUNT(*) AS total,
        COUNT(DISTINCT al.user_id) AS unique_users,
-       COUNT(DISTINCT al.table_name) AS tables_affected
+       COUNT(DISTINCT al.module) AS tables_affected
        FROM audit_log al
        ${where.length ? 'WHERE ' + where.join(' AND ') : ''}`,
       params
@@ -1012,7 +1013,7 @@ export async function onRequest(context) {
     if (carId) { where.push('cl.car_id = ?'); params.push(carId); }
     const rows = await dbAll(env.DB,
       `SELECT cl.id, cl.car_id, cl.created_at, cl.overall_status, cl.inspector,
-       cl.notes, cl.image_url,
+       cl.notes, cl.check_image AS image_url, cl.check_image,
        c.license_plate, c.brand, c.model
        FROM check_log cl
        LEFT JOIN cars c ON cl.car_id = c.id
