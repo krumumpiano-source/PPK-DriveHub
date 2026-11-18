@@ -166,7 +166,7 @@ export async function onRequest(context) {
 
     const totalDriversAvailable = Math.max(0, (activeDriversCount ? activeDriversCount.count : 0) - busyDriverIds.size);
 
-    if (totalCarsAvailable <= 0 || totalDriversAvailable <= 0) {
+    if (!body.is_backdate && (totalCarsAvailable <= 0 || totalDriversAvailable <= 0)) {
       let reason = [];
       if (totalCarsAvailable <= 0) reason.push('ไม่มีรถว่าง');
       if (totalDriversAvailable <= 0) reason.push('ไม่มีพนักงานขับรถว่าง');
@@ -190,6 +190,20 @@ export async function onRequest(context) {
     const requestNo = `พค.(ยพ.) ${nextNum.toString().padStart(4, '0')}/${yearBE}`;
     const reqDept = body.requester_department || body.department || '';
 
+    let routeText = body.route || '';
+    if (!routeText && (body.tambon || body.amphoe || body.province)) {
+      const parts = [];
+      if (body.tambon) parts.push(`ต.${body.tambon}`);
+      if (body.amphoe) parts.push(`อ.${body.amphoe}`);
+      if (body.province) parts.push(`จ.${body.province}`);
+      routeText = parts.join(' ');
+    }
+
+    let finalNotes = body.notes || '';
+    if (body.is_backdate && !finalNotes.includes('[บันทึกย้อนหลัง]')) {
+      finalNotes = (finalNotes ? `[บันทึกย้อนหลัง] ${finalNotes}` : '[บันทึกย้อนหลัง]');
+    }
+
     await dbRun(env.DB,
       `INSERT INTO vehicle_requests (id, request_no, requester_id, requester_name, requester_department,
         date, return_date, time_start, time_end, destination, route, purpose,
@@ -199,11 +213,11 @@ export async function onRequest(context) {
       [id, requestNo, user.id, body.requester_name || user.display_name || '',
        reqDept,
        body.date, body.return_date || body.date, body.time_start || null, body.time_end || null,
-       body.destination, body.route || '',
+       body.destination, routeText,
        body.purpose || '', body.passengers || 1,
        JSON.stringify(body.passenger_names || []),
-       body.priority || 'general', body.is_urgent ? 1 : 0,
-       body.notes || '', body.waypoints || null, body.dest_lat || null, body.dest_lng || null, body.estimated_km || null, user.id, ts, ts]
+       body.priority || (body.is_backdate ? 'urgent' : 'general'), (body.is_urgent || body.is_backdate) ? 1 : 0,
+       finalNotes, body.waypoints || null, body.dest_lat || null, body.dest_lng || null, body.estimated_km || null, user.id, ts, ts]
     );
 
     // Sync user's display_name, phone, and department to profile
@@ -217,7 +231,7 @@ export async function onRequest(context) {
       await dbRun(env.DB, 'UPDATE users SET department = ? WHERE id = ?', [reqDept, user.id]);
     }
 
-    await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'create_vehicle_request', 'vehicle_request', id, { date: body.date, destination: body.destination });
+    await writeAuditLog(env.DB, user.id, user.display_name || user.username, 'create_vehicle_request', 'vehicle_request', id, { date: body.date, destination: body.destination, is_backdate: !!body.is_backdate });
     
     // แจ้งคนจัดคิว + admin
     const queueManagers = await dbAll(env.DB,

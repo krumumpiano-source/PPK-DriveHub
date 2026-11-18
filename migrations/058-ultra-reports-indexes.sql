@@ -18,3 +18,4 @@ CREATE INDEX IF NOT EXISTS idx_drivers_name_deactivated
 -- 4. Index for queue by status and date range
 CREATE INDEX IF NOT EXISTS idx_queue_date_status_driver
   ON queue(date, status, driver_id);
+

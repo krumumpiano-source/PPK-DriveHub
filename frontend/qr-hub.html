@@ -254,6 +254,26 @@
       try {
         var params = new URLSearchParams(window.location.search);
         carId = params.get('car') || params.get('qr') || params.get('car_id');
+        var driverId = params.get('driver') || params.get('driver_id');
+        var driverNameParam = params.get('name');
+
+        if (!carId && driverId) {
+          var base = getBase();
+          var dEnc = encodeURIComponent(driverId);
+          document.querySelector('.hub-header-icon').innerHTML = '&#129489;&#8205;&#9992;&#65039;';
+          var nameEl = document.getElementById('carName');
+          nameEl.className = 'hub-car-name';
+          nameEl.textContent = driverNameParam || ('รหัสคนขับ: ' + driverId);
+          document.getElementById('carDetail').textContent = 'บัตรประจำตัวพนักงานขับรถ — โรงเรียนพะเยาพิทยาคม';
+
+          document.getElementById('btnUsage').href = base + 'usage-log.html?driver=' + dEnc;
+          document.getElementById('btnFuel').href  = base + 'fuel-record.html?driver=' + dEnc;
+          document.getElementById('btnCheck').href = base + 'queue-calendar.html?driver=' + dEnc;
+          document.getElementById('btnCheck').querySelector('.hub-btn-title').textContent = 'ตารางคิวงานของฉัน';
+          document.getElementById('btnCheck').querySelector('.hub-btn-sub').textContent = 'ตรวจสอบคิววิ่งรถและภารกิจประจำวัน';
+          document.getElementById('btnRepair').href = base + 'repair.html';
+          return;
+        }
 
         if (!carId) {
           document.getElementById('carName').textContent = 'ไม่พบรหัสรถ';

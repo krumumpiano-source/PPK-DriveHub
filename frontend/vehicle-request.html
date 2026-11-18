@@ -274,11 +274,18 @@
                 <label>เบอร์โทรศัพท์ติดต่อผู้ขอ <span style="color:var(--color-danger)">*</span></label>
                 <input type="tel" id="fRequesterPhone" class="form-control" placeholder="เช่น 081-234-5678" required>
               </div>
-              <div class="form-group" style="grid-column:1/-1; margin: -2px 0 4px 0;">
+              <div class="form-group" style="grid-column:1/-1; margin: -2px 0 4px 0; display:flex; flex-wrap:wrap; gap:10px;">
                 <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; color:var(--color-primary); background:#eff6ff; padding:8px 12px; border-radius:var(--radius-md); border:1px solid #bfdbfe; user-select:none;">
                   <input type="checkbox" id="fSameDayTrip" checked onchange="toggleSameDayTrip(this.checked)" style="width:18px; height:18px; accent-color:var(--color-primary); cursor:pointer;">
                   <span>🚗 เดินทางไป-กลับในวันเดียว (Same-Day Trip)</span>
                 </label>
+                <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; color:#92400e; background:#fffbeb; padding:8px 12px; border-radius:var(--radius-md); border:1px solid #fde68a; user-select:none;">
+                  <input type="checkbox" id="fBackdateTrip" onchange="toggleBackdateTrip(this.checked)" style="width:18px; height:18px; accent-color:#d97706; cursor:pointer;">
+                  <span>⏱️ บันทึกการใช้รถย้อนหลัง (กรณีฉุกเฉิน/เดินทางด่วน)</span>
+                </label>
+              </div>
+              <div id="backdateNoticeBox" style="display:none; grid-column:1/-1; background:#fffbeb; border:1px solid #fcd34d; color:#92400e; padding:10px 14px; border-radius:var(--radius-md); font-size:0.86rem;">
+                ⚠️ <strong>โหมดบันทึกการใช้รถย้อนหลัง:</strong> ระบบได้ปลดล็อกให้เลือกวันที่ย้อนหลังได้แล้ว (สำหรับภารกิจฉุกเฉิน/เร่งด่วนที่เดินทางไปแล้ว) ระบบจะบันทึกสถานะกำกับไว้ในประวัติ
               </div>
               <div class="form-group">
                 <label>วันที่ออกเดินทาง <span style="color:var(--color-danger)">*</span></label>
@@ -319,6 +326,25 @@
                 </div>
                 <div id="destListContainer" style="margin-bottom:8px;"></div>
                 <input type="hidden" id="fDestination">
+
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px; margin-bottom:10px; background:#f8fafc; padding:10px 12px; border-radius:var(--radius-md); border:1px solid #e2e8f0;">
+                  <div style="grid-column:1/-1; font-size:0.78rem; color:#475569; font-weight:600; display:flex; align-items:center; justify-content:space-between;">
+                    <span>📍 ข้อมูลเขตปกครองสำหรับเอกสารราชการ (ดึงพิกัดอัตโนมัติ / แก้ไขได้)</span>
+                    <span id="reverseGeoBadge" style="font-weight:500; color:var(--color-primary);"></span>
+                  </div>
+                  <div>
+                    <label style="font-size:0.78rem; color:#64748b; margin-bottom:2px; display:block;">ตำบล/แขวง</label>
+                    <input type="text" id="fTambon" class="form-control" placeholder="ระบุตำบล" style="font-size:0.88rem; padding:6px 10px;">
+                  </div>
+                  <div>
+                    <label style="font-size:0.78rem; color:#64748b; margin-bottom:2px; display:block;">อำเภอ/เขต</label>
+                    <input type="text" id="fAmphoe" class="form-control" placeholder="ระบุอำเภอ" style="font-size:0.88rem; padding:6px 10px;">
+                  </div>
+                  <div>
+                    <label style="font-size:0.78rem; color:#64748b; margin-bottom:2px; display:block;">จังหวัด</label>
+                    <input type="text" id="fProvince" class="form-control" placeholder="ระบุจังหวัด" style="font-size:0.88rem; padding:6px 10px;">
+                  </div>
+                </div>
 
                 <!-- Map with collapse toggle for mobile -->
                 <div id="mapWrapper" class="map-touch-shield">
@@ -651,6 +677,48 @@
       checkAvailabilityLive();
     }
 
+    function toggleBackdateTrip(isBackdate) {
+      var notice = document.getElementById('backdateNoticeBox');
+      if (notice) notice.style.display = isBackdate ? 'block' : 'none';
+      if (fDateFlatpickr) {
+        fDateFlatpickr.set('minDate', isBackdate ? null : 'today');
+      }
+      if (fReturnDateFlatpickr) {
+        var fDateVal = document.getElementById('fDate') ? document.getElementById('fDate').value : '';
+        fReturnDateFlatpickr.set('minDate', isBackdate ? (fDateVal || null) : (fDateVal || 'today'));
+      }
+      renderAvailabilityCalendar();
+      checkAvailabilityLive();
+    }
+
+    function buildGoogleCalendarUrl(r) {
+      var dateStart = (r.date || new Date().toISOString().slice(0, 10)).replace(/-/g, '');
+      var dateEnd = (r.return_date || r.date || new Date().toISOString().slice(0, 10)).replace(/-/g, '');
+      var tS = (r.time_start || '08:30').replace(':', '') + '00';
+      var tE = (r.time_end || '16:30').replace(':', '') + '00';
+      var datesParam = dateStart + 'T' + tS + '/' + dateEnd + 'T' + tE;
+      var title = '🚗 ภารกิจรถราชการ (' + (r.license_plate || 'รפ.') + ') ไป ' + (r.destination || '-');
+      var details = [
+        'เลขที่คำขอ: ' + (r.request_no || '-'),
+        'ผู้ขอใช้รถ: ' + (r.requester_name || '-') + (r.requester_department ? ' (' + r.requester_department + ')' : ''),
+        'เบอร์ติดต่อ: ' + (r.requester_phone || '-'),
+        'รถยนต์: ' + (r.license_plate || '-') + ' ' + (r.car_brand || ''),
+        'พนักงานขับรถ: ' + (r.driver_name || '-'),
+        'สถานที่: ' + (r.destination || '-') + (r.route ? ' (' + r.route + ')' : ''),
+        'วัตถุประสงค์: ' + (r.purpose || '-'),
+        'จำนวนผู้โดยสาร: ' + (r.passengers || 1) + ' คน'
+      ];
+      if (r.dest_lat && r.dest_lng) {
+        details.push('พิกัดนำทาง Google Maps: https://www.google.com/maps/dir/?api=1&destination=' + r.dest_lat + ',' + r.dest_lng);
+      }
+      var loc = (r.destination || '') + (r.route ? ' ' + r.route : '');
+      return 'https://calendar.google.com/calendar/render?action=TEMPLATE' +
+        '&text=' + encodeURIComponent(title) +
+        '&dates=' + encodeURIComponent(datesParam) +
+        '&details=' + encodeURIComponent(details.join('\n')) +
+        '&location=' + encodeURIComponent(loc);
+    }
+
     function toggleBulkPassengerModal() {
       var box = document.getElementById('bulkPassengerBox');
       if (!box) return;
@@ -733,7 +801,18 @@
       }
 
       var sameDay = document.getElementById('fSameDayTrip');
+      var backdateEl = document.getElementById('fBackdateTrip');
+      var isBackdate = !!(backdateEl && backdateEl.checked);
       var returnDateVal = (sameDay && sameDay.checked) ? document.getElementById('fDate').value : (document.getElementById('fReturnDate').value || document.getElementById('fDate').value);
+
+      var tambonVal = document.getElementById('fTambon') ? document.getElementById('fTambon').value.trim() : '';
+      var amphoeVal = document.getElementById('fAmphoe') ? document.getElementById('fAmphoe').value.trim() : '';
+      var provinceVal = document.getElementById('fProvince') ? document.getElementById('fProvince').value.trim() : '';
+      var routeParts = [];
+      if (tambonVal) routeParts.push('ต.' + tambonVal);
+      if (amphoeVal) routeParts.push('อ.' + amphoeVal);
+      if (provinceVal) routeParts.push('จ.' + provinceVal);
+
       var data = {
         requester_name: document.getElementById('fRequesterName').value.trim(),
         department: document.getElementById('fDepartment').value.trim(),
@@ -743,7 +822,11 @@
         time_start: document.getElementById('fTimeStart').value || null,
         time_end: document.getElementById('fTimeEnd').value || null,
         destination: finalDest,
-        route: '',
+        route: routeParts.join(' '),
+        tambon: tambonVal,
+        amphoe: amphoeVal,
+        province: provinceVal,
+        is_backdate: isBackdate,
         purpose: document.getElementById('fPurpose').value.trim(),
         passengers: parseInt(document.getElementById('fPassengers').value) || 1,
         passenger_names: getPassengerNames(),
@@ -779,10 +862,15 @@
             sameDay.checked = true;
             toggleSameDayTrip(true);
           }
+          if (backdateEl) {
+            backdateEl.checked = false;
+            toggleBackdateTrip(false);
+          }
           document.getElementById('passengerList').innerHTML = '';
           if (typeof clearWaypoints === 'function') clearWaypoints();
           document.getElementById('destListContainer').innerHTML = '';
           document.getElementById('fDestSearch').value = '';
+          if (document.getElementById('reverseGeoBadge')) document.getElementById('reverseGeoBadge').textContent = '';
           if (typeof renderAvailabilityCalendar === 'function') renderAvailabilityCalendar();
         } else {
           showAlert((res && res.error) || 'เกิดข้อผิดพลาด', 'danger');
@@ -797,36 +885,189 @@
       }
     }
 
+    function openOfficialPrintWindow(doc) {
+      var w = window.open('', '_blank', 'width=900,height=720');
+      if (!w) { showAlert('เบราว์เซอร์บล็อกหน้าต่างป๊อปอัป กรุณาอนุญาตป๊อปอัป', 'warning'); return; }
+      var docJson = JSON.stringify(doc).replace(/</g, '\\u003c');
+      var html = '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>แบบฟอร์มขอใช้รถราชการ - ' + (doc.request_no || 'โรงเรียนพะเยาพิทยาคม') + '</title>' +
+        '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap">' +
+        '<style>' +
+        'body{font-family:"TH Sarabun New",Sarabun,sans-serif;margin:0;padding:0;background:#f1f5f9;color:#1e293b;font-size:16pt;line-height:1.45}' +
+        '.toolbar{position:sticky;top:0;z-index:100;background:#1e293b;color:#fff;padding:10px 18px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;font-family:Sarabun,sans-serif;font-size:13px;box-shadow:0 2px 10px rgba(0,0,0,0.2)}' +
+        '.toolbar-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap}' +
+        '.toolbar button,.toolbar select,.toolbar input{font-family:Sarabun,sans-serif;font-size:13px;padding:6px 12px;border-radius:6px;border:1px solid #475569;background:#334155;color:#fff;cursor:pointer}' +
+        '.toolbar button.primary{background:#4f46e5;border-color:#4338ca;font-weight:600}' +
+        '.toolbar button.active{background:#059669;border-color:#047857;font-weight:600}' +
+        '.toolbar input[type=number]{width:62px;text-align:center}' +
+        '.page-a4{width:210mm;min-height:297mm;margin:16px auto;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,0.12);padding:20mm 20mm 18mm 25mm;box-sizing:border-box;position:relative}' +
+        'h2{text-align:center;margin:0 0 2px 0;font-size:20pt;font-weight:700}' +
+        'p.sub{text-align:center;color:#334155;margin:0 0 14px 0;font-size:15pt}' +
+        'table.std-table{width:100%;border-collapse:collapse;margin-top:12px;font-size:15pt}' +
+        'table.std-table td{padding:7px 10px;border:1px solid #94a3b8;vertical-align:top}' +
+        '.sig{margin-top:42px;display:flex;justify-content:space-around;font-size:15pt}' +
+        '.sig div{text-align:center;width:210px}' +
+        '.sig .line{border-bottom:1px dotted #333;margin-bottom:6px;height:36px}' +
+        '#overlayStage{display:none;position:relative;width:100%;height:255mm;border:1px dashed #cbd5e1}' +
+        '.ov-item{position:absolute;cursor:move;padding:1px 4px;border:1px dashed transparent;white-space:nowrap;user-select:none}' +
+        '.ov-item:hover,.ov-item.selected{border-color:#4f46e5;background:rgba(79,70,229,0.08);border-radius:3px}' +
+        '@media print{body{background:#fff}.no-print{display:none!important}.page-a4{margin:0;box-shadow:none;width:210mm;height:297mm;padding:18mm 18mm 15mm 22mm}#overlayStage{border:none}.ov-item{border:none!important;background:transparent!important}}' +
+        '</style></head><body>' +
+        '<div class="toolbar no-print">' +
+        '  <div class="toolbar-group">' +
+        '    <strong>🖨️ โหมดการพิมพ์:</strong>' +
+        '    <button id="btnModeStd" class="active" onclick="setMode(\'std\')">📄 พิมพ์ทั้งฟอร์ม (ตารางมาตรฐาน)</button>' +
+        '    <button id="btnModeOv" onclick="setMode(\'ov\')">🎯 พิมพ์ทับกระดาษแบบฟอร์มเดิม (ปรับพิกัด X/Y)</button>' +
+        '  </div>' +
+        '  <div class="toolbar-group" id="ovControls" style="display:none">' +
+        '    <span>ชดเชยแนวนอน X (มม.): <input type="number" id="inpOffX" value="0" step="0.5" onchange="applyOffsets()"></span>' +
+        '    <span>แนวตั้ง Y (มม.): <input type="number" id="inpOffY" value="0" step="0.5" onchange="applyOffsets()"></span>' +
+        '    <span>ขนาดอักษร (pt): <input type="number" id="inpFontPt" value="16" min="12" max="24" onchange="applyOffsets()"></span>' +
+        '    <button onclick="resetOffsets()">↺ รีเซ็ตพิกัด</button>' +
+        '  </div>' +
+        '  <div class="toolbar-group">' +
+        '    <button class="primary" onclick="window.print()">🖨️ สั่งพิมพ์ / บันทึก PDF</button>' +
+        '  </div>' +
+        '</div>' +
+        '<div class="page-a4" id="pageContainer">' +
+        '  <div id="stdStage">' +
+        (doc.request_no && doc.request_no !== '-' ? '<p style="text-align:right;margin:0 0 4px 0"><strong>เลขที่คำขอ:</strong> ' + doc.request_no + '</p>' : '') +
+        '    <h2>แบบฟอร์มขออนุญาตใช้รถยนต์ส่วนกลาง</h2>' +
+        '    <p class="sub">งานยานพาหนะ กลุ่มงานบริหารบุคคล โรงเรียนพะเยาพิทยาคม</p>' +
+        '    <table class="std-table">' +
+        '      <tr><td style="width:32%"><strong>ผู้ขอใช้รถ</strong></td><td>' + doc.name + (doc.phone && doc.phone !== '-' ? ' (โทร. ' + doc.phone + ')' : '') + '</td></tr>' +
+        '      <tr><td><strong>กลุ่มสาระ / หน่วยงาน</strong></td><td>' + doc.dept + '</td></tr>' +
+        '      <tr><td><strong>วันที่เดินทาง</strong></td><td>' + doc.dateDisplay + '</td></tr>' +
+        '      <tr><td><strong>เวลาเดินทาง</strong></td><td>' + doc.timeS + ' - ' + doc.timeE + ' น.</td></tr>' +
+        '      <tr><td><strong>สถานที่ไปราชการ</strong></td><td>' + doc.dest + (doc.route && doc.route !== '-' ? '<br><span style="color:#475569;font-size:14pt">(' + doc.route + ')</span>' : '') + '</td></tr>' +
+        (doc.estimated_km ? '      <tr><td><strong>ระยะทางไป-กลับโดยประมาณ</strong></td><td>' + doc.estimated_km + ' กิโลเมตร</td></tr>' : '') +
+        '      <tr><td><strong>เพื่อปฎิบัติหน้าที่ / วัตถุประสงค์</strong></td><td>' + doc.purpose + '</td></tr>' +
+        '      <tr><td><strong>จำนวนผู้เดินทาง</strong></td><td>' + (doc.passengerCount || 1) + ' คน (' + doc.passengers + ')</td></tr>' +
+        (doc.isApproved ? (
+          '      <tr><td colspan="2" style="background:#f8fafc;text-align:center"><strong>— ส่วนงานยานพาหนะและการจัดคิว —</strong></td></tr>' +
+          '      <tr><td><strong>รถยนต์หมายเลขทะเบียน</strong></td><td>' + doc.car + '</td></tr>' +
+          '      <tr><td><strong>พนักงานขับรถ</strong></td><td>' + doc.driver + '</td></tr>'
+        ) : '') +
+        '    </table>' +
+        '    <div class="sig">' +
+        '      <div><div class="line"></div>(' + doc.name + ')<br>ผู้ขออนุญาตใช้รถ</div>' +
+        '      <div><div class="line"></div>(............................................)<br>หัวหน้างานยานพาหนะ</div>' +
+        '      <div><div class="line"></div>(............................................)<br>ผู้อำนวยการ / ผู้อนุมัติ</div>' +
+        '    </div>' +
+        '  </div>' +
+        '  <div id="overlayStage">' +
+        '    <div class="no-print" style="position:absolute;top:0;left:0;right:0;background:#eff6ff;color:#1e40af;padding:6px 10px;font-size:12px;border-radius:4px;">💡 <strong>คำแนะนำ:</strong> คลิกลากข้อความแต่ละจุดเพื่อจัดวางให้ตรงกับช่องว่างบนกระดาษแบบฟอร์มจริงของโรงเรียน (ระบบจะจำค่าที่ตั้งไว้ให้อัตโนมัติ)</div>' +
+        '    <div id="ovFieldsContainer"></div>' +
+        '  </div>' +
+        '</div>' +
+        '<script>' +
+        'var DOC = ' + docJson + ';' +
+        'var DEFAULT_FIELDS = [' +
+        '  { key: "reqNo", label: "เลขที่คำขอ", x: 135, y: 12, text: DOC.request_no !== "-" ? DOC.request_no : "" },' +
+        '  { key: "name", label: "ชื่อผู้ขอ", x: 45, y: 42, text: DOC.name },' +
+        '  { key: "dept", label: "กลุ่มสาระ/หน่วยงาน", x: 115, y: 42, text: DOC.dept },' +
+        '  { key: "dest", label: "สถานที่ไป", x: 45, y: 54, text: DOC.dest },' +
+        '  { key: "route", label: "ตำบล/อำเภอ/จังหวัด", x: 45, y: 64, text: DOC.route !== "-" ? DOC.route : "" },' +
+        '  { key: "purpose", label: "วัตถุประสงค์", x: 45, y: 74, text: DOC.purpose },' +
+        '  { key: "paxCount", label: "จำนวนคน", x: 55, y: 84, text: String(DOC.passengerCount || 1) + " คน" },' +
+        '  { key: "dateDisplay", label: "วันที่เดินทาง", x: 45, y: 94, text: DOC.dateDisplay },' +
+        '  { key: "timeRange", label: "เวลาไป-กลับ", x: 120, y: 94, text: DOC.timeS + " - " + DOC.timeE + " น." },' +
+        '  { key: "car", label: "รถที่จัดให้", x: 45, y: 112, text: DOC.car || "" },' +
+        '  { key: "driver", label: "พนักงานขับรถ", x: 115, y: 112, text: DOC.driver || "" },' +
+        '  { key: "reqSig", label: "ชื่อผู้ขอ (ใต้ลายเซ็น)", x: 35, y: 165, text: "(" + DOC.name + ")" }' +
+        '];' +
+        'var savedCfg = {}; try { savedCfg = JSON.parse(localStorage.getItem("ppk_print_overlay_cfg") || "{}"); } catch(e){}' +
+        'function setMode(m) {' +
+        '  document.getElementById("stdStage").style.display = m === "std" ? "block" : "none";' +
+        '  document.getElementById("overlayStage").style.display = m === "ov" ? "block" : "none";' +
+        '  document.getElementById("ovControls").style.display = m === "ov" ? "flex" : "none";' +
+        '  document.getElementById("btnModeStd").className = m === "std" ? "active" : "";' +
+        '  document.getElementById("btnModeOv").className = m === "ov" ? "active" : "";' +
+        '  if (m === "ov") renderOverlayFields();' +
+        '}' +
+        'function renderOverlayFields() {' +
+        '  var c = document.getElementById("ovFieldsContainer"); c.innerHTML = "";' +
+        '  var offX = parseFloat(document.getElementById("inpOffX").value) || 0;' +
+        '  var offY = parseFloat(document.getElementById("inpOffY").value) || 0;' +
+        '  var pt = parseInt(document.getElementById("inpFontPt").value) || 16;' +
+        '  DEFAULT_FIELDS.forEach(function(f) {' +
+        '    if (!f.text) return;' +
+        '    var pos = (savedCfg.fields && savedCfg.fields[f.key]) || { x: f.x, y: f.y };' +
+        '    var el = document.createElement("div"); el.className = "ov-item"; el.title = f.label;' +
+        '    el.style.left = (pos.x + offX) + "mm"; el.style.top = (pos.y + offY) + "mm"; el.style.fontSize = pt + "pt";' +
+        '    el.textContent = f.text;' +
+        '    makeDraggable(el, f.key, pos);' +
+        '    c.appendChild(el);' +
+        '  });' +
+        '}' +
+        'function makeDraggable(el, key, pos) {' +
+        '  var startX, startY, origX, origY;' +
+        '  el.onmousedown = function(e) {' +
+        '    e.preventDefault(); startX = e.clientX; startY = e.clientY; origX = pos.x; origY = pos.y;' +
+        '    document.onmousemove = function(ev) {' +
+        '      var dxMm = (ev.clientX - startX) / 3.78; var dyMm = (ev.clientY - startY) / 3.78;' +
+        '      pos.x = Math.round((origX + dxMm) * 2) / 2; pos.y = Math.round((origY + dyMm) * 2) / 2;' +
+        '      var offX = parseFloat(document.getElementById("inpOffX").value) || 0;' +
+        '      var offY = parseFloat(document.getElementById("inpOffY").value) || 0;' +
+        '      el.style.left = (pos.x + offX) + "mm"; el.style.top = (pos.y + offY) + "mm";' +
+        '    };' +
+        '    document.onmouseup = function() {' +
+        '      document.onmousemove = null; document.onmouseup = null;' +
+        '      if (!savedCfg.fields) savedCfg.fields = {}; savedCfg.fields[key] = pos;' +
+        '      localStorage.setItem("ppk_print_overlay_cfg", JSON.stringify(savedCfg));' +
+        '    };' +
+        '  };' +
+        '}' +
+        'function applyOffsets() {' +
+        '  savedCfg.offX = parseFloat(document.getElementById("inpOffX").value) || 0;' +
+        '  savedCfg.offY = parseFloat(document.getElementById("inpOffY").value) || 0;' +
+        '  savedCfg.fontPt = parseInt(document.getElementById("inpFontPt").value) || 16;' +
+        '  localStorage.setItem("ppk_print_overlay_cfg", JSON.stringify(savedCfg));' +
+        '  renderOverlayFields();' +
+        '}' +
+        'function resetOffsets() {' +
+        '  savedCfg = {}; localStorage.removeItem("ppk_print_overlay_cfg");' +
+        '  document.getElementById("inpOffX").value = 0; document.getElementById("inpOffY").value = 0; document.getElementById("inpFontPt").value = 16;' +
+        '  renderOverlayFields();' +
+        '}' +
+        'if (savedCfg.offX !== undefined) document.getElementById("inpOffX").value = savedCfg.offX;' +
+        'if (savedCfg.offY !== undefined) document.getElementById("inpOffY").value = savedCfg.offY;' +
+        'if (savedCfg.fontPt !== undefined) document.getElementById("inpFontPt").value = savedCfg.fontPt;' +
+        '<\/script></body></html>';
+      w.document.write(html);
+      w.document.close();
+    }
+
     function printRequest() {
       var name = document.getElementById('fRequesterName').value || '-';
       var dept = document.getElementById('fDepartment').value || '-';
+      var phone = document.getElementById('fRequesterPhone') ? document.getElementById('fRequesterPhone').value : '-';
       var date = document.getElementById('fDate').value || '-';
       var sameDay = document.getElementById('fSameDayTrip');
       var returnDate = (sameDay && sameDay.checked) ? date : (document.getElementById('fReturnDate').value || date);
       var dateDisplay = (returnDate && returnDate !== date) ? (date + ' ถึง ' + returnDate) : date;
       var dest = document.getElementById('fDestination').value || document.getElementById('fDestSearch').value || '-';
-      var route = '-';
+      var tambonVal = document.getElementById('fTambon') ? document.getElementById('fTambon').value.trim() : '';
+      var amphoeVal = document.getElementById('fAmphoe') ? document.getElementById('fAmphoe').value.trim() : '';
+      var provinceVal = document.getElementById('fProvince') ? document.getElementById('fProvince').value.trim() : '';
+      var routeParts = [];
+      if (tambonVal) routeParts.push('ต.' + tambonVal);
+      if (amphoeVal) routeParts.push('อ.' + amphoeVal);
+      if (provinceVal) routeParts.push('จ.' + provinceVal);
+      var route = routeParts.length ? routeParts.join(' ') : '-';
       var purpose = document.getElementById('fPurpose').value || '-';
       var passengers = getPassengerNames().join(', ') || '-';
+      var passengerCount = parseInt(document.getElementById('fPassengers').value) || 1;
       var timeS = document.getElementById('fTimeStart').value || '-';
       var timeE = document.getElementById('fTimeEnd').value || '-';
-      var w = window.open('', '_blank', 'width=800,height=600');
-      w.document.write('<html><head><title>แบบฟอร์มขอใช้รถ</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap"><style>body{font-family:Sarabun,sans-serif;padding:40px;font-size:14px;color:#1e293b}h2{text-align:center;margin-bottom:4px}p.sub{text-align:center;color:#64748b;margin-top:0}table{width:100%;border-collapse:collapse;margin-top:20px}td{padding:8px 10px;border:1px solid #cbd5e1}.sig{margin-top:50px;display:flex;justify-content:space-around}.sig div{text-align:center;width:200px}.sig .line{border-bottom:1px solid #333;margin-bottom:8px;height:40px}</style></head><body>');
       var reqNo = document.getElementById('fRequestNo') ? document.getElementById('fRequestNo').value : '-';
-      w.document.write('<h2>แบบฟอร์มขอใช้รถราชการ</h2><p class="sub">งานยานพาหนะ กลุ่มงานบริหารบุคคล โรงเรียนพะเยาพิทยาคม</p>');
-      if (reqNo && reqNo !== '-') w.document.write('<p style="text-align:right"><strong>เลขที่:</strong> ' + reqNo + '</p>');
-      w.document.write('<table><tr><td style="width:30%"><strong>ผู้ขอใช้รถ</strong></td><td>' + name + '</td></tr>');
-      w.document.write('<tr><td><strong>กลุ่มสาระ/หน่วยงาน</strong></td><td>' + dept + '</td></tr>');
-      w.document.write('<tr><td><strong>วันที่เดินทาง</strong></td><td>' + dateDisplay + '</td></tr>');
-      w.document.write('<tr><td><strong>เวลา</strong></td><td>' + timeS + ' - ' + timeE + ' น.</td></tr>');
-      w.document.write('<tr><td><strong>สถานที่ปลายทาง</strong></td><td>' + dest + '</td></tr>');
-
-      w.document.write('<tr><td><strong>วัตถุประสงค์</strong></td><td>' + purpose + '</td></tr>');
-      w.document.write('<tr><td><strong>ผู้ร่วมเดินทาง</strong></td><td>' + passengers + '</td></tr></table>');
-      w.document.write('<div class="sig"><div><div class="line"></div>(ผู้ขอใช้รถ)</div><div><div class="line"></div>(ผู้อนุมัติ)</div></div>');
-      w.document.write('</body></html>');
-      w.document.close();
-      w.print();
+      var estKm = document.getElementById('fEstimatedKm') ? document.getElementById('fEstimatedKm').value : '';
+      openOfficialPrintWindow({
+        request_no: reqNo, name: name, dept: dept, phone: phone,
+        dateDisplay: dateDisplay, timeS: timeS, timeE: timeE,
+        dest: dest, route: route, purpose: purpose,
+        passengers: passengers, passengerCount: passengerCount,
+        estimated_km: estKm, isApproved: false, car: '', driver: ''
+      });
     }
 
     async function printRequestById(id) {
@@ -848,27 +1089,17 @@
         try { passengers = JSON.parse(r.passenger_names || '[]').join(', '); } catch(e){}
         var timeS = r.time_start || '-';
         var timeE = r.time_end || '-';
-        var w = window.open('', '_blank', 'width=800,height=600');
-        w.document.write('<html><head><title>แบบฟอร์มขอใช้รถ</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap"><style>body{font-family:Sarabun,sans-serif;padding:40px;font-size:14px;color:#1e293b}h2{text-align:center;margin-bottom:4px}p.sub{text-align:center;color:#64748b;margin-top:0}table{width:100%;border-collapse:collapse;margin-top:20px}td{padding:8px 10px;border:1px solid #cbd5e1}.sig{margin-top:50px;display:flex;justify-content:space-around}.sig div{text-align:center;width:200px}.sig .line{border-bottom:1px solid #333;margin-bottom:8px;height:40px}</style></head><body>');
-        if (r.request_no) w.document.write('<p style="text-align:right"><strong>เลขที่:</strong> ' + r.request_no + '</p>');
-        w.document.write('<h2>แบบฟอร์มขอใช้รถราชการ</h2><p class="sub">งานยานพาหนะ กลุ่มงานบริหารบุคคล โรงเรียนพะเยาพิทยาคม</p>');
-        w.document.write('<table><tr><td style="width:30%"><strong>ผู้ขอใช้รถ</strong></td><td>' + name + '</td></tr>');
-        w.document.write('<tr><td><strong>กลุ่มสาระ/หน่วยงาน</strong></td><td>' + dept + '</td></tr>');
-        w.document.write('<tr><td><strong>วันที่เดินทาง</strong></td><td>' + dateDisplay + '</td></tr>');
-        w.document.write('<tr><td><strong>เวลา</strong></td><td>' + timeS + ' - ' + timeE + ' น.</td></tr>');
-        w.document.write('<tr><td><strong>สถานที่ปลายทาง</strong></td><td>' + dest + '</td></tr>');
-        w.document.write('<tr><td><strong>วัตถุประสงค์</strong></td><td>' + purpose + '</td></tr>');
-        w.document.write('<tr><td><strong>ผู้ร่วมเดินทาง</strong></td><td>' + (passengers || '-') + '</td></tr>');
-        if (r.status === 'approved') {
-          w.document.write('<tr><td colspan="2" style="background:#f1f5f9;text-align:center"><strong>-- ผลการจัดคิวยานพาหนะ --</strong></td></tr>');
-          w.document.write('<tr><td><strong>รถยนต์ที่จัดให้</strong></td><td>' + (r.license_plate || '-') + ' ' + (r.car_brand || '') + '</td></tr>');
-          w.document.write('<tr><td><strong>พนักงานขับรถ</strong></td><td>' + (r.driver_name || '-') + '</td></tr>');
-        }
-        w.document.write('</table>');
-        w.document.write('<div class="sig"><div><div class="line"></div>(ผู้ขอใช้รถ)</div><div><div class="line"></div>(หัวหน้างานยานพาหนะ/ผู้จัดคิว)</div><div><div class="line"></div>(ผู้อนุมัติ)</div></div>');
-        w.document.write('</body></html>');
-        w.document.close();
-        w.print();
+        openOfficialPrintWindow({
+          request_no: r.request_no || '-',
+          name: name, dept: dept, phone: r.requester_phone || '-',
+          dateDisplay: dateDisplay, timeS: timeS, timeE: timeE,
+          dest: dest, route: r.route || '-', purpose: purpose,
+          passengers: passengers || '-', passengerCount: r.passengers || 1,
+          estimated_km: r.estimated_km || '',
+          isApproved: r.status === 'approved',
+          car: (r.license_plate || '-') + ' ' + (r.car_brand || ''),
+          driver: r.driver_name || '-'
+        });
       } catch(e) {
         showAlert('เกิดข้อผิดพลาดในการพิมพ์', 'danger');
       }
@@ -985,15 +1216,17 @@
 
         var lineText = `🔔 ถึง: ${dTag}
 ${dateLine}
-📍 สถานที่: ${r.destination || '-'}
+📍 สถานที่: ${r.destination || '-'}${r.route ? ' (' + r.route + ')' : ''}
 🎯 ภารกิจ: ${r.purpose || '-'}
 🚗 รถที่ใช้: ${carPlateOnly}
 👥 ผู้ขอ/คณะเดินทาง: ${r.requester_name || '-'} (จำนวน ${r.passengers || 1} คน)${reqPhoneStr}`;
 
         var lineShareUrl = 'https://line.me/R/share?text=' + encodeURIComponent(lineText);
+        var gcalUrl = buildGoogleCalendarUrl(r);
         h += `<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">`;
         h += `<button class="btn btn-outline btn-sm" onclick="copyLineMessage(this, \`${lineText.replace(/`/g, '\\`')}\`)">📋 คัดลอกข้อความส่ง LINE</button>`;
         h += `<a href="${lineShareUrl}" target="_blank" class="btn btn-sm" style="background:#06C755;color:white;text-decoration:none;display:inline-flex;align-items:center;gap:4px">💬 เปิดแอป LINE</a>`;
+        h += `<a href="${gcalUrl}" target="_blank" class="btn btn-sm" style="background:#2563eb;color:white;text-decoration:none;display:inline-flex;align-items:center;gap:4px" title="เพิ่มคิวงานเข้า Google Calendar ของคนขับหรือผู้เดินทาง">📅 เพิ่มลง Google Calendar</a>`;
         h += `</div>`;
       }
       h += '</div>';
@@ -1275,9 +1508,20 @@ ${dateLine}
       var timeEnd = document.getElementById('fTimeEnd').value || '23:59';
       var alertEl = document.getElementById('availabilityAlert');
       var btn = document.getElementById('btnSubmitRequest');
+      var isBackdate = !!(document.getElementById('fBackdateTrip') && document.getElementById('fBackdateTrip').checked);
 
       if (!date) {
         alertEl.style.display = 'none';
+        if (btn) btn.disabled = false;
+        return;
+      }
+
+      if (isBackdate) {
+        alertEl.style.display = 'block';
+        alertEl.style.background = '#fffbeb';
+        alertEl.style.color = '#92400e';
+        alertEl.style.border = '1px solid #fcd34d';
+        alertEl.innerHTML = '⏱️ <strong>โหมดบันทึกการใช้รถย้อนหลัง:</strong> สามารถส่งคำขอเพื่อบันทึกประวัติการเดินทางย้อนหลังได้โดยไม่บล็อกคิวรถปัจจุบัน';
         if (btn) btn.disabled = false;
         return;
       }
@@ -1518,39 +1762,9 @@ ${dateLine}
     }
 
     async function printAdminRequest() {
-      try {
-        var res = await apiCall('getVehicleRequest', { id: currentApproveId });
-        if (!res || !res.success) return;
-        var r = res.data;
-        var name = r.requester_name || '-';
-        var dept = r.requester_department || '-';
-        var date = r.date || '-';
-        var dest = r.destination || '-';
-        var purpose = r.purpose || '-';
-        var passengers = '';
-        try { passengers = JSON.parse(r.passenger_names || '[]').join(', '); } catch(e){}
-        var timeS = r.time_start || '-';
-        var timeE = r.time_end || '-';
-        var w = window.open('', '_blank', 'width=800,height=600');
-        w.document.write('<html><head><title>แบบฟอร์มขอใช้รถ (จัดคิวแล้ว)</title><style>body{font-family:Sarabun,sans-serif;padding:40px;font-size:14px}h2{text-align:center}table{width:100%;border-collapse:collapse;margin-top:20px}td{padding:6px 8px;border:1px solid #ccc}.sig{margin-top:60px;display:flex;justify-content:space-around}.sig div{text-align:center;width:200px}.sig .line{border-bottom:1px solid #333;margin-bottom:8px;height:40px}</style></head><body>');
-        if (r.request_no) w.document.write('<p style="text-align:right"><strong>เลขที่:</strong> ' + r.request_no + '</p>');
-        w.document.write('<h2>แบบฟอร์มขอใช้รถราชการ</h2><p style="text-align:center">งานยานพาหนะ กลุ่มงานบริหารบุคคล โรงเรียนพะเยาพิทยาคม</p>');
-        w.document.write('<table><tr><td style="width:30%"><strong>ผู้ขอใช้รถ</strong></td><td>' + name + '</td></tr>');
-        w.document.write('<tr><td><strong>กลุ่มสาระ/หน่วยงาน</strong></td><td>' + dept + '</td></tr>');
-        w.document.write('<tr><td><strong>วันที่</strong></td><td>' + date + '</td></tr>');
-        w.document.write('<tr><td><strong>เวลา</strong></td><td>' + timeS + ' - ' + timeE + '</td></tr>');
-        w.document.write('<tr><td><strong>สถานที่ปลายทาง</strong></td><td>' + dest + '</td></tr>');
-        w.document.write('<tr><td><strong>วัตถุประสงค์</strong></td><td>' + purpose + '</td></tr>');
-        w.document.write('<tr><td><strong>ผู้ร่วมเดินทาง</strong></td><td>' + (passengers || '-') + '</td></tr>');
-        w.document.write('<tr><td colspan="2" style="background:#f9fafb;text-align:center"><strong>-- ส่วนของการจัดคิว --</strong></td></tr>');
-        w.document.write('<tr><td><strong>รถยนต์ที่จัดให้</strong></td><td>' + (r.license_plate || '-') + ' ' + (r.car_brand || '') + '</td></tr>');
-        w.document.write('<tr><td><strong>พนักงานขับรถ</strong></td><td>' + (r.driver_name || '-') + '</td></tr>');
-        w.document.write('</table>');
-        w.document.write('<div class="sig"><div><div class="line"></div>(หัวหน้างานยานพาหนะ/ผู้จัดคิว)</div><div><div class="line"></div>(รองผู้อำนวยการกลุ่มงานบริหารบุคคล)</div><div><div class="line"></div>(ผู้อำนวยการโรงเรียนพะเยาพิทยาคม)</div></div>');
-        w.document.write('</body></html>');
-        w.document.close();
-        w.print();
-      } catch(e) { showAlert('พิมพ์ไม่สำเร็จ', 'danger'); }
+      if (currentApproveId) {
+        await printRequestById(currentApproveId);
+      }
     }
 
     async function quickReject(id, reasonOpt) {
@@ -1611,12 +1825,60 @@ ${dateLine}
       });
     }
 
-    function addWaypointPin(lat, lng, name) {
+    function applyAddressFields(addr) {
+      if (!addr) return;
+      var tEl = document.getElementById('fTambon');
+      var aEl = document.getElementById('fAmphoe');
+      var pEl = document.getElementById('fProvince');
+      var badge = document.getElementById('reverseGeoBadge');
+      if (tEl && addr.tambon !== undefined) tEl.value = addr.tambon || '';
+      if (aEl && addr.amphoe !== undefined) aEl.value = addr.amphoe || '';
+      if (pEl && addr.province !== undefined) pEl.value = addr.province || '';
+      if (badge) {
+        var parts = [];
+        if (addr.tambon) parts.push('ต.' + addr.tambon);
+        if (addr.amphoe) parts.push('อ.' + addr.amphoe);
+        if (addr.province) parts.push('จ.' + addr.province);
+        badge.textContent = parts.length ? ('✅ ' + parts.join(' ')) : '';
+      }
+    }
+
+    async function reverseGeocodePin(lat, lng, marker) {
+      var badge = document.getElementById('reverseGeoBadge');
+      if (badge) badge.textContent = '⏳ กำลังถอดพิกัด...';
+      try {
+        var res = await fetch('/api/maps/reverse?lat=' + encodeURIComponent(lat) + '&lng=' + encodeURIComponent(lng));
+        if (!res.ok) return;
+        var json = await res.json();
+        var d = json.data || json;
+        if (d) {
+          applyAddressFields(d);
+          if (marker && (!marker.destName || marker.destName.startsWith('จุดที่ระบุบนแผนที่'))) {
+            var shortName = d.name || d.place_name || d.road || (d.tambon ? ('ต.' + d.tambon + ' อ.' + (d.amphoe || '')) : '');
+            if (shortName) {
+              marker.destName = shortName;
+              renderWaypointListUI();
+            }
+          }
+        }
+      } catch (e) {
+        if (badge) badge.textContent = '';
+      }
+    }
+
+    function addWaypointPin(lat, lng, name, presetAddr) {
       var m = L.marker([lat, lng], { draggable: true }).addTo(map);
       m.destName = name || 'จุดที่ระบุบนแผนที่';
       markers.push(m);
+      if (presetAddr) {
+        applyAddressFields(presetAddr);
+      } else {
+        reverseGeocodePin(lat, lng, m);
+      }
       m.on('dragend', function() {
+        var pos = m.getLatLng();
         m.destName = 'จุดที่ระบุบนแผนที่ (ย้ายพิกัดแล้ว)';
+        reverseGeocodePin(pos.lat, pos.lng, m);
         updateRoute();
       });
       m.on('dblclick', function() {
@@ -1645,8 +1907,7 @@ ${dateLine}
       updateRoute();
     }
 
-    async function updateRoute() {
-      // Update destination list UI and hidden input
+    function renderWaypointListUI() {
       var destListHTML = '';
       var destNames = [];
       markers.forEach(function(m, idx) {
@@ -1659,6 +1920,10 @@ ${dateLine}
       });
       document.getElementById('destListContainer').innerHTML = destListHTML;
       document.getElementById('fDestination').value = destNames.join(', ');
+    }
+
+    async function updateRoute() {
+      renderWaypointListUI();
 
       if (markers.length === 0) {
         if (routeLine) map.removeLayer(routeLine);
@@ -1671,10 +1936,11 @@ ${dateLine}
       }
       document.getElementById('mapStatus').innerText = 'กำลังคำนวณระยะทาง...';
 
+      // Build round-trip coordinates: School -> Waypoints -> School
       var coordsStr = `${SCHOOL_LNG},${SCHOOL_LAT};` + markers.map(m => {
         var pos = m.getLatLng();
         return `${pos.lng},${pos.lat}`;
-      }).join(';');
+      }).join(';') + `;${SCHOOL_LNG},${SCHOOL_LAT}`;
 
       // Save last marker as destination
       var lastPos = markers[markers.length-1].getLatLng();
@@ -1710,6 +1976,7 @@ ${dateLine}
     }
 
     var searchTimeout = null;
+    var lastSearchResults = [];
     function debounceSearch() {
       clearTimeout(searchTimeout);
       var query = document.getElementById('fDestSearch').value.trim();
@@ -1736,13 +2003,14 @@ ${dateLine}
         }
         var json = await res.json();
         var data = json.data || json;
+        lastSearchResults = Array.isArray(data) ? data : [];
         var listHTML = '';
-        if (data && data.length > 0) {
-          data.forEach(function(item) {
+        if (lastSearchResults.length > 0) {
+          lastSearchResults.forEach(function(item, idx) {
             var lat = parseFloat(item.lat);
             var lon = parseFloat(item.lon);
             var displayName = htmlEsc(item.display_name);
-            listHTML += '<div onclick="selectLocation(' + lat + ', ' + lon + ', \'' + displayName.replace(/'/g, "\\'") + '\')">' + displayName + '</div>';
+            listHTML += '<div onclick="selectLocation(' + lat + ', ' + lon + ', \'' + displayName.replace(/'/g, "\\'") + '\', ' + idx + ')">' + displayName + '</div>';
           });
         } else {
           listHTML = '<div style="color:#999">ไม่พบสถานที่นี้ (คุณสามารถคลิกบนแผนที่ได้โดยตรง)</div>';
@@ -1754,19 +2022,22 @@ ${dateLine}
       }
     }
 
-    function selectLocation(lat, lng, name) {
+    function selectLocation(lat, lng, name, resultIdx) {
       document.getElementById('fDestSearch').value = ''; // clear search box after selection
       document.getElementById('autocomplete-list').innerHTML = ''; // close dropdown
-      map.setView([lat, lng], 13);
-      addWaypointPin(lat, lng, name);
+      var addr = (resultIdx !== undefined && lastSearchResults[resultIdx] && lastSearchResults[resultIdx].thai_address) ? lastSearchResults[resultIdx].thai_address : null;
+      if (typeof map !== 'undefined' && map) {
+        map.setView([lat, lng], 13);
+        addWaypointPin(lat, lng, name, addr);
+      }
     }
 
     var PRESET_DESTINATIONS = {
-      'สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาพะเยา (สพม.พะเยา)': { lat: 19.1605, lng: 99.9118 },
-      'ศาลากลางจังหวัดพะเยา': { lat: 19.2612, lng: 99.8804 },
-      'มหาวิทยาลัยพะเยา': { lat: 19.0286, lng: 99.8970 },
-      'ท่าอากาศยานแม่ฟ้าหลวง เชียงราย': { lat: 19.9525, lng: 99.8828 },
-      'สนามกีฬาองค์การบริหารส่วนจังหวัดพะเยา': { lat: 19.1820, lng: 99.9015 }
+      'สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาพะเยา (สพม.พะเยา)': { lat: 19.1605, lng: 99.9118, tambon: 'บ้านต๋อม', amphoe: 'เมืองพะเยา', province: 'พะเยา' },
+      'ศาลากลางจังหวัดพะเยา': { lat: 19.2612, lng: 99.8804, tambon: 'บ้านต๋อม', amphoe: 'เมืองพะเยา', province: 'พะเยา' },
+      'มหาวิทยาลัยพะเยา': { lat: 19.0286, lng: 99.8970, tambon: 'แม่กา', amphoe: 'เมืองพะเยา', province: 'พะเยา' },
+      'ท่าอากาศยานแม่ฟ้าหลวง เชียงราย': { lat: 19.9525, lng: 99.8828, tambon: 'บ้านดู่', amphoe: 'เมืองเชียงราย', province: 'เชียงราย' },
+      'สนามกีฬาองค์การบริหารส่วนจังหวัดพะเยา': { lat: 19.1820, lng: 99.9015, tambon: 'บ้านต๋อม', amphoe: 'เมืองพะเยา', province: 'พะเยา' }
     };
 
     function setQuickDest(name) {
@@ -1774,7 +2045,9 @@ ${dateLine}
       if (s) s.value = name;
       if (PRESET_DESTINATIONS[name] && typeof map !== 'undefined' && map) {
         var p = PRESET_DESTINATIONS[name];
-        selectLocation(p.lat, p.lng, name);
+        document.getElementById('fDestSearch').value = '';
+        map.setView([p.lat, p.lng], 13);
+        addWaypointPin(p.lat, p.lng, name, { tambon: p.tambon, amphoe: p.amphoe, province: p.province });
       } else {
         debounceSearch();
       }
@@ -1824,6 +2097,7 @@ ${dateLine}
       var fDateEl = document.getElementById('fDate');
       var fReturnEl = document.getElementById('fReturnDate');
       var sameDay = document.getElementById('fSameDayTrip');
+      var isBackdate = document.getElementById('fBackdateTrip') && document.getElementById('fBackdateTrip').checked;
       if (fDateEl) {
         fDateEl.value = dateStr;
         if (fDateFlatpickr) fDateFlatpickr.setDate(dateStr);
@@ -1833,7 +2107,7 @@ ${dateLine}
         if (fReturnDateFlatpickr) fReturnDateFlatpickr.setDate(dateStr);
       }
       if (fReturnDateFlatpickr) {
-        fReturnDateFlatpickr.set('minDate', dateStr || 'today');
+        fReturnDateFlatpickr.set('minDate', dateStr || (isBackdate ? null : 'today'));
       }
       renderAvailabilityCalendar();
       checkAvailabilityLive();
@@ -1888,6 +2162,7 @@ ${dateLine}
 
       var todayObj = new Date();
       var todayStr = todayObj.getFullYear() + '-' + pad(todayObj.getMonth() + 1) + '-' + pad(todayObj.getDate());
+      var allowBackdate = !!(document.getElementById('fBackdateTrip') && document.getElementById('fBackdateTrip').checked);
 
       for (var day = 1; day <= lastDay.getDate(); day++) {
         var dateStr = y + '-' + pad(m + 1) + '-' + pad(day);
@@ -1908,9 +2183,12 @@ ${dateLine}
         var dotClass = 'dot-avail';
         var dotText = '🟢 ว่าง';
 
-        if (isPast) {
+        if (isPast && !allowBackdate) {
           dotClass = 'dot-past';
           dotText = '⚪ ผ่านมา';
+        } else if (isPast && allowBackdate) {
+          dotClass = 'dot-partial';
+          dotText = '⏱️ ย้อนหลัง';
         } else if (freeCars === 0) {
           dotClass = 'dot-full';
           dotText = '🔴 เต็ม';
@@ -1920,11 +2198,11 @@ ${dateLine}
         }
 
         var cellClass = 'avail-cal-day';
-        if (isPast) cellClass += ' past';
+        if (isPast && !allowBackdate) cellClass += ' past';
         if (isToday) cellClass += ' today';
         if (isSelected) cellClass += ' selected';
 
-        var clickAttr = isPast ? '' : ' onclick="selectCalDate(\'' + dateStr + '\')" title="คลิกเพื่อเลือกวันเดินทาง ' + dateStr + '"';
+        var clickAttr = (isPast && !allowBackdate) ? '' : ' onclick="selectCalDate(\'' + dateStr + '\')" title="คลิกเพื่อเลือกวันเดินทาง ' + dateStr + '"';
 
         html += '<div class="' + cellClass + '"' + clickAttr + '>';
         html += '<span class="cal-date-num">' + day + '</span>';

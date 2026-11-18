@@ -174,34 +174,64 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>📱 จัดการ QR Code</h1>
-      <p>สร้างและพิมพ์ QR Code สำหรับติดที่รถแต่ละคัน (1 QR/รถ รวม 4 รายการ)</p>
+      <h1>📱 จัดการ QR Code รถยนต์และบัตรพนักงานขับรถ</h1>
+      <p>สร้างและพิมพ์ป้าย QR Code ประจำรถ และบัตรคล้องคอประจำตัวพนักงานขับรถ (Driver ID Badge)</p>
     </div>
     <div id="navigation"></div>
 
     <div class="content">
       <div id="alertContainer"></div>
 
-      <div class="stats-row" id="statsRow">
-        <div class="stat-card">
-          <div class="stat-value" id="statTotal">-</div>
-          <div class="stat-label">จำนวนรถทั้งหมด</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="statActive">-</div>
-          <div class="stat-label">ใช้งานอยู่</div>
-        </div>
+      <div style="display:flex; gap:10px; margin-bottom:20px; border-bottom:2px solid #e2e8f0; padding-bottom:10px; flex-wrap:wrap;">
+        <button id="tabBtnVehicles" class="btn btn-primary" onclick="switchQrTab('vehicles')">🚗 ป้าย QR ประจำรถยนต์</button>
+        <button id="tabBtnDrivers" class="btn btn-outline" onclick="switchQrTab('drivers')">🪪 บัตร QR ประจำตัวพนักงานขับรถ (Driver Card)</button>
       </div>
 
-      <div class="qr-controls">
-        <input type="text" id="searchInput" placeholder="🔍 ค้นหาทะเบียน, รุ่นรถ...">
-        <button class="btn btn-primary" onclick="printAllQR()">🖨️ พิมพ์ทั้งหมด</button>
-        <button class="btn btn-secondary" onclick="loadVehicles()">🔃 รีเฟรช</button>
+      <div id="vehicleQrSection">
+        <div class="stats-row" id="statsRow">
+          <div class="stat-card">
+            <div class="stat-value" id="statTotal">-</div>
+            <div class="stat-label">จำนวนรถทั้งหมด</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statActive">-</div>
+            <div class="stat-label">ใช้งานอยู่</div>
+          </div>
+        </div>
+
+        <div class="qr-controls">
+          <input type="text" id="searchInput" placeholder="🔍 ค้นหาทะเบียน, รุ่นรถ...">
+          <button class="btn btn-primary" onclick="printAllQR()">🖨️ พิมพ์ทั้งหมด</button>
+          <button class="btn btn-secondary" onclick="loadVehicles()">🔃 รีเฟรช</button>
+        </div>
+
+        <div id="loading" class="loading">กำลังโหลดข้อมูล...</div>
+        <div id="qrGrid" class="qr-grid"></div>
+        <div id="noData" class="no-data" style="display:none;">ไม่พบข้อมูลรถ</div>
       </div>
 
-      <div id="loading" class="loading">กำลังโหลดข้อมูล...</div>
-      <div id="qrGrid" class="qr-grid"></div>
-      <div id="noData" class="no-data" style="display:none;">ไม่พบข้อมูลรถ</div>
+      <div id="driverQrSection" style="display:none;">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-value" id="statDriversTotal">-</div>
+            <div class="stat-label">พนักงานขับรถทั้งหมด</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statDriversActive">-</div>
+            <div class="stat-label">พร้อมปฏิบัติงาน</div>
+          </div>
+        </div>
+
+        <div class="qr-controls">
+          <input type="text" id="searchDriverInput" placeholder="🔍 ค้นหาชื่อพนักงานขับรถ, เบอร์โทร..." oninput="renderDriverQRCards(allDriversList)">
+          <button class="btn btn-primary" onclick="printAllDriverQR()">🖨️ พิมพ์บัตรคนขับทั้งหมด</button>
+          <button class="btn btn-secondary" onclick="loadDriverQRs()">🔃 รีเฟรช</button>
+        </div>
+
+        <div id="driverLoading" class="loading" style="display:none;">กำลังโหลดข้อมูลพนักงานขับรถ...</div>
+        <div id="driverQrGrid" class="qr-grid"></div>
+        <div id="driverNoData" class="no-data" style="display:none;">ไม่พบข้อมูลพนักงานขับรถ</div>
+      </div>
     </div>
   </div>
 
@@ -400,6 +430,177 @@
     document.getElementById('searchInput').addEventListener('input', function () {
       renderQRCards(allVehicles);
     });
+
+    var allDriversList = [];
+
+    function switchQrTab(tab) {
+      var vSec = document.getElementById('vehicleQrSection');
+      var dSec = document.getElementById('driverQrSection');
+      var vBtn = document.getElementById('tabBtnVehicles');
+      var dBtn = document.getElementById('tabBtnDrivers');
+      if (tab === 'drivers') {
+        vSec.style.display = 'none';
+        dSec.style.display = 'block';
+        vBtn.className = 'btn btn-outline';
+        dBtn.className = 'btn btn-primary';
+        if (allDriversList.length === 0) loadDriverQRs();
+      } else {
+        vSec.style.display = 'block';
+        dSec.style.display = 'none';
+        vBtn.className = 'btn btn-primary';
+        dBtn.className = 'btn btn-outline';
+      }
+    }
+
+    function buildDriverHubUrl(d) {
+      return getBaseURL() + 'qr-hub?driver=' + encodeURIComponent(d.id) + '&name=' + encodeURIComponent(d.name || '');
+    }
+
+    async function loadDriverQRs() {
+      try {
+        document.getElementById('driverLoading').style.display = 'block';
+        document.getElementById('driverQrGrid').innerHTML = '';
+        document.getElementById('driverNoData').style.display = 'none';
+
+        var result = await apiCall('getDrivers', {});
+        document.getElementById('driverLoading').style.display = 'none';
+
+        if (!result || !result.success || !result.data) {
+          document.getElementById('driverNoData').style.display = 'block';
+          return;
+        }
+
+        allDriversList = Array.isArray(result.data) ? result.data : (result.data.drivers || []);
+        var active = allDriversList.filter(function (d) { return d.status === 'active'; });
+
+        document.getElementById('statDriversTotal').textContent = allDriversList.length;
+        document.getElementById('statDriversActive').textContent = active.length;
+
+        renderDriverQRCards(allDriversList);
+      } catch (err) {
+        document.getElementById('driverLoading').style.display = 'none';
+        document.getElementById('driverNoData').textContent = handleError(err, 'loadDriverQRs');
+        document.getElementById('driverNoData').style.display = 'block';
+      }
+    }
+
+    function renderDriverQRCards(drivers) {
+      var grid = document.getElementById('driverQrGrid');
+      var noData = document.getElementById('driverNoData');
+      var search = (document.getElementById('searchDriverInput').value || '').toLowerCase();
+
+      var filtered = drivers.filter(function (d) {
+        if (!search) return true;
+        var text = ((d.name || '') + ' ' + (d.phone || '') + ' ' + (d.license_no || '')).toLowerCase();
+        return text.indexOf(search) !== -1;
+      });
+
+      grid.innerHTML = '';
+      if (filtered.length === 0) {
+        noData.style.display = 'block';
+        noData.textContent = search ? 'ไม่พบพนักงานขับรถที่ตรงกับคำค้น' : 'ไม่พบข้อมูลพนักงานขับรถ';
+        return;
+      }
+      noData.style.display = 'none';
+
+      filtered.forEach(function (d) {
+        var card = document.createElement('div');
+        card.className = 'qr-card';
+        card.style.borderTop = '4px solid #4f46e5';
+
+        var statusBadge = d.status === 'active'
+          ? '<span style="color:#16a34a;font-size:12px;">● ปฏิบัติงาน</span>'
+          : '<span style="color:#dc2626;font-size:12px;">● พักงาน/ไม่ใช้งาน</span>';
+
+        var title = d.name || 'ไม่ระบุชื่อ';
+        var sub = (d.phone ? '📞 ' + d.phone : 'พนักงานขับรถ') + ' ';
+        var titleEnc = encodeURIComponent(title);
+        var hubUrl = buildDriverHubUrl(d);
+
+        card.innerHTML =
+          '<div style="font-size:11px;font-weight:600;color:#4f46e5;margin-bottom:4px;">🪪 บัตรประจำตัวพนักงานขับรถ</div>' +
+          '<div class="qr-card-title">' + title + '</div>' +
+          '<div class="qr-card-sub">' + sub + statusBadge + '</div>' +
+          '<div class="qr-code-wrapper"><div id="dqr-' + d.id + '"></div></div>' +
+          '<div class="qr-card-hint">📲 สแกนเพื่อเปิดเมนูคนขับ<br>(ตารางคิวงาน · บันทึกใช้รถ · เติมน้ำมัน)</div>' +
+          '<div class="qr-card-actions">' +
+          '<button class="btn btn-sm btn-secondary" onclick="downloadDriverQR(\'' + d.id + '\',\'' + titleEnc + '\')">💾 ดาวน์โหลด</button>' +
+          '<button class="btn btn-sm btn-primary" onclick="printSingleDriverQR(\'' + d.id + '\')">🖨️ พิมพ์บัตร</button>' +
+          '</div>';
+
+        grid.appendChild(card);
+        makeQR('dqr-' + d.id, hubUrl, 160);
+      });
+    }
+
+    function downloadDriverQR(driverId, encodedTitle) {
+      var title = decodeURIComponent(encodedTitle);
+      var container = document.getElementById('dqr-' + driverId);
+      if (!container) return;
+      var canvas = container.querySelector('canvas');
+      var dataUrl = canvas ? canvas.toDataURL('image/png') : '';
+      if (!dataUrl) return;
+      var link = document.createElement('a');
+      link.download = 'Driver_QR_' + title + '.png';
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function printSingleDriverQR(driverId) {
+      var d = allDriversList.find(function (x) { return String(x.id) === String(driverId); });
+      if (!d) return;
+      prepareDriverPrintArea([d]);
+    }
+
+    function printAllDriverQR() {
+      var search = (document.getElementById('searchDriverInput').value || '').toLowerCase();
+      var filtered = allDriversList.filter(function (d) {
+        if (!search) return true;
+        var text = ((d.name || '') + ' ' + (d.phone || '')).toLowerCase();
+        return text.indexOf(search) !== -1;
+      });
+      if (filtered.length === 0) { alert('ไม่มีรายการบัตรที่จะพิมพ์'); return; }
+      prepareDriverPrintArea(filtered);
+    }
+
+    function prepareDriverPrintArea(drivers) {
+      var area = document.getElementById('printArea');
+      area.innerHTML = '';
+
+      drivers.forEach(function (d) {
+        var item = document.createElement('div');
+        item.className = 'print-item';
+        item.style.maxWidth = '320px';
+        item.style.margin = '0 auto 20px auto';
+        item.style.border = '2px solid #1e293b';
+        item.style.borderRadius = '12px';
+        var title = d.name || 'ไม่ระบุชื่อ';
+        var sub = d.phone ? ('โทร. ' + d.phone) : 'พนักงานขับรถ';
+        var hubUrl = buildDriverHubUrl(d);
+
+        item.innerHTML =
+          '<div style="font-size:12px;font-weight:700;color:#4f46e5;margin-bottom:4px;">โรงเรียนพะเยาพิทยาคม — บัตรประจำตัวคนขับ</div>' +
+          '<div class="print-item-title">' + title + '</div>' +
+          '<div class="print-item-sub">' + sub + '</div>' +
+          '<div id="pdqr-' + d.id + '" style="display:inline-block;margin:8px 0;"></div>' +
+          '<div class="print-item-hint">PPK DriveHub — สแกนดูคิวงานและบันทึกการเดินทาง</div>';
+
+        area.appendChild(item);
+
+        try {
+          new QRCode(document.getElementById('pdqr-' + d.id), {
+            text: hubUrl,
+            width: 170, height: 170,
+            colorDark: '#000000', colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.M
+          });
+        } catch (e) {}
+      });
+
+      requestAnimationFrame(function () { window.print(); });
+    }
 
     // Init
     loadVehicles();
