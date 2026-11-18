@@ -39,8 +39,6 @@
       }
       .vr-tabs{overflow-x:auto; white-space:nowrap; -webkit-overflow-scrolling:touch; padding-bottom:4px}
       .vr-tab{flex-shrink:0; padding:10px 14px; font-size:.88rem}
-      #mapWrapper.collapsed #map{display:none}
-      #mapWrapper.collapsed .map-toggle-btn{border-radius:var(--radius-md)}
       #mapWrapper{margin-bottom:8px}
       /* ปุ่มส่งเต็มความกว้างบน mobile */
       .vr-submit-row{flex-direction:column!important}
@@ -48,6 +46,9 @@
       /* เพิ่มชื่อ - tap target ใหญ่ขึ้น */
       #btnAddPassenger{padding:10px 18px!important;font-size:.9rem!important}
     }
+    #mapWrapper.collapsed #map{display:none}
+    #mapWrapper.collapsed .map-toggle-btn{border-radius:var(--radius-md); border-bottom:2px solid var(--color-border)}
+    #mapWrapper.collapsed .map-toggle-icon{transform:rotate(-90deg)}
     .passenger-row{display:flex;gap:8px;margin-bottom:6px;align-items:center}
     .passenger-row input{flex:1}
     .approve-section{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--radius-lg);padding:1rem;margin-top:1rem}
@@ -238,175 +239,195 @@
         <div id="bookingFormCard" class="vr-card">
           <div style="background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; border-radius:var(--radius-md); padding:10px 14px; margin-bottom:1.2rem; font-size:0.88rem; display:flex; align-items:center; gap:10px;">
             <span style="font-size:1.4rem">ℹ️</span>
-            <div><strong>หมายเหตุการจัดสรรรถ:</strong> ผู้ขอใช้รถไม่ต้องเลือกรถหรือคนขับ การจัดสรรยานพาหนะและพนักงานขับรถจะดำเนินการโดยงานยานพาหนะ (กลุ่มงานบริหารบุคคล) ตามความเหมาะสมของภารกิจ</div>
+            <div><strong>หมายเหตุการจัดสรรรถ:</strong> ผู้ขอใช้รถกรอกเฉพาะวันเวลา สถานที่ และจำนวนคน งานยานพาหนะจะเป็นผู้จัดรถและพนักงานขับรถที่ว่างและเหมาะสมให้ (หากต้องการระบุคันรถที่ต้องการเป็นพิเศษ สามารถระบุในช่องหมายเหตุด้านล่างได้)</div>
           </div>
-          <h3 style="margin-bottom:1rem">กรอกแบบฟอร์มขอใช้รถ</h3>
+          <div id="preferredCarBanner" style="display:none; background:#f0fdf4; border:1.5px solid #86efac; color:#166534; border-radius:var(--radius-md); padding:10px 14px; margin-bottom:1rem; font-size:0.9rem; font-weight:600;"></div>
+          <h3 style="margin-bottom:1rem">📝 แบบฟอร์มขอใช้รถราชการ (กรอกง่าย 3 ส่วน)</h3>
           <form id="requestForm" onsubmit="submitRequest(event)">
-            <div class="vr-form-grid">
-              <div class="form-group">
-                <label>ชื่อ-สกุล ผู้ขอ <span style="color:var(--color-danger)">*</span></label>
-                <input type="text" id="fRequesterName" class="form-control" placeholder="ระบุชื่อ-นามสกุลจริง (ภาษาไทย)" required>
-              </div>
-              <div class="form-group">
-                <label>กลุ่มสาระ/หน่วยงาน</label>
-                <select id="fDepartment" class="form-control">
-                  <option value="">-- เลือกกลุ่มสาระ/หน่วยงาน --</option>
-                  <option value="ฝ่ายบริหาร">ฝ่ายบริหาร</option>
-                  <option value="งานยานพาหนะ / กลุ่มงานบริหารบุคคล">งานยานพาหนะ / กลุ่มงานบริหารบุคคล</option>
-                  <option value="กลุ่มงานบริหารบุคคล">กลุ่มงานบริหารบุคคล</option>
-                  <option value="กลุ่มงานบริหารวิชาการ">กลุ่มงานบริหารวิชาการ</option>
-                  <option value="กลุ่มงานบริหารงบประมาณและแผนงาน">กลุ่มงานบริหารงบประมาณและแผนงาน</option>
-                  <option value="กลุ่มงานบริหารทั่วไป">กลุ่มงานบริหารทั่วไป</option>
-                  <option value="กลุ่มสาระการเรียนรู้วิทยาศาสตร์และเทคโนโลยี">กลุ่มสาระการเรียนรู้วิทยาศาสตร์และเทคโนโลยี</option>
-                  <option value="กลุ่มสาระการเรียนรู้คณิตศาสตร์">กลุ่มสาระการเรียนรู้คณิตศาสตร์</option>
-                  <option value="กลุ่มสาระการเรียนรู้ภาษาไทย">กลุ่มสาระการเรียนรู้ภาษาไทย</option>
-                  <option value="กลุ่มสาระการเรียนรู้ภาษาต่างประเทศ">กลุ่มสาระการเรียนรู้ภาษาต่างประเทศ</option>
-                  <option value="กลุ่มสาระการเรียนรู้สังคมศึกษา ศาสนา และวัฒนธรรม">กลุ่มสาระการเรียนรู้สังคมศึกษา ศาสนา และวัฒนธรรม</option>
-                  <option value="กลุ่มสาระการเรียนรู้สุขศึกษาและพลศึกษา">กลุ่มสาระการเรียนรู้สุขศึกษาและพลศึกษา</option>
-                  <option value="กลุ่มสาระการเรียนรู้ศิลปะ">กลุ่มสาระการเรียนรู้ศิลปะ</option>
-                  <option value="กลุ่มสาระการเรียนรู้การงานอาชีพ">กลุ่มสาระการเรียนรู้การงานอาชีพ</option>
-                  <option value="กิจกรรมพัฒนาผู้เรียน">กิจกรรมพัฒนาผู้เรียน</option>
-                  <option value="เจ้าหน้าที่">เจ้าหน้าที่</option>
-                  <option value="อื่นๆ">อื่นๆ</option>
-                </select>
-              </div>
-              <div class="form-group" style="grid-column:1/-1">
-                <label>เบอร์โทรศัพท์ติดต่อผู้ขอ <span style="color:var(--color-danger)">*</span></label>
-                <input type="tel" id="fRequesterPhone" class="form-control" placeholder="เช่น 081-234-5678" required>
-              </div>
-              <div class="form-group" style="grid-column:1/-1; margin: -2px 0 4px 0; display:flex; flex-wrap:wrap; gap:10px;">
-                <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; color:var(--color-primary); background:#eff6ff; padding:8px 12px; border-radius:var(--radius-md); border:1px solid #bfdbfe; user-select:none;">
-                  <input type="checkbox" id="fSameDayTrip" checked onchange="toggleSameDayTrip(this.checked)" style="width:18px; height:18px; accent-color:var(--color-primary); cursor:pointer;">
-                  <span>🚗 เดินทางไป-กลับในวันเดียว (Same-Day Trip)</span>
-                </label>
-                <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; color:#92400e; background:#fffbeb; padding:8px 12px; border-radius:var(--radius-md); border:1px solid #fde68a; user-select:none;">
-                  <input type="checkbox" id="fBackdateTrip" onchange="toggleBackdateTrip(this.checked)" style="width:18px; height:18px; accent-color:#d97706; cursor:pointer;">
-                  <span>⏱️ บันทึกการใช้รถย้อนหลัง (กรณีฉุกเฉิน/เดินทางด่วน)</span>
-                </label>
-              </div>
-              <div id="backdateNoticeBox" style="display:none; grid-column:1/-1; background:#fffbeb; border:1px solid #fcd34d; color:#92400e; padding:10px 14px; border-radius:var(--radius-md); font-size:0.86rem;">
-                ⚠️ <strong>โหมดบันทึกการใช้รถย้อนหลัง:</strong> ระบบได้ปลดล็อกให้เลือกวันที่ย้อนหลังได้แล้ว (สำหรับภารกิจฉุกเฉิน/เร่งด่วนที่เดินทางไปแล้ว) ระบบจะบันทึกสถานะกำกับไว้ในประวัติ
-              </div>
-              <div class="form-group">
-                <label>วันที่ออกเดินทาง <span style="color:var(--color-danger)">*</span></label>
-                <input type="text" id="fDate" class="form-control" placeholder="เลือกวันที่" required>
-              </div>
-              <div class="form-group">
-                <label>เวลาออกเดินทาง <span style="color:var(--color-danger)">*</span></label>
-                <div style="position:relative">
-                  <input type="text" id="fTimeStart" class="form-control" placeholder="เลือกเวลา" value="08:30" style="background:#fff; cursor:pointer; padding-right:36px;" required>
-                  <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); pointer-events:none; font-size:1.1rem">⏰</span>
+            <div style="background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:var(--radius-lg); padding:16px 18px; margin-bottom:16px;">
+              <div style="font-weight:700; color:var(--color-primary-dark); font-size:1rem; margin-bottom:12px; padding-bottom:6px; border-bottom:2px solid #e0e7ff;">👤 ส่วนที่ 1: ข้อมูลผู้ขอใช้รถ</div>
+              <div class="vr-form-grid">
+                <div class="form-group">
+                  <label>ชื่อ-สกุล ผู้ขอ <span style="color:var(--color-danger)">*</span></label>
+                  <input type="text" id="fRequesterName" class="form-control" placeholder="ระบุชื่อ-นามสกุลจริง (ภาษาไทย)" required>
                 </div>
-              </div>
-
-              <div class="form-group" id="groupReturnDate" style="display:none;">
-                <label>วันที่กลับ <span style="color:var(--color-danger)">*</span></label>
-                <input type="text" id="fReturnDate" class="form-control" placeholder="เลือกวันที่" required>
-              </div>
-              <div class="form-group" id="groupReturnTime">
-                <label>เวลากลับถึงโรงเรียน <span style="color:var(--color-danger)">*</span></label>
-                <div style="position:relative">
-                  <input type="text" id="fTimeEnd" class="form-control" placeholder="เลือกเวลา" value="16:30" style="background:#fff; cursor:pointer; padding-right:36px;" required>
-                  <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); pointer-events:none; font-size:1.1rem">⏰</span>
+                <div class="form-group">
+                  <label>กลุ่มสาระ/หน่วยงาน</label>
+                  <select id="fDepartment" class="form-control">
+                    <option value="">-- เลือกกลุ่มสาระ/หน่วยงาน --</option>
+                    <option value="ฝ่ายบริหาร">ฝ่ายบริหาร</option>
+                    <option value="งานยานพาหนะ / กลุ่มงานบริหารบุคคล">งานยานพาหนะ / กลุ่มงานบริหารบุคคล</option>
+                    <option value="กลุ่มงานบริหารบุคคล">กลุ่มงานบริหารบุคคล</option>
+                    <option value="กลุ่มงานบริหารวิชาการ">กลุ่มงานบริหารวิชาการ</option>
+                    <option value="กลุ่มงานบริหารงบประมาณและแผนงาน">กลุ่มงานบริหารงบประมาณและแผนงาน</option>
+                    <option value="กลุ่มงานบริหารทั่วไป">กลุ่มงานบริหารทั่วไป</option>
+                    <option value="กลุ่มสาระการเรียนรู้วิทยาศาสตร์และเทคโนโลยี">กลุ่มสาระการเรียนรู้วิทยาศาสตร์และเทคโนโลยี</option>
+                    <option value="กลุ่มสาระการเรียนรู้คณิตศาสตร์">กลุ่มสาระการเรียนรู้คณิตศาสตร์</option>
+                    <option value="กลุ่มสาระการเรียนรู้ภาษาไทย">กลุ่มสาระการเรียนรู้ภาษาไทย</option>
+                    <option value="กลุ่มสาระการเรียนรู้ภาษาต่างประเทศ">กลุ่มสาระการเรียนรู้ภาษาต่างประเทศ</option>
+                    <option value="กลุ่มสาระการเรียนรู้สังคมศึกษา ศาสนา และวัฒนธรรม">กลุ่มสาระการเรียนรู้สังคมศึกษา ศาสนา และวัฒนธรรม</option>
+                    <option value="กลุ่มสาระการเรียนรู้สุขศึกษาและพลศึกษา">กลุ่มสาระการเรียนรู้สุขศึกษาและพลศึกษา</option>
+                    <option value="กลุ่มสาระการเรียนรู้ศิลปะ">กลุ่มสาระการเรียนรู้ศิลปะ</option>
+                    <option value="กลุ่มสาระการเรียนรู้การงานอาชีพ">กลุ่มสาระการเรียนรู้การงานอาชีพ</option>
+                    <option value="กิจกรรมพัฒนาผู้เรียน">กิจกรรมพัฒนาผู้เรียน</option>
+                    <option value="เจ้าหน้าที่">เจ้าหน้าที่</option>
+                    <option value="อื่นๆ">อื่นๆ</option>
+                  </select>
                 </div>
-              </div>
-              <div class="form-group" style="grid-column:1/-1">
-                <label>สถานที่ปลายทาง <span style="color:var(--color-danger)">*</span></label>
-                <div style="position:relative; margin-bottom:8px;">
-                  <input type="text" id="fDestSearch" class="form-control" placeholder="พิมพ์ค้นหาสถานที่ หรือคลิกบนแผนที่เพื่อปักหมุด" oninput="debounceSearch()" style="width: 100%;">
-                  <div id="autocomplete-list" class="autocomplete-items"></div>
+                <div class="form-group" style="grid-column:1/-1; margin-bottom:0;">
+                  <label>เบอร์โทรศัพท์ติดต่อผู้ขอ <span style="color:var(--color-danger)">*</span></label>
+                  <input type="tel" id="fRequesterPhone" class="form-control" placeholder="เช่น 081-234-5678" required>
                 </div>
-                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
-                  <span style="font-size:0.8rem; color:var(--color-text-muted); font-weight:600;">ปลายทางบ่อย:</span>
-                  <button type="button" class="btn btn-sm btn-outline" onclick="setQuickDest('สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาพะเยา (สพม.พะเยา)')" style="font-size:0.8rem; padding:4px 10px; background:#f8fafc;">สพม.พะเยา</button>
-                  <button type="button" class="btn btn-sm btn-outline" onclick="setQuickDest('ศาลากลางจังหวัดพะเยา')" style="font-size:0.8rem; padding:4px 10px; background:#f8fafc;">ศาลากลาง จ.พะเยา</button>
-                  <button type="button" class="btn btn-sm btn-outline" onclick="setQuickDest('มหาวิทยาลัยพะเยา')" style="font-size:0.8rem; padding:4px 10px; background:#f8fafc;">ม.พะเยา</button>
-                  <button type="button" class="btn btn-sm btn-outline" onclick="setQuickDest('ท่าอากาศยานแม่ฟ้าหลวง เชียงราย')" style="font-size:0.8rem; padding:4px 10px; background:#f8fafc;">สนามบินเชียงราย</button>
-                  <button type="button" class="btn btn-sm btn-outline" onclick="setQuickDest('สนามกีฬาองค์การบริหารส่วนจังหวัดพะเยา')" style="font-size:0.8rem; padding:4px 10px; background:#f8fafc;">สนามกีฬา อบจ.</button>
-                </div>
-                <div id="destListContainer" style="margin-bottom:8px;"></div>
-                <input type="hidden" id="fDestination">
-
-                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px; margin-bottom:10px; background:#f8fafc; padding:10px 12px; border-radius:var(--radius-md); border:1px solid #e2e8f0;">
-                  <div style="grid-column:1/-1; font-size:0.78rem; color:#475569; font-weight:600; display:flex; align-items:center; justify-content:space-between;">
-                    <span>📍 ข้อมูลเขตปกครองสำหรับเอกสารราชการ (ดึงพิกัดอัตโนมัติ / แก้ไขได้)</span>
-                    <span id="reverseGeoBadge" style="font-weight:500; color:var(--color-primary);"></span>
-                  </div>
-                  <div>
-                    <label style="font-size:0.78rem; color:#64748b; margin-bottom:2px; display:block;">ตำบล/แขวง</label>
-                    <input type="text" id="fTambon" class="form-control" placeholder="ระบุตำบล" style="font-size:0.88rem; padding:6px 10px;">
-                  </div>
-                  <div>
-                    <label style="font-size:0.78rem; color:#64748b; margin-bottom:2px; display:block;">อำเภอ/เขต</label>
-                    <input type="text" id="fAmphoe" class="form-control" placeholder="ระบุอำเภอ" style="font-size:0.88rem; padding:6px 10px;">
-                  </div>
-                  <div>
-                    <label style="font-size:0.78rem; color:#64748b; margin-bottom:2px; display:block;">จังหวัด</label>
-                    <input type="text" id="fProvince" class="form-control" placeholder="ระบุจังหวัด" style="font-size:0.88rem; padding:6px 10px;">
-                  </div>
-                </div>
-
-                <!-- Map with collapse toggle for mobile -->
-                <div id="mapWrapper" class="map-touch-shield">
-                  <button type="button" class="map-toggle-btn" onclick="toggleMap()" id="mapToggleBtn">
-                    <span>🗺️ แผนที่ — คลิกปักหมุดปลายทาง</span>
-                    <i class="map-toggle-icon">▼</i>
-                  </button>
-                  <div id="map"></div>
-                </div>
-
-                <div style="margin-top:8px; font-size:0.85rem; color:var(--color-text-light);">
-                  <span id="mapStatus">💡 คลิกบนแผนที่เพื่อเพิ่มจุดแวะพัก/ปลายทาง (ดับเบิ้ลคลิกเพื่อลบหมุด)</span>
-                  <input type="hidden" id="fWaypoints">
-                  <input type="hidden" id="fDestLat">
-                  <input type="hidden" id="fDestLng">
-                  <input type="hidden" id="fEstimatedKm">
-                </div>
-              </div>
-
-              <div id="availabilityAlert" style="display:none;grid-column:1/-1;padding:10px 14px;border-radius:var(--radius-md);font-size:0.92rem;font-weight:500;"></div>
-
-              <div class="form-group" style="grid-column:1/-1">
-                <label>วัตถุประสงค์</label>
-                <textarea id="fPurpose" class="form-control" rows="2"></textarea>
-              </div>
-              <div class="form-group">
-                <label>จำนวนผู้ร่วมเดินทาง</label>
-                <input type="number" id="fPassengers" class="form-control" min="1" value="1" onchange="updatePassengerFields()">
-              </div>
-              <div class="form-group" style="grid-column:1/-1">
-                <div style="background:#fff3cd; color:#856404; padding:10px; border-radius:var(--radius-md); font-size:0.9rem; border:1px solid #ffeeba;">
-                  ⚠️ <strong>หมายเหตุ:</strong> การขอใช้รถปกติควรดำเนินการล่วงหน้าอย่างน้อย 3 วันทำการ <b>กรณีฉุกเฉินหรือเร่งด่วน</b> โปรดติดต่อหัวหน้างานยานพาหนะ กลุ่มงานบริหารบุคคล โดยตรง
-                </div>
-              </div>
-              <div class="form-group" style="grid-column:1/-1">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
-                  <label style="margin:0; font-weight:600;">รายชื่อผู้ร่วมเดินทาง</label>
-                  <div style="display:flex; gap:6px;">
-                    <button type="button" id="btnAddPassenger" class="btn btn-sm btn-outline" onclick="addPassengerRow()" style="font-size:.82rem; padding:6px 12px;">➕ เพิ่มทีละคน</button>
-                    <button type="button" class="btn btn-sm" onclick="toggleBulkPassengerModal()" style="font-size:.82rem; padding:6px 12px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:500;">📋 วางรายชื่อหลายคน</button>
-                  </div>
-                </div>
-                <div id="bulkPassengerBox" style="display:none; background:#f8fafc; border:1px solid #cbd5e1; border-radius:var(--radius-md); padding:12px; margin-bottom:10px;">
-                  <div style="font-size:0.85rem; font-weight:600; color:#334155; margin-bottom:6px;">
-                    วางรายชื่อจาก Excel หรือ Word (1 บรรทัด ต่อ 1 คน):
-                  </div>
-                  <textarea id="bulkPassengerText" class="form-control" rows="4" placeholder="นายสมชาย ใจดี&#10;นางสาวสมศรี มีสุข&#10;เด็กชายรักเรียน เพียรดี"></textarea>
-                  <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
-                    <button type="button" class="btn btn-sm btn-outline" onclick="toggleBulkPassengerModal()">ยกเลิก</button>
-                    <button type="button" class="btn btn-sm btn-primary" onclick="applyBulkPassengers()">📥 นำเข้ารายชื่อ</button>
-                  </div>
-                </div>
-                <div id="passengerList"></div>
-              </div>
-              <div class="form-group" style="grid-column:1/-1">
-                <label>หมายเหตุ</label>
-                <textarea id="fNotes" class="form-control" rows="2"></textarea>
               </div>
             </div>
+
+            <div style="background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:var(--radius-lg); padding:16px 18px; margin-bottom:16px;">
+              <div style="font-weight:700; color:var(--color-primary-dark); font-size:1rem; margin-bottom:12px; padding-bottom:6px; border-bottom:2px solid #e0e7ff;">📅 ส่วนที่ 2: วันเวลาและสถานที่เดินทาง</div>
+              <div class="vr-form-grid">
+                <div class="form-group" style="grid-column:1/-1; margin: -2px 0 4px 0; display:flex; flex-wrap:wrap; gap:10px;">
+                  <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; color:var(--color-primary); background:#eff6ff; padding:8px 12px; border-radius:var(--radius-md); border:1px solid #bfdbfe; user-select:none;">
+                    <input type="checkbox" id="fSameDayTrip" checked onchange="toggleSameDayTrip(this.checked)" style="width:18px; height:18px; accent-color:var(--color-primary); cursor:pointer;">
+                    <span>🚗 เดินทางไป-กลับในวันเดียว</span>
+                  </label>
+                  <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; color:#92400e; background:#fffbeb; padding:8px 12px; border-radius:var(--radius-md); border:1px solid #fde68a; user-select:none;">
+                    <input type="checkbox" id="fBackdateTrip" onchange="toggleBackdateTrip(this.checked)" style="width:18px; height:18px; accent-color:#d97706; cursor:pointer;">
+                    <span>⏱️ บันทึกย้อนหลัง (กรณีเดินทางด่วนไปแล้ว)</span>
+                  </label>
+                </div>
+                <div id="backdateNoticeBox" style="display:none; grid-column:1/-1; background:#fffbeb; border:1px solid #fcd34d; color:#92400e; padding:10px 14px; border-radius:var(--radius-md); font-size:0.86rem;">
+                  ⚠️ <strong>โหมดบันทึกการใช้รถย้อนหลัง:</strong> ระบบได้ปลดล็อกให้เลือกวันที่ย้อนหลังได้แล้ว (สำหรับภารกิจฉุกเฉิน/เร่งด่วนที่เดินทางไปแล้ว) ระบบจะบันทึกสถานะกำกับไว้ในประวัติ
+                </div>
+                <div class="form-group">
+                  <label>วันที่ออกเดินทาง <span style="color:var(--color-danger)">*</span></label>
+                  <input type="text" id="fDate" class="form-control" placeholder="เลือกวันที่" required>
+                </div>
+                <div class="form-group">
+                  <label>เวลาออกเดินทาง <span style="color:var(--color-danger)">*</span></label>
+                  <div style="position:relative">
+                    <input type="text" id="fTimeStart" class="form-control" placeholder="เลือกเวลา" value="08:30" style="background:#fff; cursor:pointer; padding-right:36px;" required>
+                    <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); pointer-events:none; font-size:1.1rem">⏰</span>
+                  </div>
+                </div>
+
+                <div class="form-group" id="groupReturnDate" style="display:none;">
+                  <label>วันที่กลับ <span style="color:var(--color-danger)">*</span></label>
+                  <input type="text" id="fReturnDate" class="form-control" placeholder="เลือกวันที่" required>
+                </div>
+                <div class="form-group" id="groupReturnTime">
+                  <label>เวลากลับถึงโรงเรียน <span style="color:var(--color-danger)">*</span></label>
+                  <div style="position:relative">
+                    <input type="text" id="fTimeEnd" class="form-control" placeholder="เลือกเวลา" value="16:30" style="background:#fff; cursor:pointer; padding-right:36px;" required>
+                    <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); pointer-events:none; font-size:1.1rem">⏰</span>
+                  </div>
+                </div>
+                <div class="form-group" style="grid-column:1/-1; margin-bottom:0;">
+                  <label>สถานที่ปลายทาง <span style="color:var(--color-danger)">*</span></label>
+                  <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+                    <span style="font-size:0.84rem; color:var(--color-text-muted); font-weight:600;">⚡ กดเลือกสถานที่ไปบ่อย:</span>
+                    <button type="button" class="btn btn-sm btn-outline" onclick="setQuickDest('สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาพะเยา (สพม.พะเยา)')" style="font-size:0.84rem; padding:6px 12px; background:#fff;">สพม.พะเยา</button>
+                    <button type="button" class="btn btn-sm btn-outline" onclick="setQuickDest('ศาลากลางจังหวัดพะเยา')" style="font-size:0.84rem; padding:6px 12px; background:#fff;">ศาลากลาง จ.พะเยา</button>
+                    <button type="button" class="btn btn-sm btn-outline" onclick="setQuickDest('มหาวิทยาลัยพะเยา')" style="font-size:0.84rem; padding:6px 12px; background:#fff;">ม.พะเยา</button>
+                    <button type="button" class="btn btn-sm btn-outline" onclick="setQuickDest('ท่าอากาศยานแม่ฟ้าหลวง เชียงราย')" style="font-size:0.84rem; padding:6px 12px; background:#fff;">สนามบินเชียงราย</button>
+                    <button type="button" class="btn btn-sm btn-outline" onclick="setQuickDest('สนามกีฬาองค์การบริหารส่วนจังหวัดพะเยา')" style="font-size:0.84rem; padding:6px 12px; background:#fff;">สนามกีฬา อบจ.</button>
+                  </div>
+                  <div style="position:relative; margin-bottom:8px;">
+                    <input type="text" id="fDestSearch" class="form-control" placeholder="พิมพ์ชื่อสถานที่ปลายทาง เช่น โรงเรียน..., โรงแรม..., หรือกดปุ่มด้านบน" oninput="debounceSearch()" style="width: 100%; font-size: 1rem;">
+                    <div id="autocomplete-list" class="autocomplete-items"></div>
+                  </div>
+                  <div id="destListContainer" style="margin-bottom:8px;"></div>
+                  <input type="hidden" id="fDestination">
+
+                  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px; margin-bottom:10px; background:#fff; padding:10px 12px; border-radius:var(--radius-md); border:1px solid #e2e8f0;">
+                    <div style="grid-column:1/-1; font-size:0.8rem; color:#475569; font-weight:600; display:flex; align-items:center; justify-content:space-between;">
+                      <span>📍 ตำบล / อำเภอ / จังหวัด (ใช้พิมพ์ลงแบบฟอร์มราชการ — ระบบเติมให้อัตโนมัติหรือพิมพ์แก้ไขได้)</span>
+                      <span id="reverseGeoBadge" style="font-weight:600; color:var(--color-primary);"></span>
+                    </div>
+                    <div>
+                      <label style="font-size:0.78rem; color:#475569; margin-bottom:2px; display:block;">ตำบล/แขวง</label>
+                      <input type="text" id="fTambon" class="form-control" placeholder="ระบุตำบล" style="font-size:1rem; padding:8px 10px;">
+                    </div>
+                    <div>
+                      <label style="font-size:0.78rem; color:#475569; margin-bottom:2px; display:block;">อำเภอ/เขต</label>
+                      <input type="text" id="fAmphoe" class="form-control" placeholder="ระบุอำเภอ" style="font-size:1rem; padding:8px 10px;">
+                    </div>
+                    <div>
+                      <label style="font-size:0.78rem; color:#475569; margin-bottom:2px; display:block;">จังหวัด</label>
+                      <input type="text" id="fProvince" class="form-control" placeholder="ระบุจังหวัด" style="font-size:1rem; padding:8px 10px;">
+                    </div>
+                  </div>
+
+                  <!-- Map with collapse toggle (collapsed by default to keep form clean) -->
+                  <div id="mapWrapper" class="map-touch-shield collapsed">
+                    <button type="button" class="map-toggle-btn" onclick="toggleMap()" id="mapToggleBtn">
+                      <span>🗺️ เปิดแผนที่เพื่อปักหมุดจุดแวะพัก (ไม่บังคับ)</span>
+                      <i class="map-toggle-icon" style="transform:rotate(-90deg)">▼</i>
+                    </button>
+                    <div id="map"></div>
+                  </div>
+
+                  <div style="margin-top:6px; font-size:0.82rem; color:var(--color-text-muted);">
+                    <span id="mapStatus">💡 พิมพ์ชื่อสถานที่ในช่องค้นหา หรือกดเปิดแผนที่หากต้องการปักหมุดหลายจุด</span>
+                    <input type="hidden" id="fWaypoints">
+                    <input type="hidden" id="fDestLat">
+                    <input type="hidden" id="fDestLng">
+                    <input type="hidden" id="fEstimatedKm">
+                  </div>
+                </div>
+
+                <div id="availabilityAlert" style="display:none;grid-column:1/-1;padding:10px 14px;border-radius:var(--radius-md);font-size:0.92rem;font-weight:500;"></div>
+              </div>
+            </div>
+
+            <div style="background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:var(--radius-lg); padding:16px 18px; margin-bottom:16px;">
+              <div style="font-weight:700; color:var(--color-primary-dark); font-size:1rem; margin-bottom:12px; padding-bottom:6px; border-bottom:2px solid #e0e7ff;">🎯 ส่วนที่ 3: วัตถุประสงค์และจำนวนผู้เดินทาง</div>
+              <div class="vr-form-grid">
+                <div class="form-group" style="grid-column:1/-1">
+                  <label>วัตถุประสงค์ (ไปราชการเรื่องใด) <span style="color:var(--color-danger)">*</span></label>
+                  <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+                    <span style="font-size:0.82rem; color:var(--color-text-muted); font-weight:600;">⚡ เลือกด่วน:</span>
+                    <button type="button" class="btn btn-sm btn-outline" onclick="setQuickPurpose('เข้าร่วมประชุม/อบรมสัมมนาทางวิชาการ')" style="font-size:0.82rem; padding:4px 10px; background:#fff;">ประชุม/อบรม</button>
+                    <button type="button" class="btn btn-sm btn-outline" onclick="setQuickPurpose('นำนักเรียนเข้าร่วมการแข่งขันทักษะวิชาการ/กีฬา')" style="font-size:0.82rem; padding:4px 10px; background:#fff;">พานักเรียนไปแข่งขัน</button>
+                    <button type="button" class="btn btn-sm btn-outline" onclick="setQuickPurpose('ติดต่อราชการและรับ-ส่งเอกสารทางราชการ')" style="font-size:0.82rem; padding:4px 10px; background:#fff;">ติดต่อราชการ/ส่งเอกสาร</button>
+                    <button type="button" class="btn btn-sm btn-outline" onclick="setQuickPurpose('นำคณะครูและบุคลากรไปศึกษาดูงาน')" style="font-size:0.82rem; padding:4px 10px; background:#fff;">ศึกษาดูงาน</button>
+                  </div>
+                  <textarea id="fPurpose" class="form-control" rows="2" placeholder="ระบุวัตถุประสงค์ในการเดินทาง..." required></textarea>
+                </div>
+                <div class="form-group">
+                  <label>จำนวนผู้ร่วมเดินทาง (คน) <span style="color:var(--color-danger)">*</span></label>
+                  <input type="number" id="fPassengers" class="form-control" min="1" value="1" onchange="updatePassengerFields()" required>
+                </div>
+                <div class="form-group" style="grid-column:1/-1">
+                  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+                    <label style="margin:0; font-weight:600;">รายชื่อผู้ร่วมเดินทาง (ถ้ามี)</label>
+                    <div style="display:flex; gap:6px;">
+                      <button type="button" id="btnAddPassenger" class="btn btn-sm btn-outline" onclick="addPassengerRow()" style="font-size:.82rem; padding:6px 12px; background:#fff;">➕ เพิ่มรายชื่อทีละคน</button>
+                      <button type="button" class="btn btn-sm" onclick="toggleBulkPassengerModal()" style="font-size:.82rem; padding:6px 12px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:600;">📋 วางรายชื่อหลายคนจาก Word/Excel</button>
+                    </div>
+                  </div>
+                  <div id="bulkPassengerBox" style="display:none; background:#fff; border:1px solid #cbd5e1; border-radius:var(--radius-md); padding:12px; margin-bottom:10px;">
+                    <div style="font-size:0.85rem; font-weight:600; color:#334155; margin-bottom:6px;">
+                      วางรายชื่อจาก Excel หรือ Word (1 บรรทัด ต่อ 1 คน):
+                    </div>
+                    <textarea id="bulkPassengerText" class="form-control" rows="4" placeholder="นายสมชาย ใจดี&#10;นางสาวสมศรี มีสุข&#10;เด็กชายรักเรียน เพียรดี"></textarea>
+                    <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
+                      <button type="button" class="btn btn-sm btn-outline" onclick="toggleBulkPassengerModal()">ยกเลิก</button>
+                      <button type="button" class="btn btn-sm btn-primary" onclick="applyBulkPassengers()">📥 นำเข้ารายชื่อ</button>
+                    </div>
+                  </div>
+                  <div id="passengerList"></div>
+                </div>
+                <div class="form-group" style="grid-column:1/-1; margin-bottom:0;">
+                  <label>หมายเหตุถึงงานยานพาหนะ (ถ้ามี)</label>
+                  <textarea id="fNotes" class="form-control" rows="2" placeholder="เช่น จุดนัดรับหน้าอาคาร 1 หรือความต้องการเพิ่มเติม"></textarea>
+                </div>
+              </div>
+            </div>
+            <div style="background:#fffbeb; color:#92400e; padding:10px 14px; border-radius:var(--radius-md); font-size:0.88rem; border:1px solid #fde68a; margin-bottom:14px;">
+              💡 <strong>คำแนะนำ:</strong> การขอใช้รถปกติควรยื่นล่วงหน้าอย่างน้อย 3 วันทำการ หลังกดส่งคำขอแล้ว ท่านสามารถกด <strong>"🖨️ พิมพ์ใบคำขอ"</strong> ในหน้าถัดไปได้ทันที
+            </div>
             <div style="display:flex;gap:12px;margin-top:1.25rem;align-items:center" class="vr-submit-row">
-              <button type="submit" id="btnSubmitRequest" class="btn btn-primary" style="flex:2; padding:12px 20px; font-size:1.02rem; font-weight:700; box-shadow:0 4px 12px rgba(79,70,229,0.2);">📤 ส่งคำขอใช้รถ</button>
-              <button type="button" class="btn btn-outline" onclick="printRequest()" style="flex:1; padding:12px 16px; font-size:.92rem;">🖨️ พิมพ์แบบฟอร์ม</button>
+              <button type="submit" id="btnSubmitRequest" class="btn btn-primary" style="flex:2; padding:14px 20px; font-size:1.05rem; font-weight:700; box-shadow:0 4px 12px rgba(79,70,229,0.2);">📤 ส่งคำขอใช้รถ</button>
+              <button type="button" class="btn btn-outline" onclick="printRequest()" style="flex:1; padding:14px 16px; font-size:.95rem;">🖨️ พิมพ์แบบฟอร์มตัวอย่าง</button>
             </div>
           </form>
         </div>
@@ -872,6 +893,10 @@
           document.getElementById('fDestSearch').value = '';
           if (document.getElementById('reverseGeoBadge')) document.getElementById('reverseGeoBadge').textContent = '';
           if (typeof renderAvailabilityCalendar === 'function') renderAvailabilityCalendar();
+          setTimeout(function() {
+            switchTab('mylist');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }, 400);
         } else {
           showAlert((res && res.error) || 'เกิดข้อผิดพลาด', 'danger');
         }
@@ -2040,14 +2065,27 @@ ${dateLine}
       'สนามกีฬาองค์การบริหารส่วนจังหวัดพะเยา': { lat: 19.1820, lng: 99.9015, tambon: 'บ้านต๋อม', amphoe: 'เมืองพะเยา', province: 'พะเยา' }
     };
 
+    function setQuickPurpose(text) {
+      var pEl = document.getElementById('fPurpose');
+      if (pEl) {
+        pEl.value = text;
+        pEl.focus();
+      }
+    }
+
     function setQuickDest(name) {
       var s = document.getElementById('fDestSearch');
       if (s) s.value = name;
-      if (PRESET_DESTINATIONS[name] && typeof map !== 'undefined' && map) {
+      if (PRESET_DESTINATIONS[name]) {
         var p = PRESET_DESTINATIONS[name];
-        document.getElementById('fDestSearch').value = '';
-        map.setView([p.lat, p.lng], 13);
-        addWaypointPin(p.lat, p.lng, name, { tambon: p.tambon, amphoe: p.amphoe, province: p.province });
+        applyAddressFields({ tambon: p.tambon, amphoe: p.amphoe, province: p.province });
+        if (typeof map !== 'undefined' && map) {
+          document.getElementById('fDestSearch').value = '';
+          map.setView([p.lat, p.lng], 13);
+          addWaypointPin(p.lat, p.lng, name, { tambon: p.tambon, amphoe: p.amphoe, province: p.province });
+        } else {
+          document.getElementById('fDestination').value = name;
+        }
       } else {
         debounceSearch();
       }
@@ -2314,6 +2352,40 @@ ${dateLine}
           var urlParams = new URLSearchParams(window.location.search);
           var initialTab = urlParams.get('tab');
           var approveId = urlParams.get('approve_id');
+          var preDate = urlParams.get('date');
+          var preTimeStart = urlParams.get('time_start');
+          var preTimeEnd = urlParams.get('time_end');
+          var preCarId = urlParams.get('car_id');
+
+          if (preDate) {
+            selectCalDate(preDate);
+          }
+          if (preTimeStart && document.getElementById('fTimeStart')) {
+            document.getElementById('fTimeStart').value = preTimeStart;
+            if (document.getElementById('fTimeStart')._flatpickr) {
+              document.getElementById('fTimeStart')._flatpickr.setDate(preTimeStart, false);
+            }
+          }
+          if (preTimeEnd && document.getElementById('fTimeEnd')) {
+            document.getElementById('fTimeEnd').value = preTimeEnd;
+            if (document.getElementById('fTimeEnd')._flatpickr) {
+              document.getElementById('fTimeEnd')._flatpickr.setDate(preTimeEnd, false);
+            }
+          }
+          if (preCarId) {
+            var matchedCar = allCars.find(function(c) { return c.id === preCarId; });
+            var carLabel = matchedCar ? (matchedCar.license_plate + ' (' + (matchedCar.brand || '') + ' ' + (matchedCar.model || '') + ')') : preCarId;
+            var prefBanner = document.getElementById('preferredCarBanner');
+            if (prefBanner) {
+              prefBanner.innerHTML = '🚗 คุณเลือกขอใช้รถคันที่ว่างจากหน้าแรก: <strong>' + htmlEsc(carLabel) + '</strong> (ระบบได้ระบุความต้องการลงในช่องหมายเหตุถึงงานยานพาหนะให้แล้ว)';
+              prefBanner.style.display = 'block';
+            }
+            var notesEl = document.getElementById('fNotes');
+            if (notesEl && !notesEl.value.includes(carLabel)) {
+              notesEl.value = (notesEl.value ? notesEl.value + ' | ' : '') + 'มีความประสงค์ขอใช้รถ ' + carLabel + ' (หากว่าง)';
+            }
+          }
+
           if (initialTab === 'approve' && canApprove) {
             switchTab('approve');
             if (approveId) {
