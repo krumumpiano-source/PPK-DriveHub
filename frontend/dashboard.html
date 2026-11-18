@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>หน้าแรก - PPK DriveHub</title>
   <script src="config.js"></script>
   <script>window.REQUIRE_AUTH = true; window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'dashboard';</script>
@@ -19,7 +19,7 @@
     .container { }
 
     .content {
-    padding: 40px;
+      padding: 0;
     }
 
     /* ── Requester Dashboard ─────────────────────── */
@@ -348,19 +348,20 @@
     .avail-vehicle-plate { font-weight: 700; font-size: 0.95rem; }
     .avail-vehicle-model { font-size: 0.78rem; color: var(--color-text-muted); margin-top: 2px; }
     .avail-book-btn {
-      padding: 6px 14px;
+      padding: 8px 16px;
+      min-height: 40px;
       background: var(--gradient-primary);
       color: white;
       border: none;
       border-radius: var(--radius-md);
-      font-size: 0.8rem;
-      font-weight: 700;
+      font-size: 0.85rem;
+      font-weight: 600;
       cursor: pointer;
       font-family: inherit;
       white-space: nowrap;
       transition: opacity 0.15s, transform 0.15s;
     }
-    .avail-book-btn:hover { opacity: 0.9; transform: scale(1.03); }
+    .avail-book-btn:hover { opacity: 0.92; transform: translateY(-1px); }
 
     /* Date Trigger — calendar picker button */
     .avail-date-trigger {
@@ -382,19 +383,6 @@
       transform: translateY(-1px);
     }
     .avail-date-trigger:active { transform: scale(0.98); }
-    .avail-date-trigger::after {
-      content: '';
-      position: absolute;
-      inset: -4px;
-      border: 2px solid rgba(79,70,229,0.3);
-      border-radius: calc(var(--radius-lg) + 4px);
-      animation: calPulse 2.2s ease-in-out infinite;
-      pointer-events: none;
-    }
-    @keyframes calPulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50%       { opacity: 0; transform: scale(1.04); }
-    }
     .avail-date-icon {
       font-size: 1.8rem;
       line-height: 1;
@@ -722,13 +710,21 @@
     }
 
     @media (max-width: 768px) {
-    .calendar-day {
-    min-height: 80px;
-    padding: 5px;
+    .calendar-grid {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      min-width: 560px;
     }
-
+    .calendar-section {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .calendar-day {
+      min-height: 80px;
+      padding: 6px;
+    }
     .queue-item {
-    font-size: 0.65em;
+      font-size: 0.78em;
     }
 
     .availability-section {

@@ -26,5 +26,6 @@ out.txt
 response.txt
 test-results/
 playwright-report/
+.impeccable/
 
 ~$*

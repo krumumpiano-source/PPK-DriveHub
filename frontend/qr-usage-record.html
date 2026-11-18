@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>บันทึกการใช้รถ - PPK DriveHub</title>
@@ -501,67 +501,66 @@
             <div style="display: flex; gap: 10px; align-items: flex-start;">
               <div style="flex: 1;">
                 <input type="time" id="time" name="time" required>
-                <div class="help-text time-ampm-help" style="font-size: 0.85em; color: var(--color-text-muted);">
-                  <strong>AM เช้า</strong> · <strong>PM บ่าย</strong>
-                </div>
               </div>
               <button type="button" onclick="useCurrentTime('time')" class="btn-use-current-time"
-                style="padding: 12px 16px; background: var(--color-success); color: white; border: none; border-radius: var(--radius-md); font-size: 0.9em; font-weight: 600; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; touch-action: manipulation; align-self: flex-end;">
+                style="padding: 12px 16px; min-height: 44px; background: var(--color-success); color: white; border: none; border-radius: var(--radius-md); font-size: 0.9em; font-weight: 600; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; touch-action: manipulation; align-self: flex-end;">
                 ⏰ ใช้เวลาปัจจุบัน
               </button>
             </div>
           </div>
         </div>
 
-        <div class="form-group">
-          <label for="requester_name">ผู้ขอใช้รถ <span class="required">*</span></label>
-          <input type="text" id="requester_name" name="requester_name" required placeholder="ชื่อผู้ขอใช้รถ" list="staff-names-list" autocomplete="off">
-          <datalist id="staff-names-list"></datalist>
-          <div class="help-text" id="requesterFromQueue" style="display:none; color:var(--color-success); font-weight:600;">✅ ดึงจากคิวอัตโนมัติ</div>
+        <div id="departureDetailsGroup">
+          <div class="form-group">
+            <label for="requester_name">ผู้ขอใช้รถ <span class="required" id="reqStar">*</span></label>
+            <input type="text" id="requester_name" name="requester_name" required placeholder="ชื่อผู้ขอใช้รถ" list="staff-names-list" autocomplete="off">
+            <datalist id="staff-names-list"></datalist>
+            <div class="help-text" id="requesterFromQueue" style="display:none; color:var(--color-success); font-weight:600;">✅ ดึงจากคิวอัตโนมัติ</div>
+          </div>
+
+          <div class="form-group">
+            <label for="destination">จุดหมายปลายทาง <span class="required" id="destStar">*</span></label>
+            <input type="text" id="destination" name="destination" required placeholder="ระบุจุดหมายปลายทาง">
+          </div>
+
+          <div class="form-group">
+            <label for="passengers">ผู้โดยสาร</label>
+            <input type="text" id="passengers" name="passengers" placeholder="ชื่อผู้โดยสาร (ถ้ามี) คั่นด้วยเครื่องหมายจุลภาค">
+          </div>
+
+          <div class="form-group">
+            <label for="purpose">วัตถุประสงค์ <span class="required" id="purpStar">*</span></label>
+            <select id="purpose" name="purpose" required>
+              <option value="">-- เลือกวัตถุประสงค์ --</option>
+              <option value="school_passenger">ภารกิจโดยสารของโรงเรียน</option>
+              <option value="official_document">รับส่งเอกสารทางราชการ</option>
+              <option value="other">อื่นๆ</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- ===== ภาพมิเตอร์ไมล์ (วางก่อนช่องกรอกเลขไมล์ เพื่อให้ AI OCR อ่านค่าให้อัตโนมัติ) ===== -->
+        <div class="form-group" id="odometerPhotoSection">
+          <label>📸 1. ถ่ายภาพหน้าปัดเลขไมล์รถ <span class="required">*</span></label>
+          <div class="help-text" style="margin-bottom:8px;">ถ่ายภาพหน้าปัดไมล์ให้ชัดเจน ระบบ AI จะอ่านและกรอกตัวเลขไมล์ด้านล่างให้อัตโนมัติ</div>
+          <label for="odometerFile" id="odometerCameraBtn"
+            style="display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;padding:14px 20px;background:var(--color-primary);color:#fff;border-radius:var(--radius-md);cursor:pointer;font-size:1em;font-weight:600;-webkit-tap-highlight-color:transparent;touch-action:manipulation;">
+            📷 เปิดกล้องถ่ายภาพหน้าปัดไมล์
+          </label>
+          <input type="file" id="odometerFile" accept="image/*" capture="environment" style="display:none;" onchange="handleOdometerPhoto(event)">
+          <div id="odometerPreviewBox" style="display:none;margin-top:12px;">
+            <img id="odometerPreview" src="data:," alt="ตัวอย่างภาพ" style="max-width:100%;max-height:200px;border-radius:var(--radius-md);border:2px solid #e0e0e0;">
+            <div id="odometerOcrStatus" style="margin-top:8px;padding:10px 14px;border-radius:var(--radius-md);font-size:0.9em;font-weight:600;"></div>
+          </div>
+          <div class="error-text" id="odometerError"></div>
         </div>
 
         <div class="form-group">
-          <label for="destination">จุดหมายปลายทาง <span class="required">*</span></label>
-          <input type="text" id="destination" name="destination" required placeholder="ระบุจุดหมายปลายทาง">
-        </div>
-
-        <div class="form-group">
-          <label for="passengers">ผู้โดยสาร</label>
-          <input type="text" id="passengers" name="passengers" placeholder="ชื่อผู้โดยสาร (ถ้ามี) คั่นด้วยเครื่องหมายจุลภาค">
-        </div>
-
-        <div class="form-group">
-          <label for="purpose">วัตถุประสงค์ <span class="required">*</span></label>
-          <select id="purpose" name="purpose" required>
-            <option value="">-- เลือกวัตถุประสงค์ --</option>
-            <option value="school_passenger">ภารกิจโดยสารของโรงเรียน</option>
-            <option value="official_document">รับส่งเอกสารทางราชการ</option>
-            <option value="other">อื่นๆ</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="mileage">เลขไมล์รถ <span class="required">*</span></label>
+          <label for="mileage">🔢 2. เลขไมล์รถ (ตรวจสอบหรือพิมพ์แก้ไขได้) <span class="required">*</span></label>
           <input type="number" id="mileage" name="mileage" required placeholder="ตัวเลขเท่านั้น ไม่มีเว้นวรรค" min="0"
             step="1" oninput="this.value = this.value.replace(/[^0-9]/g, '')" onblur="validateMileage()">
           <div class="help-text">เลขไมล์ล่าสุด: <span id="lastMileage">-</span></div>
           <div class="error-text" id="mileageError"></div>
-        </div>
-
-        <!-- ===== ภาพมิเตอร์ไมล์ ===== -->
-        <div class="form-group" id="odometerPhotoSection">
-          <label>📸 ถ่ายภาพมิเตอร์ไมล์ <span class="required">*</span></label>
-          <div class="help-text" style="margin-bottom:8px;">ถ่ายภาพมิเตอร์รถให้ชัดเจน ระบบจะอ่านเลขไมล์ให้อัตโนมัติ</div>
-          <label for="odometerFile" id="odometerCameraBtn"
-            style="display:inline-flex;align-items:center;gap:8px;padding:12px 20px;background:var(--color-primary);color:#fff;border-radius:var(--radius-md);cursor:pointer;font-size:0.95em;font-weight:600;-webkit-tap-highlight-color:transparent;touch-action:manipulation;">
-            📷 เปิดกล้องถ่ายภาพ
-          </label>
-          <input type="file" id="odometerFile" accept="image/*" capture="environment" style="display:none;" onchange="handleOdometerPhoto(event)">
-          <div id="odometerPreviewBox" style="display:none;margin-top:12px;">
-            <img id="odometerPreview" src="" alt="ตัวอย่างภาพ" style="max-width:100%;max-height:200px;border-radius:var(--radius-md);border:2px solid #e0e0e0;">
-            <div id="odometerOcrStatus" style="margin-top:8px;padding:10px 14px;border-radius:var(--radius-md);font-size:0.9em;font-weight:600;"></div>
-          </div>
-          <div class="error-text" id="odometerError"></div>
         </div>
 
         <button type="submit" class="btn" id="submitBtn">
@@ -700,6 +699,10 @@
       var helpText = document.getElementById('recordTypeHelp');
       var depBtn = document.getElementById('statusDeparture');
       var retBtn = document.getElementById('statusReturn');
+      var depGroup = document.getElementById('departureDetailsGroup');
+      var reqEl = document.getElementById('requester_name');
+      var destEl = document.getElementById('destination');
+      var purpEl = document.getElementById('purpose');
 
       depBtn.classList.remove('selected');
       retBtn.classList.remove('selected');
@@ -710,10 +713,18 @@
         depBtn.classList.add('selected');
         helpText.textContent = '✈️ บันทึกการออกเดินทาง';
         helpText.style.color = 'var(--color-primary)';
+        if (depGroup) depGroup.style.display = '';
+        if (reqEl) reqEl.required = true;
+        if (destEl) destEl.required = true;
+        if (purpEl) purpEl.required = true;
       } else if (status === 'return') {
         retBtn.classList.add('selected');
-        helpText.textContent = '🏠 บันทึกการกลับจากเดินทาง';
+        helpText.textContent = '🏠 บันทึกการกลับจากเดินทาง (ไม่ต้องกรอกจุดหมายซ้ำ)';
         helpText.style.color = 'var(--color-secondary-dark)';
+        if (depGroup) depGroup.style.display = 'none';
+        if (reqEl) reqEl.required = false;
+        if (destEl) destEl.required = false;
+        if (purpEl) purpEl.required = false;
       }
     }
 
@@ -896,9 +907,10 @@
           var bgColor = confidence === 'high' ? '#e8f5e9' : confidence === 'medium' ? '#fff9c4' : '#fff3e0';
           var textColor = confidence === 'high' ? '#1b5e20' : confidence === 'medium' ? '#7b5e00' : '#e65100';
           var icon = confidence === 'high' ? '✅' : confidence === 'medium' ? '⚠️' : '🔶';
+          var confThai = confidence === 'high' ? 'ชัดเจนมาก' : confidence === 'medium' ? 'ปานกลาง' : 'ต่ำ';
           status.style.background = bgColor;
           status.style.color = textColor;
-          status.textContent = icon + ' อ่านได้: ' + Number(mileage).toLocaleString() + ' กม. (ความมั่นใจ: ' + confidence + ') — ตรวจสอบก่อนบันทึก';
+          status.textContent = icon + ' อ่านได้: ' + Number(mileage).toLocaleString() + ' กม. (ความแม่นยำ: ' + confThai + ') — ตรวจสอบก่อนบันทึก';
         } else {
           status.style.background = '#ffebee';
           status.style.color = '#c62828';

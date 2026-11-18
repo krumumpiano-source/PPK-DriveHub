@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>จัดคิว - PPK DriveHub</title>
   <script src="config.js"></script>
   <script>
@@ -19,24 +19,8 @@
 
     input[type="time"] { -webkit-locale: "fr"; }
 
-    body {
-      font-family: var(--font-family);
-      background: linear-gradient(135deg, #81d4fa 0%, #b2dfdb 100%);
-      min-height: 100vh;
-      padding: 20px;
-    }
-
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
-      background: white;
-      border-radius: var(--radius-2xl);
-      box-shadow: var(--shadow-container);
-      overflow: hidden;
-    }
-
     .content {
-      padding: 40px;
+      padding: 0;
     }
 
     .actions-bar { justify-content: space-between; }
@@ -680,16 +664,23 @@
     }
 
     @media (max-width: 768px) {
+      .calendar-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .calendar-grid {
+        min-width: 560px;
+      }
       .calendar-day {
-        min-height: 120px;
+        min-height: 110px;
         max-height: 180px;
         padding: 6px;
       }
 
       .queue-item {
-        font-size: 0.65em;
-        padding: 2px 4px;
-        margin-bottom: 1px;
+        font-size: 0.78em;
+        padding: 3px 6px;
+        margin-bottom: 2px;
       }
 
       .form-row,
@@ -812,12 +803,12 @@
       transition: all 0.2s ease;
     }
     .selection-card.vehicle-card {
-      border-left: 6px solid #0288d1;
-      background: #fbfdff;
+      border: 1.5px solid #c7d2fe;
+      background: #f8fafc;
     }
     .selection-card.driver-card {
-      border-left: 6px solid #00897b;
-      background: #fbfdfc;
+      border: 1.5px solid #a7f3d0;
+      background: #f8fafc;
       margin-bottom: 0;
     }
     .selection-card-header {
@@ -867,16 +858,16 @@
       box-shadow: 0 1px 2px rgba(0,0,0,0.04);
     }
     .selection-card.vehicle-card .select-btn.selected {
-      background: #0288d1;
+      background: var(--color-primary);
       color: white;
-      border-color: #0288d1;
-      box-shadow: 0 3px 8px rgba(2, 136, 209, 0.35);
+      border-color: var(--color-primary);
+      box-shadow: 0 3px 8px rgba(79, 70, 229, 0.25);
     }
     .selection-card.driver-card .select-btn.selected {
-      background: #00897b;
+      background: var(--color-secondary);
       color: white;
-      border-color: #00897b;
-      box-shadow: 0 3px 8px rgba(0, 137, 123, 0.35);
+      border-color: var(--color-secondary);
+      box-shadow: 0 3px 8px rgba(5, 150, 105, 0.25);
     }
     .driver-group-section {
       background: rgba(255, 255, 255, 0.85);

@@ -105,7 +105,15 @@ function setActiveMenu() {
         var currentPage = window.currentPage || 'dashboard';
         document.querySelectorAll('.sidebar-item').forEach(function (el) { el.classList.remove('active'); });
         var active = document.querySelector('.sidebar-item[data-page="' + currentPage + '"]');
-        if (active) active.classList.add('active');
+        if (active) {
+            active.classList.add('active');
+            var parentGroup = active.closest('.sidebar-group');
+            if (parentGroup) {
+                parentGroup.classList.add('active');
+                var btn = parentGroup.querySelector('.sidebar-group-header');
+                if (btn) btn.setAttribute('aria-expanded', 'true');
+            }
+        }
         // legacy support for QR pages
         document.querySelectorAll('.nav-btn').forEach(function (btn) { btn.classList.remove('active'); });
         var activeBtn = document.querySelector('.nav-btn[data-page="' + currentPage + '"]');
@@ -120,12 +128,19 @@ function initMenu() {
 initMenu();
 
 function renderQROnlyNavigation() {
+    var carQuery = '';
+    try {
+        var params = new URLSearchParams(window.location.search);
+        var carId = params.get('car') || params.get('car_id') || '';
+        if (carId) carQuery = '?car=' + encodeURIComponent(carId);
+    } catch (e) {}
     return '<div class="nav">' +
-        '<a class="nav-btn" href="qr-usage-record.html" data-page="qr-usage-record">📷 บันทึกใช้รถ</a>' +
-        '<a class="nav-btn" href="qr-fuel-record.html" data-page="qr-fuel-record">⛽ เติมน้ำมัน</a>' +
-        '<a class="nav-btn" href="qr-daily-check.html" data-page="qr-daily-check">🔧 ตรวจสภาพ+แจ้งซ่อม</a>' +
+        (carQuery ? '<a class="nav-btn" href="qr-hub.html' + carQuery + '" data-page="qr-hub">🚐 หน้าหลักรถ</a>' : '') +
+        '<a class="nav-btn" href="qr-usage-record.html' + carQuery + '" data-page="qr-usage-record">📷 บันทึกใช้รถ</a>' +
+        '<a class="nav-btn" href="qr-fuel-record.html' + carQuery + '" data-page="qr-fuel-record">⛽ เติมน้ำมัน</a>' +
+        '<a class="nav-btn" href="qr-daily-check.html' + carQuery + '" data-page="qr-daily-check">🔧 ตรวจสภาพ+แจ้งซ่อม</a>' +
         '<a class="nav-btn" href="user-guide.html" data-page="user-guide">📖 วิธีใช้งาน</a>' +
-        '<a class="nav-btn" href="login.html" style="background:rgba(30,136,229,0.5);color:white;border-color:#1e88e5;">🔐 เข้าสู่ระบบ</a>' +
+        '<a class="nav-btn" href="login.html" style="background:rgba(79,70,229,0.75);color:white;border-color:#818cf8;">🔐 เข้าสู่ระบบ</a>' +
         '</div>';
 }
 
@@ -142,11 +157,11 @@ function _sidebarSection(title) {
 
 function _sidebarGroupBegin(id, title, icon = '📁') {
     return '<div class="sidebar-group" id="sg-' + id + '">' +
-           '<div class="sidebar-group-header" onclick="toggleSidebarGroup(\'' + id + '\')">' +
+           '<button type="button" class="sidebar-group-header" aria-expanded="false" onclick="toggleSidebarGroup(\'' + id + '\')">' +
            '<span class="si-icon">' + icon + '</span>' +
            '<span class="si-label">' + title + '</span>' +
            '<span class="si-chevron">▼</span>' +
-           '</div>' +
+           '</button>' +
            '<div class="sidebar-group-content" id="sg-content-' + id + '">';
 }
 
@@ -156,7 +171,11 @@ function _sidebarGroupEnd() {
 
 window.toggleSidebarGroup = function(id) {
     var group = document.getElementById('sg-' + id);
-    if (group) group.classList.toggle('active');
+    if (group) {
+        var isActive = group.classList.toggle('active');
+        var btn = group.querySelector('.sidebar-group-header');
+        if (btn) btn.setAttribute('aria-expanded', isActive ? 'true' : 'false');
+    }
 };
 
 function escapeHtml(str) {
@@ -253,8 +272,6 @@ function renderNavigation() {
     if (hasModulePermission('reports', 'view') || hasPermission(['admin'])) {
         nav += _sidebarGroupBegin('reports', 'รายงานและสถิติ', '📊');
         nav += _sidebarItem('reports.html', 'reports', '📊', 'รายงานและสถิติ');
-        nav += _sidebarItem('driver-performance.html', 'driver-performance', '🏆', 'ผลงานพนักงาน');
-        nav += _sidebarItem('print-executive-summary.html', 'print-executive-summary', '📑', 'สรุปประเมิน (ผอ.)');
         nav += _sidebarItem('vehicle-timeline.html', 'vehicle-timeline', '🚗', 'ไทม์ไลน์รถ');
         nav += _sidebarItem('executive-dashboard.html', 'executive-dashboard', '📈', 'Dashboard ผู้บริหาร');
         nav += _sidebarItem('basic-info.html', 'basic-info', '📋', 'ข้อมูลรถและพนักงาน');
@@ -547,7 +564,7 @@ else renderNav();
 /* ── Wrap all plain <table> elements in a scrollable div ── */
 function wrapTablesForMobile() {
     document.querySelectorAll('table').forEach(function (tbl) {
-        if (tbl.parentElement && tbl.parentElement.classList.contains('table-wrap')) return;
+        if (tbl.closest('.table-wrap, .table-container, .repairs-table-wrap, .vehicles-table-wrap, .section-body')) return;
         var wrap = document.createElement('div');
         wrap.className = 'table-wrap';
         tbl.parentNode.insertBefore(wrap, tbl);
@@ -556,6 +573,23 @@ function wrapTablesForMobile() {
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wrapTablesForMobile);
 else wrapTablesForMobile();
+
+// Global Escape key handler to close open modals & mobile sidebar
+document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    var openSidebar = document.querySelector('.sidebar.open');
+    var openOverlay = document.querySelector('.sidebar-overlay.open');
+    if (openSidebar) openSidebar.classList.remove('open');
+    if (openOverlay) openOverlay.classList.remove('open');
+    document.querySelectorAll('.modal-overlay.show, .modal-overlay.active').forEach(function (m) {
+        var closeBtn = m.querySelector('.modal-close, [onclick*="close"], [onclick*="Close"]');
+        if (closeBtn) closeBtn.click();
+        else {
+            m.classList.remove('show', 'active');
+            m.style.display = 'none';
+        }
+    });
+});
 
 
 function handleError(error, context) {
@@ -568,7 +602,11 @@ function handleError(error, context) {
         if (isThai(msg)) return msg;
         var map = {
             'Authentication required': 'กรุณาล็อกอินก่อนใช้งาน',
+            'Unauthorized': 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่',
+            'Forbidden': 'คุณไม่มีสิทธิ์ดำเนินการนี้',
+            'Not Found': 'ไม่พบข้อมูลที่ต้องการ',
             'Failed to fetch': 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ต',
+            'NetworkError when attempting to fetch resource.': 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ต',
             'Invalid credentials': 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
         };
         return map[msg] || def;
@@ -578,14 +616,14 @@ function handleError(error, context) {
 function getUserMessage(m) {
     if (!m) return 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
     if (/[\u0E00-\u0E7F]/.test(m)) return m;
-    return 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+    return handleError(m, 'getUserMessage');
 }
 
 function showLoading(elementId) {
     var el = document.getElementById(elementId);
     if (el) {
         el.style.display = 'block';
-        el.innerHTML = '<div style="text-align:center;padding:40px;"><div style="display:inline-block;width:40px;height:40px;border:4px solid #f3f3f3;border-top:4px solid #4285f4;border-radius:50%;animation:spin 1s linear infinite;"></div><p style="margin-top:20px;color:#666;">กำลังโหลด...</p></div>';
+        el.innerHTML = '<div style="text-align:center;padding:40px;"><div style="display:inline-block;width:40px;height:40px;border:4px solid #f3f3f3;border-top:4px solid #4f46e5;border-radius:50%;animation:spin 1s linear infinite;"></div><p style="margin-top:20px;color:#475569;">กำลังโหลด...</p></div>';
     }
 }
 
@@ -597,9 +635,11 @@ function hideLoading(elementId) {
 function showAlert(message, type, duration) {
     type = type || 'info';
     duration = duration || 3000;
-    var colors = { error: '#f44336', success: '#4caf50', warning: '#ff9800', info: '#2196f3' };
+    var colors = { error: '#dc2626', success: '#047857', warning: '#b45309', info: '#4338ca' };
     var div = document.createElement('div');
-    div.style.cssText = 'position:fixed;top:20px;right:20px;padding:15px 20px;background:' + (colors[type] || colors.info) + ';color:white;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.2);z-index:10000;max-width:400px;font-size:.95em;opacity:0;transform:translateX(100%);transition:all .3s ease;';
+    div.setAttribute('role', 'status');
+    div.setAttribute('aria-live', 'polite');
+    div.style.cssText = 'position:fixed;top:20px;right:20px;padding:14px 20px;background:' + (colors[type] || colors.info) + ';color:white;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.22);z-index:10000;max-width:400px;font-size:.95em;font-weight:500;opacity:0;transform:translateX(100%);transition:all .25s ease;';
     div.textContent = message;
     document.body.appendChild(div);
     setTimeout(function () { div.style.opacity = '1'; div.style.transform = 'translateX(0)'; }, 10);
@@ -664,14 +704,14 @@ function renderAuditMeta(row) {
     if (!row) return '';
     var created = escapeHtml(_displayCreator(row.created_by_name));
     var createdAt = escapeHtml(_formatAuditTime(row.created_at));
-    var html = '<small style="color:#666;display:block;margin-top:4px">' +
+    var html = '<small style="color:#475569;display:block;margin-top:4px">' +
         '📝 บันทึกโดย: <b>' + created + '</b>' +
-        (createdAt ? ' <span style="color:#999">(' + createdAt + ')</span>' : '') +
+        (createdAt ? ' <span style="color:#64748b">(' + createdAt + ')</span>' : '') +
         '</small>';
     if (row.updated_by_name && row.updated_at && row.updated_at !== row.created_at) {
-        html += '<small style="color:#e67e22;display:block">' +
+        html += '<small style="color:#b45309;display:block">' +
             '✏️ แก้ไขล่าสุด: <b>' + escapeHtml(_displayCreator(row.updated_by_name)) + '</b>' +
-            ' <span style="color:#999">(' + escapeHtml(_formatAuditTime(row.updated_at)) + ')</span>' +
+            ' <span style="color:#64748b">(' + escapeHtml(_formatAuditTime(row.updated_at)) + ')</span>' +
             '</small>';
     }
     return html;
@@ -683,7 +723,7 @@ function renderAuditMetaInline(row) {
     var created = escapeHtml(_displayCreator(row.created_by_name));
     var s = '<small>' + created;
     if (row.updated_by_name && row.updated_at && row.updated_at !== row.created_at) {
-        s += ' <span style="color:#e67e22">/ แก้: ' + escapeHtml(_displayCreator(row.updated_by_name)) + '</span>';
+        s += ' <span style="color:#b45309">/ แก้: ' + escapeHtml(_displayCreator(row.updated_by_name)) + '</span>';
     }
     s += '</small>';
     return s;

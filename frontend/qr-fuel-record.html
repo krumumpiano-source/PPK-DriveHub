@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>บันทึกน้ำมัน - PPK DriveHub</title>
@@ -487,21 +487,21 @@
         <div class="form-group">
           <label for="liters">จำนวนลิตร <span class="required">*</span></label>
           <input type="number" id="liters" name="liters" required min="0" step="0.01" placeholder="0.00"
-            oninput="validateAmountCalculation()">
+            oninput="autoCalculateFuel(this.id)">
           <div class="help-text">กรอกจำนวนลิตรที่เติม</div>
         </div>
 
         <div class="form-group">
           <label for="price_per_liter">ราคาต่อลิตร (บาท) <span class="required">*</span></label>
           <input type="number" id="price_per_liter" name="price_per_liter" required min="0" step="0.01"
-            placeholder="0.00" oninput="validateAmountCalculation()">
+            placeholder="0.00" oninput="autoCalculateFuel(this.id)">
           <div class="help-text">ราคาต่อลิตรที่จ่าย</div>
         </div>
 
         <div class="form-group">
           <label for="total_amount">จำนวนเงินรวม (บาท) <span class="required">*</span></label>
           <input type="number" id="total_amount" name="total_amount" required min="0" step="0.01" placeholder="0.00"
-            oninput="validateAmountCalculation()">
+            oninput="autoCalculateFuel(this.id)">
           <div class="help-text">กรุณากรอกจำนวนเงินรวมที่จ่ายจริง (ระบบจะตรวจสอบความถูกต้องอัตโนมัติ)</div>
           <div id="amountError"
             style="display: none; color: var(--color-danger-dark); font-size: 0.9em; margin-top: 5px; font-weight: 600;"></div>
@@ -718,6 +718,30 @@
     }
 
     // ตรวจสอบการคำนวณจำนวนเงินรวม (แสดงเตือนแต่ไม่บล็อกการกรอก)
+    var _amountManuallyEdited = false;
+    function autoCalculateFuel(changedField) {
+      var litersEl = document.getElementById('liters');
+      var priceEl = document.getElementById('price_per_liter');
+      var amountEl = document.getElementById('total_amount');
+      var liters = parseFloat(litersEl.value) || 0;
+      var price = parseFloat(priceEl.value) || 0;
+      var amount = parseFloat(amountEl.value) || 0;
+
+      if (changedField === 'amount' || changedField === 'total_amount') {
+        _amountManuallyEdited = amountEl.value !== '';
+        if (amount > 0 && price > 0 && !litersEl.value) {
+          litersEl.value = (amount / price).toFixed(2);
+        }
+      } else if (changedField === 'liters' || changedField === 'price' || changedField === 'price_per_liter') {
+        if (liters > 0 && price > 0 && (!_amountManuallyEdited || !amountEl.value)) {
+          amountEl.value = (liters * price).toFixed(2);
+        } else if (amount > 0 && price > 0 && (changedField === 'price' || changedField === 'price_per_liter') && !litersEl.value) {
+          litersEl.value = (amount / price).toFixed(2);
+        }
+      }
+      validateAmountCalculation();
+    }
+
     function validateAmountCalculation() {
       var liters = parseFloat(document.getElementById('liters').value) || 0;
       var pricePerLiter = parseFloat(document.getElementById('price_per_liter').value) || 0;

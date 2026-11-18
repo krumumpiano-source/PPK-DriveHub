@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>เปรียบเทียบบิลน้ำมัน - PPK DriveHub</title>
   <script src="config.js"></script>
   <script>window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'fuel-reconcile'; window.REQUIRE_AUTH = true;</script>
@@ -375,7 +375,7 @@
 
         html += '<p style="margin-bottom:8px;">\u0e43\u0e1a\u0e40\u0e1a\u0e34\u0e01: <strong>' + escHtml(invoice.invoice_number || '') + '</strong> | \u0e1b\u0e31\u0e4a\u0e21: ' + escHtml(invoice.station_name || '') + ' | \u0e0a\u0e48\u0e27\u0e07: ' + (invoice.date_from || '') + ' \u2013 ' + (invoice.date_to || '') + '</p>';
 
-        html += '<table class="compare-table">';
+        html += '<div class="table-wrap"><table class="compare-table">';
         html += '<thead><tr><th class="text-left">\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17\u0e19\u0e49\u0e33\u0e21\u0e31\u0e19</th><th>\u0e22\u0e2d\u0e14\u0e1b\u0e31\u0e4a\u0e21 (\u0e25\u0e34\u0e15\u0e23)</th><th>\u0e22\u0e2d\u0e14\u0e23\u0e30\u0e1a\u0e1a (\u0e25\u0e34\u0e15\u0e23)</th><th>\u0e2a\u0e48\u0e27\u0e19\u0e15\u0e48\u0e32\u0e07 (\u0e25\u0e34\u0e15\u0e23)</th><th>\u0e22\u0e2d\u0e14\u0e1b\u0e31\u0e4a\u0e21 (\u0e1a\u0e32\u0e17)</th><th>\u0e22\u0e2d\u0e14\u0e23\u0e30\u0e1a\u0e1a (\u0e1a\u0e32\u0e17)</th><th>\u0e2a\u0e48\u0e27\u0e19\u0e15\u0e48\u0e32\u0e07 (\u0e1a\u0e32\u0e17)</th></tr></thead><tbody>';
         var totalInvLiters = 0, totalSysLiters = 0, totalInvAmount = 0, totalSysAmount = 0;
         comparison.forEach(function (c) {
@@ -406,12 +406,12 @@
         html += '<td>' + fmtMoney(totalInvAmount) + '</td>';
         html += '<td>' + fmtMoney(totalSysAmount) + '</td>';
         html += '<td class="' + (Math.abs(totalDiffAmount) < 1 ? 'diff-ok' : 'diff-bad') + '">' + fmtMoney(totalDiffAmount) + '</td>';
-        html += '</tr></tbody></table>';
+        html += '</tr></tbody></table></div>';
 
         // Detail records
         if (data.detail_records && data.detail_records.length > 0) {
           html += '<details style="margin-top:15px;"><summary style="cursor:pointer;font-weight:600;">\u{1f4c4} \u0e14\u0e39\u0e23\u0e32\u0e22\u0e01\u0e32\u0e23\u0e43\u0e19\u0e23\u0e30\u0e1a\u0e1a (' + data.detail_records.length + ' \u0e23\u0e32\u0e22\u0e01\u0e32\u0e23)</summary>';
-          html += '<table class="compare-table" style="margin-top:8px;font-size:0.9em;">';
+          html += '<div class="table-wrap" style="margin-top:8px;"><table class="compare-table" style="font-size:0.9em;">';
           html += '<thead><tr><th>\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48</th><th>\u0e17\u0e30\u0e40\u0e1a\u0e35\u0e22\u0e19</th><th class="text-left">\u0e1b\u0e23\u0e30\u0e40\u0e20\u0e17</th><th>\u0e25\u0e34\u0e15\u0e23</th><th>\u0e23\u0e32\u0e04\u0e32/\u0e25.</th><th>\u0e23\u0e27\u0e21</th></tr></thead><tbody>';
           data.detail_records.forEach(function (dr) {
             html += '<tr>';
@@ -423,7 +423,7 @@
             html += '<td>' + fmtMoney(dr.amount || 0) + '</td>';
             html += '</tr>';
           });
-          html += '</tbody></table></details>';
+          html += '</tbody></table></div></details>';
         }
 
         // Resolve section

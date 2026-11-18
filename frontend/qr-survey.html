@@ -2,33 +2,34 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>แบบประเมินผู้โดยสาร - PPK DriveHub</title>
   <script src="config.js"></script>
   <script>window.API_BASE_URL=CONFIG.API_BASE_URL;window.currentPage='qr-survey';window.REQUIRE_AUTH=false;</script>
   <link rel="stylesheet" href="common.css">
   <script src="js/api.js"></script>
+  <script src="common.js"></script>
   <style>
-    body{font-family:var(--font-family);background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
-    .survey-card{background:#fff;border-radius:var(--radius-2xl);box-shadow:var(--shadow-xl);max-width:480px;width:100%;overflow:hidden}
-    .survey-header{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:24px;text-align:center}
-    .survey-header h1{font-size:1.2rem;margin-bottom:4px}
-    .survey-header p{font-size:.85rem;opacity:.85}
-    .car-info{background:rgba(255,255,255,.15);padding:10px;border-radius:var(--radius-md);margin-top:10px;font-size:.9rem}
+    body{font-family:var(--font-family);background:#0f172a;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+    .survey-card{background:#fff;border-radius:var(--radius-xl);box-shadow:var(--shadow-xl);max-width:480px;width:100%;overflow:hidden}
+    .survey-header{background:var(--gradient-primary);color:#fff;padding:24px;text-align:center}
+    .survey-header h1{font-size:1.25rem;margin-bottom:4px;color:#fff}
+    .survey-header p{font-size:.88rem;opacity:.92;color:#e0e7ff}
+    .car-info{background:rgba(255,255,255,.16);padding:10px 14px;border-radius:var(--radius-md);margin-top:10px;font-size:.92rem;font-weight:500}
     .survey-body{padding:20px}
     .q-item{margin-bottom:20px}
-    .q-label{font-weight:600;font-size:.9rem;margin-bottom:2px;color:var(--color-text)}
-    .q-hint{font-size:.75rem;color:var(--color-text-muted);margin-bottom:8px;line-height:1.3}
-    .stars{display:flex;gap:4px;direction:rtl;justify-content:flex-end}
+    .q-label{font-weight:600;font-size:.95rem;margin-bottom:2px;color:var(--color-text)}
+    .q-hint{font-size:.8rem;color:var(--color-text-muted);margin-bottom:8px;line-height:1.35}
+    .stars{display:flex;gap:6px;direction:rtl;justify-content:flex-end}
     .stars input{display:none}
-    .stars label{font-size:1.8rem;cursor:pointer;color:#d1d5db;transition:color .15s}
-    .stars label:hover,.stars label:hover~label,.stars input:checked~label{color:#f59e0b}
+    .stars label{font-size:2.1rem;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#cbd5e1;transition:color .15s,transform .15s;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0}
+    .stars label:hover,.stars label:hover~label,.stars input:checked~label{color:#f59e0b;background:#fffbeb;border-color:#fde68a}
     .survey-footer{text-align:center;padding:12px 20px 20px;font-size:.8rem;color:var(--color-text-muted)}
     .thank-you{text-align:center;padding:40px 20px}
     .thank-you .icon{font-size:3rem;margin-bottom:12px}
     .thank-you h2{font-size:1.2rem;margin-bottom:8px}
     .thank-you p{color:var(--color-text-light);font-size:.9rem}
-    #surveyForm button[type=submit]{width:100%;padding:14px;font-size:1rem;font-weight:600;border:none;border-radius:var(--radius-lg);background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;cursor:pointer;margin-top:8px}
+    #surveyForm button[type=submit]{width:100%;min-height:48px;padding:14px;font-size:1rem;font-weight:600;border:none;border-radius:var(--radius-md);background:var(--gradient-primary);color:#fff;cursor:pointer;margin-top:8px;box-shadow:var(--shadow-primary)}
     #surveyForm button[type=submit]:disabled{opacity:.5}
     .error-box{background:#fee2e2;color:#991b1b;padding:16px;border-radius:var(--radius-lg);text-align:center;margin:20px}
   </style>
@@ -80,11 +81,11 @@
         </div>
         <div class="q-item">
           <div class="q-label">ข้อเสนอแนะ (ถ้ามี)</div>
-          <textarea id="comment" rows="3" style="width:100%;padding:10px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:.9rem" placeholder="พิมพ์ข้อเสนอแนะ..."></textarea>
+          <textarea id="comment" rows="3" style="width:100%;padding:12px;border:1.5px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;font-size:1rem" placeholder="พิมพ์ข้อเสนอแนะ..."></textarea>
         </div>
         <div class="q-item">
           <div class="q-label">ชื่อผู้ประเมิน (ไม่บังคับ)</div>
-          <input type="text" id="respondent" style="width:100%;padding:10px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:.9rem" placeholder="ชื่อ-สกุล">
+          <input type="text" id="respondent" style="width:100%;padding:12px;border:1.5px solid var(--color-border);border-radius:var(--radius-md);font-size:1rem" placeholder="ชื่อ-สกุล">
         </div>
         <button type="submit" id="submitBtn">📩 ส่งแบบประเมิน</button>
       </form>
