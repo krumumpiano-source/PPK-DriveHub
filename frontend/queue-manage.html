@@ -709,89 +709,100 @@
       }
     }
   
-    /* --- Stepper UI --- */
+    /* --- Single-View Friendly Form (All steps visible) --- */
     .stepper-container {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 20px;
-      position: relative;
-    }
-    .stepper-container::before {
-      content: '';
-      position: absolute;
-      top: 15px;
-      left: 10%;
-      right: 10%;
-      height: 2px;
-      background: #e0e0e0;
-      z-index: 1;
-    }
-    .step-indicator {
-      position: relative;
-      z-index: 2;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      flex: 1;
-      cursor: pointer;
-    }
-    .step-indicator.disabled {
-      cursor: not-allowed;
-      pointer-events: none;
-    }
-    .step-circle {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: #fff;
-      border: 2px solid #e0e0e0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      color: #999;
-      margin-bottom: 8px;
-      transition: all 0.3s;
-    }
-    .step-label {
-      font-size: 0.85em;
-      color: #999;
-      text-align: center;
-    }
-    .step-indicator.active .step-circle {
-      border-color: var(--color-primary);
-      background: var(--color-primary);
-      color: #fff;
-    }
-    .step-indicator.active .step-label {
-      color: var(--color-primary);
-      font-weight: 600;
-    }
-    .step-indicator.completed .step-circle {
-      border-color: var(--color-primary);
-      color: var(--color-primary);
-    }
-    .step-indicator.completed .step-label {
-      color: var(--color-text);
+      display: none;
     }
     .form-step {
-      display: none;
-      animation: fadeIn 0.3s;
+      display: block !important;
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      margin-bottom: 16px;
     }
-    .form-step.active {
-      display: block;
+    .form-step .form-section-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--color-primary-dark);
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e0e7ff;
     }
     .stepper-footer {
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-end;
+      gap: 10px;
       margin-top: 20px;
       padding-top: 15px;
-      border-top: 1px solid #eee;
+      border-top: 1px solid #e2e8f0;
+      position: sticky;
+      bottom: 0;
+      background: white;
+      z-index: 10;
     }
-    @media (max-width: 600px) {
-      .step-label { font-size: 0.75em; }
-      .step-circle { width: 28px; height: 28px; }
-      .stepper-container::before { top: 13px; }
+    .select-btn {
+      flex-direction: column;
+      gap: 3px;
+      padding: 10px 8px;
+      min-height: 58px;
+    }
+    .select-btn .avail-tag {
+      font-size: 0.74rem;
+      font-weight: 600;
+      padding: 1px 7px;
+      border-radius: 10px;
+      line-height: 1.3;
+    }
+    .select-btn.is-free {
+      border-color: #86efac;
+      background: #f0fdf4;
+    }
+    .select-btn.is-free .avail-tag {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .select-btn.is-busy {
+      border-color: #fca5a5;
+      background: #fef2f2;
+      opacity: 0.78;
+    }
+    .select-btn.is-busy .avail-tag {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .select-btn.selected .avail-tag {
+      background: rgba(255,255,255,0.25);
+      color: white;
+    }
+    .auto-suggest-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+      border: 1.5px solid #818cf8;
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      margin-bottom: 14px;
+    }
+    .auto-suggest-btn {
+      padding: 10px 18px;
+      min-height: 44px;
+      background: var(--gradient-primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      box-shadow: var(--shadow-primary);
+      white-space: nowrap;
+    }
+    .auto-suggest-btn:hover {
+      opacity: 0.94;
+      transform: translateY(-1px);
     }
     .selection-card {
       background: white;
@@ -939,38 +950,38 @@
       <div id="alertContainer"></div>
 
       <!-- Pending Vehicle Requests Notification Banner -->
-      <div id="pendingRequestsBanner" style="display: none; margin-bottom: 25px; background: linear-gradient(135deg, #fff9c4 0%, #fffde7 100%); border: 2px solid #fbc02d; border-radius: var(--radius-lg); padding: 18px 22px; box-shadow: 0 4px 15px rgba(251, 192, 45, 0.2);">
+      <div id="pendingRequestsBanner" style="display: none; margin-bottom: 25px; background: #fffbeb; border: 2px solid #f59e0b; border-radius: var(--radius-lg); padding: 18px 22px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.14);">
         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
           <div style="display: flex; align-items: center; gap: 14px;">
             <div style="font-size: 2.2em; line-height: 1;">🔔</div>
             <div>
-              <div style="font-size: 1.15em; font-weight: 800; color: #b78103;" id="pendingRequestsCountText">
+              <div style="font-size: 1.15em; font-weight: 800; color: #92400e;" id="pendingRequestsCountText">
                 มีคำขอใช้รถออนไลน์รอจัดคิวและอนุมัติ (0 รายการ)
               </div>
-              <div style="font-size: 0.9em; color: #6d4c41; margin-top: 3px;">
-                ตรวจสอบความเหมาะสมของภารกิจ จำนวนคน สถานะรถว่าง และพนักงานขับรถว่าง แล้วดำเนินการอนุมัติจัดคิว
+              <div style="font-size: 0.92em; color: #78350f; margin-top: 3px;">
+                กดปุ่ม <strong>"⚡ จัดรถให้คำขอนี้ทันที"</strong> ด้านล่างเพื่อเลือกรถและคนขับที่ว่างได้ในหน้านี้เลย
               </div>
             </div>
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button type="button" class="btn" onclick="togglePendingRequestsPreview()" style="font-size: 0.9em; padding: 8px 16px; border: 1px solid #d7ccc8; background: white; color: #5d4037; border-radius: var(--radius-md); font-weight: 600; cursor: pointer;">
-              👁️ <span id="togglePendingPreviewText">ดูรายการคำขอ</span>
+            <button type="button" class="btn" onclick="togglePendingRequestsPreview()" style="font-size: 0.9em; padding: 8px 16px; border: 1px solid #fcd34d; background: white; color: #78350f; border-radius: var(--radius-md); font-weight: 600; cursor: pointer;">
+              👁️ <span id="togglePendingPreviewText">พับเก็บรายการ</span>
             </button>
-            <a href="vehicle-request.html?tab=approve" class="btn" style="background: #f57c00; color: white; font-size: 0.9em; padding: 8px 18px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; border-radius: var(--radius-md); border: none;">
-              ⚡ ไปหน้าจัดคิว/อนุมัติคำขอ
+            <a href="vehicle-request.html?tab=approve" class="btn" style="background: #d97706; color: white; font-size: 0.9em; padding: 8px 18px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; border-radius: var(--radius-md); border: none;">
+              📋 ดูรายละเอียดคำขอทั้งหมด / พิมพ์ใบคำขอ
             </a>
           </div>
         </div>
-        <div id="pendingRequestsListContainer" style="display: none; margin-top: 16px; border-top: 1px dashed #fbc02d; padding-top: 16px;">
+        <div id="pendingRequestsListContainer" style="display: block; margin-top: 16px; border-top: 1px dashed #f59e0b; padding-top: 16px;">
           <!-- Injected cards -->
         </div>
       </div>
 
       <div class="tabs" style="display:flex; border-bottom:1px solid #ddd; margin-bottom:20px; gap:10px;">
-        <button class="tab active" onclick="switchTab('calendar')" style="padding:10px 20px; border:none; background:none; border-bottom:3px solid var(--color-primary); color:var(--color-primary); font-weight:bold; cursor:pointer;">📅 ปฏิทินคิวรถ</button>
-        <button class="tab" onclick="switchTab('gantt')" style="padding:10px 20px; border:none; background:none; border-bottom:3px solid transparent; color:#666; font-weight:bold; cursor:pointer;">📊 ตารางการใช้รถ (Gantt)</button>
-        <a id="pendingRequestsTabLink" href="vehicle-request.html?tab=approve" style="display:none; padding:10px 20px; text-decoration:none; border-bottom:3px solid transparent; color:#e65100; font-weight:bold; align-items:center; gap:6px;">
-          🔔 คำขอรออนุมัติ <span id="pendingRequestsTabBadge" style="background:#ff9800; color:white; border-radius:12px; padding:2px 8px; font-size:0.8em;">0</span>
+        <button class="tab active" onclick="switchTab('calendar')" style="padding:10px 20px; border:none; background:none; border-bottom:3px solid var(--color-primary); color:var(--color-primary); font-weight:bold; cursor:pointer;">📅 ปฏิทินคิวรถรายเดือน</button>
+        <button class="tab" onclick="switchTab('gantt')" style="padding:10px 20px; border:none; background:none; border-bottom:3px solid transparent; color:#475569; font-weight:bold; cursor:pointer;">⏰ ตารางเวลารายชั่วโมง (ดูคิวว่างรายวัน)</button>
+        <a id="pendingRequestsTabLink" href="vehicle-request.html?tab=approve" style="display:none; padding:10px 20px; text-decoration:none; border-bottom:3px solid transparent; color:#b45309; font-weight:bold; align-items:center; gap:6px;">
+          🔔 คำขอรออนุมัติ <span id="pendingRequestsTabBadge" style="background:#d97706; color:white; border-radius:12px; padding:2px 8px; font-size:0.8em;">0</span>
         </a>
       </div>
 
@@ -1132,7 +1143,17 @@
         </div>
 
         <div class="form-section form-step" id="createStep2">
-          <div class="form-section-title">🚗 เลือกรถและคนขับ</div>
+          <div class="form-section-title">🚗 ขั้นตอนที่ 2: เลือกรถและพนักงานขับรถ (ปุ่มสีเขียว = ว่างพร้อมใช้งาน)</div>
+
+          <div class="auto-suggest-bar">
+            <div style="flex:1; min-width:200px;">
+              <div style="font-weight:700; color:#312e81; font-size:0.98rem;">✨ ไม่แน่ใจว่าจะจัดคันไหนหรือคนขับคนไหน?</div>
+              <div style="font-size:0.84rem; color:#4338ca;">กดปุ่มขวาเพื่อเลือก <strong>รถที่ว่าง</strong> และ <strong>คนขับที่ว่าง</strong> ให้อัตโนมัติทันที</div>
+            </div>
+            <button type="button" class="auto-suggest-btn" onclick="autoSelectAvailableForCreate()">
+              ✨ เลือกรถและคนขับที่ว่างให้อัตโนมัติ
+            </button>
+          </div>
           
           <div class="selection-card vehicle-card">
             <div class="selection-card-header">
@@ -1238,8 +1259,8 @@
         <div class="stepper-footer" id="createStepperFooter">
           <button type="button" class="btn btn-secondary" onclick="prevCreateStep()" id="createBtnPrev" style="display: none;">⬅️ ถอยกลับ</button>
           <button type="button" class="btn btn-secondary" onclick="closeCreateModal()" id="createBtnCancel">ยกเลิก</button>
-          <button type="button" class="btn btn-primary" onclick="nextCreateStep()" id="createBtnNext" style="margin-left: auto;">ถัดไป ➡️</button>
-          <button type="submit" class="btn btn-primary" id="createSubmitBtn" style="display: none; margin-left: auto;">💾 สร้างคิว</button>
+          <button type="button" class="btn btn-primary" onclick="nextCreateStep()" id="createBtnNext" style="display: none;">ถัดไป ➡️</button>
+          <button type="submit" class="btn btn-primary" id="createSubmitBtn" style="margin-left: auto; font-size: 1.05rem; padding: 12px 28px;">💾 บันทึกสร้างคิวรถ</button>
         </div>
                 
       </form>
@@ -1383,13 +1404,13 @@
         
         <div class="stepper-footer" id="editStepperFooter">
           <button type="button" class="btn btn-danger" onclick="deleteQueue(editingQueueId)" id="editBtnDelete" style="margin-right: 8px;">🗑️ ลบคิว</button>
-          <button type="button" class="btn" onclick="copyCurrentQueueToLine(this)" id="editBtnCopyLine" style="background: #06C755; color: white; margin-right: auto;">💬 ส่ง LINE</button>
+          <button type="button" class="btn" onclick="copyCurrentQueueToLine(this)" id="editBtnCopyLine" style="background: #06C755; color: white; margin-right: auto;">💬 คัดลอกส่ง LINE</button>
           
           <div style="display: flex; gap: 10px; margin-left: auto;">
             <button type="button" class="btn btn-secondary" onclick="prevEditStep()" id="editBtnPrev" style="display: none;">⬅️ ถอยกลับ</button>
             <button type="button" class="btn btn-secondary" onclick="closeEditModal()" id="editBtnCancel">ยกเลิก</button>
-            <button type="button" class="btn btn-primary" onclick="nextEditStep()" id="editBtnNext">ถัดไป ➡️</button>
-            <button type="submit" class="btn btn-primary" id="editSubmitBtn" style="display: none;">💾 บันทึก</button>
+            <button type="button" class="btn btn-primary" onclick="nextEditStep()" id="editBtnNext" style="display: none;">ถัดไป ➡️</button>
+            <button type="submit" class="btn btn-primary" id="editSubmitBtn" style="font-size: 1.05rem; padding: 12px 28px;">💾 บันทึกการแก้ไข</button>
           </div>
         </div>
                 
@@ -1422,14 +1443,14 @@
           </div>
           <div class="checkbox-group">
             <input type="checkbox" id="modal_emergency_override" onchange="toggleModalOverrideReason()">
-            <label for="modal_emergency_override" style="margin: 0;">Override การตรวจสอบ (กรณีฉุกเฉิน/จำเป็นพิเศษ - ข้ามการตรวจสอบซ่อม/ลา/ข้อจำกัด)</label>
+            <label for="modal_emergency_override" style="margin: 0;">ยืนยันจัดคิวเป็นกรณีพิเศษ (กรณีฉุกเฉิน/จำเป็นเร่งด่วน)</label>
           </div>
           <div id="modal_override_reason_box" style="display:none; margin-top:10px; padding:10px; background:#fef2f2; border:1px solid #fca5a5; border-radius:6px;">
             <label style="font-size:0.88rem; font-weight:600; color:#991b1b; display:block; margin-bottom:4px;">
-              ระบุเหตุผลความจำเป็นในการ Override (บังคับบันทึก Audit Logs) <span class="required" style="color:red">*</span>
+              ระบุเหตุผลความจำเป็นพิเศษ <span class="required" style="color:red">*</span>
             </label>
-            <textarea id="modal_override_reason" rows="2" style="width:100%; border:1px solid #f87171; border-radius:4px; padding:6px; font-size:0.88rem;" placeholder="เช่น ภารกิจเร่งด่วนพิเศษ ผอ. สั่งการ หรือได้รับอนุญาตเป็นกรณีพิเศษ"></textarea>
-            <div style="font-size:0.78rem; color:#991b1b; margin-top:3px;">* ระบบจะบันทึก Log การ Override ลงใน Audit Logs พร้อมชื่อผู้บันทึกเสมอ</div>
+            <textarea id="modal_override_reason" rows="2" style="width:100%; border:1px solid #f87171; border-radius:4px; padding:8px; font-size:1rem;" placeholder="เช่น ภารกิจเร่งด่วนพิเศษ ผอ. สั่งการ หรือได้รับอนุญาตเป็นกรณีพิเศษ"></textarea>
+            <div style="font-size:0.78rem; color:#991b1b; margin-top:3px;">* ระบบจะบันทึกเหตุผลไว้เป็นหลักฐานอัตโนมัติ</div>
           </div>
         </div>
       </div>
@@ -1531,12 +1552,7 @@
     }
 
     function applySavedFormMemory() {
-      var memory = getFormMemory();
-      fillInputIfEmpty('create_requested_by', memory.requested_by || '');
-      fillInputIfEmpty('create_requester_phone', memory.requester_phone || '');
-      fillInputIfEmpty('create_destination', memory.destination || '');
-      fillInputIfEmpty('create_mission', memory.mission || '');
-      fillInputIfEmpty('create_notes', memory.notes || '');
+      // Disabled auto-filling old teacher/destination into new queues to prevent accidental mix-ups
     }
 
     function persistCreateDraftFields() {
@@ -1991,7 +2007,9 @@
         if (includeCreate) {
           var btn1 = document.createElement('div');
           btn1.className = 'select-btn' + (createInput.value === vehicle.id ? ' selected' : '');
-          btn1.textContent = displayText;
+          btn1.setAttribute('data-car-id', vehicle.id);
+          var seatsTxt = vehicle.seat_count ? (' (' + vehicle.seat_count + ' ที่นั่ง)') : '';
+          btn1.innerHTML = '<span>' + displayText + seatsTxt + '</span><span class="avail-tag">กำลังเช็ค...</span>';
           if (st === 'inactive') btn1.style.opacity = '0.6';
           else if (cat === 'support') btn1.style.borderStyle = 'dashed';
           
@@ -2011,7 +2029,9 @@
         if (includeEdit) {
           var btn2 = document.createElement('div');
           btn2.className = 'select-btn' + (editInput.value === vehicle.id ? ' selected' : '');
-          btn2.textContent = displayText;
+          btn2.setAttribute('data-car-id', vehicle.id);
+          var seatsTxt2 = vehicle.seat_count ? (' (' + vehicle.seat_count + ' ที่นั่ง)') : '';
+          btn2.innerHTML = '<span>' + displayText + seatsTxt2 + '</span><span class="avail-tag">กำลังเช็ค...</span>';
           if (st === 'inactive') btn2.style.opacity = '0.6';
           else if (cat === 'support') btn2.style.borderStyle = 'dashed';
           
@@ -2046,7 +2066,8 @@
           var isReserve = (driver.assignment_type && driver.assignment_type !== 'primary');
           var btn = document.createElement('div');
           btn.className = 'select-btn' + (isReserve ? ' reserve-btn' : '') + (inputEl.value === driver.id ? ' selected' : '');
-          btn.textContent = firstName;
+          btn.setAttribute('data-driver-id', driver.id);
+          btn.innerHTML = '<span>' + firstName + '</span><span class="avail-tag">กำลังเช็ค...</span>';
           btn.onclick = function() {
             if (btn.classList.contains('selected')) {
               btn.classList.remove('selected');
@@ -2338,13 +2359,14 @@
         dayQueues.forEach(function (queue) {
           var vehicle = vehiclesMap[queue.car_id];
           var driver = driversMap[queue.driver_id];
-          // Prefer joined fields from API (license_plate / driver_name) so that
-          // รถที่ถูกปิดใช้งาน/ซ่อม (ไม่อยู่ใน vehiclesMap) ยังแสดงป้ายทะเบียนได้
           var licensePlate = (vehicle && vehicle.license_plate) || queue.license_plate || '-';
           var driverName = queue.driver_name || (driver && driver.name) || '-';
+          var shortDriver = driverName.replace(/^(นาย|นางสาว|นาง)\s*/, '').split(' ')[0] || driverName;
+          var timeTag = queue.time_start ? (queue.time_start.substring(0, 5) + ' ') : '';
+          var destTag = queue.destination ? (' → ' + queue.destination) : '';
 
-          html += '<div class="queue-item" onclick="openEditModal(\'' + queue.id + '\'); event.stopPropagation();">';
-          html += '<span class="queue-plate">' + licensePlate + '</span> ' + driverName;
+          html += '<div class="queue-item" title="' + escapeHtml((queue.time_start || '') + (queue.time_end ? '-' + queue.time_end : '') + ' | ' + licensePlate + ' (' + driverName + ')' + destTag) + '" onclick="openEditModal(\'' + queue.id + '\'); event.stopPropagation();">';
+          html += '<span class="queue-plate">' + timeTag + licensePlate + '</span> ' + shortDriver + escapeHtml(destTag);
           html += '</div>';
         });
 
@@ -2510,6 +2532,7 @@
     }
 
     function resetCreateForm() {
+      _fulfillingRequestId = null;
       createDateType = 'single';
       selectedWeekdays = [];
       document.querySelectorAll('.date-type-btn').forEach(function (btn, idx) {
@@ -2981,6 +3004,34 @@
       var submitBtn = document.getElementById('createSubmitBtn');
       submitBtn.disabled = true;
 
+      if (_fulfillingRequestId && dates.length === 1) {
+        try {
+          var approveRes = await apiCall('approveVehicleRequest', {
+            id: _fulfillingRequestId,
+            assigned_car_id: formData.car_id,
+            assigned_driver_id: formData.driver_id,
+            notes: formData.notes || 'จัดคิวจากหน้าจัดการคิวรถ',
+            force_queue: formData.allow_flexible || formData.emergency_override,
+            override: formData.emergency_override,
+            override_reason: formData.override_reason || ''
+          });
+          if (approveRes && approveRes.success) {
+            closeCreateModal();
+            loadQueues();
+            var lineMsg = approveRes.data ? approveRes.data.lineMessage : '';
+            if (lineMsg) {
+              showQueueSuccessModal(lineMsg, 'อนุมัติคำขอออนไลน์และสร้างคิวรถเรียบร้อยแล้ว');
+            } else {
+              showAlert('✅ อนุมัติคำขอและจัดคิวรถเรียบร้อยแล้ว', 'success');
+            }
+            document.getElementById('createProgressContainer').style.display = 'none';
+            return;
+          }
+        } catch (e) {
+          console.warn('Direct request approval fallback to manual queue creation:', e);
+        }
+      }
+
       var successCount = 0;
       var failCount = 0;
       var total = dates.length;
@@ -3404,41 +3455,238 @@ ${dTagHeader}📅 วันเดินทาง: ${dateFormatted}
       }, 5000);
     }
 
-// --- Stepper Logic Create ---
+// --- Single-View Friendly Form & Live Availability Badges ---
 let currentCreateStep = 1;
+let _pendingRequestsCache = {};
+let _fulfillingRequestId = null;
+
 function updateCreateStepper() {
-  for (let i = 1; i <= 3; i++) {
-    const stepEl = document.getElementById('createStep' + i);
-    const indEl = document.getElementById('createStepInd' + i);
-    if (stepEl) {
-      if (i === currentCreateStep) {
-        stepEl.classList.add('active');
-        indEl.classList.add('active');
-        indEl.classList.remove('completed');
+  // All steps are visible simultaneously for easy scrolling by non-tech-savvy supervisors
+  var btnPrev = document.getElementById('createBtnPrev');
+  var btnNext = document.getElementById('createBtnNext');
+  var btnSubmit = document.getElementById('createSubmitBtn');
+  var btnCancel = document.getElementById('createBtnCancel');
+  if (btnPrev) btnPrev.style.display = 'none';
+  if (btnNext) btnNext.style.display = 'none';
+  if (btnCancel) btnCancel.style.display = 'inline-flex';
+  if (btnSubmit) btnSubmit.style.display = 'inline-flex';
+  refreshLiveButtonAvailability('create');
+}
+
+let currentEditStep = 1;
+function updateEditStepper() {
+  var btnPrev = document.getElementById('editBtnPrev');
+  var btnNext = document.getElementById('editBtnNext');
+  var btnSubmit = document.getElementById('editSubmitBtn');
+  var btnCancel = document.getElementById('editBtnCancel');
+  if (btnPrev) btnPrev.style.display = 'none';
+  if (btnNext) btnNext.style.display = 'none';
+  if (btnCancel) btnCancel.style.display = 'inline-flex';
+  if (btnSubmit) btnSubmit.style.display = 'inline-flex';
+  refreshLiveButtonAvailability('edit');
+}
+
+async function refreshLiveButtonAvailability(mode) {
+  try {
+    var date = '';
+    var returnDate = '';
+    var timeStart = '08:00';
+    var timeEnd = '16:30';
+    if (mode === 'edit') {
+      date = (document.getElementById('edit_date') || {}).value || '';
+      returnDate = date;
+      timeStart = (document.getElementById('edit_time_start') || {}).value || '08:00';
+      timeEnd = (document.getElementById('edit_time_end') || {}).value || '16:30';
+    } else {
+      if (createDateType === 'range') {
+        date = (document.getElementById('create_date_from') || {}).value || '';
+        returnDate = (document.getElementById('create_date_to') || {}).value || date;
+      } else if (createDateType === 'weekly') {
+        date = (document.getElementById('weekly_date_from') || {}).value || '';
+        returnDate = (document.getElementById('weekly_date_to') || {}).value || date;
       } else {
-        stepEl.classList.remove('active');
-        indEl.classList.remove('active');
-        if (i < currentCreateStep) {
-          indEl.classList.add('completed');
-        } else {
-          indEl.classList.remove('completed');
-        }
+        date = (document.getElementById('create_date') || {}).value || '';
+        returnDate = date;
       }
+      timeStart = (document.getElementById('create_time_start') || {}).value || '08:00';
+      timeEnd = (document.getElementById('create_time_end') || {}).value || '16:30';
     }
-  }
-  
-  // Footer buttons
-  document.getElementById('createBtnPrev').style.display = currentCreateStep === 1 ? 'none' : 'block';
-  document.getElementById('createBtnCancel').style.display = currentCreateStep === 1 ? 'block' : 'none';
-  
-  if (currentCreateStep === 3) {
-    document.getElementById('createBtnNext').style.display = 'none';
-    document.getElementById('createSubmitBtn').style.display = 'block';
-  } else {
-    document.getElementById('createBtnNext').style.display = 'block';
-    document.getElementById('createSubmitBtn').style.display = 'none';
+    if (!date) return;
+
+    var res = await API.get('/api/queue/suggest?date=' + encodeURIComponent(date) + '&return_date=' + encodeURIComponent(returnDate || date) + '&time_start=' + encodeURIComponent(timeStart) + '&time_end=' + encodeURIComponent(timeEnd));
+    if (!res || !res.success || !res.data) return;
+
+    var freeCarIds = new Set((res.data.available_cars || []).map(function(c) { return c.id; }));
+    var freeDriverIds = new Set((res.data.available_drivers || []).map(function(d) { return d.id; }));
+
+    // Also allow the currently assigned car/driver when editing an existing queue
+    if (mode === 'edit' && editingQueueData) {
+      if (editingQueueData.car_id) freeCarIds.add(editingQueueData.car_id);
+      if (editingQueueData.driver_id) freeDriverIds.add(editingQueueData.driver_id);
+    }
+
+    var prefix = mode === 'edit' ? 'edit' : 'create';
+    var carGrid = document.getElementById(prefix + '_car_grid');
+    if (carGrid) {
+      carGrid.querySelectorAll('.select-btn[data-car-id]').forEach(function(btn) {
+        var cId = btn.getAttribute('data-car-id');
+        var v = vehiclesMap[cId] || {};
+        var tag = btn.querySelector('.avail-tag');
+        btn.classList.remove('is-free', 'is-busy');
+        if (v.status === 'under_repair' || v.status === 'maintenance') {
+          btn.classList.add('is-busy');
+          if (tag) tag.textContent = '🔧 กำลังซ่อม';
+        } else if (v.status === 'inactive') {
+          btn.classList.add('is-busy');
+          if (tag) tag.textContent = '⛔ งดใช้';
+        } else if (freeCarIds.has(cId)) {
+          btn.classList.add('is-free');
+          if (tag) tag.textContent = '🟢 ว่าง';
+        } else {
+          btn.classList.add('is-busy');
+          if (tag) tag.textContent = '🔴 ติดคิวอื่น';
+        }
+      });
+    }
+
+    [prefix + '_driver_grid_primary', prefix + '_driver_grid_reserve'].forEach(function(gId) {
+      var dGrid = document.getElementById(gId);
+      if (!dGrid) return;
+      dGrid.querySelectorAll('.select-btn[data-driver-id]').forEach(function(btn) {
+        var dId = btn.getAttribute('data-driver-id');
+        var drv = driversMap[dId] || {};
+        var tag = btn.querySelector('.avail-tag');
+        btn.classList.remove('is-free', 'is-busy');
+        if (drv.status === 'on_leave') {
+          btn.classList.add('is-busy');
+          if (tag) tag.textContent = '🏖️ ลาพัก';
+        } else if (freeDriverIds.has(dId)) {
+          btn.classList.add('is-free');
+          if (tag) tag.textContent = '🟢 ว่าง';
+        } else {
+          btn.classList.add('is-busy');
+          if (tag) tag.textContent = '🔴 ติดคิว/ลา';
+        }
+      });
+    });
+  } catch (e) {
+    console.warn('refreshLiveButtonAvailability error:', e);
   }
 }
+
+async function autoSelectAvailableForCreate() {
+  var date = (document.getElementById('create_date') || {}).value || '';
+  var returnDate = date;
+  if (createDateType === 'range') {
+    date = (document.getElementById('create_date_from') || {}).value || '';
+    returnDate = (document.getElementById('create_date_to') || {}).value || date;
+  }
+  var timeStart = (document.getElementById('create_time_start') || {}).value || '08:00';
+  var timeEnd = (document.getElementById('create_time_end') || {}).value || '16:30';
+  var pax = parseInt((document.getElementById('create_passenger_count') || {}).value) || 1;
+
+  if (!date) {
+    showAlert('กรุณาเลือกวันที่เดินทางก่อนกดปุ่มเลือกอัตโนมัติ', 'warning');
+    return;
+  }
+
+  try {
+    var res = await API.get('/api/queue/suggest?date=' + encodeURIComponent(date) + '&return_date=' + encodeURIComponent(returnDate || date) + '&time_start=' + encodeURIComponent(timeStart) + '&time_end=' + encodeURIComponent(timeEnd));
+    if (!res || !res.success || !res.data) {
+      showAlert('ไม่สามารถดึงข้อมูลรถว่างได้', 'error');
+      return;
+    }
+
+    var availCars = res.data.available_cars || [];
+    // Filter cars that fit passenger count if seat_count is known
+    var suitableCar = availCars.find(function(c) {
+      var fullCar = vehiclesMap[c.id] || c;
+      return !fullCar.seat_count || parseInt(fullCar.seat_count) >= pax;
+    }) || res.data.best_car || availCars[0];
+
+    var suitableDriver = res.data.best_driver || (res.data.available_drivers || [])[0];
+
+    if (!suitableCar && !suitableDriver) {
+      showAlert('❌ ไม่มีรถและพนักงานขับรถว่างในช่วงเวลานี้', 'error');
+      return;
+    }
+
+    if (suitableCar) {
+      var cInput = document.getElementById('create_car_id');
+      var cGrid = document.getElementById('create_car_grid');
+      if (cInput && cGrid) {
+        cInput.value = suitableCar.id;
+        Array.from(cGrid.children).forEach(function(btn) {
+          btn.classList.toggle('selected', btn.getAttribute('data-car-id') === suitableCar.id);
+        });
+        cInput.dispatchEvent(new Event('change'));
+      }
+    }
+
+    if (suitableDriver) {
+      var dInput = document.getElementById('create_driver_id');
+      var g1 = document.getElementById('create_driver_grid_primary');
+      var g2 = document.getElementById('create_driver_grid_reserve');
+      if (dInput) {
+        dInput.value = suitableDriver.id;
+        [g1, g2].forEach(function(g) {
+          if (!g) return;
+          Array.from(g.children).forEach(function(btn) {
+            btn.classList.toggle('selected', btn.getAttribute('data-driver-id') === suitableDriver.id);
+          });
+        });
+        dInput.dispatchEvent(new Event('change'));
+      }
+    }
+
+    await refreshLiveButtonAvailability('create');
+    showAlert('✨ เลือกรถ (' + (suitableCar ? suitableCar.license_plate : 'ไม่มีรถว่าง') + ') และคนขับ (' + (suitableDriver ? suitableDriver.name : 'ไม่มีคนขับว่าง') + ') ที่ว่างให้เรียบร้อยแล้ว', 'success');
+  } catch (e) {
+    showAlert('เกิดข้อผิดพลาดในการค้นหารถว่าง', 'error');
+  }
+}
+
+function quickDispatchFromRequest(reqId) {
+  var r = _pendingRequestsCache[reqId];
+  if (!r) return;
+  openCreateModal();
+  _fulfillingRequestId = reqId;
+  setTimeout(async function() {
+    var startDate = r.date || r.start_date || '';
+    var endDate = r.return_date || r.end_date || startDate;
+    if (endDate && endDate !== startDate) {
+      _setDateTypeProgrammatic('range');
+      _fpSetDate('create_date_from', startDate);
+      _fpSetDate('create_date_to', endDate);
+      if (typeof updateDateRangePreview === 'function') updateDateRangePreview();
+    } else {
+      _setDateTypeProgrammatic('single');
+      _fpSetDate('create_date', startDate);
+    }
+    if (r.time_start) document.getElementById('create_time_start').value = r.time_start;
+    if (r.time_end) document.getElementById('create_time_end').value = r.time_end;
+    document.getElementById('create_requested_by').value = r.requester_name || r.requester_display_name || '';
+    if (document.getElementById('create_requester_phone')) {
+      document.getElementById('create_requester_phone').value = r.requester_phone || '';
+    }
+    document.getElementById('create_passenger_count').value = r.passengers || r.passenger_count || 1;
+    document.getElementById('create_destination').value = r.destination || '';
+    document.getElementById('create_mission').value = r.purpose || '';
+    await autoSelectAvailableForCreate();
+  }, 50);
+}
+
+// Re-check availability whenever date/time inputs change
+document.addEventListener('DOMContentLoaded', function() {
+  ['create_date', 'create_date_from', 'create_date_to', 'create_time_start', 'create_time_end'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('change', function() { refreshLiveButtonAvailability('create'); });
+  });
+  ['edit_date', 'edit_time_start', 'edit_time_end'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('change', function() { refreshLiveButtonAvailability('edit'); });
+  });
+});
 
 function validateCreateStep(step) {
   if (step === 1) {
@@ -3515,42 +3763,6 @@ window.openCreateModal = function() {
   currentCreateStep = 1;
   updateCreateStepper();
 };
-
-// --- Stepper Logic Edit ---
-let currentEditStep = 1;
-function updateEditStepper() {
-  for (let i = 1; i <= 3; i++) {
-    const stepEl = document.getElementById('editStep' + i);
-    const indEl = document.getElementById('editStepInd' + i);
-    if (stepEl) {
-      if (i === currentEditStep) {
-        stepEl.classList.add('active');
-        indEl.classList.add('active');
-        indEl.classList.remove('completed');
-      } else {
-        stepEl.classList.remove('active');
-        indEl.classList.remove('active');
-        if (i < currentEditStep) {
-          indEl.classList.add('completed');
-        } else {
-          indEl.classList.remove('completed');
-        }
-      }
-    }
-  }
-  
-  // Footer buttons
-  document.getElementById('editBtnPrev').style.display = currentEditStep === 1 ? 'none' : 'block';
-  document.getElementById('editBtnCancel').style.display = currentEditStep === 1 ? 'block' : 'none';
-  
-  if (currentEditStep === 3) {
-    document.getElementById('editBtnNext').style.display = 'none';
-    document.getElementById('editSubmitBtn').style.display = 'block';
-  } else {
-    document.getElementById('editBtnNext').style.display = 'block';
-    document.getElementById('editSubmitBtn').style.display = 'none';
-  }
-}
 
 function validateEditStep(step) {
   if (step === 1) {
@@ -3677,8 +3889,10 @@ function renderPendingRequestsList(requests) {
     return;
   }
 
-  var html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; margin-top: 10px;">';
+  _pendingRequestsCache = {};
+  var html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 10px;">';
   requests.forEach(function (r) {
+    _pendingRequestsCache[r.id] = r;
     var dateDisplay = r.date || r.start_date || '-';
     if (r.end_date && r.end_date !== r.start_date && r.end_date !== r.date) {
       dateDisplay += ' ถึง ' + r.end_date;
@@ -3688,20 +3902,23 @@ function renderPendingRequestsList(requests) {
     var phone = r.requester_phone ? ' 📞 ' + r.requester_phone : '';
     var dept = r.department ? ' (' + r.department + ')' : '';
 
-    html += '<div style="background: white; border: 1px solid #ffe082; border-radius: var(--radius-md); padding: 14px 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between;">';
+    html += '<div style="background: white; border: 1.5px solid #fcd34d; border-radius: var(--radius-md); padding: 14px 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between;">';
     html += '  <div>';
     html += '    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">';
-    html += '      <span style="background: #fff3e0; color: #e65100; font-weight: 700; font-size: 0.8em; padding: 2px 8px; border-radius: 10px;">🕒 รออนุมัติ</span>';
-    html += '      <span style="font-size: 0.85em; color: #757575; font-weight: 600;">' + escapeHtml(dateDisplay) + '</span>';
+    html += '      <span style="background: #fef3c7; color: #92400e; font-weight: 700; font-size: 0.8em; padding: 2px 8px; border-radius: 10px;">🕒 รอจัดรถ</span>';
+    html += '      <span style="font-size: 0.88em; color: #334155; font-weight: 700;">📅 ' + escapeHtml(dateDisplay) + '</span>';
     html += '    </div>';
     html += '    <div style="font-weight: 700; color: var(--color-text); font-size: 1.05em; margin-bottom: 4px;">📍 ' + escapeHtml(r.destination || '-') + '</div>';
-    html += '    <div style="font-size: 0.9em; color: #555; margin-bottom: 4px;">🎯 ภารกิจ: ' + escapeHtml(r.purpose || '-') + '</div>';
-    html += '    <div style="font-size: 0.85em; color: #666; margin-bottom: 2px;">👤 ผู้ขอ: ' + escapeHtml(requester) + dept + phone + '</div>';
-    html += '    <div style="font-size: 0.85em; color: #666;">👥 ผู้โดยสาร: ' + (r.passenger_count || 1) + ' คน ' + (timeDisplay ? ' | ⏰ ' + timeDisplay : '') + '</div>';
+    html += '    <div style="font-size: 0.9em; color: #475569; margin-bottom: 4px;">🎯 ภารกิจ: ' + escapeHtml(r.purpose || '-') + '</div>';
+    html += '    <div style="font-size: 0.88em; color: #475569; margin-bottom: 2px;">👤 ผู้ขอ: <strong>' + escapeHtml(requester) + '</strong>' + dept + phone + '</div>';
+    html += '    <div style="font-size: 0.88em; color: #475569;">👥 ผู้โดยสาร: <strong>' + (r.passengers || r.passenger_count || 1) + ' คน</strong> ' + (timeDisplay ? ' | ⏰ ' + timeDisplay : '') + '</div>';
     html += '  </div>';
-    html += '  <div style="margin-top: 12px; display: flex; justify-content: flex-end; gap: 8px;">';
-    html += '    <a href="vehicle-request.html?tab=approve&approve_id=' + encodeURIComponent(r.id) + '" class="btn btn-primary" style="background: #2e7d32; border-color: #1b5e20; font-size: 0.85em; padding: 6px 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; font-weight: 700; border-radius: 6px; color: white;">';
-    html += '      ✅ ตรวจสอบและอนุมัติ';
+    html += '  <div style="margin-top: 12px; display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap;">';
+    html += '    <button type="button" onclick="quickDispatchFromRequest(\'' + escapeHtml(r.id) + '\')" class="btn" style="background: var(--color-primary); color: white; font-size: 0.88em; padding: 8px 14px; min-height: 40px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer;">';
+    html += '      ⚡ จัดรถให้คำขอนี้ทันที';
+    html += '    </button>';
+    html += '    <a href="vehicle-request.html?tab=approve&approve_id=' + encodeURIComponent(r.id) + '" class="btn" style="background: #059669; font-size: 0.88em; padding: 8px 14px; min-height: 40px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; font-weight: 700; border-radius: 8px; color: white;">';
+    html += '      ✅ อนุมัติใบคำขอ';
     html += '    </a>';
     html += '  </div>';
     html += '</div>';
