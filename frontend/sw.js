@@ -1,6 +1,6 @@
-// sw.js — PPK DriveHub Service Worker
+﻿// sw.js â€” PPK DriveHub Service Worker
 // v17: Full Phase 1-5 Remediation + UI/UX Unification
-var CACHE_NAME='ppk-v17';
+var CACHE_NAME='ppk-v18';
 // Only pre-cache truly static fallback assets. JS/CSS use network-first below.
 var STATIC_ASSETS=[
   '/manifest.json'
@@ -37,9 +37,9 @@ self.addEventListener('fetch',function(e){
   if(e.request.method!=='GET')return;
   // Skip cross-origin requests (Google Fonts, CDNs, etc.)
   if(url.origin!==self.location.origin)return;
-  // Skip API calls — let them go to network directly
+  // Skip API calls â€” let them go to network directly
   if(url.pathname.startsWith('/api/'))return;
-  // Skip navigation requests (HTML pages) — avoid redirect issues with Cloudflare Pages
+  // Skip navigation requests (HTML pages) â€” avoid redirect issues with Cloudflare Pages
   if(e.request.mode==='navigate')return;
 
   // JS/CSS: network-first (always try fresh; fall back to cache only if offline)

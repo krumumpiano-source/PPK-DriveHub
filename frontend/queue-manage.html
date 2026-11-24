@@ -3004,9 +3004,10 @@
       var submitBtn = document.getElementById('createSubmitBtn');
       submitBtn.disabled = true;
 
-      if (_fulfillingRequestId && dates.length === 1) {
+if (_fulfillingRequestId) {
+        var approveRes = null;
         try {
-          var approveRes = await apiCall('approveVehicleRequest', {
+          approveRes = await apiCall('approveVehicleRequest', {
             id: _fulfillingRequestId,
             assigned_car_id: formData.car_id,
             assigned_driver_id: formData.driver_id,
@@ -3015,21 +3016,31 @@
             override: formData.emergency_override,
             override_reason: formData.override_reason || ''
           });
-          if (approveRes && approveRes.success) {
-            closeCreateModal();
-            loadQueues();
-            var lineMsg = approveRes.data ? approveRes.data.lineMessage : '';
-            if (lineMsg) {
-              showQueueSuccessModal(lineMsg, 'อนุมัติคำขอออนไลน์และสร้างคิวรถเรียบร้อยแล้ว');
-            } else {
-              showAlert('✅ อนุมัติคำขอและจัดคิวรถเรียบร้อยแล้ว', 'success');
-            }
-            document.getElementById('createProgressContainer').style.display = 'none';
-            return;
-          }
         } catch (e) {
-          console.warn('Direct request approval fallback to manual queue creation:', e);
+          approveRes = { success: false, message: (e && e.message) || 'เชื่อมต่อระบบไม่สำเร็จ' };
         }
+        document.getElementById('createProgressContainer').style.display = 'none';
+        if (approveRes && approveRes.success) {
+          closeCreateModal();
+          loadQueues();
+          checkPendingVehicleRequests();
+          var approvedText = buildDispatchLineText({
+            carId: formData.car_id, driverId: formData.driver_id,
+            dateText: dates.length > 1
+              ? formatThaiDateDisplay(dates[0]) + ' ถึง ' + formatThaiDateDisplay(dates[dates.length - 1]) + ' (' + dates.length + ' วัน)'
+              : formatThaiDateDisplay(dates[0]),
+            timeStart: formData.time_start, timeEnd: formData.time_end,
+            destination: formData.destination, mission: formData.purpose,
+            requester: formData.requester_name, passengers: formData.passenger_count,
+            notes: formData.notes
+          });
+          showQueueSuccessModal(approvedText || (approveRes.data && approveRes.data.lineMessage) || '', 'อนุมัติคำขอและจัดคิวเรียบร้อยแล้ว กด "คัดลอกข้อความ" แล้วส่งให้พนักงานขับรถทาง LINE ได้เลย');
+        } else {
+          // ไม่สร้างคิวซ้ำเอง เพื่อไม่ให้คำขอค้างสถานะรอและคิวซ้อนกัน
+          showAlert('จัดรถให้คำขอนี้ไม่สำเร็จ: ' + ((approveRes && approveRes.message) || 'กรุณาตรวจสอบรถ/คนขับว่าว่างหรือไม่') + ' (ยังไม่มีการสร้างคิว)', 'error');
+          submitBtn.disabled = false;
+        }
+        return;
       }
 
       var successCount = 0;
@@ -3066,15 +3077,20 @@
         }
       }
 
-      if (successCount === total) {
+if (successCount === total) {
         closeCreateModal();
         loadQueues();
-        var adminEmail = (currentUser && currentUser.email) ? currentUser.email : 'อีเมลของท่าน';
-        if (lastLineMessage) {
-          showQueueSuccessModal(lastLineMessage, 'ระบบได้ส่งอีเมลยืนยันรายการจัดคิวไปยัง ' + adminEmail + ' เรียบร้อยแล้ว เพื่อใช้เป็นหลักฐานการบันทึกข้อมูล');
-        } else {
-          showAlert('สร้างคิวสำเร็จทั้งหมด ' + successCount + ' คิว (ส่งอีเมลยืนยันเรียบร้อย)', 'success');
-        }
+        var dispatchText = buildDispatchLineText({
+          carId: formData.car_id, driverId: formData.driver_id,
+          dateText: dates.length > 1
+            ? formatThaiDateDisplay(dates[0]) + ' ถึง ' + formatThaiDateDisplay(dates[dates.length - 1]) + ' (' + dates.length + ' วัน)'
+            : formatThaiDateDisplay(dates[0]),
+          timeStart: formData.time_start, timeEnd: formData.time_end,
+          destination: formData.destination, mission: formData.purpose,
+          requester: formData.requester_name, passengers: formData.passenger_count,
+          notes: formData.notes
+        });
+        showQueueSuccessModal(dispatchText || lastLineMessage, 'บันทึกคิวเรียบร้อยแล้ว กด "คัดลอกข้อความ" แล้วส่งให้พนักงานขับรถทาง LINE ได้เลย');
       } else if (successCount > 0) {
         showAlert('สร้างคิวสำเร็จ ' + successCount + ' คิว, ล้มเหลว ' + failCount + ' คิว', 'warning');
         submitBtn.disabled = false;
@@ -3098,12 +3114,16 @@
       document.getElementById('queueSuccessModal').classList.remove('show');
     }
 
-    function copyQueueSuccessText() {
-      var txt = document.getElementById('queueSuccessLineText').value;
-      navigator.clipboard.writeText(txt).then(function () {
-        showAlert('คัดลอกข้อความสำหรับส่ง LINE เรียบร้อยแล้ว', 'success');
-      }).catch(function () {
-        alert('กรุณาคัดลอกข้อความด้วยตนเอง:\n' + txt);
+function copyQueueSuccessText() {
+      var ta = document.getElementById('queueSuccessLineText');
+      copyTextRobust(ta.value, function () {
+        showAlert('✅ คัดลอกข้อความแล้ว เปิด LINE แล้วกดวางส่งให้คนขับได้เลย', 'success');
+      }, function () {
+        ta.removeAttribute('readonly');
+        ta.focus();
+        ta.select();
+        ta.setAttribute('readonly', '');
+        showAlert('คัดลอกอัตโนมัติไม่ได้ ข้อความถูกเลือกไว้แล้ว กรุณากดค้างแล้วเลือก "คัดลอก"', 'warning');
       });
     }
 
@@ -3245,64 +3265,86 @@
       return phone;
     }
 
+function buildDispatchLineText(o) {
+      var car = vehiclesMap[o.carId] || {};
+      var carPlate = o.carPlate || car.license_plate || '-';
+      var carModel = ((o.carBrand || car.brand || '') + ' ' + (o.carModel || car.model || '')).trim();
+      var carLabel = carPlate + (carModel ? ' (' + carModel + ')' : '');
+      var driver = driversMap[o.driverId] || {};
+      var driverName = driver.name || o.driverName || '-';
+      var dTag = driver.line_id || o.driverLineId || '';
+      if (dTag && dTag.charAt(0) !== '@') dTag = '@' + dTag;
+      var dPhone = formatPhoneNumber(driver.phone || o.driverPhone || '');
+      var dTagHeader = dTag ? '🔔 ถึง: ' + dTag + ' (พนักงานขับรถ)\n' : '';
+      var dDisplay = dTag ? driverName + ' (' + dTag + ')' : driverName;
+      var timeStr = o.timeEnd ? o.timeStart + ' - ' + o.timeEnd + ' น.' : o.timeStart + ' น. เป็นต้นไป';
+      return '📋 [สั่งการคิวรถราชการ - โรงเรียนพะเยาพิทยาคม]\n' +
+        '──────────────────────\n' +
+        dTagHeader +
+        '📅 วันเดินทาง: ' + o.dateText + '\n' +
+        '⏰ เวลาล้อหมุน: ' + timeStr + '\n' +
+        '📍 สถานที่ไป: ' + (o.destination || '-') + '\n' +
+        '🎯 ภารกิจ: ' + (o.mission || '-') + '\n\n' +
+        '🚗 รถที่ใช้: ' + carLabel + '\n' +
+        '👤 คนขับ: ' + dDisplay + (dPhone ? '\n📞 โทรคนขับ: ' + dPhone : '') + '\n\n' +
+        '👥 ผู้ขอ/คณะเดินทาง: ' + (o.requester || '-') + ' (จำนวน ' + (o.passengers || 1) + ' คน)' +
+        (o.notes ? '\n📝 หมายเหตุ: ' + o.notes : '') + '\n' +
+        '──────────────────────\n' +
+        '📌 ขอให้พนักงานขับรถเตรียมความพร้อม และตรวจเช็ครถก่อนออกเดินทางครับ';
+    }
+
+    // คัดลอกข้อความ: ลอง clipboard API ก่อน ถ้าไม่ได้ใช้ execCommand จาก textarea
+    function copyTextRobust(txt, onDone, onFail) {
+      function legacy() {
+        try {
+          var ta = document.createElement('textarea');
+          ta.value = txt;
+          ta.setAttribute('readonly', '');
+          ta.style.position = 'fixed';
+          ta.style.top = '0';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          var ok = document.execCommand('copy');
+          document.body.removeChild(ta);
+          if (ok) onDone(); else onFail();
+        } catch (e) { onFail(); }
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(onDone).catch(legacy);
+      } else {
+        legacy();
+      }
+    }
+
     function copyCurrentQueueToLine(btn) {
       if (!editingQueueData) {
         alert('ไม่พบข้อมูลคิวงาน');
         return;
       }
       var q = editingQueueData;
-      var car = vehiclesMap[q.car_id] || {};
-      var carPlate = q.license_plate || car.license_plate || '-';
-      var carModel = (q.brand || car.brand || '') + ' ' + (q.model || car.model || '');
-      var carLabel = carPlate + (carModel.trim() ? ' (' + carModel.trim() + ')' : '');
-      
-      var currentEditDriverId = document.getElementById('edit_driver_id') ? document.getElementById('edit_driver_id').value : '';
-      var driver = (currentEditDriverId ? driversMap[currentEditDriverId] : null) || driversMap[q.driver_id] || {};
-      var driverName = driver.name || q.driver_name || '-';
-      var dTag = q.driver_line_id || driver.line_id || '';
-      if (dTag && !dTag.startsWith('@')) dTag = '@' + dTag;
-
-      var dPhone = formatPhoneNumber(q.driver_phone || driver.phone || '');
-      var dTagHeader = dTag ? `🔔 ถึง: ${dTag} (พนักงานขับรถ)\n` : '';
-      var dDisplay = dTag ? `${driverName} (${dTag})` : driverName;
-
-      var rawDate = document.getElementById('edit_date') ? document.getElementById('edit_date').value : q.date;
-      var dateFormatted = formatThaiDateDisplay(rawDate);
-      var timeStart = document.getElementById('edit_time_start') ? document.getElementById('edit_time_start').value : (q.time_start || '-');
-      var timeEnd = document.getElementById('edit_time_end') ? document.getElementById('edit_time_end').value : (q.time_end || '');
-      var timeStr = timeEnd ? `${timeStart} - ${timeEnd} น.` : `${timeStart} น. เป็นต้นไป`;
-
-      var dest = document.getElementById('edit_destination') ? document.getElementById('edit_destination').value.trim() : (q.destination || '-');
-      var mission = document.getElementById('edit_mission') ? document.getElementById('edit_mission').value.trim() : (q.notes || q.mission || '-');
-      var requester = document.getElementById('edit_requested_by') ? document.getElementById('edit_requested_by').value.trim() : (q.requester_name || q.requested_by || '-');
-      var passengerCount = document.getElementById('edit_passenger_count') ? document.getElementById('edit_passenger_count').value : (q.passenger_count || 1);
-      var notes = document.getElementById('edit_notes') ? document.getElementById('edit_notes').value.trim() : '';
-
-      var lineText = `📋 [สั่งการคิวรถราชการ - โรงเรียนพะเยาพิทยาคม]
-──────────────────────
-${dTagHeader}📅 วันเดินทาง: ${dateFormatted}
-⏰ เวลาล้อหมุน: ${timeStr}
-📍 สถานที่ไป: ${dest}
-🎯 ภารกิจ: ${mission}
-
-🚗 รถที่ใช้: ${carLabel}
-👤 คนขับ: ${dDisplay}${dPhone ? '\n📞 โทรคนขับ: ' + dPhone : ''}
-
-👥 ผู้ขอ/คณะเดินทาง: ${requester} (จำนวน ${passengerCount} คน)${notes ? '\n📝 หมายเหตุ: ' + notes : ''}
-──────────────────────
-📌 ขอให้พนักงานขับรถเตรียมความพร้อม และตรวจเช็ครถก่อนออกเดินทางครับ`;
-
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(lineText).then(function() {
-          var orig = btn.innerHTML;
-          btn.innerHTML = '✅ คัดลอกแล้ว!';
-          setTimeout(function() { btn.innerHTML = orig; }, 2500);
-        }).catch(function() {
-          prompt('คัดลอกข้อความด้านล่างเพื่อส่ง LINE:', lineText);
-        });
-      } else {
-        prompt('คัดลอกข้อความด้านล่างเพื่อส่ง LINE:', lineText);
-      }
+      function g(id) { var e = document.getElementById(id); return e ? e.value.trim() : ''; }
+      var lineText = buildDispatchLineText({
+        carId: q.car_id, carPlate: q.license_plate, carBrand: q.brand, carModel: q.model,
+        driverId: g('edit_driver_id') || q.driver_id, driverName: q.driver_name,
+        driverLineId: q.driver_line_id, driverPhone: q.driver_phone,
+        dateText: formatThaiDateDisplay(g('edit_date') || q.date),
+        timeStart: g('edit_time_start') || q.time_start || '-',
+        timeEnd: g('edit_time_end') || q.time_end || '',
+        destination: g('edit_destination') || q.destination,
+        mission: g('edit_mission') || q.notes || q.mission,
+        requester: g('edit_requested_by') || q.requester_name || q.requested_by,
+        passengers: g('edit_passenger_count') || q.passenger_count || 1,
+        notes: g('edit_notes')
+      });
+      copyTextRobust(lineText, function () {
+        var orig = btn.innerHTML;
+        btn.innerHTML = '✅ คัดลอกแล้ว! เปิด LINE แล้วกดวาง';
+        setTimeout(function () { btn.innerHTML = orig; }, 3000);
+      }, function () {
+        showQueueSuccessModal(lineText, 'คัดลอกอัตโนมัติไม่ได้ กรุณากดปุ่ม "💬 เปิด LINE" หรือกดค้างที่ข้อความด้านล่างแล้วเลือก "คัดลอก"');
+      });
     }
 
     function getStatusText(status) {
