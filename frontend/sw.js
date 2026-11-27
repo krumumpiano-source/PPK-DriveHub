@@ -1,6 +1,6 @@
 // sw.js — PPK DriveHub Service Worker
 // v19: Fix Messenger WebView loading hang, 403 must_change_password redirect, and cache busting
-var CACHE_NAME='ppk-v20';
+var CACHE_NAME='ppk-v21';
 // Only pre-cache truly static fallback assets. JS/CSS use network-first below.
 var STATIC_ASSETS=[
   '/manifest.json'

@@ -9,8 +9,8 @@
   <script>window.REQUIRE_AUTH = true; window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'dashboard';</script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
-  <link rel="stylesheet" href="common.css?v=20261127">
-  <script src="js/api.js?v=20261127"></script><script src="common.js?v=20261127"></script>
+  <link rel="stylesheet" href="common.css?v=20261127_2">
+  <script src="js/api.js?v=20261127_2"></script><script src="common.js?v=20261127_2"></script>
   <style>
     * { box-sizing: border-box; }
 
@@ -710,29 +710,71 @@
     }
 
     @media (max-width: 768px) {
-    .calendar-grid {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      min-width: 560px;
+    .calendar-container {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
     }
-    .calendar-section {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
+    .calendar-header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .calendar-nav {
+      display: flex;
+      flex-wrap: nowrap;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .calendar-nav-btn {
+      flex: 1;
+      padding: 8px 10px;
+      font-size: 0.88rem;
+      white-space: nowrap;
+    }
+    .calendar-month-year {
+      font-size: 1.25em;
+      text-align: center;
+    }
+    .calendar-grid {
+      width: 100%;
+      min-width: 0 !important;
+      overflow: hidden;
+      border-radius: var(--radius-md);
+    }
+    .calendar-day-header {
+      padding: 8px 2px;
+      font-size: 0.78em;
     }
     .calendar-day {
-      min-height: 80px;
-      padding: 6px;
+      min-height: 74px;
+      padding: 24px 3px 4px 3px;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .calendar-day-number {
+      top: 4px;
+      left: 5px;
+      font-size: 0.88em;
+    }
+    .calendar-day.today .calendar-day-number {
+      font-size: 0.98em;
     }
     .queue-item {
-      font-size: 0.78em;
+      font-size: 0.65em;
+      padding: 2px 3px;
+      margin-bottom: 2px;
+      border-left-width: 2px;
+    }
+    .trip-bar {
+      height: 16px;
+      font-size: 0.6em;
+      padding: 0 3px;
     }
 
     .availability-section {
-    grid-template-columns: 1fr;
-    }
-
-    .calendar-nav {
-    flex-wrap: wrap;
+      grid-template-columns: 1fr;
     }
     .req-kpi-grid { grid-template-columns: repeat(3, 1fr); }
     .req-hero { flex-direction: column; align-items: flex-start; }
