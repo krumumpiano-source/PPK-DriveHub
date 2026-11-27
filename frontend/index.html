@@ -21,6 +21,16 @@
             if (token) {
                 var u = API.getUser();
                 if (u && (u.must_change_password === true || u.must_change_password === 1 || u.mustChangePassword === true)) {
+                    try {
+                        var me = await API.get('/api/auth/me');
+                        if (me && me.success && me.data && !me.data.must_change_password) {
+                            u.must_change_password = false;
+                            u.mustChangePassword = false;
+                            API.setUser(u);
+                            window.location.href = 'dashboard.html';
+                            return;
+                        }
+                    } catch(e) {}
                     window.location.href = 'change-password.html';
                 } else {
                     window.location.href = 'dashboard.html';

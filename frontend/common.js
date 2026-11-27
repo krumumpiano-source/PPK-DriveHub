@@ -37,7 +37,23 @@ function checkAuth() {
         }
         if (currentUser && (currentUser.must_change_password === true || currentUser.must_change_password === 1 || currentUser.mustChangePassword === true)) {
             if (typeof window !== 'undefined' && window.location && !window.location.pathname.includes('change-password') && !window.location.pathname.includes('login')) {
-                window.location.href = 'change-password.html';
+                // Verify with backend first in case admin already unlocked must_change_password
+                API.get('/api/auth/me').then(function(res) {
+                    if (res && res.success && res.data) {
+                        if (!res.data.must_change_password) {
+                            currentUser.must_change_password = false;
+                            currentUser.mustChangePassword = false;
+                            API.setUser(currentUser);
+                            window.location.reload();
+                        } else {
+                            window.location.href = 'change-password.html';
+                        }
+                    } else {
+                        window.location.href = 'change-password.html';
+                    }
+                }).catch(function() {
+                    window.location.href = 'change-password.html';
+                });
                 return false;
             }
         }
@@ -365,9 +381,6 @@ function renderNav() {
     // Redirect to login if not authenticated on auth-required pages
     if (window.REQUIRE_AUTH === true && !checkAuth()) {
         if (currentUser && (currentUser.must_change_password === true || currentUser.must_change_password === 1 || currentUser.mustChangePassword === true)) {
-            if (!window.location.pathname.includes('change-password')) {
-                window.location.href = 'change-password.html';
-            }
             return;
         }
         window.location.href = 'login.html';

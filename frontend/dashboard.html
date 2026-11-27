@@ -964,8 +964,20 @@
             try { user = JSON.parse(localStorage.getItem('ppk_user') || sessionStorage.getItem('ppk_user') || 'null'); } catch (e) {}
           }
           if (user && (user.must_change_password === true || user.must_change_password === 1 || user.mustChangePassword === true)) {
-            window.location.href = 'change-password.html';
-            return;
+            try {
+              var meRes = await API.get('/api/auth/me');
+              if (meRes && meRes.success && meRes.data && !meRes.data.must_change_password) {
+                user.must_change_password = false;
+                user.mustChangePassword = false;
+                API.setUser(user);
+              } else {
+                window.location.href = 'change-password.html';
+                return;
+              }
+            } catch (e) {
+              window.location.href = 'change-password.html';
+              return;
+            }
           }
           if (user && (user.needs_onboarding === true || user.onboarding_completed === false || user.onboarding_completed === 0)) {
             window.location.href = 'login.html';

@@ -91,6 +91,10 @@ export async function onRequest(context) {
       }
       const headers = new Headers(response.headers);
       headers.set('Content-Security-Policy', CSP);
+      if (url.pathname === '/' || url.pathname.endsWith('.html') || !url.pathname.includes('.') || url.pathname.endsWith('.js') || url.pathname.endsWith('.css')) {
+        headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        headers.set('Pragma', 'no-cache');
+      }
       addSecurityHeaders(headers);
       return new Response(response.body, { status: response.status, headers });
     } catch (e) {

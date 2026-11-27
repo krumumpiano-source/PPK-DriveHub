@@ -462,12 +462,22 @@
     var currentIdentityData = null;
 
     // Auto redirect if already logged in
-    (function checkAlreadyLoggedIn() {
+    (async function checkAlreadyLoggedIn() {
       try {
         if (typeof API !== 'undefined' && API.getToken()) {
           var u = API.getUser();
           if (u && !u.needs_onboarding && u.onboarding_completed !== false && u.onboarding_completed !== 0) {
             if (u.must_change_password === true || u.must_change_password === 1 || u.mustChangePassword === true) {
+              try {
+                var me = await API.get('/api/auth/me');
+                if (me && me.success && me.data && !me.data.must_change_password) {
+                  u.must_change_password = false;
+                  u.mustChangePassword = false;
+                  API.setUser(u);
+                  window.location.href = 'dashboard.html';
+                  return;
+                }
+              } catch (e) {}
               window.location.href = 'change-password.html';
             } else {
               window.location.href = 'dashboard.html';
