@@ -19,7 +19,12 @@
             } catch(e) { /* ignore — proceed to auth check */ }
             var token = API.getToken();
             if (token) {
-                window.location.href = 'dashboard.html';
+                var u = API.getUser();
+                if (u && (u.must_change_password === true || u.must_change_password === 1 || u.mustChangePassword === true)) {
+                    window.location.href = 'change-password.html';
+                } else {
+                    window.location.href = 'dashboard.html';
+                }
             } else {
                 window.location.href = 'login.html';
             }

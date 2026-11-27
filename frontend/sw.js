@@ -1,6 +1,6 @@
-﻿// sw.js â€” PPK DriveHub Service Worker
-// v17: Full Phase 1-5 Remediation + UI/UX Unification
-var CACHE_NAME='ppk-v18';
+﻿// sw.js — PPK DriveHub Service Worker
+// v19: Fix Messenger WebView loading hang, 403 must_change_password redirect, and cache busting
+var CACHE_NAME='ppk-v19';
 // Only pre-cache truly static fallback assets. JS/CSS use network-first below.
 var STATIC_ASSETS=[
   '/manifest.json'

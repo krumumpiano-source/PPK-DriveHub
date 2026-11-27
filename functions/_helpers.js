@@ -86,8 +86,8 @@ export function success(data, status = 200) {
   return json({ success: true, data }, status);
 }
 
-export function error(message, status = 400) {
-  return json({ success: false, error: message }, status);
+export function error(message, status = 400, extra = {}) {
+  return json({ success: false, error: message, ...extra }, status);
 }
 
 export async function parseBody(request) {

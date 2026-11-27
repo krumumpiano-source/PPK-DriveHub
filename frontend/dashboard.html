@@ -9,14 +9,14 @@
   <script>window.REQUIRE_AUTH = true; window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'dashboard';</script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
-  <link rel="stylesheet" href="common.css">
-  <script src="js/api.js"></script><script src="common.js?v=20260831_eval1"></script>
+  <link rel="stylesheet" href="common.css?v=20261127">
+  <script src="js/api.js?v=20261127"></script><script src="common.js?v=20261127"></script>
   <style>
     * { box-sizing: border-box; }
 
     body { }
 
-    .container { }
+    .container { background: #f8fafc; min-height: 100vh; }
 
     .content {
       padding: 0;
@@ -918,51 +918,81 @@
               if (typeof apiCall !== 'undefined') {
                 clearInterval(checkInterval);
                 resolve();
-              } else if (checkCount > 50) { // Wait max 5 seconds
+              } else if (checkCount > 15) { // Wait max 1.5 seconds
                 clearInterval(checkInterval);
-                console.warn('common.js not loaded after 5 seconds');
+                console.warn('common.js not loaded after 1.5 seconds');
                 resolve(); // Continue anyway
               }
             }, 100);
           });
         }
 
-        document.addEventListener('DOMContentLoaded', async function () {
-          // Wait for common.js to load
+        var _dashboardBooted = false;
+        async function bootDashboard() {
+          if (_dashboardBooted) return;
+          _dashboardBooted = true;
+
+          // Ensure sidebar/topbar layout is rendered if common.js loaded
+          if (typeof renderNav === 'function' && !document.getElementById('sidebar')) {
+            try { renderNav(); } catch (e) { console.error('renderNav error:', e); }
+          }
+
+          // Wait for common.js / api.js to load
           await waitForCommon();
 
-          if (typeof apiCall === 'undefined') {
-            console.error('common.js not loaded! Make sure to open via web server, not file://');
-            // Still show calendar even without API
-            renderCalendar();
-            displayAvailability([], []);
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('dashboardContent').style.display = 'block';
-            alert('⚠️ กรุณาเปิดผ่าน Web Server (ไม่ใช่ file://) เพื่อให้ระบบทำงานได้เต็มที่\n\nตอนนี้แสดงปฏิทินแบบไม่มีข้อมูล');
+          // Fallback check for token directly from storage in case common.js had a cache mismatch
+          var hasToken = false;
+          try {
+            hasToken = !!(typeof API !== 'undefined' ? API.getToken() : (localStorage.getItem('ppk_token') || sessionStorage.getItem('ppk_token')));
+          } catch (e) {}
+
+          if (!hasToken) {
+            window.location.href = 'login.html';
             return;
           }
 
           if (typeof requireAuth === 'function') {
             var authResult = requireAuth();
             if (!authResult) {
-              window.location.href = 'login.html';
               return;
             }
           }
 
-          // Route by role
-          var user = typeof getCurrentUser==='function'?getCurrentUser():null;
-          var role = user?user.role:'';
-          if(role==='manager' || role==='executive'){
-            window.location.href='executive-dashboard.html';
+          // Check user object directly for must_change_password or onboarding
+          var user = typeof getCurrentUser === 'function' ? getCurrentUser() : (typeof API !== 'undefined' ? API.getUser() : null);
+          if (!user) {
+            try { user = JSON.parse(localStorage.getItem('ppk_user') || sessionStorage.getItem('ppk_user') || 'null'); } catch (e) {}
+          }
+          if (user && (user.must_change_password === true || user.must_change_password === 1 || user.mustChangePassword === true)) {
+            window.location.href = 'change-password.html';
             return;
-          } else if(role==='driver'){
+          }
+          if (user && (user.needs_onboarding === true || user.onboarding_completed === false || user.onboarding_completed === 0)) {
+            window.location.href = 'login.html';
+            return;
+          }
+
+          if (typeof apiCall === 'undefined') {
+            console.error('api.js not loaded!');
+            renderCalendar();
+            displayAvailability([], []);
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('dashboardContent').style.display = 'block';
+            return;
+          }
+
+          // Route by role
+          var role = user ? user.role : '';
+          if (role === 'manager' || role === 'executive') {
+            window.location.href = 'executive-dashboard.html';
+            return;
+          } else if (role === 'driver') {
             loadDriverDashboard(user);
-          } else if(role==='fuel'){
+          } else if (role === 'fuel') {
             loadFuelDashboard();
-          } else if(role==='repair'){
+          } else if (role === 'repair') {
             loadRepairDashboard();
-          } else if(role==='staff' || role==='viewer' || role==='requester'){
+          } else if (role === 'staff' || role === 'viewer' || role === 'requester') {
             // Requester-only dashboard — do NOT load the admin calendar
             loadRequesterDashboard(user);
           } else {
@@ -972,7 +1002,29 @@
             // admin, super_admin, vehicle (queue) → full calendar
             loadDashboard();
           }
+        }
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', bootDashboard);
+        } else {
+          bootDashboard();
+        }
+        // Safety fallback for mobile in-app browsers (Messenger/LINE WebView)
+        window.addEventListener('load', function () {
+          setTimeout(bootDashboard, 300);
         });
+        setTimeout(function () {
+          var loadingEl = document.getElementById('loading');
+          if (loadingEl && loadingEl.style.display !== 'none') {
+            loadingEl.innerHTML = '<div style="padding:20px;background:white;border-radius:12px;max-width:360px;margin:0 auto;box-shadow:0 4px 12px rgba(0,0,0,0.1);color:#0f172a;">' +
+              '<p style="margin-bottom:12px;font-weight:600;">⏳ การเชื่อมต่อใช้เวลานานกว่าปกติ</p>' +
+              '<p style="font-size:0.85rem;color:#475569;margin-bottom:16px;">หากเปิดผ่านแอป Messenger แนะนำให้กดเมนู <b>⋯ (มุมขวาบน)</b> แล้วเลือก <b>"เปิดในเบราว์เซอร์ภายนอก" (Chrome / Safari)</b> หรือกดปุ่มด้านล่างเพื่อเข้าสู่ระบบใหม่</p>' +
+              '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">' +
+              '<button onclick="window.location.reload(true)" class="btn btn-primary" style="padding:8px 16px;">🔄 โหลดหน้านี้ใหม่</button>' +
+              '<a href="login.html" class="btn btn-secondary" style="padding:8px 16px;text-decoration:none;">🔐 ไปหน้าเข้าสู่ระบบ</a>' +
+              '</div></div>';
+          }
+        }, 8000);
 
         function _kpi(val,label,sub){return'<div style="background:var(--color-bg-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:1rem;text-align:center"><div style="font-size:1.8rem;font-weight:700;color:var(--color-primary)">'+val+'</div><div style="font-size:.82rem;color:var(--color-text-muted);margin-top:4px">'+label+'</div>'+(sub?'<div style="font-size:.78rem;color:var(--color-text-light)">'+sub+'</div>':'')+'</div>'}
 

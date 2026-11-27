@@ -29,14 +29,14 @@ function checkAuth() {
     // api.js provides API.getUser() — reads from localStorage or sessionStorage
     if (typeof API !== 'undefined') {
         currentUser = API.getUser();
-        if (currentUser && (currentUser.needs_onboarding === true || currentUser.onboarding_completed === false)) {
-            if (typeof window !== 'undefined' && window.location && !window.location.pathname.includes('login.html')) {
+        if (currentUser && (currentUser.needs_onboarding === true || currentUser.onboarding_completed === false || currentUser.onboarding_completed === 0)) {
+            if (typeof window !== 'undefined' && window.location && !window.location.pathname.includes('login')) {
                 window.location.href = 'login.html';
                 return false;
             }
         }
-        if (currentUser && (currentUser.must_change_password === true || currentUser.mustChangePassword === true)) {
-            if (typeof window !== 'undefined' && window.location && !window.location.pathname.includes('change-password.html') && !window.location.pathname.includes('login.html')) {
+        if (currentUser && (currentUser.must_change_password === true || currentUser.must_change_password === 1 || currentUser.mustChangePassword === true)) {
+            if (typeof window !== 'undefined' && window.location && !window.location.pathname.includes('change-password') && !window.location.pathname.includes('login')) {
                 window.location.href = 'change-password.html';
                 return false;
             }
@@ -364,6 +364,12 @@ function renderNav() {
 
     // Redirect to login if not authenticated on auth-required pages
     if (window.REQUIRE_AUTH === true && !checkAuth()) {
+        if (currentUser && (currentUser.must_change_password === true || currentUser.must_change_password === 1 || currentUser.mustChangePassword === true)) {
+            if (!window.location.pathname.includes('change-password')) {
+                window.location.href = 'change-password.html';
+            }
+            return;
+        }
         window.location.href = 'login.html';
         return;
     }

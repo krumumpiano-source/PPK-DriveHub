@@ -7,8 +7,8 @@
   <title>เข้าสู่ระบบ / สมัครใช้งาน - PPK DriveHub</title>
   <script src="config.js"></script>
   <script>window.API_BASE_URL = CONFIG.API_BASE_URL; window.currentPage = 'login';</script>
-  <link rel="stylesheet" href="common.css">
-  <script src="js/api.js"></script><script src="common.js?v=20260831_eval1"></script>
+  <link rel="stylesheet" href="common.css?v=20261127">
+  <script src="js/api.js?v=20261127"></script><script src="common.js?v=20261127"></script>
   <style>
     * {
       margin: 0;
@@ -466,8 +466,12 @@
       try {
         if (typeof API !== 'undefined' && API.getToken()) {
           var u = API.getUser();
-          if (u && !u.needs_onboarding && u.onboarding_completed !== false) {
-            window.location.href = 'dashboard.html';
+          if (u && !u.needs_onboarding && u.onboarding_completed !== false && u.onboarding_completed !== 0) {
+            if (u.must_change_password === true || u.must_change_password === 1 || u.mustChangePassword === true) {
+              window.location.href = 'change-password.html';
+            } else {
+              window.location.href = 'dashboard.html';
+            }
           }
         }
       } catch (e) {}

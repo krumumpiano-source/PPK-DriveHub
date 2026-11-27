@@ -44,10 +44,21 @@ const API = (() => {
     const data = await resp.json().catch(() => ({ success: false, message: `HTTP ${resp.status}` }));
     if (resp.status === 401) {
       clearAuth();
-      if (!window.location.pathname.includes('/login')) {
+      if (!window.location.pathname.includes('login')) {
         window.location.href = '/login.html';
       }
       throw new Error(data.error || data.message || 'กรุณาเข้าสู่ระบบใหม่');
+    }
+    if (resp.status === 403 && (data.must_change_password || (data.error && data.error.includes('เปลี่ยนรหัสผ่านเริ่มต้น')))) {
+      const u = getUser();
+      if (u) {
+        u.must_change_password = true;
+        setUser(u);
+      }
+      if (!window.location.pathname.includes('change-password') && !window.location.pathname.includes('login')) {
+        window.location.href = '/change-password.html';
+      }
+      throw new Error(data.error || data.message || 'กรุณาตั้งรหัส PIN หรือรหัสผ่านใหม่ก่อนเข้าใช้งาน');
     }
     if (!resp.ok) throw new Error(data.message || data.error || `HTTP ${resp.status}`);
     return data;
